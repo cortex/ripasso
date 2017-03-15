@@ -1,0 +1,10 @@
+[package]
+
+name = "rustpass"
+version = "0.0.1"
+authors = ["Joakim Lundborg <joakim.lundborg@gmail.com"]
+
+[dependencies]
+qml = "0.0.9"
+notify = "4.0.0"
+glob = "0.2.11"
