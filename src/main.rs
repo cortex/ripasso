@@ -10,8 +10,10 @@ mod pass;
 
 // UI state
 pub struct UI {
+    password: Box<QPassword>,
     passwords: QPasswordEntry,
     password_updates: Receiver<String>,
+
 }
 
 impl UI {
@@ -21,6 +23,11 @@ impl UI {
     }
     pub fn select(&mut self, i: i32) -> Option<&QVariant> {
         println!("select: {}", i);
+        let item = self.passwords.view_data()[i as usize].clone();
+        let name = item.0;
+        let meta = item.1;
+        self.password.set_name(name.into());
+        self.password.set_meta(meta.into());
         None
     }
     pub fn add_password(&mut self) -> Option<&QVariant> {
@@ -28,7 +35,7 @@ impl UI {
         match entry {
             Err(_why) => return None, 
             Ok(entry) => {
-                self.passwords.append_row(entry);
+                self.passwords.append_row(entry.clone(), entry.clone());
                 return None;
             }
         }
@@ -82,7 +89,8 @@ pub UI as QUI{
 // Password list
 Q_LISTMODEL!(
     pub QPasswordEntry{
-        name: String
+        name: String,
+        meta: String
     }
 );
 
@@ -103,16 +111,14 @@ fn main() {
     let ui = QUI::new(UI {
                           passwords: QPasswordEntry::new(),
                           password_updates: password_rx,
+                          password: QPassword::new(Password, true, "test".into(), "test".into(), "test".into()),
                       },
                       "started".into(),
-
                       0.0);
-    engine.set_and_store_property("ui", ui.get_qobj());
-
     let ref passwords = ui.passwords;
+    let ref password = ui.password;
+    engine.set_and_store_property("ui", ui.get_qobj());
     engine.set_and_store_property("passwords", passwords);
-
-    let password = QPassword::new(Password, true, "test".into(), "test".into(), "test".into());
     engine.set_and_store_property("password", password.get_qobj());
 
     engine.load_file("res/main.qml");

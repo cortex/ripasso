@@ -8,3 +8,6 @@ authors = ["Joakim Lundborg <joakim.lundborg@gmail.com"]
 qml = "0.0.9"
 notify = "4.0.0"
 glob = "0.2.11"
+
+[replace]
+"qml:0.0.9" = { git = 'https://github.com/vandenoever/qml-rust/', branch = "notify"}

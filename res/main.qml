@@ -116,7 +116,7 @@ ApplicationWindow {
                             anchors.right: parent ? parent.right : undefined
                         }
                         onCurrentItemChanged:{
-                            ui.select(currentIndex)
+                            ui.select(currentIndex);
                         }
                     }
                 }
