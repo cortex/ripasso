@@ -48,7 +48,7 @@ fn watch_passwords(password_tx: Sender<String>) -> Result<(), Box<Error>> {
         match rx.recv() {
             Ok(event) => {
                 match event {
-                    Create(path) => try!(password_tx.send(to_name(path))), 
+                    Create(path) => try!(password_tx.send(to_name(path))),
                     _ => (),
                 }
             }

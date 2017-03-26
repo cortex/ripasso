@@ -5,22 +5,40 @@ use qml::*;
 use std::thread;
 use std::sync::mpsc;
 use std::sync::mpsc::{Sender, Receiver};
+use std::sync::{Arc, Mutex};
 
 mod pass;
 
+pub struct Password {
+    name: String,
+    meta: String,
+    filename: String,
+}
+
 // UI state
 pub struct UI {
-    password: Box<QPassword>,
+    all_passwords: Arc<Mutex<Vec<Password>>>,
+    password: Box<QPasswordView>,
     passwords: QPasswordEntry,
-    password_updates: Receiver<String>,
-
 }
 
 impl UI {
-    pub fn query(&mut self) -> Option<&QVariant> {
+    pub fn query(&mut self, query: String) -> Option<&QVariant> {
         println!("query");
+        let passwords = self.all_passwords.lock().unwrap();
+        fn normalized(s: &String) -> String {
+            s.to_lowercase()
+        };
+        fn matches(s: &String, q: &String) -> bool {
+            normalized(&s).as_str().contains(normalized(&q).as_str())
+        };
+        self.passwords.set_data(passwords.iter()
+                                    .filter(|p| matches(&p.name, &query))
+                                    .map(|p| (p.name.clone().into(), p.meta.clone().into()))
+                                    .collect());
         None
     }
+
     pub fn select(&mut self, i: i32) -> Option<&QVariant> {
         println!("select: {}", i);
         let item = self.passwords.view_data()[i as usize].clone();
@@ -31,60 +49,53 @@ impl UI {
         None
     }
     pub fn add_password(&mut self) -> Option<&QVariant> {
-        let entry = self.password_updates.try_recv();
-        match entry {
-            Err(_why) => return None, 
-            Ok(entry) => {
-                self.passwords.append_row(entry.clone(), entry.clone());
-                return None;
-            }
-        }
+        None
     }
 }
-
-// The currently shown password
-pub struct Password;
-Q_OBJECT!(
-pub Password as QPassword{
-     signals:
-     slots:
-     properties:
-        cached: bool; 
-            read: get_cached, 
-            write: set_cached, 
-            notify: cached_changed;
-        name: String; 
-            read: get_name, 
-            write: set_name, 
-            notify: name_changed;
-        info: String; 
-            read: get_info, 
-            write: set_info, 
-            notify: info_changed;
-        metadata: String; 
-            read: get_meta, 
-            write: set_meta, 
-            notify: meta_changed;
-}
-);
 
 Q_OBJECT!(
 pub UI as QUI{
     signals:
     slots:
-        fn query();
+        fn query(query:String);
         fn select(i:i32);
         fn add_password();
     properties:
-        status: String; 
-            read: get_status, 
-            write: set_status, 
+        status: String;
+            read: get_status,
+            write: set_status,
             notify: status_changed;
         countdown: f64;
             read: get_countdown,
             write: set_countdown,
             notify: countdown_changed;
 });
+
+// The currently shown password
+pub struct PasswordView;
+Q_OBJECT!(
+pub PasswordView as QPasswordView{
+     signals:
+     slots:
+     properties:
+        cached: bool;
+            read: get_cached,
+            write: set_cached,
+            notify: cached_changed;
+        name: String;
+            read: get_name,
+            write: set_name,
+            notify: name_changed;
+        info: String;
+            read: get_info,
+            write: set_info,
+            notify: info_changed;
+        metadata: String;
+            read: get_meta,
+            write: set_meta,
+            notify: meta_changed;
+}
+);
 
 // Password list
 Q_LISTMODEL!(
@@ -104,21 +115,43 @@ fn main() {
                       println!("error: {:?}", e)
                   });
 
+    let passwords = Arc::new(Mutex::new(vec![]));
+    let p1 = passwords.clone();
+    thread::spawn(move || loop {
+                      let entry = password_rx.recv();
+                      match entry {
+                          Ok(entry) => {
+            let p = Password {
+                name: entry.clone(),
+                filename: entry.clone(),
+                meta: entry.clone(),
+            };
+            println!("Recieved: {:?}", p.name);
+            let mut passwords = p1.lock().unwrap();
+            passwords.push(p);
+        }
+                          Err(E) => println!("error: {:?}", E),
+                      }
+                  });
 
     // Set up all the UI stuff
     let mut engine = QmlEngine::new();
 
     let ui = QUI::new(UI {
+                          all_passwords: passwords.clone(),
                           passwords: QPasswordEntry::new(),
-                          password_updates: password_rx,
-                          password: QPassword::new(Password, true, "test".into(), "test".into(), "test".into()),
+                          password: QPasswordView::new(PasswordView,
+                                                       true,
+                                                       "test".into(),
+                                                       "test".into(),
+                                                       "test".into()),
                       },
                       "started".into(),
                       0.0);
-    let ref passwords = ui.passwords;
+    let ref passwordsv = ui.passwords;
     let ref password = ui.password;
     engine.set_and_store_property("ui", ui.get_qobj());
-    engine.set_and_store_property("passwords", passwords);
+    engine.set_and_store_property("passwords", passwordsv);
     engine.set_and_store_property("password", password.get_qobj());
 
     engine.load_file("res/main.qml");
