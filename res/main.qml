@@ -19,7 +19,12 @@ ApplicationWindow {
     color: "transparent"
     Timer {
         interval: 1; running: true; repeat: true
-        onTriggered: ui.add_password();
+        onTriggered: {
+            ui.add_password();
+        }
+    }
+    Component.onCompleted:{
+        ui.query("");
     }
     MouseArea {
         id: mouseRegion
@@ -75,7 +80,7 @@ ApplicationWindow {
                     focus: true
 
                     onTextChanged: ui.query(text)
-                    onAccepted: passwords.copyToClipboard(hitList.currentIndex)
+                    onAccepted: ui.copyToClipboard(hitList.currentIndex)
 
                     placeholderText: "Search your passwords..."
 
@@ -117,6 +122,9 @@ ApplicationWindow {
                         }
                         onCurrentItemChanged:{
                             ui.select(currentIndex);
+                        }
+                        onCountChanged:{
+                            currentIndex = 0;
                         }
                     }
                 }
@@ -350,7 +358,7 @@ ApplicationWindow {
                     onClicked: view.currentIndex = itemIndex
                     onDoubleClicked: {
                         clicked(passwordEntry)
-                        passwords.copyToClipboard(hitList.currentIndex)
+                        ui.copyToClipboard(hitList.currentIndex)
                     }
                 }
             }

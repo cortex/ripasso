@@ -1,23 +1,27 @@
-#[macro_use]
+
 extern crate qml;
+extern crate gpgme;
 
 use qml::*;
 use std::thread;
 use std::sync::mpsc;
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::{Arc, Mutex};
-
+use pass::Password;
 mod pass;
 
-pub struct Password {
-    name: String,
-    meta: String,
-    filename: String,
-}
+extern crate clipboard;
+
+use clipboard::ClipboardContext;
+use std::fs::File;
+
+use std::str;
+use gpgme::{Context, Protocol};
 
 // UI state
 pub struct UI {
     all_passwords: Arc<Mutex<Vec<Password>>>,
+    current_passwords: Vec<Password>,
     password: Box<QPasswordView>,
     passwords: QPasswordEntry,
 }
@@ -32,20 +36,45 @@ impl UI {
         fn matches(s: &String, q: &String) -> bool {
             normalized(&s).as_str().contains(normalized(&q).as_str())
         };
-        self.passwords.set_data(passwords.iter()
-                                    .filter(|p| matches(&p.name, &query))
+        let matching = passwords.iter().filter(|p| matches(&p.name, &query));
+
+        // Save currently matched passwords
+        self.current_passwords = matching.cloned().collect();
+
+        // Update QML data with currently matched passwords
+        self.passwords.set_data(self.current_passwords.clone().into_iter()
                                     .map(|p| (p.name.clone().into(), p.meta.clone().into()))
                                     .collect());
         None
     }
 
+    fn get_password(&self, i: i32) -> Password{
+        return self.current_passwords[i as usize].clone()
+    }
+
+    pub fn copyToClipboard(&mut self, i: i32) -> Option<&QVariant>{
+        let path = self.get_password(i).filename;
+
+        // Decrypt password
+        let mut ctx = Context::from_protocol(Protocol::OpenPgp).unwrap();
+        let mut input = File::open(&path).unwrap();
+        let mut output = Vec::new();
+        ctx.decrypt(&mut input, &mut output).expect("decrypting failed");
+        let password = str::from_utf8(&output).unwrap();
+        let firstline:String = password.split("\n").take(1).collect();
+
+        // Copy password to clipboard
+        let mut ctx: ClipboardContext = ClipboardContext::new().unwrap();
+        ctx.set_contents(firstline.to_owned()).unwrap();
+        println!("password copied to clipboard");
+        None
+
+    }
     pub fn select(&mut self, i: i32) -> Option<&QVariant> {
         println!("select: {}", i);
-        let item = self.passwords.view_data()[i as usize].clone();
-        let name = item.0;
-        let meta = item.1;
-        self.password.set_name(name.into());
-        self.password.set_meta(meta.into());
+        let pass = self.get_password(i);
+        self.password.set_name(pass.name);
+        self.password.set_meta(pass.meta);
         None
     }
     pub fn add_password(&mut self) -> Option<&QVariant> {
@@ -60,6 +89,7 @@ pub UI as QUI{
         fn query(query:String);
         fn select(i:i32);
         fn add_password();
+        fn copyToClipboard(i: i32);
     properties:
         status: String;
             read: get_status,
@@ -108,7 +138,7 @@ Q_LISTMODEL!(
 fn main() {
 
     // Channel for password updates
-    let (password_tx, password_rx): (Sender<String>, Receiver<String>) = mpsc::channel();
+    let (password_tx, password_rx): (Sender<Password>, Receiver<Password>) = mpsc::channel();
 
     // Load and watch all the passwords in the background
     thread::spawn(move || if let Err(e) = pass::load_and_watch_passwords(password_tx) {
@@ -120,17 +150,12 @@ fn main() {
     thread::spawn(move || loop {
                       let entry = password_rx.recv();
                       match entry {
-                          Ok(entry) => {
-            let p = Password {
-                name: entry.clone(),
-                filename: entry.clone(),
-                meta: entry.clone(),
-            };
-            println!("Recieved: {:?}", p.name);
-            let mut passwords = p1.lock().unwrap();
-            passwords.push(p);
-        }
-                          Err(E) => println!("error: {:?}", E),
+                          Ok(p) => {
+                            println!("Recieved: {:?}", p.name);
+                            let mut passwords = p1.lock().unwrap();
+                            passwords.push(p);
+                        }
+                          Err(e) => println!("error: {:?}", e),
                       }
                   });
 
@@ -139,6 +164,7 @@ fn main() {
 
     let ui = QUI::new(UI {
                           all_passwords: passwords.clone(),
+                          current_passwords: Vec::<Password>::new(),
                           passwords: QPasswordEntry::new(),
                           password: QPasswordView::new(PasswordView,
                                                        true,
@@ -153,7 +179,6 @@ fn main() {
     engine.set_and_store_property("ui", ui.get_qobj());
     engine.set_and_store_property("passwords", passwordsv);
     engine.set_and_store_property("password", password.get_qobj());
-
     engine.load_file("res/main.qml");
     engine.exec();
 }
