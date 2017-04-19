@@ -32,8 +32,8 @@ fn to_name(path: &PathBuf) -> String {
         .to_string()
 }
 
-fn to_password(path: PathBuf) -> Password{
-    Password{
+fn to_password(path: PathBuf) -> Password {
+    Password {
         name: to_name(&path),
         filename: path.to_string_lossy().into_owned().clone(),
         meta: "".to_string(),
@@ -45,12 +45,9 @@ fn load_passwords(tx: &Sender<Password>) -> Result<(), SendError<Password>> {
     let passpath = home.join(".password-store/**/*.gpg");
     let passpath_str = passpath.to_str().unwrap();
     println!("path: {}", passpath_str);
-    for entry in
-        glob(passpath_str).expect("Failed to read glob pattern") {
+    for entry in glob(passpath_str).expect("Failed to read glob pattern") {
         match entry {
-            Ok(path) => {
-                try!(tx.send(to_password(path)))
-            }
+            Ok(path) => try!(tx.send(to_password(path))),
             Err(e) => println!("{:?}", e),
         }
     }
