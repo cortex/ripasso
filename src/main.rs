@@ -9,7 +9,7 @@ use std::sync::mpsc::{Sender, Receiver};
 use std::sync::{Arc, Mutex};
 use pass::Password;
 mod pass;
-
+use std::time::Duration;
 extern crate clipboard;
 
 use clipboard::ClipboardContext;
@@ -42,17 +42,19 @@ impl UI {
         self.current_passwords = matching.cloned().collect();
 
         // Update QML data with currently matched passwords
-        self.passwords.set_data(self.current_passwords.clone().into_iter()
+        self.passwords.set_data(self.current_passwords
+                                    .clone()
+                                    .into_iter()
                                     .map(|p| (p.name.clone().into(), p.meta.clone().into()))
                                     .collect());
         None
     }
 
-    fn get_password(&self, i: i32) -> Password{
-        return self.current_passwords[i as usize].clone()
+    fn get_password(&self, i: i32) -> Password {
+        return self.current_passwords[i as usize].clone();
     }
 
-    pub fn copyToClipboard(&mut self, i: i32) -> Option<&QVariant>{
+    pub fn copyToClipboard(&mut self, i: i32) -> Option<&QVariant> {
         let path = self.get_password(i).filename;
 
         // Decrypt password
@@ -61,12 +63,19 @@ impl UI {
         let mut output = Vec::new();
         ctx.decrypt(&mut input, &mut output).expect("decrypting failed");
         let password = str::from_utf8(&output).unwrap();
-        let firstline:String = password.split("\n").take(1).collect();
+        let firstline: String = password.split("\n").take(1).collect();
 
         // Copy password to clipboard
         let mut ctx: ClipboardContext = ClipboardContext::new().unwrap();
         ctx.set_contents(firstline.to_owned()).unwrap();
         println!("password copied to clipboard");
+
+        thread::spawn(move || {
+                          thread::sleep(Duration::new(5, 0));
+                          let mut ctx: ClipboardContext = ClipboardContext::new().unwrap();
+                          ctx.set_contents("".into()).unwrap();
+                          println!("clipoard cleared");
+                      });
         None
 
     }
@@ -151,10 +160,10 @@ fn main() {
                       let entry = password_rx.recv();
                       match entry {
                           Ok(p) => {
-                            println!("Recieved: {:?}", p.name);
-                            let mut passwords = p1.lock().unwrap();
-                            passwords.push(p);
-                        }
+            println!("Recieved: {:?}", p.name);
+            let mut passwords = p1.lock().unwrap();
+            passwords.push(p);
+        }
                           Err(e) => println!("error: {:?}", e),
                       }
                   });
