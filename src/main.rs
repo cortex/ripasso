@@ -12,7 +12,7 @@ mod pass;
 use std::time::Duration;
 extern crate clipboard;
 
-use clipboard::ClipboardContext;
+use clipboard::{ClipboardProvider, ClipboardContext};
 use std::fs::File;
 
 use std::str;
@@ -66,13 +66,13 @@ impl UI {
         let firstline: String = password.split("\n").take(1).collect();
 
         // Copy password to clipboard
-        let mut ctx: ClipboardContext = ClipboardContext::new().unwrap();
+        let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
         ctx.set_contents(firstline.to_owned()).unwrap();
         println!("password copied to clipboard");
 
         thread::spawn(move || {
                           thread::sleep(Duration::new(5, 0));
-                          let mut ctx: ClipboardContext = ClipboardContext::new().unwrap();
+                          let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
                           ctx.set_contents("".into()).unwrap();
                           println!("clipoard cleared");
                       });
