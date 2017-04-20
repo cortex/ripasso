@@ -55,13 +55,20 @@ impl UI {
     }
 
     pub fn copyToClipboard(&mut self, i: i32) -> Option<&QVariant> {
+        // Open password file
         let path = self.get_password(i).filename;
+        let mut input = File::open(&path).unwrap();
 
         // Decrypt password
         let mut ctx = Context::from_protocol(Protocol::OpenPgp).unwrap();
-        let mut input = File::open(&path).unwrap();
         let mut output = Vec::new();
-        ctx.decrypt(&mut input, &mut output).expect("decrypting failed");
+        match ctx.decrypt(&mut input, &mut output) {
+            Err(e) => {
+                println!("decryption failed");
+                return None;
+            }
+            Ok(_) => (),
+        }
         let password = str::from_utf8(&output).unwrap();
         let firstline: String = password.split("\n").take(1).collect();
 
