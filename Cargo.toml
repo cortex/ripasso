@@ -12,4 +12,5 @@ clipboard = "0.2.0"
 gpgme = { git = "https://github.com/johnschug/rust-gpgme", branch = "master" }
 
 [replace]
+"clipboard:0.2.0" = {git = 'https://github.com/aweinstock314/rust-clipboard', branch = "master" }
 "qml:0.0.9" = { git = 'https://github.com/vandenoever/qml-rust/', branch = "notify"}
