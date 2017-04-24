@@ -1,5 +1,7 @@
+dist: trusty
+sudo: false
 language: rust
+
 before_install:
-- sudo add-apt-repository --yes ppa:ubuntu-sdk-team/ppa
 - sudo apt-get update -qq
 - sudo apt-get install -qq qtbase5-dev
