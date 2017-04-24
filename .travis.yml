@@ -1,8 +1,12 @@
+os:
+  - linux
+  - osx
+
 dist: trusty
 sudo: false
 language: rust
 addons:
   apt:
     packages:
-    - qtbase5-dev
-    - qtdeclarative5-dev
+      - qtbase5-dev
+      - qtdeclarative5-dev
