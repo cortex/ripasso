@@ -5,3 +5,4 @@ addons:
   apt:
     packages:
     - qtbase5-dev
+    - qtdeclarative5-dev
