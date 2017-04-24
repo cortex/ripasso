@@ -7,7 +7,7 @@ use self::notify::DebouncedEvent::Create;
 use std::sync::mpsc::{Sender, channel, SendError};
 use std::time::Duration;
 use std::error::Error;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use std::env;
 
 #[derive(Clone)]
@@ -40,10 +40,26 @@ fn to_password(path: PathBuf) -> Password {
     }
 }
 
+/// Determine password base path
+fn  password_base() -> Option<PathBuf>{
+    let mut pass_home = match env::var("PASSWORD_STORE_DIR"){
+        Ok(p) => {p}
+        Err(_) => {"".into()}
+    };
+    let homedir_path;
+    if !Path::new(&pass_home).exists(){
+        homedir_path = env::home_dir().unwrap().join(".password-store");
+        pass_home = homedir_path.to_string_lossy().into();
+    }
+    return Some(Path::new(&pass_home).to_path_buf());
+}
+
 fn load_passwords(tx: &Sender<Password>) -> Result<(), SendError<Password>> {
-    let home = env::home_dir().unwrap();
-    let passpath = home.join(".password-store/**/*.gpg");
-    let passpath_str = passpath.to_str().unwrap();
+    let password_path = password_base().unwrap();
+    let password_path_glob = password_path.join("**/*.gpg");
+
+    // Find all passwords
+    let ref passpath_str = password_path_glob.to_string_lossy();
     println!("path: {}", passpath_str);
     for entry in glob(passpath_str).expect("Failed to read glob pattern") {
         match entry {
@@ -57,8 +73,8 @@ fn load_passwords(tx: &Sender<Password>) -> Result<(), SendError<Password>> {
 fn watch_passwords(password_tx: Sender<Password>) -> Result<(), Box<Error>> {
     let (tx, rx) = channel();
     let mut watcher: RecommendedWatcher = try!(Watcher::new(tx, Duration::from_secs(2)));
-
-    try!(watcher.watch("/home/joakim/.password-store", RecursiveMode::Recursive));
+    let pass_base = password_base().unwrap();
+    try!(watcher.watch(pass_base, RecursiveMode::Recursive));
 
     loop {
         match rx.recv() {
