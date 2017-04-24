@@ -1,1 +1,4 @@
 language: rust
+before_install:
+- sudo apt-get update -qq
+- sudo apt-get install -qq qtbase5-dev
