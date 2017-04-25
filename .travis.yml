@@ -7,6 +7,8 @@ language: rust
 cache: rust
 addons:
   apt:
+    sources:
+      - ubuntu-toolchain-r-test
     packages:
       - qtbase5-dev
       - qtdeclarative5-dev
