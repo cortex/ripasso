@@ -11,7 +11,7 @@ addons:
       - qtbase5-dev
       - qtdeclarative5-dev
       - libqt5svg5-dev
-      - libgpgme-dev
+      - libgpgme11-dev
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update          ; fi
