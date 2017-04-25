@@ -4,6 +4,7 @@ os:
 dist: precise
 sudo: false
 language: rust
+cache: cargo
 addons:
   apt:
     packages:
