@@ -1,7 +1,6 @@
 os:
   - linux
   - osx
-dist: precise
 sudo: false
 language: rust
 cache: cargo
