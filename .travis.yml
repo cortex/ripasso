@@ -1,7 +1,6 @@
 os:
   - linux
   - osx
-
 dist: trusty
 sudo: false
 language: rust
@@ -12,6 +11,12 @@ addons:
       - qtdeclarative5-dev
       - libqt5svg5-dev
       - libgpgme11-dev
+env:
+  global:
+    - GPGME_DEBUG=9
+    - AUTOMAKE_VERSION=1.14.1
+    - GETTEXT_VERSION=0.19.3
+    - TRAVIS_CARGO_NIGHTLY_FEATURE=nightly
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update          ; fi
