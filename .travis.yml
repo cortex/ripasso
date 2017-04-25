@@ -1,7 +1,7 @@
 os:
   - linux
   - osx
-dist: trusty
+dist: precise
 sudo: false
 language: rust
 addons:
