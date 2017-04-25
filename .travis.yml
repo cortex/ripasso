@@ -13,12 +13,8 @@ addons:
       - libqt5svg5-dev
       - libgpgme11-dev
       - libgpg-error-dev
-env:
-  global:
-    - GPGME_DEBUG=9
-    - AUTOMAKE_VERSION=1.14.1
-    - GETTEXT_VERSION=0.19.3
-    - TRAVIS_CARGO_NIGHTLY_FEATURE=nightly
+      - gcc-4.9
+      - g++-4.9
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update          ; fi
