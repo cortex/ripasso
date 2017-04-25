@@ -1,9 +1,10 @@
 os:
   - linux
   - osx
+dist: trusty
 sudo: false
 language: rust
-cache: cargo
+cache: rust
 addons:
   apt:
     packages:
