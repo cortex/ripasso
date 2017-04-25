@@ -17,7 +17,14 @@ addons:
       - libgpg-error-dev
       - gcc-4.9
       - g++-4.9
-
-before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update          ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install qt5     ; fi
+matrix:
+  include:
+    - os: linux
+      sudo: false
+      env:
+        CC=/usr/bin/gcc-4.9
+        CXX=/usr/bin/g++-4.9
+    - os: osx
+      before_install:
+        - brew update
+        - brew install qt5
