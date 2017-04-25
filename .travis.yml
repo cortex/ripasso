@@ -1,8 +1,3 @@
-os:
-  - linux
-  - osx
-dist: trusty
-sudo: false
 language: rust
 cache: rust
 addons:
@@ -21,6 +16,7 @@ matrix:
   include:
     - os: linux
       sudo: false
+      dist: trusty
       env:
         CC=/usr/bin/gcc-4.9
         CXX=/usr/bin/g++-4.9
