@@ -10,6 +10,7 @@ addons:
     packages:
       - qtbase5-dev
       - qtdeclarative5-dev
+      - libqt5svg5-dev
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update          ; fi
