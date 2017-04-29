@@ -157,23 +157,22 @@ fn main() {
     let (password_tx, password_rx): (Sender<Password>, Receiver<Password>) = mpsc::channel();
 
     // Load and watch all the passwords in the background
-    thread::spawn(move || if let Err(e) = pass::load_and_watch_passwords(password_tx) {
-                      println!("error: {:?}", e)
-                  });
+    pass::load_and_watch_passwords(password_tx).expect("failed to locate password directory");
 
     let passwords = Arc::new(Mutex::new(vec![]));
     let p1 = passwords.clone();
     thread::spawn(move || loop {
-                      let entry = password_rx.recv();
-                      match entry {
-                          Ok(p) => {
-            println!("Recieved: {:?}", p.name);
-            let mut passwords = p1.lock().unwrap();
-            passwords.push(p);
+        match password_rx.recv() {
+            Ok(p) => {
+                println!("Recieved: {:?}", p.name);
+                let mut passwords = p1.lock().unwrap();
+                passwords.push(p);
+            }
+            Err(e) => {
+                panic!("password reciever channel failed: {:?}", e);
+            },
         }
-                          Err(e) => println!("error: {:?}", e),
-                      }
-                  });
+    });
 
     // Set up all the UI stuff
     let mut engine = QmlEngine::new();

@@ -9,6 +9,7 @@ use std::time::Duration;
 use std::error::Error;
 use std::path::{PathBuf, Path};
 use std::env;
+use std::thread;
 
 #[derive(Clone)]
 pub struct Password {
@@ -18,8 +19,12 @@ pub struct Password {
 }
 
 pub fn load_and_watch_passwords(tx: Sender<Password>) -> Result<(), Box<Error>> {
-    try!(load_passwords(&tx));
-    try!(watch_passwords(tx));
+    let dir = password_dir()?;
+    thread::spawn(move ||{
+        load_passwords(&dir, &tx);
+        watch_passwords(&dir, tx);
+    }
+    );
     Ok(())
 }
 
@@ -40,23 +45,27 @@ fn to_password(path: PathBuf) -> Password {
     }
 }
 
-/// Determine password base path
-fn  password_base() -> Option<PathBuf>{
-    let mut pass_home = match env::var("PASSWORD_STORE_DIR"){
+/// Determine password directory
+fn password_dir() -> Result<PathBuf, Box<Error>> {
+    // If a directory is provided via env var, use it
+    let pass_home = match env::var("PASSWORD_STORE_DIR"){
         Ok(p) => {p}
-        Err(_) => {"".into()}
+        Err(_) => {
+            env::home_dir()
+                .unwrap()
+                .join(".password-store")
+                .to_string_lossy()
+                .into()
+        }
     };
-    let homedir_path;
     if !Path::new(&pass_home).exists(){
-        homedir_path = env::home_dir().unwrap().join(".password-store");
-        pass_home = homedir_path.to_string_lossy().into();
+        return Err(From::from("Not found"))
     }
-    return Some(Path::new(&pass_home).to_path_buf());
+    return Ok(Path::new(&pass_home).to_path_buf());
 }
 
-fn load_passwords(tx: &Sender<Password>) -> Result<(), SendError<Password>> {
-    let password_path = password_base().unwrap();
-    let password_path_glob = password_path.join("**/*.gpg");
+fn load_passwords(dir: &PathBuf, tx: &Sender<Password>) -> Result<(), SendError<Password>> {
+    let password_path_glob = dir.join("**/*.gpg");
 
     // Find all passwords
     let ref passpath_str = password_path_glob.to_string_lossy();
@@ -70,11 +79,10 @@ fn load_passwords(tx: &Sender<Password>) -> Result<(), SendError<Password>> {
     Ok(())
 }
 
-fn watch_passwords(password_tx: Sender<Password>) -> Result<(), Box<Error>> {
+fn watch_passwords(dir: &PathBuf, password_tx: Sender<Password>) -> Result<(), Box<Error>> {
     let (tx, rx) = channel();
     let mut watcher: RecommendedWatcher = try!(Watcher::new(tx, Duration::from_secs(2)));
-    let pass_base = password_base().unwrap();
-    try!(watcher.watch(pass_base, RecursiveMode::Recursive));
+    try!(watcher.watch(dir, RecursiveMode::Recursive));
 
     loop {
         match rx.recv() {
