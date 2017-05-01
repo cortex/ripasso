@@ -28,8 +28,8 @@ pub fn load_and_watch_passwords(tx: Sender<Password>) -> Result<(), Box<Error>> 
     Ok(())
 }
 
-fn to_name(path: &PathBuf) -> String {
-    path.file_name()
+fn to_name(base: &PathBuf, path: &PathBuf) -> String {
+    path.strip_prefix(base)
         .unwrap()
         .to_string_lossy()
         .into_owned()
@@ -37,9 +37,9 @@ fn to_name(path: &PathBuf) -> String {
         .to_string()
 }
 
-fn to_password(path: PathBuf) -> Password {
+fn to_password(base: &PathBuf, path: PathBuf) -> Password {
     Password {
-        name: to_name(&path),
+        name: to_name(base, &path),
         filename: path.to_string_lossy().into_owned().clone(),
         meta: "".to_string(),
     }
@@ -72,7 +72,7 @@ fn load_passwords(dir: &PathBuf, tx: &Sender<Password>) -> Result<(), SendError<
     println!("path: {}", passpath_str);
     for entry in glob(passpath_str).expect("Failed to read glob pattern") {
         match entry {
-            Ok(path) => try!(tx.send(to_password(path))),
+            Ok(path) => try!(tx.send(to_password(dir, path))),
             Err(e) => println!("{:?}", e),
         }
     }
@@ -88,7 +88,7 @@ fn watch_passwords(dir: &PathBuf, password_tx: Sender<Password>) -> Result<(), B
         match rx.recv() {
             Ok(event) => {
                 match event {
-                    Create(path) => try!(password_tx.send(to_password(path))),
+                    Create(path) => try!(password_tx.send(to_password(dir, path ))),
                     _ => (),
                 }
             }
