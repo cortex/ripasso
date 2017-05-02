@@ -4,6 +4,8 @@ import QtQuick.Layouts 1.2
 import QtQuick.Controls.Styles 1.4
 import QtQuick.Window 2.2
 
+
+
 ApplicationWindow {
     id: rootWindow
 
@@ -51,14 +53,14 @@ ApplicationWindow {
         id: mainLayout
 
         color: "#333"
-        radius: 10
+        radius: 16
         anchors.rightMargin: 0
         anchors.bottomMargin: 0
         anchors.leftMargin: 0
         anchors.topMargin: 0
         anchors.fill: parent
         border.width: 2
-        border.color: "#aaa"
+        border.color: "#444"
 
         RowLayout {
             id: panes
@@ -71,29 +73,28 @@ ApplicationWindow {
                 Layout.fillHeight: true
                 Layout.fillWidth: true
 
-                TextField {
+                TextInput {
                     id: searchInput
-
+                    leftPadding: 5
                     height: 42
                     Layout.fillWidth: true
                     font.pixelSize: 24
                     focus: true
-
+                    color: "white"
                     onTextChanged: ui.query(text)
                     onAccepted: ui.copyToClipboard(hitList.currentIndex)
-
-                    placeholderText: "Search your passwords..."
-
-                    style: TextFieldStyle {
+                    cursorDelegate: cursorA
+                    //placeholderText: "Search your passwords..."
+  /*                  style: TextFieldStyle {
                         textColor: "white"
                         placeholderTextColor: "#444"
                         background: Rectangle {
                             radius: 5
-                            border.color: "#666"
+                            border.color: "#333"
                             border.width: 1
                             color: "#333"
                         }
-                    }
+                    }*/
                 }
 
                 ScrollView{
@@ -116,7 +117,7 @@ ApplicationWindow {
                         delegate: passwordEntry
                         highlight: Rectangle {
                             color: "#444"
-                            radius: 3
+                            radius: 5
                             anchors.left: parent ? parent.left : undefined
                             anchors.right: parent ? parent.right : undefined
                         }
@@ -348,7 +349,7 @@ ApplicationWindow {
             Text {
                 property var view: ListView.view
                 property int itemIndex: index
-
+                leftPadding: 5
                 text: name
                 font.pixelSize: 18
                 color: ListView.isCurrentItem? "#dd00bb":"gray"
@@ -363,5 +364,32 @@ ApplicationWindow {
                 }
             }
         }
+
+Component{
+    id: cursorA
+    Rectangle {
+        id: cursor_rect
+        width: 10
+        border.width: 1
+        border.color: "#666"
+        color: "#999"
+        radius: 2
+        SequentialAnimation on opacity{
+            loops: Animation.Infinite
+            PropertyAnimation {
+                easing.type: Easing.InOutSine
+                from: 0.1
+                to: 1.0
+                duration: 750
+            }
+            PropertyAnimation {
+                easing.type: Easing.InOutSine
+                from: 1
+                to: 0.1
+                duration: 750
+            }
+        }
+    }
+}
     }
 }
