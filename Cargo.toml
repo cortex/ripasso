@@ -1,6 +1,6 @@
 [package]
 
-name = "rustpass"
+name = "ripasso"
 version = "0.0.1"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com"]
 
