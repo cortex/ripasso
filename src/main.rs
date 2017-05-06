@@ -15,8 +15,6 @@ extern crate clipboard;
 use clipboard::{ClipboardProvider, ClipboardContext};
 use std::fs::File;
 
-use std::str;
-use gpgme::{Context, Protocol};
 
 // UI state
 pub struct UI {
@@ -56,25 +54,11 @@ impl UI {
 
     pub fn copyToClipboard(&mut self, i: i32) -> Option<&QVariant> {
         // Open password file
-        let path = self.get_password(i).filename;
-        let mut input = File::open(&path).unwrap();
-
-        // Decrypt password
-        let mut ctx = Context::from_protocol(Protocol::OpenPgp).unwrap();
-        let mut output = Vec::new();
-        match ctx.decrypt(&mut input, &mut output) {
-            Err(e) => {
-                println!("decryption failed");
-                return None;
-            }
-            Ok(_) => (),
-        }
-        let password = str::from_utf8(&output).unwrap();
-        let firstline: String = password.split("\n").take(1).collect();
+        let password = self.get_password(i).password().unwrap();
 
         // Copy password to clipboard
         let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-        ctx.set_contents(firstline.to_owned()).unwrap();
+        ctx.set_contents(password.to_owned()).unwrap();
         println!("password copied to clipboard");
 
         thread::spawn(move || {

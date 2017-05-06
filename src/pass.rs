@@ -10,14 +10,35 @@ use std::error::Error;
 use std::path::{PathBuf, Path};
 use std::env;
 use std::thread;
+use std::fs::File;
 
+use std::str;
+use gpgme::{Context, Protocol};
 #[derive(Clone)]
 pub struct Password {
     pub name: String,
     pub meta: String,
     pub filename: String,
 }
+impl Password{
+    pub fn password(&self) -> Option<String>{
+        let mut input = File::open(&self.filename).unwrap();
 
+        // Decrypt password
+        let mut ctx = Context::from_protocol(Protocol::OpenPgp).unwrap();
+        let mut output = Vec::new();
+        match ctx.decrypt(&mut input, &mut output) {
+            Err(e) => {
+                println!("decryption failed");
+                return None;
+            }
+            Ok(_) => (),
+        }
+        let password = str::from_utf8(&output).unwrap();
+        let firstline: String = password.split("\n").take(1).collect();
+        return Some(firstline);
+    }
+}
 pub fn load_and_watch_passwords(tx: Sender<Password>) -> Result<(), Box<Error>> {
     let dir = password_dir()?;
     thread::spawn(move ||{
