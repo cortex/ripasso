@@ -8,9 +8,8 @@ authors = ["Joakim Lundborg <joakim.lundborg@gmail.com"]
 qml = "0.0.9"
 notify = "4.0.0"
 glob = "0.2.11"
-clipboard = "0.2.0"
+clipboard = "0.3.0"
 gpgme = { git = "https://github.com/johnschug/rust-gpgme", branch = "master" }
 
 [replace]
-"clipboard:0.2.0" = {git = 'https://github.com/aweinstock314/rust-clipboard', branch = "master" }
 "qml:0.0.9" = { git = 'https://github.com/vandenoever/qml-rust/', branch = "notify"}
