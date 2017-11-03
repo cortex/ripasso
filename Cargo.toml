@@ -5,11 +5,12 @@ version = "0.0.1"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com"]
 
 [dependencies]
-qml = "0.0.9"
+gtk = "0.2.0"
 notify = "4.0.0"
 glob = "0.2.11"
 clipboard = "0.3.0"
 gpgme = { git = "https://github.com/johnschug/rust-gpgme", branch = "master" }
 
-[replace]
-"qml:0.0.9" = { git = 'https://github.com/vandenoever/qml-rust/', branch = "notify"}
+[features]
+#default = ["gtk_3_22"]
+gtk_3_10 = ["gtk/v3_10"]

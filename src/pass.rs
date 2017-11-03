@@ -1,4 +1,6 @@
 extern crate glob;
+extern crate gpgme;
+
 use self::glob::glob;
 
 extern crate notify;
@@ -13,13 +15,15 @@ use std::thread;
 use std::fs::File;
 
 use std::str;
-use gpgme::{Context, Protocol};
+use self::gpgme::{Context, Protocol};
+
 #[derive(Clone)]
 pub struct Password {
     pub name: String,
     pub meta: String,
     pub filename: String,
 }
+
 impl Password{
     pub fn password(&self) -> Option<String>{
         let mut input = File::open(&self.filename).unwrap();
