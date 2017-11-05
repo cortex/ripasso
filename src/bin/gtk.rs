@@ -1,45 +1,22 @@
 extern crate ripasso;
 extern crate gtk;
+extern crate glib;
 
 use gtk::prelude::*;
-use gtk::{Builder, ListBox, ListBoxRow, Window};
+use gtk::{SearchEntry, Builder, ListStore, Window, TreeView, TreeViewColumn, CellRendererText};
 
-use std::thread;
-use std::sync::mpsc;
-use std::sync::mpsc::{Sender, Receiver};
-use std::sync::{Arc, Mutex};
-
-use ripasso::pass::{Password, load_and_watch_passwords};
+use std::cell::RefCell;
+use ripasso::pass;
 
 //use std::time::Duration;
-extern crate clipboard;
-
+//extern crate clipboard;
 //use clipboard::{ClipboardProvider, ClipboardContext};
 //use std::fs::File;
 
 fn main() {
-
-    // Channel for password updates
-    let (password_tx, password_rx): (Sender<Password>, Receiver<Password>) = mpsc::channel();
-
     // Load and watch all the passwords in the background
-    load_and_watch_passwords(password_tx).expect("failed to locate password directory");
-
-    let passwords = Arc::new(Mutex::new(vec![]));
-    let p1 = passwords.clone();
-    thread::spawn(move || loop {
-        match password_rx.recv() {
-            Ok(p) => {
-                println!("Recieved: {:?}", p.name);
-                let mut passwords = p1.lock().unwrap();
-                passwords.push(p);
-            }
-            Err(e) => {
-                panic!("password reciever channel failed: {:?}", e);
-            },
-        }
-    });
-    print!("Hello world");
+    let (password_rx, passwords) = pass::watch()
+        .expect("failed to locate password directory");
 
     if gtk::init().is_err() {
         println!("Failed to initialize GTK.");
@@ -49,14 +26,72 @@ fn main() {
     let glade_src = include_str!("../../res/ripasso.ui");
     let builder = Builder::new_from_string(glade_src);
 
-    let window: Window = builder.get_object("mainWindow").expect("Couldn't get window1");
-    let list: ListBox = builder.get_object("passwordList").expect("Couldn't get list");
+    let window: Window = builder.get_object("mainWindow")
+        .expect("Couldn't get window1");
+
+    let password_list: TreeView = builder.get_object("passwordList")
+        .expect( "Couldn't get list");
+
+    let password_search: SearchEntry = builder.get_object("passwordSearchBox")
+        .expect( "Couldn't get passwordSearchBox");
+
+    let name_column = TreeViewColumn::new();
+    let name_cell = CellRendererText::new();
+
+    name_column.pack_start(&name_cell, true);
+    name_column.add_attribute(&name_cell, "text", 0);
+
+    password_list.set_headers_visible(false);
+    password_list.append_column(&name_column);
+
+
+    password_search.connect_search_changed(move |_| { receive(); });
+
     window.connect_delete_event(|_, _| {
         gtk::main_quit();
         Inhibit(false)
     });
 
-    window.show_all();
+    GLOBAL.with(move |global| {
+        *global.borrow_mut() = Some((password_search, password_list, passwords));
+    });
 
+    window.show_all();
+    gtk::idle_add(move || {
+        match password_rx.try_recv() {
+            Ok(_) => {
+                receive();
+            }
+            Err(_) => {}
+        };
+        glib::Continue(true)
+    });
     gtk::main();
 }
+
+fn results(passwords: &pass::PasswordList, query: String) -> ListStore {
+    let model = ListStore::new(&[String::static_type()]);
+    let filtered = pass::search(passwords, query);
+    for (i, p) in filtered.iter().enumerate() {
+        model.insert_with_values(Some(i as u32), &[0], &[&p.name]);
+    }
+    model
+}
+
+fn receive() -> glib::Continue {
+    GLOBAL.with(|global| if let Some((ref password_search,
+                          ref password_list,
+                          ref passwords)) = *global.borrow()
+    {
+        let query = password_search.get_text().unwrap();
+        password_list.set_model(&results(&passwords, query));
+    });
+    glib::Continue(false)
+}
+
+thread_local!(
+    static GLOBAL: RefCell<Option<(SearchEntry,
+        TreeView,
+        pass::PasswordList,
+    )>> = RefCell::new(None)
+);
