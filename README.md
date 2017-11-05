@@ -7,3 +7,9 @@ is unmaintaned. Also, using a safe language for you passwords seems like a good 
 It has not yet reached feature-parity, but the basic functionality works. If this plays out well, it will replace gopass.
 
 PRs are very welcome!
+
+Build Instructions on ubuntu:
+
+    apt install cargo libgtk-3-dev qtdeclarative5-dev libqt5svg5-dev cmake
+    cargo build
+
