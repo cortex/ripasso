@@ -1,4 +1,6 @@
 # ripasso
+![Build Status](https://travis-ci.org/cortex/ripasso.svg?branch=master)
+
 A simple password manager written in Rust
 
 This is a reimplementation of https://github.com/cortex/gopass in Rust. I started it mainly because since https://github.com/go-qml/qml
