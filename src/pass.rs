@@ -88,7 +88,7 @@ pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList), Box<Error>> {
                 event_tx.send(PasswordEvent::NewPassword);
             }
             Err(e) => {
-                panic!("password reciever channel failed: {:?}", e);
+                panic!("password receiver channel failed: {:?}", e);
             }
         }
     });
@@ -126,7 +126,7 @@ fn password_dir() -> Result<PathBuf, Box<Error>> {
         }
     };
     if !Path::new(&pass_home).exists() {
-        return Err(From::from("Not found"));
+        return Err(From::from("failed to locate password directory"));
     }
     return Ok(Path::new(&pass_home).to_path_buf());
 }
