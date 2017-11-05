@@ -3,3 +3,5 @@ Cargo.lock
 *.qmlc
 **/*~
 **/*.bk
+.idea/
+*.iml
