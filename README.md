@@ -1,5 +1,6 @@
 # ripasso
-![Build Status](https://travis-ci.org/cortex/ripasso.svg?branch=master)
+[![Build Status](https://travis-ci.org/cortex/ripasso.svg?branch=master)](https://travis-ci.org/cortex/ripasso)
+
 
 A simple password manager written in Rust
 
