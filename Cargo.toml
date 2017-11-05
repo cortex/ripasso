@@ -8,7 +8,7 @@ authors = ["Joakim Lundborg <joakim.lundborg@gmail.com"]
 gtk = {version = "0.2.0", features = ["v3_22"]}
 qml = { git = "https://github.com/White-Oak/qml-rust" }
 glib = "0.3.1"
-notify = "4.0.0"
+notify = "4.0.2"
 glob = "0.2.11"
 clipboard = "0.3.0"
 gpgme = { git = "https://github.com/johnschug/rust-gpgme", branch = "master" }

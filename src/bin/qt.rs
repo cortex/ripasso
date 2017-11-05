@@ -1,20 +1,17 @@
 extern crate ripasso;
 extern crate qml;
 extern crate gpgme;
+extern crate clipboard;
 
 use qml::*;
+
 use std::thread;
-use std::sync::mpsc;
-use std::sync::mpsc::{Sender, Receiver};
 use std::sync::{Arc, Mutex};
 use pass::Password;
 use ripasso::pass;
 use std::time::Duration;
-extern crate clipboard;
 
 use clipboard::{ClipboardProvider, ClipboardContext};
-use std::fs::File;
-
 
 // UI state
 pub struct UI {
@@ -43,7 +40,8 @@ impl UI {
         self.passwords.set_data(self.current_passwords
                                     .clone()
                                     .into_iter()
-                                    .map(|p| (p.name.clone().into(), p.meta.clone().into()))
+                                    .map(|p| (
+                                        p.name.clone().into(), p.meta.clone().into()))
                                     .collect());
         None
     }
@@ -137,14 +135,9 @@ Q_LISTMODEL!(
 
 fn main() {
 
-    // Channel for password updates
-    //let (password_tx, password_rx): (Sender<Password>, Receiver<Password>) = mpsc::channel();
-
     // Load and watch all the passwords in the background
     let (password_rx, passwords) = pass::watch()
         .expect("failed to locate password directory");
-
-    let p0 = passwords.clone();
 
     // Set up all the UI stuff
     let mut engine = QmlEngine::new();

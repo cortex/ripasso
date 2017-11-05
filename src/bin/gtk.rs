@@ -3,7 +3,15 @@ extern crate gtk;
 extern crate glib;
 
 use gtk::prelude::*;
-use gtk::{SearchEntry, Builder, ListStore, Window, TreeView, TreeViewColumn, CellRendererText};
+use gtk::{
+    SearchEntry,
+    Builder,
+    ListStore,
+    Window,
+    TreeView,
+    TreeViewColumn,
+    CellRendererText,
+};
 
 use std::cell::RefCell;
 use ripasso::pass;
@@ -19,10 +27,12 @@ fn main() {
         .expect("failed to locate password directory");
 
     if gtk::init().is_err() {
-        println!("Failed to initialize GTK.");
-        return;
+        panic!("failed to initialize GTK.");
     }
 
+    let settings = gtk::Settings::get_default ();
+    settings.unwrap().set_property_gtk_application_prefer_dark_theme(true);
+    
     let glade_src = include_str!("../../res/ripasso.ui");
     let builder = Builder::new_from_string(glade_src);
 
@@ -43,7 +53,6 @@ fn main() {
 
     password_list.set_headers_visible(false);
     password_list.append_column(&name_column);
-
 
     password_search.connect_search_changed(move |_| { receive(); });
 
