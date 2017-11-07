@@ -11,8 +11,21 @@ It has not yet reached feature-parity, but the basic functionality works. If thi
 
 PRs are very welcome!
 
-Build Instructions on ubuntu:
+## Build instructions
 
-    apt install cargo libgtk-3-dev qtdeclarative5-dev libqt5svg5-dev cmake
-    cargo build
+### Mac OS X
 
+```
+$ brew update
+$ brew install automake cmake qt5 gtk+3
+$ export PATH="/usr/local/opt/qt/bin:$PATH"
+$ git clone https://github.com/cortex/ripasso.git
+$ cd ripasso
+$ cargo run
+```
+
+### Ubuntu
+```
+$ apt install cargo libgtk-3-dev qtdeclarative5-dev libqt5svg5-dev cmake
+$ cargo build
+```
