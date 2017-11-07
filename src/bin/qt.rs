@@ -1,20 +1,17 @@
-
+extern crate ripasso;
 extern crate qml;
 extern crate gpgme;
-
-use qml::*;
-use std::thread;
-use std::sync::mpsc;
-use std::sync::mpsc::{Sender, Receiver};
-use std::sync::{Arc, Mutex};
-use pass::Password;
-mod pass;
-use std::time::Duration;
 extern crate clipboard;
 
-use clipboard::{ClipboardProvider, ClipboardContext};
-use std::fs::File;
+use qml::*;
 
+use std::thread;
+use std::sync::{Arc, Mutex};
+use pass::Password;
+use ripasso::pass;
+use std::time::Duration;
+
+use clipboard::{ClipboardProvider, ClipboardContext};
 
 // UI state
 pub struct UI {
@@ -43,7 +40,8 @@ impl UI {
         self.passwords.set_data(self.current_passwords
                                     .clone()
                                     .into_iter()
-                                    .map(|p| (p.name.clone().into(), p.meta.clone().into()))
+                                    .map(|p| (
+                                        p.name.clone().into(), p.meta.clone().into()))
                                     .collect());
         None
     }
@@ -137,26 +135,9 @@ Q_LISTMODEL!(
 
 fn main() {
 
-    // Channel for password updates
-    let (password_tx, password_rx): (Sender<Password>, Receiver<Password>) = mpsc::channel();
-
     // Load and watch all the passwords in the background
-    pass::load_and_watch_passwords(password_tx).expect("failed to locate password directory");
-
-    let passwords = Arc::new(Mutex::new(vec![]));
-    let p1 = passwords.clone();
-    thread::spawn(move || loop {
-        match password_rx.recv() {
-            Ok(p) => {
-                println!("Recieved: {:?}", p.name);
-                let mut passwords = p1.lock().unwrap();
-                passwords.push(p);
-            }
-            Err(e) => {
-                panic!("password reciever channel failed: {:?}", e);
-            },
-        }
-    });
+    let (password_rx, passwords) = pass::watch()
+        .expect("failed to locate password directory");
 
     // Set up all the UI stuff
     let mut engine = QmlEngine::new();
