@@ -13,6 +13,9 @@ use std::time::Duration;
 
 use clipboard::{ClipboardProvider, ClipboardContext};
 
+use std::process;
+use std::io::Write;
+
 // UI state
 pub struct UI {
     all_passwords: Arc<Mutex<Vec<Password>>>,
@@ -136,8 +139,13 @@ Q_LISTMODEL!(
 fn main() {
 
     // Load and watch all the passwords in the background
-    let (password_rx, passwords) = pass::watch()
-        .expect("failed to locate password directory");
+    let (password_rx, passwords) = match pass::watch() {
+        Ok(t)  => t,
+        Err(e) => {
+            writeln!(&mut std::io::stderr(), "Error: {}", e);
+            process::exit(0x01);
+        }
+    };
 
     // Set up all the UI stuff
     let mut engine = QmlEngine::new();

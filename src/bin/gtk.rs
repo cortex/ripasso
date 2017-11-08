@@ -15,6 +15,8 @@ use gtk::{
 
 use std::cell::RefCell;
 use ripasso::pass;
+use std::process;
+use std::io::Write;
 
 //use std::time::Duration;
 //extern crate clipboard;
@@ -23,8 +25,13 @@ use ripasso::pass;
 
 fn main() {
     // Load and watch all the passwords in the background
-    let (password_rx, passwords) = pass::watch()
-        .expect("failed to locate password directory");
+    let (password_rx, passwords) = match pass::watch() {
+        Ok(t)  => t,
+        Err(e) => {
+            writeln!(&mut std::io::stderr(), "Error: {}", e);
+            process::exit(0x01);
+        }
+    };
 
     if gtk::init().is_err() {
         panic!("failed to initialize GTK.");
