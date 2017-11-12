@@ -82,7 +82,7 @@ ApplicationWindow {
                     focus: true
                     color: "white"
                     onTextChanged: ui.query(text)
-                    onAccepted: ui.copyToClipboard(hitList.currentIndex)
+                    onAccepted: ui.copy_to_clipboard(hitList.currentIndex)
                     cursorDelegate: cursorA
                     //placeholderText: "Search your passwords..."
   /*                  style: TextFieldStyle {

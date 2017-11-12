@@ -13,9 +13,6 @@ use std::time::Duration;
 
 use clipboard::{ClipboardProvider, ClipboardContext};
 
-use std::process;
-use std::io::Write;
-
 use std::panic;
 
 // UI state
@@ -55,7 +52,7 @@ impl UI {
         return self.current_passwords[i as usize].clone();
     }
 
-    pub fn copyToClipboard(&mut self, i: i32) -> Option<&QVariant> {
+    pub fn copy_to_clipboard(&mut self, i: i32) -> Option<&QVariant> {
         // Open password file
         let password = self.get_password(i).password().unwrap();
 
@@ -92,7 +89,7 @@ pub UI as QUI{
         fn query(query:String);
         fn select(i:i32);
         fn add_password();
-        fn copyToClipboard(i: i32);
+        fn copy_to_clipboard(i: i32);
     properties:
         status: String;
             read: get_status,
@@ -142,26 +139,25 @@ fn main() {
     panic::set_hook(Box::new(|_| {
         let mut engine = QmlEngine::new();
         engine.load_data(r#"
-        import QtQuick 2.2
-import QtQuick.Dialogs 1.1
+            import QtQuick 2.2
+            import QtQuick.Dialogs 1.1
 
-MessageDialog {
-    id: messageDialog
-    title: "May I have your attention please"
-    text: "It's so cool that you are using Qt Quick."
-    onAccepted: {
-        console.log("And of course you could only agree.")
-        Qt.quit()
-    }
-    Component.onCompleted: visible = true
-}
- "# );
- engine.exec();
+            MessageDialog {
+                id: messageDialog
+                title: "May I have your attention please"
+                text: "It's so cool that you are using Qt Quick."
+                onAccepted: {
+                    console.log("And of course you could only agree.")
+                    Qt.quit()
+                }
+                Component.onCompleted: visible = true
+            }"#);
+        engine.exec();
         println!("Custom panic hook");
     }));
 
     // Load and watch all the passwords in the background
-    let (password_rx, passwords) = pass::watch().expect("error");
+    let (_, passwords) = pass::watch().expect("error");
 
     // Set up all the UI stuff
     let mut engine = QmlEngine::new();
