@@ -16,6 +16,8 @@ use clipboard::{ClipboardProvider, ClipboardContext};
 use std::process;
 use std::io::Write;
 
+use std::panic;
+
 // UI state
 pub struct UI {
     all_passwords: Arc<Mutex<Vec<Password>>>,
@@ -137,15 +139,29 @@ Q_LISTMODEL!(
 );
 
 fn main() {
+    panic::set_hook(Box::new(|_| {
+        let mut engine = QmlEngine::new();
+        engine.load_data(r#"
+        import QtQuick 2.2
+import QtQuick.Dialogs 1.1
+
+MessageDialog {
+    id: messageDialog
+    title: "May I have your attention please"
+    text: "It's so cool that you are using Qt Quick."
+    onAccepted: {
+        console.log("And of course you could only agree.")
+        Qt.quit()
+    }
+    Component.onCompleted: visible = true
+}
+ "# );
+ engine.exec();
+        println!("Custom panic hook");
+    }));
 
     // Load and watch all the passwords in the background
-    let (password_rx, passwords) = match pass::watch() {
-        Ok(t)  => t,
-        Err(e) => {
-            writeln!(&mut std::io::stderr(), "Error: {}", e);
-            process::exit(0x01);
-        }
-    };
+    let (password_rx, passwords) = pass::watch().expect("error");
 
     // Set up all the UI stuff
     let mut engine = QmlEngine::new();
