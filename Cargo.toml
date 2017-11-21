@@ -4,9 +4,14 @@ name = "ripasso"
 version = "0.0.1"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com"]
 
+[features]
+default = ["qml"]
+use-gtk= ["gtk"]
+use-qml = ["qml"]
+
 [dependencies]
-gtk = {version = "0.2.0", features = ["v3_10"]}
-qml = { git = "https://github.com/White-Oak/qml-rust" }
+gtk = { version = "0.2.0", features = ["v3_10"], optional=true }
+qml = { git = "https://github.com/White-Oak/qml-rust", optional=true }
 glib = "0.3.1"
 notify = "4.0.2"
 glob = "0.2.11"

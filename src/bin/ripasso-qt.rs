@@ -1,3 +1,4 @@
+#![cfg(feature = "use-qml")]
 extern crate ripasso;
 extern crate qml;
 extern crate gpgme;
@@ -182,3 +183,4 @@ fn main() {
     engine.load_file("res/main.qml");
     engine.exec();
 }
+

@@ -1,3 +1,4 @@
+#![cfg(feature = "use-gtk")]
 extern crate ripasso;
 extern crate gtk;
 extern crate glib;
@@ -111,3 +112,4 @@ thread_local!(
         pass::PasswordList,
     )>> = RefCell::new(None)
 );
+
