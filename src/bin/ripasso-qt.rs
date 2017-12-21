@@ -137,24 +137,15 @@ Q_LISTMODEL!(
 );
 
 fn main() {
-    panic::set_hook(Box::new(|_| {
-        let mut engine = QmlEngine::new();
-        engine.load_data(r#"
-            import QtQuick 2.2
-            import QtQuick.Dialogs 1.1
+    panic::set_hook(Box::new(|panic_info| {
+        if let Some(location) = panic_info.location() {
+            println!("panic occurred in file '{}' at line {}", location.file(),
+                     location.line());
+        } else {
+            println!("panic occurred but can't get location information...");
+        }
 
-            MessageDialog {
-                id: messageDialog
-                title: "May I have your attention please"
-                text: "It's so cool that you are using Qt Quick."
-                onAccepted: {
-                    console.log("And of course you could only agree.")
-                    Qt.quit()
-                }
-                Component.onCompleted: visible = true
-            }"#);
-        engine.exec();
-        println!("Custom panic hook");
+        println!("panic occurred: {:?}", panic_info.payload().downcast_ref::<&str>());
     }));
 
     // Load and watch all the passwords in the background
