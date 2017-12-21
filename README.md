@@ -29,3 +29,8 @@ $ cargo run
 $ apt install cargo libgtk-3-dev qtdeclarative5-dev libqt5svg5-dev cmake
 $ cargo build
 ```
+
+### Arch
+```
+$ pacman -S qt5-base qt5-svg qt5-declarative
+```
