@@ -15,7 +15,7 @@ use std;
 pub fn main() {
     // Load and watch all the passwords in the background
     let (password_rx, passwords) = match pass::watch() {
-        Ok(t)  => t,
+        Ok(t) => t,
         Err(e) => {
             writeln!(&mut std::io::stderr(), "Error: {}", e);
             process::exit(0x01);
@@ -26,20 +26,25 @@ pub fn main() {
         panic!("failed to initialize GTK.");
     }
 
-    let settings = gtk::Settings::get_default ();
-    settings.unwrap().set_property_gtk_application_prefer_dark_theme(true);
+    let settings = gtk::Settings::get_default();
+    settings
+        .unwrap()
+        .set_property_gtk_application_prefer_dark_theme(true);
 
     let glade_src = include_str!("../res/ripasso.ui");
     let builder = Builder::new_from_string(glade_src);
 
-    let window: Window = builder.get_object("mainWindow")
-        .expect("Couldn't get window1");
+    let window: Window = builder.get_object("mainWindow").expect(
+        "Couldn't get window1",
+    );
 
-    let password_list: TreeView = builder.get_object("passwordList")
-        .expect( "Couldn't get list");
+    let password_list: TreeView = builder.get_object("passwordList").expect(
+        "Couldn't get list",
+    );
 
-    let password_search: gtk::SearchEntry = builder.get_object("passwordSearchBox")
-        .expect( "Couldn't get passwordSearchBox");
+    let password_search: gtk::SearchEntry = builder.get_object("passwordSearchBox").expect(
+        "Couldn't get passwordSearchBox",
+    );
 
     let name_column = TreeViewColumn::new();
     let name_cell = CellRendererText::new();
@@ -100,4 +105,3 @@ thread_local!(
         pass::PasswordList,
     )>> = RefCell::new(None)
 );
-

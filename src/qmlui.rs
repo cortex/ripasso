@@ -39,12 +39,13 @@ impl UI {
         self.current_passwords = matching.cloned().collect();
 
         // Update QML data with currently matched passwords
-        self.passwords.set_data(self.current_passwords
-                                    .clone()
-                                    .into_iter()
-                                    .map(|p| (
-                                        p.name.clone().into(), p.meta.clone().into()))
-                                    .collect());
+        self.passwords.set_data(
+            self.current_passwords
+                .clone()
+                .into_iter()
+                .map(|p| (p.name.clone().into(), p.meta.clone().into()))
+                .collect(),
+        );
         None
     }
 
@@ -62,11 +63,11 @@ impl UI {
         println!("password copied to clipboard");
 
         thread::spawn(move || {
-                          thread::sleep(Duration::new(5, 0));
-                          let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-                          ctx.set_contents("".into()).unwrap();
-                          println!("clipoard cleared");
-                      });
+            thread::sleep(Duration::new(5, 0));
+            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+            ctx.set_contents("".into()).unwrap();
+            println!("clipoard cleared");
+        });
         None
 
     }
@@ -138,13 +139,19 @@ Q_LISTMODEL!(
 pub fn main() {
     panic::set_hook(Box::new(|panic_info| {
         if let Some(location) = panic_info.location() {
-            println!("panic occurred in file '{}' at line {}", location.file(),
-                     location.line());
+            println!(
+                "panic occurred in file '{}' at line {}",
+                location.file(),
+                location.line()
+            );
         } else {
             println!("panic occurred but can't get location information...");
         }
 
-        println!("panic occurred: {:?}", panic_info.payload().downcast_ref::<&str>());
+        println!(
+            "panic occurred: {:?}",
+            panic_info.payload().downcast_ref::<&str>()
+        );
     }));
 
     // Load and watch all the passwords in the background
@@ -153,18 +160,22 @@ pub fn main() {
     // Set up all the UI stuff
     let mut engine = QmlEngine::new();
 
-    let ui = QUI::new(UI {
-                          all_passwords: passwords.clone(),
-                          current_passwords: Vec::<Password>::new(),
-                          passwords: QPasswordEntry::new(),
-                          password: QPasswordView::new(PasswordView,
-                                                       true,
-                                                       "test".into(),
-                                                       "test".into(),
-                                                       "test".into()),
-                      },
-                      "started".into(),
-                      0.0);
+    let ui = QUI::new(
+        UI {
+            all_passwords: passwords.clone(),
+            current_passwords: Vec::<Password>::new(),
+            passwords: QPasswordEntry::new(),
+            password: QPasswordView::new(
+                PasswordView,
+                true,
+                "test".into(),
+                "test".into(),
+                "test".into(),
+            ),
+        },
+        "started".into(),
+        0.0,
+    );
     let ref passwordsv = ui.passwords;
     let ref password = ui.password;
     engine.set_and_store_property("ui", ui.get_qobj());
@@ -173,4 +184,3 @@ pub fn main() {
     engine.load_file("res/main.qml");
     engine.exec();
 }
-
