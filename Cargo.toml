@@ -13,7 +13,7 @@ use-relm = ["relm"]
 [dependencies]
 gtk = { version = "0.3.0", features = ["v3_10"], optional=true }
 qml = { git = "https://github.com/White-Oak/qml-rust", optional=true }
-glib = "0.3.1"
+glib = "0.4.0"
 notify = "4.0.2"
 glob = "0.2.11"
 clipboard =  "0.4.2"
