@@ -1,30 +1,18 @@
 #![cfg(feature = "use-gtk")]
-extern crate ripasso;
-extern crate gtk;
-extern crate glib;
+use gtk;
+use glib;
 
-use gtk::prelude::*;
-use gtk::{
-    SearchEntry,
-    Builder,
-    ListStore,
-    Window,
-    TreeView,
-    TreeViewColumn,
-    CellRendererText,
-};
+use gtk::*;
+
+use self::glib::StaticType;
 
 use std::cell::RefCell;
-use ripasso::pass;
+use pass;
 use std::process;
 use std::io::Write;
+use std;
 
-//use std::time::Duration;
-//extern crate clipboard;
-//use clipboard::{ClipboardProvider, ClipboardContext};
-//use std::fs::File;
-
-fn main() {
+pub fn main() {
     // Load and watch all the passwords in the background
     let (password_rx, passwords) = match pass::watch() {
         Ok(t)  => t,
@@ -40,8 +28,8 @@ fn main() {
 
     let settings = gtk::Settings::get_default ();
     settings.unwrap().set_property_gtk_application_prefer_dark_theme(true);
-    
-    let glade_src = include_str!("../../res/ripasso.ui");
+
+    let glade_src = include_str!("../res/ripasso.ui");
     let builder = Builder::new_from_string(glade_src);
 
     let window: Window = builder.get_object("mainWindow")
@@ -50,7 +38,7 @@ fn main() {
     let password_list: TreeView = builder.get_object("passwordList")
         .expect( "Couldn't get list");
 
-    let password_search: SearchEntry = builder.get_object("passwordSearchBox")
+    let password_search: gtk::SearchEntry = builder.get_object("passwordSearchBox")
         .expect( "Couldn't get passwordSearchBox");
 
     let name_column = TreeViewColumn::new();
@@ -66,7 +54,7 @@ fn main() {
 
     window.connect_delete_event(|_, _| {
         gtk::main_quit();
-        Inhibit(false)
+        gtk::Inhibit(false)
     });
 
     GLOBAL.with(move |global| {
@@ -107,7 +95,7 @@ fn receive() -> glib::Continue {
 }
 
 thread_local!(
-    static GLOBAL: RefCell<Option<(SearchEntry,
+    static GLOBAL: RefCell<Option<(gtk::SearchEntry,
         TreeView,
         pass::PasswordList,
     )>> = RefCell::new(None)

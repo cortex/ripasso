@@ -1,18 +1,17 @@
 #![cfg(feature = "use-qml")]
-extern crate ripasso;
 extern crate qml;
 extern crate gpgme;
 extern crate clipboard;
 
-use qml::*;
+use self::qml::*;
 
 use std::thread;
 use std::sync::{Arc, Mutex};
 use pass::Password;
-use ripasso::pass;
+use pass;
 use std::time::Duration;
 
-use clipboard::{ClipboardProvider, ClipboardContext};
+use self::clipboard::{ClipboardProvider, ClipboardContext};
 
 use std::panic;
 
@@ -136,7 +135,7 @@ Q_LISTMODEL!(
     }
 );
 
-fn main() {
+pub fn main() {
     panic::set_hook(Box::new(|panic_info| {
         if let Some(location) = panic_info.location() {
             println!("panic occurred in file '{}' at line {}", location.file(),
