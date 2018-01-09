@@ -16,13 +16,13 @@ use notify::Watcher;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
-pub struct Password {
+pub struct PasswordEntry {
     pub name: String,
     pub meta: String,
     pub filename: String,
 }
 
-impl Password {
+impl PasswordEntry {
     pub fn password(&self) -> Option<String> {
         let mut input = File::open(&self.filename).unwrap();
 
@@ -46,9 +46,9 @@ pub enum PasswordEvent {
     NewPassword,
 }
 
-pub type PasswordList = Arc<Mutex<Vec<Password>>>;
+pub type PasswordList = Arc<Mutex<Vec<PasswordEntry>>>;
 
-pub fn search(l: &PasswordList, query: String) -> Vec<Password> {
+pub fn search(l: &PasswordList, query: String) -> Vec<PasswordEntry> {
     let passwords = l.lock().unwrap();
     fn normalized(s: &String) -> String {
         s.to_lowercase()
@@ -62,7 +62,7 @@ pub fn search(l: &PasswordList, query: String) -> Vec<Password> {
 
 pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList), Box<Error>> {
 
-    let (password_tx, password_rx): (Sender<Password>, Receiver<Password>) = channel();
+    let (password_tx, password_rx): (Sender<PasswordEntry>, Receiver<PasswordEntry>) = channel();
     let (event_tx, event_rx): (Sender<PasswordEvent>, Receiver<PasswordEvent>) = channel();
 
     let dir = password_dir()?;
@@ -101,8 +101,8 @@ fn to_name(base: &PathBuf, path: &PathBuf) -> String {
         .to_string()
 }
 
-fn to_password(base: &PathBuf, path: PathBuf) -> Password {
-    Password {
+fn to_password(base: &PathBuf, path: PathBuf) -> PasswordEntry {
+    PasswordEntry {
         name: to_name(base, &path),
         filename: path.to_string_lossy().into_owned().clone(),
         meta: "".to_string(),
@@ -128,7 +128,7 @@ fn password_dir() -> Result<PathBuf, Box<Error>> {
     return Ok(Path::new(&pass_home).to_path_buf());
 }
 
-fn load_passwords(dir: &PathBuf, tx: &Sender<Password>) -> Result<(), SendError<Password>> {
+fn load_passwords(dir: &PathBuf, tx: &Sender<PasswordEntry>) -> Result<(), SendError<PasswordEntry>> {
     let password_path_glob = dir.join("**/*.gpg");
 
     // Find all passwords

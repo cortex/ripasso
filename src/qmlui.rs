@@ -7,7 +7,7 @@ use self::qml::*;
 
 use std::thread;
 use std::sync::{Arc, Mutex};
-use pass::Password;
+use pass::PasswordEntry;
 use pass;
 use std::time::Duration;
 
@@ -17,8 +17,8 @@ use std::panic;
 
 // UI state
 pub struct UI {
-    all_passwords: Arc<Mutex<Vec<Password>>>,
-    current_passwords: Vec<Password>,
+    all_passwords: Arc<Mutex<Vec<PasswordEntry>>>,
+    current_passwords: Vec<PasswordEntry>,
     password: Box<QPasswordView>,
     passwords: QPasswordEntry,
 }
@@ -49,7 +49,7 @@ impl UI {
         None
     }
 
-    fn get_password(&self, i: i32) -> Password {
+    fn get_password(&self, i: i32) -> PasswordEntry {
         return self.current_passwords[i as usize].clone();
     }
 
@@ -128,7 +128,7 @@ pub PasswordView as QPasswordView{
 }
 );
 
-// Password list
+// PasswordEntry list
 Q_LISTMODEL!(
     pub QPasswordEntry{
         name: String,
@@ -163,7 +163,7 @@ pub fn main() {
     let ui = QUI::new(
         UI {
             all_passwords: passwords.clone(),
-            current_passwords: Vec::<Password>::new(),
+            current_passwords: Vec::<PasswordEntry>::new(),
             passwords: QPasswordEntry::new(),
             password: QPasswordView::new(
                 PasswordView,
