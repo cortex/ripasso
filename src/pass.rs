@@ -1,10 +1,3 @@
-extern crate glob;
-extern crate gpgme;
-extern crate notify;
-
-use self::notify::{RecommendedWatcher, Watcher, RecursiveMode};
-use self::notify::DebouncedEvent::Create;
-
 use std::sync::mpsc::{Sender, Receiver, channel, SendError};
 use std::time::Duration;
 use std::error::Error;
@@ -14,7 +7,11 @@ use std::thread;
 use std::fs::File;
 use std::str;
 
-use self::gpgme::{Context, Protocol};
+use notify;
+use gpgme;
+use glob;
+
+use notify::Watcher;
 
 use std::sync::{Arc, Mutex};
 
@@ -30,7 +27,7 @@ impl Password {
         let mut input = File::open(&self.filename).unwrap();
 
         // Decrypt password
-        let mut ctx = Context::from_protocol(Protocol::OpenPgp).unwrap();
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp).unwrap();
         let mut output = Vec::new();
         match ctx.decrypt(&mut input, &mut output) {
             Err(_) => {
@@ -146,16 +143,16 @@ fn load_passwords(dir: &PathBuf, tx: &Sender<Password>) -> Result<(), SendError<
     Ok(())
 }
 
-fn watch_passwords(dir: &PathBuf, password_tx: Sender<Password>) -> Result<(), Box<Error>> {
+fn watch_passwords(dir: &PathBuf, password_tx: Sender<PasswordEntry>) -> Result<(), Box<Error>> {
     let (tx, rx) = channel();
-    let mut watcher: RecommendedWatcher = try!(Watcher::new(tx, Duration::from_secs(2)));
-    try!(watcher.watch(dir, RecursiveMode::Recursive));
+    let mut watcher: notify::RecommendedWatcher = try!(notify::Watcher::new(tx, Duration::from_secs(2)));
+    try!(watcher.watch(dir, notify::RecursiveMode::Recursive));
 
     loop {
         match rx.recv() {
             Ok(event) => {
                 match event {
-                    Create(path) => try!(password_tx.send(to_password(dir, path))),
+                    notify::DebouncedEvent::Create(path) => try!(password_tx.send(to_password(dir, path))),
                     _ => (),
                 }
             }

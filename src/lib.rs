@@ -2,6 +2,9 @@ pub mod pass;
 pub mod gtkui;
 pub mod qmlui;
 
+extern crate glob;
+extern crate gpgme;
+extern crate notify;
 
 #[cfg(feature = "use-gtk")]
 extern crate gtk;
