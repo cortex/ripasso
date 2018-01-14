@@ -1,7 +1,7 @@
 #![cfg(feature = "use-qml")]
-extern crate qml;
-extern crate gpgme;
 extern crate clipboard;
+extern crate gpgme;
+extern crate qml;
 
 use self::qml::*;
 
@@ -11,7 +11,7 @@ use pass::PasswordEntry;
 use pass;
 use std::time::Duration;
 
-use self::clipboard::{ClipboardProvider, ClipboardContext};
+use self::clipboard::{ClipboardContext, ClipboardProvider};
 
 use std::panic;
 
@@ -69,7 +69,6 @@ impl UI {
             println!("clipoard cleared");
         });
         None
-
     }
     pub fn select(&mut self, i: i32) -> Option<&QVariant> {
         println!("select: {}", i);

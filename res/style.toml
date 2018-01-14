@@ -1,0 +1,16 @@
+shadow = false
+borders = "outset"
+
+[colors]
+
+background = "black"
+view = "light black"
+
+# Text
+primary = "white"
+secondary ="light magenta"
+tertiary = "light white"
+
+title_primary="white"
+highlight="light magenta"
+highlight_inactive="light magenta"

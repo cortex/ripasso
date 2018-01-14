@@ -34,17 +34,17 @@ pub fn main() {
     let glade_src = include_str!("../res/ripasso.ui");
     let builder = Builder::new_from_string(glade_src);
 
-    let window: Window = builder.get_object("mainWindow").expect(
-        "Couldn't get window1",
-    );
+    let window: Window = builder
+        .get_object("mainWindow")
+        .expect("Couldn't get window1");
 
-    let password_list: TreeView = builder.get_object("passwordList").expect(
-        "Couldn't get list",
-    );
+    let password_list: TreeView = builder
+        .get_object("passwordList")
+        .expect("Couldn't get list");
 
-    let password_search: gtk::SearchEntry = builder.get_object("passwordSearchBox").expect(
-        "Couldn't get passwordSearchBox",
-    );
+    let password_search: gtk::SearchEntry = builder
+        .get_object("passwordSearchBox")
+        .expect("Couldn't get passwordSearchBox");
 
     let name_column = TreeViewColumn::new();
     let name_cell = CellRendererText::new();
@@ -55,7 +55,9 @@ pub fn main() {
     password_list.set_headers_visible(false);
     password_list.append_column(&name_column);
 
-    password_search.connect_search_changed(move |_| { receive(); });
+    password_search.connect_search_changed(move |_| {
+        receive();
+    });
 
     window.connect_delete_event(|_, _| {
         gtk::main_quit();
@@ -89,12 +91,11 @@ fn results(passwords: &pass::PasswordList, query: String) -> ListStore {
 }
 
 fn receive() -> glib::Continue {
-    GLOBAL.with(|global| if let Some((ref password_search,
-                          ref password_list,
-                          ref passwords)) = *global.borrow()
-    {
-        let query = password_search.get_text().unwrap();
-        password_list.set_model(&results(&passwords, query));
+    GLOBAL.with(|global| {
+        if let Some((ref password_search, ref password_list, ref passwords)) = *global.borrow() {
+            let query = password_search.get_text().unwrap();
+            password_list.set_model(&results(&passwords, query));
+        }
     });
     glib::Continue(false)
 }

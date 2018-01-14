@@ -1,6 +1,7 @@
 pub mod pass;
 pub mod gtkui;
 pub mod qmlui;
+pub mod tui;
 
 extern crate glob;
 extern crate gpgme;
