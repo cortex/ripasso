@@ -7,13 +7,11 @@ use self::cursive::views::{
     Dialog,
     EditView,
     LinearLayout,
-    ListView,
     OnEventView,
     SelectView,
     TextView,
 };
 
-use self::cursive::align::HAlign;
 use self::cursive::direction::Orientation;
 use self::cursive::event::{Event, Key};
 
@@ -21,61 +19,62 @@ extern crate clipboard;
 use self::clipboard::{ClipboardContext, ClipboardProvider};
 
 use pass;
-use std;
 use std::process;
 
 pub fn main() {
+
     // Load and watch all the passwords in the background
-    let (password_rx, passwords) = match pass::watch() {
+    let (_password_rx, passwords) = match pass::watch() {
         Ok(t) => t,
         Err(e) => {
+            println!("Error {:?}", e);
             process::exit(1);
         }
     };
 
-    let mut siv = Cursive::new();
+    let mut ui = Cursive::new();
 
-    fn down(s: &mut Cursive) -> () {
-        s.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
+    fn down(ui: &mut Cursive) -> () {
+        ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
             l.select_down(1);
         });
     }
-    fn up(s: &mut Cursive) -> () {
-        s.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
+    fn up(ui: &mut Cursive) -> () {
+        ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
             l.select_up(1);
         });
     }
 
     // Copy
-    fn copy(s: &mut Cursive) -> () {
-        s.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
+    fn copy(ui: &mut Cursive) -> () {
+        ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
             let password = l.selection().password().unwrap();
             let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
             ctx.set_contents(password.to_owned()).unwrap();
         });
     };
-    siv.add_global_callback(Event::CtrlChar('y'), copy);
-    siv.add_global_callback(Key::Enter, copy);
+    ui.add_global_callback(Event::CtrlChar('y'), copy);
+    ui.add_global_callback(Key::Enter, copy);
 
     // Movement
-    siv.add_global_callback(Event::CtrlChar('n'), down);
-    siv.add_global_callback(Event::CtrlChar('p'), up);
+    ui.add_global_callback(Event::CtrlChar('n'), down);
+    ui.add_global_callback(Event::CtrlChar('p'), up);
 
     // Editing
-    siv.add_global_callback(Event::CtrlChar('w'), |s| {
-        s.call_on_id("searchbox", |e: &mut EditView| {
+    ui.add_global_callback(Event::CtrlChar('w'), |ui| {
+        ui.call_on_id("searchbox", |e: &mut EditView| {
             e.set_content("");
         });
     });
 
-    siv.load_theme(include_str!("../res/style.toml")).unwrap();
-    siv.load_theme_file("res/style.toml").unwrap();
+    ui.load_theme(include_str!("../res/style.toml")).unwrap();
+    ui.load_theme_file("res/style.toml").unwrap();
     let searchbox = EditView::new()
-        .on_edit(move |s, q, l| {
-            s.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
-                let r = pass::search(&passwords, String::from(q));
+        .on_edit(move |ui, query, _| {
+            ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
+                let r = pass::search(&passwords, &String::from(query));
                 l.clear();
-                for p in r.iter() {
+                for p in &r{
                     l.add_item(p.name.clone(), p.clone());
                 }
             });
@@ -92,7 +91,7 @@ pub fn main() {
         .with_id("results")
         .full_height();
 
-    siv.add_layer(
+    ui.add_layer(
         LinearLayout::new(Orientation::Vertical)
             .child(
                 Dialog::around(
@@ -111,5 +110,5 @@ pub fn main() {
                     .full_width(),
             ),
     );
-    siv.run();
+    ui.run();
 }
