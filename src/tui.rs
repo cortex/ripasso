@@ -60,11 +60,24 @@ pub fn main() {
     ui.add_global_callback(Event::CtrlChar('n'), down);
     ui.add_global_callback(Event::CtrlChar('p'), up);
 
-    // Editing
+    // Query editing
     ui.add_global_callback(Event::CtrlChar('w'), |ui| {
         ui.call_on_id("searchbox", |e: &mut EditView| {
             e.set_content("");
         });
+    });
+
+    // Editing
+    ui.add_global_callback(Event::CtrlChar('o'), |ui| {
+        let password: String = ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
+            l.selection().password().unwrap()
+        }).unwrap();
+
+        let d = Dialog::around(
+            TextView::new(password))
+            .dismiss_button("Ok");
+
+        ui.add_layer(d);
     });
 
     ui.load_theme(include_str!("../res/style.toml")).unwrap();
@@ -107,6 +120,7 @@ pub fn main() {
                     .child(TextView::new("CTRL-P: Previous "))
                     .child(TextView::new("CTRL-Y: Copy "))
                     .child(TextView::new("CTRL-W: Clear"))
+                    .child(TextView::new("CTRL-O: Open"))
                     .full_width(),
             ),
     );
