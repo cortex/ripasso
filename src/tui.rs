@@ -119,7 +119,7 @@ pub fn main() {
                     .child(TextView::new("CTRL-N: Next "))
                     .child(TextView::new("CTRL-P: Previous "))
                     .child(TextView::new("CTRL-Y: Copy "))
-                    .child(TextView::new("CTRL-W: Clear"))
+                    .child(TextView::new("CTRL-W: Clear "))
                     .child(TextView::new("CTRL-O: Open"))
                     .full_width(),
             ),
