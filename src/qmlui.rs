@@ -5,10 +5,10 @@ extern crate qml;
 
 use self::qml::*;
 
-use std::thread;
-use std::sync::{Arc, Mutex};
-use pass::PasswordEntry;
 use pass;
+use pass::PasswordEntry;
+use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::Duration;
 
 use self::clipboard::{ClipboardContext, ClipboardProvider};
