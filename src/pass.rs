@@ -1,25 +1,29 @@
-use std::sync::mpsc::{Sender, Receiver, channel, SendError};
-use std::time::Duration;
-use std::error::Error;
-use std::path::{PathBuf, Path};
+#![feature(conservative_impl_trait, universal_impl_trait)]
+use errors::*;
 use std::env;
-use std::thread;
+use std::fs;
 use std::fs::File;
+use std::path::{Path, PathBuf};
 use std::str;
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::thread;
+use std::time::Duration;
 
-use notify;
-use gpgme;
+use chrono::DateTime;
+use chrono::Local;
 use glob;
-
+use gpgme;
+use notify;
 use notify::Watcher;
-
 use std::sync::{Arc, Mutex};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PasswordEntry {
-    pub name: String,
-    pub meta: String,
-    pub filename: String,
+    pub name: String, // Name of the entry
+    pub meta: String, // Metadata
+    pub path: String, // Path, relative to the store
+    updated: DateTime<Local>,
+    filename: String,
 }
 
 impl PasswordEntry {
@@ -39,8 +43,10 @@ impl PasswordEntry {
     }
 }
 
+#[derive(Debug)]
 pub enum PasswordEvent {
-    NewPassword,
+    NewPassword(PasswordEntry),
+    Error(Error),
 }
 
 pub type PasswordList = Arc<Mutex<Vec<PasswordEntry>>>;
@@ -57,28 +63,70 @@ pub fn search(l: &PasswordList, query: &str) -> Vec<PasswordEntry> {
     matching.cloned().collect()
 }
 
-pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList), Box<Error>> {
-
-    let (password_tx, password_rx): (Sender<PasswordEntry>, Receiver<PasswordEntry>) = channel();
-    let (event_tx, event_rx): (Sender<PasswordEvent>, Receiver<PasswordEvent>) = channel();
-
+pub fn watch_iter() -> Result<impl Iterator<Item = PasswordEvent>> {
     let dir = password_dir()?;
 
-    // Spawn watcher threads
-    thread::spawn(move || {
-        load_passwords(&dir, &password_tx).expect("failed loading passwords");
-        watch_passwords(&dir, &password_tx).expect("failed watching password directory");
-    });
+    let (watcher_tx, watcher_rx) = channel();
+    // Existing files iterator
+    let password_path_glob = dir.join("**/*.gpg");
+    let existing_iter = glob::glob(&password_path_glob.to_string_lossy())
+        .chain_err(|| "failed to open password directory")?;
+
+    // Watcher iterator
+    notify::RecommendedWatcher::new(watcher_tx, Duration::from_secs(2))
+        .chain_err(|| "failed to watch directory")?
+        .watch(&dir, notify::RecursiveMode::Recursive)
+        .chain_err(|| "failed to start watching")?;
+    Ok(existing_iter
+        .map(|event| -> Result<PathBuf> {
+            match event {
+                Ok(x) => Ok(x),
+                Err(_) => Err(ErrorKind::GenericError("test".to_string()).into()),
+            }
+        })
+        .chain(watcher_rx.into_iter().map(|event| -> Result<PathBuf> {
+            match event {
+                notify::DebouncedEvent::Create(p) => Ok(p),
+                notify::DebouncedEvent::Error(_, _) => {
+                    Err(ErrorKind::GenericError("test".to_string()).into())
+                }
+                _ => Err("None".into()),
+            }
+        }))
+        .map(move |path| match path {
+            Ok(p) => match to_password(&dir, &p) {
+                Ok(password) => PasswordEvent::NewPassword(password),
+                Err(e) => PasswordEvent::Error(e),
+            },
+            Err(e) => PasswordEvent::Error(e),
+        }))
+}
+
+pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
+    let wi = watch_iter()?;
+
+    let (event_tx, event_rx): (Sender<PasswordEvent>, Receiver<PasswordEvent>) = channel();
 
     let passwords = Arc::new(Mutex::new(Vec::new()));
     let passwords_out = passwords.clone();
 
-    // Spawn password list update thread
-    thread::spawn(move || loop {
-        let p = password_rx.recv().expect("password receiver channel failed");
-        let mut passwords = passwords.lock().unwrap();
-        passwords.push(p);
-        event_tx.send(PasswordEvent::NewPassword).expect("password send channel failed")
+    thread::spawn(move || {
+        info!("Starting thread");
+        for event in wi {
+            match event {
+                PasswordEvent::NewPassword(ref p) => {
+                    (passwords.lock().unwrap()).push(p.clone());
+                    info!("password: {}", p.name);
+                }
+                PasswordEvent::Error(ref err) => {
+                   error!("Error: {}", err);
+                }
+            }
+            match event_tx.send(event){
+                _ => (),
+                Err(err) => {error!("Error sending event {}", err)}
+            }
+        }
     });
     Ok((event_rx, passwords_out))
 }
@@ -92,61 +140,34 @@ fn to_name(base: &PathBuf, path: &PathBuf) -> String {
         .to_string()
 }
 
-fn to_password(base: &PathBuf, path: &PathBuf) -> PasswordEntry {
-    PasswordEntry {
+fn to_password(base: &PathBuf, path: &PathBuf) -> Result<PasswordEntry> {
+    let metadata = fs::metadata(path).chain_err(|| "Failed to extract password metadata")?;
+    let modified = metadata
+        .modified()
+        .chain_err(|| "Failed to extract updated time")?
+        .into();
+    Ok(PasswordEntry {
         name: to_name(base, path),
-        filename: path.to_string_lossy().into_owned().clone(),
         meta: "".to_string(),
-    }
+        path: path.to_string_lossy().to_string(), // TODO: do we need lossy?
+        filename: path.to_string_lossy().into_owned().clone(),
+        updated: modified,
+    })
 }
 
 /// Determine password directory
-fn password_dir() -> Result<PathBuf, Box<Error>> {
+fn password_dir() -> Result<PathBuf> {
     // If a directory is provided via env var, use it
     let pass_home = match env::var("PASSWORD_STORE_DIR") {
         Ok(p) => p,
-        Err(_) => {
-            env::home_dir()
-                .unwrap()
-                .join(".password-store")
-                .to_string_lossy()
-                .into()
-        }
+        Err(_) => env::home_dir()
+            .unwrap()
+            .join(".password-store")
+            .to_string_lossy()
+            .into(),
     };
     if !Path::new(&pass_home).exists() {
         return Err(From::from("failed to locate password directory"));
     }
     Ok(Path::new(&pass_home).to_path_buf())
-}
-
-fn load_passwords(dir: &PathBuf, tx: &Sender<PasswordEntry>) -> Result<(), SendError<PasswordEntry>> {
-    let password_path_glob = dir.join("**/*.gpg");
-
-    // Find all passwords
-    let passpath_str = &password_path_glob.to_string_lossy();
-    println!("path: {}", passpath_str);
-    for entry in glob::glob(passpath_str).expect("Failed to read glob pattern") {
-        match entry {
-            Ok(path) => try!(tx.send(to_password(dir, &path))),
-            Err(e) => println!("{:?}", e),
-        }
-    }
-    Ok(())
-}
-
-fn watch_passwords(dir: &PathBuf, password_tx: &Sender<PasswordEntry>) -> Result<(), Box<Error>> {
-    let (tx, rx) = channel();
-    let mut watcher: notify::RecommendedWatcher = try!(notify::Watcher::new(tx, Duration::from_secs(2)));
-    try!(watcher.watch(dir, notify::RecursiveMode::Recursive));
-
-    loop {
-        match rx.recv(){
-            Ok(event) => {
-                if let notify::DebouncedEvent::Create(path) = event {
-                    try!(password_tx.send(to_password(dir, &path)));   
-                }
-            }
-            Err(e) => println!("watch error: {:?}", e)
-        }
-    }
 }

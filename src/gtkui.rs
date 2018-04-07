@@ -1,16 +1,16 @@
 #![cfg(feature = "use-gtk")]
-use gtk;
 use glib;
+use gtk;
 
 use gtk::*;
 
 use self::glib::StaticType;
 
-use std::cell::RefCell;
 use pass;
-use std::process;
-use std::io::Write;
 use std;
+use std::cell::RefCell;
+use std::io::Write;
+use std::process;
 
 pub fn main() {
     // Load and watch all the passwords in the background
@@ -83,7 +83,7 @@ pub fn main() {
 
 fn results(passwords: &pass::PasswordList, query: String) -> ListStore {
     let model = ListStore::new(&[String::static_type()]);
-    let filtered = pass::search(passwords, query);
+    let filtered = pass::search(passwords, &query);
     for (i, p) in filtered.iter().enumerate() {
         model.insert_with_values(Some(i as u32), &[0], &[&p.name]);
     }
