@@ -41,7 +41,7 @@ pub fn main() {
             Ok(e) => match e{
                 pass::PasswordEvent::Error(ref err)=> {
                     let d = Dialog::around(
-                        TextView::new(format!("{:?}", e)))
+                        TextView::new(format!("{:?}", err)))
                         .dismiss_button("Ok");
                         s.add_layer(d);
                     },

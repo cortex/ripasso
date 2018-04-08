@@ -1,4 +1,3 @@
-#![feature(conservative_impl_trait, universal_impl_trait)]
 use errors::*;
 use std::env;
 use std::fs;
@@ -123,8 +122,8 @@ pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
                 }
             }
             match event_tx.send(event){
+                Err(err) => {error!("Error sending event {}", err)},
                 _ => (),
-                Err(err) => {error!("Error sending event {}", err)}
             }
         }
     });
