@@ -26,19 +26,17 @@ pub struct PasswordEntry {
 }
 
 impl PasswordEntry {
-    pub fn password(&self) -> Option<String> {
-        let mut input = File::open(&self.filename).unwrap();
-
-        // Decrypt password
-        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp).unwrap();
+    pub fn secret(&self) -> Result<String> {
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
+            .chain_err(|| "error obtaining gpgme context")?;
+        let mut input = File::open(&self.filename).chain_err(|| "error opening file")?;
         let mut output = Vec::new();
-        if let Err(e) = ctx.decrypt(&mut input, &mut output) {
-            println!("decryption failed {:?}", e);
-            return None;
-        }
-        let password = str::from_utf8(&output).unwrap();
-        let firstline: String = password.split('\n').take(1).collect();
-        Some(firstline)
+        ctx.decrypt(&mut input, &mut output)
+            .chain_err(|| "error decrypting")?;
+        String::from_utf8(output).chain_err(|| "error decoding utf-8")
+    }
+    pub fn password(&self) -> Result<String> {
+        Ok(self.secret()?.split('\n').take(1).collect())
     }
 }
 
@@ -118,11 +116,11 @@ pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
                     info!("password: {}", p.name);
                 }
                 PasswordEvent::Error(ref err) => {
-                   error!("Error: {}", err);
+                    error!("Error: {}", err);
                 }
             }
-            match event_tx.send(event){
-                Err(err) => {error!("Error sending event {}", err)},
+            match event_tx.send(event) {
+                Err(err) => (), //error!("Error sending event {}", err),
                 _ => (),
             }
         }

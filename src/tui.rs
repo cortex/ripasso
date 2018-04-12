@@ -25,7 +25,7 @@ pub fn main() {
     let (_password_rx, passwords) = match pass::watch() {
         Ok(t) => t,
         Err(e) => {
-            println!("Error {:?}", e);
+            //println!("Error {:?}", e);
             process::exit(1);
         }
     };
@@ -89,7 +89,7 @@ pub fn main() {
     ui.add_global_callback(Event::CtrlChar('o'), |ui| {
         let password: String = ui.call_on_id(
             "results",
-            |l: &mut SelectView<pass::PasswordEntry>| l.selection().password().unwrap(),
+            |l: &mut SelectView<pass::PasswordEntry>| l.selection().secret().unwrap(),
         ).unwrap();
 
         let d = Dialog::around(TextView::new(password)).dismiss_button("Ok");
