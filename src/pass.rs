@@ -14,8 +14,8 @@ use glob;
 use gpgme;
 use notify;
 use notify::Watcher;
+use std::io::prelude::*;
 use std::sync::{Arc, Mutex};
-
 #[derive(Clone, Debug)]
 pub struct PasswordEntry {
     pub name: String, // Name of the entry
@@ -29,14 +29,34 @@ impl PasswordEntry {
     pub fn secret(&self) -> Result<String> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
             .chain_err(|| "error obtaining gpgme context")?;
-        let mut input = File::open(&self.filename).chain_err(|| "error opening file")?;
+        let mut input =
+            File::open(&self.filename).chain_err(|| "error opening file")?;
         let mut output = Vec::new();
         ctx.decrypt(&mut input, &mut output)
             .chain_err(|| "error decrypting")?;
         String::from_utf8(output).chain_err(|| "error decoding utf-8")
     }
+
     pub fn password(&self) -> Result<String> {
         Ok(self.secret()?.split('\n').take(1).collect())
+    }
+
+    pub fn update(&self, secret: String) -> Result<()> {
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
+            .chain_err(|| "error obtaining GPGME context")?;
+
+        let key = ctx.find_key("C461AE8C")
+            .chain_err(|| "keys not found")?;
+
+        let mut ciphertext = Vec::new();
+        ctx.encrypt(Some(&key), secret, &mut ciphertext)
+            .chain_err(|| "encryption failed")?;
+
+        let mut output =
+            File::create(&self.filename).chain_err(|| "error opening file")?;
+        output
+            .write_all(&ciphertext)
+            .chain_err(|| "error writing new password file")
     }
 }
 
@@ -54,9 +74,13 @@ pub fn search(l: &PasswordList, query: &str) -> Vec<PasswordEntry> {
         s.to_lowercase()
     };
     fn matches(s: &str, q: &str) -> bool {
-        normalized(s).as_str().contains(normalized(q).as_str())
+        normalized(s)
+            .as_str()
+            .contains(normalized(q).as_str())
     };
-    let matching = passwords.iter().filter(|p| matches(&p.name, query));
+    let matching = passwords
+        .iter()
+        .filter(|p| matches(&p.name, query));
     matching.cloned().collect()
 }
 
@@ -78,18 +102,24 @@ pub fn watch_iter() -> Result<impl Iterator<Item = PasswordEvent>> {
         .map(|event| -> Result<PathBuf> {
             match event {
                 Ok(x) => Ok(x),
-                Err(_) => Err(ErrorKind::GenericError("test".to_string()).into()),
-            }
-        })
-        .chain(watcher_rx.into_iter().map(|event| -> Result<PathBuf> {
-            match event {
-                notify::DebouncedEvent::Create(p) => Ok(p),
-                notify::DebouncedEvent::Error(_, _) => {
+                Err(_) => {
                     Err(ErrorKind::GenericError("test".to_string()).into())
                 }
-                _ => Err("None".into()),
             }
-        }))
+        })
+        .chain(
+            watcher_rx
+                .into_iter()
+                .map(|event| -> Result<PathBuf> {
+                    match event {
+                        notify::DebouncedEvent::Create(p) => Ok(p),
+                        notify::DebouncedEvent::Error(_, _) => Err(
+                            ErrorKind::GenericError("test".to_string()).into(),
+                        ),
+                        _ => Err("None".into()),
+                    }
+                }),
+        )
         .map(move |path| match path {
             Ok(p) => match to_password(&dir, &p) {
                 Ok(password) => PasswordEvent::NewPassword(password),
@@ -102,7 +132,10 @@ pub fn watch_iter() -> Result<impl Iterator<Item = PasswordEvent>> {
 pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
     let wi = watch_iter()?;
 
-    let (event_tx, event_rx): (Sender<PasswordEvent>, Receiver<PasswordEvent>) = channel();
+    let (event_tx, event_rx): (
+        Sender<PasswordEvent>,
+        Receiver<PasswordEvent>,
+    ) = channel();
 
     let passwords = Arc::new(Mutex::new(Vec::new()));
     let passwords_out = passwords.clone();
@@ -138,7 +171,8 @@ fn to_name(base: &PathBuf, path: &PathBuf) -> String {
 }
 
 fn to_password(base: &PathBuf, path: &PathBuf) -> Result<PasswordEntry> {
-    let metadata = fs::metadata(path).chain_err(|| "Failed to extract password metadata")?;
+    let metadata =
+        fs::metadata(path).chain_err(|| "Failed to extract password metadata")?;
     let modified = metadata
         .modified()
         .chain_err(|| "Failed to extract updated time")?
@@ -164,7 +198,9 @@ fn password_dir() -> Result<PathBuf> {
             .into(),
     };
     if !Path::new(&pass_home).exists() {
-        return Err(From::from("failed to locate password directory"));
+        return Err(From::from(
+            "failed to locate password directory",
+        ));
     }
     Ok(Path::new(&pass_home).to_path_buf())
 }
