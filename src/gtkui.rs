@@ -65,7 +65,8 @@ pub fn main() {
     });
 
     GLOBAL.with(move |global| {
-        *global.borrow_mut() = Some((password_search, password_list, passwords));
+        *global.borrow_mut() =
+            Some((password_search, password_list, passwords));
     });
 
     window.show_all();
@@ -92,7 +93,9 @@ fn results(passwords: &pass::PasswordList, query: String) -> ListStore {
 
 fn receive() -> glib::Continue {
     GLOBAL.with(|global| {
-        if let Some((ref password_search, ref password_list, ref passwords)) = *global.borrow() {
+        if let Some((ref password_search, ref password_list, ref passwords)) =
+            *global.borrow()
+        {
             let query = password_search.get_text().unwrap();
             password_list.set_model(&results(&passwords, query));
         }

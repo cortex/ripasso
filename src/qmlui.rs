@@ -31,9 +31,13 @@ impl UI {
             s.to_lowercase()
         };
         fn matches(s: &String, q: &String) -> bool {
-            normalized(&s).as_str().contains(normalized(&q).as_str())
+            normalized(&s)
+                .as_str()
+                .contains(normalized(&q).as_str())
         };
-        let matching = passwords.iter().filter(|p| matches(&p.name, &query));
+        let matching = passwords
+            .iter()
+            .filter(|p| matches(&p.name, &query));
 
         // Save currently matched passwords
         self.current_passwords = matching.cloned().collect();
