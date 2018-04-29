@@ -16,6 +16,7 @@ use notify;
 use notify::Watcher;
 use std::io::prelude::*;
 use std::sync::{Arc, Mutex};
+
 #[derive(Clone, Debug)]
 pub struct PasswordEntry {
     pub name: String, // Name of the entry
@@ -42,10 +43,19 @@ impl PasswordEntry {
     }
 
     pub fn update(&self, secret: String) -> Result<()> {
+        let pwdir = password_dir()?;
+
+        let mut gpg_id_file = File::open(pwdir.join(".gpg-id"))
+            .chain_err(||"failed to open gpg-id file")?;
+
+        let mut gpgid = String::new();
+        gpg_id_file.read_to_string(&mut gpgid)
+            .chain_err(||"failed to read gpg-id file")?;
+            
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
             .chain_err(|| "error obtaining GPGME context")?;
 
-        let key = ctx.find_key("C461AE8C")
+        let key = ctx.find_key(gpgid)
             .chain_err(|| "keys not found")?;
 
         let mut ciphertext = Vec::new();
