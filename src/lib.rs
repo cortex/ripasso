@@ -9,6 +9,7 @@ extern crate log;
 extern crate env_logger;
 
 extern crate chrono;
+extern crate git2;
 extern crate glob;
 extern crate gpgme;
 extern crate notify;

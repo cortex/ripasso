@@ -8,8 +8,8 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
 
-use chrono::DateTime;
-use chrono::Local;
+use chrono::prelude::*;
+use git2;
 use glob;
 use gpgme;
 use notify;
@@ -21,8 +21,8 @@ use std::sync::{Arc, Mutex};
 pub struct PasswordEntry {
     pub name: String, // Name of the entry
     pub meta: String, // Metadata
-    pub path: String, // Path, relative to the store
-    updated: DateTime<Local>,
+    path: PathBuf,    // Path, relative to the store
+    base: PathBuf,    //Base path of password entry
     filename: String,
 }
 
@@ -46,17 +46,17 @@ impl PasswordEntry {
         let pwdir = password_dir()?;
 
         let mut gpg_id_file = File::open(pwdir.join(".gpg-id"))
-            .chain_err(||"failed to open gpg-id file")?;
+            .chain_err(|| "failed to open gpg-id file")?;
 
         let mut gpgid = String::new();
-        gpg_id_file.read_to_string(&mut gpgid)
-            .chain_err(||"failed to read gpg-id file")?;
-            
+        gpg_id_file
+            .read_to_string(&mut gpgid)
+            .chain_err(|| "failed to read gpg-id file")?;
+
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
             .chain_err(|| "error obtaining GPGME context")?;
 
-        let key = ctx.find_key(gpgid)
-            .chain_err(|| "keys not found")?;
+        let key = ctx.find_key(gpgid).chain_err(|| "keys not found")?;
 
         let mut ciphertext = Vec::new();
         ctx.encrypt(Some(&key), secret, &mut ciphertext)
@@ -67,6 +67,28 @@ impl PasswordEntry {
         output
             .write_all(&ciphertext)
             .chain_err(|| "error writing new password file")
+    }
+
+    pub fn updated(&self) -> Result<DateTime<Local>> {
+        let repo = match git2::Repository::open(&self.base) {
+            Ok(repo) => repo,
+            Err(e) => panic!("failed to open: {}", e),
+        };
+
+        let blame = repo.blame_file(
+            self.path
+                .strip_prefix(&self.base)
+                .chain_err(|| "failed to strip prefix")?,
+            None,
+        ).chain_err(|| format!("failed to blame file {:?}", self.base))?;
+        let id = blame
+            .get_line(1)
+            .chain_err(|| format!("failed to get line 1 {:?}", self.path))?
+            .orig_commit_id();
+        let time = repo.find_commit(id)
+            .chain_err(|| "failed to find commit")?
+            .time();
+        return Ok(Local.timestamp(time.seconds(), 0));
     }
 }
 
@@ -84,13 +106,9 @@ pub fn search(l: &PasswordList, query: &str) -> Vec<PasswordEntry> {
         s.to_lowercase()
     };
     fn matches(s: &str, q: &str) -> bool {
-        normalized(s)
-            .as_str()
-            .contains(normalized(q).as_str())
+        normalized(s).as_str().contains(normalized(q).as_str())
     };
-    let matching = passwords
-        .iter()
-        .filter(|p| matches(&p.name, query));
+    let matching = passwords.iter().filter(|p| matches(&p.name, query));
     matching.cloned().collect()
 }
 
@@ -117,19 +135,15 @@ pub fn watch_iter() -> Result<impl Iterator<Item = PasswordEvent>> {
                 }
             }
         })
-        .chain(
-            watcher_rx
-                .into_iter()
-                .map(|event| -> Result<PathBuf> {
-                    match event {
-                        notify::DebouncedEvent::Create(p) => Ok(p),
-                        notify::DebouncedEvent::Error(_, _) => Err(
-                            ErrorKind::GenericError("test".to_string()).into(),
-                        ),
-                        _ => Err("None".into()),
-                    }
-                }),
-        )
+        .chain(watcher_rx.into_iter().map(|event| -> Result<PathBuf> {
+            match event {
+                notify::DebouncedEvent::Create(p) => Ok(p),
+                notify::DebouncedEvent::Error(_, _) => {
+                    Err(ErrorKind::GenericError("test".to_string()).into())
+                }
+                _ => Err("None".into()),
+            }
+        }))
         .map(move |path| match path {
             Ok(p) => match to_password(&dir, &p) {
                 Ok(password) => PasswordEvent::NewPassword(password),
@@ -181,18 +195,12 @@ fn to_name(base: &PathBuf, path: &PathBuf) -> String {
 }
 
 fn to_password(base: &PathBuf, path: &PathBuf) -> Result<PasswordEntry> {
-    let metadata =
-        fs::metadata(path).chain_err(|| "Failed to extract password metadata")?;
-    let modified = metadata
-        .modified()
-        .chain_err(|| "Failed to extract updated time")?
-        .into();
     Ok(PasswordEntry {
         name: to_name(base, path),
         meta: "".to_string(),
-        path: path.to_string_lossy().to_string(), // TODO: do we need lossy?
+        base: base.to_path_buf(),
+        path: path.to_path_buf(), // TODO: do we need lossy?
         filename: path.to_string_lossy().into_owned().clone(),
-        updated: modified,
     })
 }
 
@@ -208,9 +216,7 @@ fn password_dir() -> Result<PathBuf> {
             .into(),
     };
     if !Path::new(&pass_home).exists() {
-        return Err(From::from(
-            "failed to locate password directory",
-        ));
+        return Err(From::from("failed to locate password directory"));
     }
     Ok(Path::new(&pass_home).to_path_buf())
 }

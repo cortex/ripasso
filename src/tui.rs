@@ -4,8 +4,9 @@ extern crate cursive;
 extern crate env_logger;
 
 use self::cursive::traits::*;
-use self::cursive::views::{Dialog, EditView, LinearLayout, OnEventView,
-                           SelectView, TextArea, TextView};
+use self::cursive::views::{
+    Dialog, EditView, LinearLayout, OnEventView, SelectView, TextArea, TextView,
+};
 
 use self::cursive::Cursive;
 
@@ -46,47 +47,36 @@ pub fn main() {
         ui.add_layer(d);
     }
 
-    ui.cb_sink()
-        .send(Box::new(move |s: &mut Cursive| {
-            let event = rrx.lock().unwrap().try_recv();
-            match event {
-                Ok(e) => match e {
-                    pass::PasswordEvent::Error(ref err) => errorbox(s, err),
-                    _ => (),
-                },
+    ui.cb_sink().send(Box::new(move |s: &mut Cursive| {
+        let event = rrx.lock().unwrap().try_recv();
+        match event {
+            Ok(e) => match e {
+                pass::PasswordEvent::Error(ref err) => errorbox(s, err),
                 _ => (),
-            }
-        }));
+            },
+            _ => (),
+        }
+    }));
 
     fn down(ui: &mut Cursive) -> () {
-        ui.call_on_id(
-            "results",
-            |l: &mut SelectView<pass::PasswordEntry>| {
-                l.select_down(1);
-            },
-        );
+        ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
+            l.select_down(1);
+        });
     }
 
     fn up(ui: &mut Cursive) -> () {
-        ui.call_on_id(
-            "results",
-            |l: &mut SelectView<pass::PasswordEntry>| {
-                l.select_up(1);
-            },
-        );
+        ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
+            l.select_up(1);
+        });
     }
 
     // Copy
     fn copy(ui: &mut Cursive) -> () {
-        ui.call_on_id(
-            "results",
-            |l: &mut SelectView<pass::PasswordEntry>| {
-                let password = l.selection().password().unwrap();
-                let mut ctx: ClipboardContext =
-                    ClipboardProvider::new().unwrap();
-                ctx.set_contents(password.to_owned()).unwrap();
-            },
-        );
+        ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
+            let password = l.selection().password().unwrap();
+            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+            ctx.set_contents(password.to_owned()).unwrap();
+        });
     };
     ui.add_global_callback(Event::CtrlChar('y'), copy);
     ui.add_global_callback(Key::Enter, copy);
@@ -112,9 +102,7 @@ pub fn main() {
 
         let password = password_entry.secret().unwrap();
         let d = Dialog::around(
-            TextArea::new()
-                .content(password)
-                .with_id("editbox"),
+            TextArea::new().content(password).with_id("editbox"),
         ).button("Edit", move |s| {
             let new_password = s.call_on_id("editbox", |e: &mut TextArea| {
                 e.get_content().to_string()
@@ -130,8 +118,7 @@ pub fn main() {
         ui.add_layer(d);
     });
 
-    ui.load_theme(include_str!("../res/style.toml"))
-        .unwrap();
+    ui.load_theme(include_str!("../res/style.toml")).unwrap();
     ui.load_theme_file("res/style.toml").unwrap();
     let searchbox = EditView::new()
         .on_edit(move |ui, query, _| {
@@ -141,7 +128,15 @@ pub fn main() {
                     let r = pass::search(&passwords, &String::from(query));
                     l.clear();
                     for p in &r {
-                        l.add_item(p.name.clone(), p.clone());
+                        let label = format!(
+                            "{:32}  {}",
+                            p.name,
+                            match p.updated() {
+                                Ok(d) => format!("{}", d.format("%Y-%m-%d")),
+                                Err(e) => "n/a".to_string(),
+                            }
+                        );
+                        l.add_item(label, p.clone());
                     }
                 },
             );
