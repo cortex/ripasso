@@ -130,9 +130,9 @@ pub fn main() {
                         let label = format!(
                             "{:32}  {}",
                             p.name,
-                            match p.updated() {
-                                Ok(d) => format!("{}", d.format("%Y-%m-%d")),
-                                Err(e) => "n/a".to_string(),
+                            match p.updated {
+                                Some(d) => format!("{}", d.format("%Y-%m-%d")),
+                                None => "n/a".to_string(),
                             }
                         );
                         l.add_item(label, p.clone());

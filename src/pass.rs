@@ -22,7 +22,8 @@ pub struct PasswordEntry {
     pub name: String, // Name of the entry
     pub meta: String, // Metadata
     path: PathBuf,    // Path, relative to the store
-    base: PathBuf,    //Base path of password entry
+    base: PathBuf,    // Base path of password entry
+    pub updated: Option<DateTime<Local>>,
     filename: String,
 }
 
@@ -68,30 +69,29 @@ impl PasswordEntry {
             .write_all(&ciphertext)
             .chain_err(|| "error writing new password file")
     }
+}
 
-    pub fn updated(&self) -> Result<DateTime<Local>> {
-        let repo = match git2::Repository::open(&self.base) {
-            Ok(repo) => repo,
-            Err(e) => panic!("failed to open: {}", e),
-        };
+fn updated(base: &PathBuf, path: &PathBuf) -> Result<DateTime<Local>> {
+    let repo = match git2::Repository::open(base) {
+        Ok(repo) => repo,
+        Err(e) => panic!("failed to open: {}", e),
+    };
 
-        let blame = repo
-            .blame_file(
-                self.path
-                    .strip_prefix(&self.base)
-                    .chain_err(|| "failed to strip prefix")?,
-                None,
-            ).chain_err(|| format!("failed to blame file {:?}", self.base))?;
-        let id = blame
-            .get_line(1)
-            .chain_err(|| format!("failed to get line 1 {:?}", self.path))?
-            .orig_commit_id();
-        let time = repo
-            .find_commit(id)
-            .chain_err(|| "failed to find commit")?
-            .time();
-        return Ok(Local.timestamp(time.seconds(), 0));
-    }
+    let blame = repo
+        .blame_file(
+            path.strip_prefix(base)
+                .chain_err(|| "failed to strip prefix")?,
+            None,
+        ).chain_err(|| format!("failed to blame file {:?}", base))?;
+    let id = blame
+        .get_line(1)
+        .chain_err(|| format!("failed to get line 1 {:?}", path))?
+        .orig_commit_id();
+    let time = repo
+        .find_commit(id)
+        .chain_err(|| "failed to find commit")?
+        .time();
+    return Ok(Local.timestamp(time.seconds(), 0));
 }
 
 #[derive(Debug)]
@@ -199,7 +199,11 @@ fn to_password(base: &PathBuf, path: &PathBuf) -> Result<PasswordEntry> {
         name: to_name(base, path),
         meta: "".to_string(),
         base: base.to_path_buf(),
-        path: path.to_path_buf(), // TODO: do we need lossy?
+        path: path.to_path_buf(),
+        updated: match updated(base, path) {
+            Ok(p) => Some(p),
+            Err(_) => None,
+        }, // TODO: do we need lossy?
         filename: path.to_string_lossy().into_owned().clone(),
     })
 }
