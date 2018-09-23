@@ -94,26 +94,25 @@ pub fn main() {
 
     // Editing
     ui.add_global_callback(Event::CtrlChar('o'), |ui| {
-        let password_entry: pass::PasswordEntry = (*ui.call_on_id(
-            "results",
-            |l: &mut SelectView<pass::PasswordEntry>| l.selection(),
-        ).unwrap())
-            .clone();
+        let password_entry: pass::PasswordEntry = (*ui
+            .call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
+                l.selection()
+            }).unwrap()).clone();
 
         let password = password_entry.secret().unwrap();
         let d = Dialog::around(
             TextArea::new().content(password).with_id("editbox"),
         ).button("Edit", move |s| {
-            let new_password = s.call_on_id("editbox", |e: &mut TextArea| {
-                e.get_content().to_string()
-            }).unwrap();
+            let new_password = s
+                .call_on_id("editbox", |e: &mut TextArea| {
+                    e.get_content().to_string()
+                }).unwrap();
             let r = password_entry.update(new_password);
             match r {
                 Err(e) => errorbox(s, &e),
                 Ok(_) => (),
             }
-        })
-            .dismiss_button("Ok");
+        }).dismiss_button("Ok");
 
         ui.add_layer(d);
     });
@@ -140,8 +139,7 @@ pub fn main() {
                     }
                 },
             );
-        })
-        .with_id("searchbox")
+        }).with_id("searchbox")
         .fixed_width(72);
 
     // Override shortcuts on search box
@@ -162,8 +160,7 @@ pub fn main() {
                         .child(results)
                         .fixed_width(72),
                 ).title("Ripasso"),
-            )
-            .child(
+            ).child(
                 LinearLayout::new(Orientation::Horizontal)
                     .child(TextView::new("CTRL-N: Next "))
                     .child(TextView::new("CTRL-P: Previous "))

@@ -75,17 +75,19 @@ impl PasswordEntry {
             Err(e) => panic!("failed to open: {}", e),
         };
 
-        let blame = repo.blame_file(
-            self.path
-                .strip_prefix(&self.base)
-                .chain_err(|| "failed to strip prefix")?,
-            None,
-        ).chain_err(|| format!("failed to blame file {:?}", self.base))?;
+        let blame = repo
+            .blame_file(
+                self.path
+                    .strip_prefix(&self.base)
+                    .chain_err(|| "failed to strip prefix")?,
+                None,
+            ).chain_err(|| format!("failed to blame file {:?}", self.base))?;
         let id = blame
             .get_line(1)
             .chain_err(|| format!("failed to get line 1 {:?}", self.path))?
             .orig_commit_id();
-        let time = repo.find_commit(id)
+        let time = repo
+            .find_commit(id)
             .chain_err(|| "failed to find commit")?
             .time();
         return Ok(Local.timestamp(time.seconds(), 0));
@@ -134,8 +136,7 @@ pub fn watch_iter() -> Result<impl Iterator<Item = PasswordEvent>> {
                     Err(ErrorKind::GenericError("test".to_string()).into())
                 }
             }
-        })
-        .chain(watcher_rx.into_iter().map(|event| -> Result<PathBuf> {
+        }).chain(watcher_rx.into_iter().map(|event| -> Result<PathBuf> {
             match event {
                 notify::DebouncedEvent::Create(p) => Ok(p),
                 notify::DebouncedEvent::Error(_, _) => {
@@ -143,8 +144,7 @@ pub fn watch_iter() -> Result<impl Iterator<Item = PasswordEvent>> {
                 }
                 _ => Err("None".into()),
             }
-        }))
-        .map(move |path| match path {
+        })).map(move |path| match path {
             Ok(p) => match to_password(&dir, &p) {
                 Ok(password) => PasswordEvent::NewPassword(password),
                 Err(e) => PasswordEvent::Error(e),
