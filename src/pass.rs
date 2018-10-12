@@ -1,6 +1,5 @@
 use errors::*;
 use std::env;
-use std::fs;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::str;
@@ -91,7 +90,7 @@ fn updated(base: &PathBuf, path: &PathBuf) -> Result<DateTime<Local>> {
         .find_commit(id)
         .chain_err(|| "failed to find commit")?
         .time();
-    return Ok(Local.timestamp(time.seconds(), 0));
+    Ok(Local.timestamp(time.seconds(), 0))
 }
 
 #[derive(Debug)]
@@ -177,7 +176,7 @@ pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
                 }
             }
             match event_tx.send(event) {
-                Err(err) => (), //error!("Error sending event {}", err),
+                Err(_err) => (), //error!("Error sending event {}", err),
                 _ => (),
             }
         }
