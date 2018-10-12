@@ -15,6 +15,7 @@ use notify;
 use notify::Watcher;
 use std::io::prelude::*;
 use std::sync::{Arc, Mutex};
+extern crate dirs;
 
 #[derive(Clone, Debug)]
 pub struct PasswordEntry {
@@ -212,7 +213,7 @@ fn password_dir() -> Result<PathBuf> {
     // If a directory is provided via env var, use it
     let pass_home = match env::var("PASSWORD_STORE_DIR") {
         Ok(p) => p,
-        Err(_) => env::home_dir()
+        Err(_) => dirs::home_dir()
             .unwrap()
             .join(".password-store")
             .to_string_lossy()
