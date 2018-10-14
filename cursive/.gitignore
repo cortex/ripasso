@@ -1,0 +1,7 @@
+/target/
+Cargo.lock
+*.qmlc
+**/*~
+**/*.bk
+.idea/
+*.iml

@@ -1,23 +1,22 @@
-#![cfg(feature = "use-gtk")]
-use glib;
-use gtk;
+extern crate glib;
+extern crate gtk;
+extern crate ripasso;
 
 use gtk::*;
 
 use self::glib::StaticType;
 
-use pass;
-use std;
+use ripasso::pass;
 use std::cell::RefCell;
 use std::io::Write;
 use std::process;
 
-pub fn main() {
+fn main() {
     // Load and watch all the passwords in the background
     let (password_rx, passwords) = match pass::watch() {
         Ok(t) => t,
         Err(e) => {
-            writeln!(&mut std::io::stderr(), "Error: {}", e);
+            writeln!(&mut std::io::stderr(), "Error: {:?}", e);
             process::exit(0x01);
         }
     };
