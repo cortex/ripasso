@@ -57,7 +57,7 @@ impl PasswordEntry {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
             .chain_err(|| "error obtaining GPGME context")?;
 
-        let key = ctx.find_key(gpgid).chain_err(|| "keys not found")?;
+        let key = ctx.get_key(gpgid).chain_err(|| "keys not found")?;
 
         let mut ciphertext = Vec::new();
         ctx.encrypt(Some(&key), secret, &mut ciphertext)

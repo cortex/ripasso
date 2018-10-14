@@ -35,10 +35,8 @@ pub fn main() {
         }
     };
 
-    let mut ui = Cursive::new();
+    let mut ui = Cursive::default();
     let rrx = Mutex::new(_password_rx);
-
-    ui.set_fps(10);
 
     fn errorbox(ui: &mut Cursive, err: &Error) -> () {
         let d = Dialog::around(TextView::new(err.display_chain().to_string()))
@@ -73,7 +71,7 @@ pub fn main() {
     // Copy
     fn copy(ui: &mut Cursive) -> () {
         ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
-            let password = l.selection().password().unwrap();
+            let password = l.selection().unwrap().password().unwrap();
             let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
             ctx.set_contents(password.to_owned()).unwrap();
         });
@@ -96,7 +94,7 @@ pub fn main() {
     ui.add_global_callback(Event::CtrlChar('o'), |ui| {
         let password_entry: pass::PasswordEntry = (*ui
             .call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
-                l.selection()
+                l.selection().unwrap()
             }).unwrap()).clone();
 
         let password = password_entry.secret().unwrap();
@@ -117,7 +115,6 @@ pub fn main() {
         ui.add_layer(d);
     });
 
-    ui.load_theme(include_str!("../res/style.toml")).unwrap();
     ui.load_theme_file("res/style.toml").unwrap();
     let searchbox = EditView::new()
         .on_edit(move |ui, query, _| {

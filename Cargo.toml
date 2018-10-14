@@ -11,18 +11,18 @@ use-tui = ["cursive"]
 
 [dependencies]
 qml = { git = "https://github.com/White-Oak/qml-rust", optional = true }
-gtk = { version = "0.4.0", features = ["v3_10"], optional = true }
-glib = "0.5.0"
-cursive = { version = "0.8.1", optional = true }
-notify = "4.0.3"
+gtk = { version = "0.5.0", features = ["v3_10"], optional = true }
+glib = "0.6.0"
+cursive = { version = "0.9", optional = true }
+notify = "4"
 glob = "0.2.11"
-clipboard =  "0.4.6"
-gpgme = { version = "0.7.2", "default-features" = false }
+clipboard =  "0.5.0"
+gpgme = { version = "0.8.0"}
 chrono = "0.4"
-git2 = "0.6"
-error-chain = "0.11.0"
-log = "0.4.0"
-env_logger = "0.5.6"
+git2 = "0.7.5"
+error-chain = "0.12.0"
+log = "0.4.5"
+env_logger = "0.5"
 pad = "0.1.5"
 dirs = "1.0"
 
