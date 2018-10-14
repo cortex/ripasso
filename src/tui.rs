@@ -19,8 +19,6 @@ use self::clipboard::{ClipboardContext, ClipboardProvider};
 use pass;
 use std::process;
 
-use error_chain::ChainedError;
-use errors::Error;
 use std::sync::Mutex;
 
 pub fn main() {
@@ -38,8 +36,8 @@ pub fn main() {
     let mut ui = Cursive::default();
     let rrx = Mutex::new(_password_rx);
 
-    fn errorbox(ui: &mut Cursive, err: &Error) -> () {
-        let d = Dialog::around(TextView::new(err.display_chain().to_string()))
+    fn errorbox(ui: &mut Cursive, err: &pass::Error) -> () {
+        let d = Dialog::around(TextView::new(format!("{:?}", err)))
             .dismiss_button("Ok")
             .title("Error");
         ui.add_layer(d);

@@ -14,22 +14,6 @@ extern crate glob;
 extern crate gpgme;
 extern crate notify;
 
-#[macro_use]
-extern crate error_chain;
-
-mod errors {
-    // Create the Error, ErrorKind, ResultExt, and Result types
-    error_chain!{
-        errors{
-            GenericError(t: String)	{
-                description("Generic")
-                display("generic: {}", t)
-            }
-        }
-
-    }
-}
-
 #[cfg(feature = "use-gtk")]
 extern crate gtk;
 

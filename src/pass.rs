@@ -1,7 +1,6 @@
-use errors::*;
 use std::env;
 use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path;
 use std::str;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
@@ -17,26 +16,74 @@ use std::io::prelude::*;
 use std::sync::{Arc, Mutex};
 extern crate dirs;
 
+use std;
+use std::io;
+use std::string;
+
+type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Debug)]
+pub enum Error {
+    IO(io::Error),
+    Git(git2::Error),
+    GPG(gpgme::Error),
+    UTF8(string::FromUtf8Error),
+    Notify(notify::Error),
+    Generic(&'static str),
+    PathError(path::StripPrefixError),
+}
+
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Error {
+        Error::IO(err)
+    }
+}
+
+impl From<gpgme::Error> for Error {
+    fn from(err: gpgme::Error) -> Error {
+        Error::GPG(err)
+    }
+}
+
+impl From<git2::Error> for Error {
+    fn from(err: git2::Error) -> Error {
+        Error::Git(err)
+    }
+}
+
+impl From<string::FromUtf8Error> for Error {
+    fn from(err: string::FromUtf8Error) -> Error {
+        Error::UTF8(err)
+    }
+}
+
+impl From<notify::Error> for Error {
+    fn from(err: notify::Error) -> Error {
+        Error::Notify(err)
+    }
+}
+impl From<path::StripPrefixError> for Error {
+    fn from(err: path::StripPrefixError) -> Error {
+        Error::PathError(err)
+    }
+}
 #[derive(Clone, Debug)]
 pub struct PasswordEntry {
-    pub name: String, // Name of the entry
-    pub meta: String, // Metadata
-    path: PathBuf,    // Path, relative to the store
-    base: PathBuf,    // Base path of password entry
+    pub name: String,    // Name of the entry
+    pub meta: String,    // Metadata
+    path: path::PathBuf, // Path, relative to the store
+    base: path::PathBuf, // Base path of password entry
     pub updated: Option<DateTime<Local>>,
     filename: String,
 }
 
 impl PasswordEntry {
     pub fn secret(&self) -> Result<String> {
-        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
-            .chain_err(|| "error obtaining gpgme context")?;
-        let mut input =
-            File::open(&self.filename).chain_err(|| "error opening file")?;
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+        let mut input = File::open(&self.filename)?;
         let mut output = Vec::new();
-        ctx.decrypt(&mut input, &mut output)
-            .chain_err(|| "error decrypting")?;
-        String::from_utf8(output).chain_err(|| "error decoding utf-8")
+        ctx.decrypt(&mut input, &mut output)?;
+        Ok(String::from_utf8(output)?)
     }
 
     pub fn password(&self) -> Result<String> {
@@ -46,51 +93,31 @@ impl PasswordEntry {
     pub fn update(&self, secret: String) -> Result<()> {
         let pwdir = password_dir()?;
 
-        let mut gpg_id_file = File::open(pwdir.join(".gpg-id"))
-            .chain_err(|| "failed to open gpg-id file")?;
-
+        let mut gpg_id_file = File::open(pwdir.join(".gpg-id"))?;
         let mut gpgid = String::new();
-        gpg_id_file
-            .read_to_string(&mut gpgid)
-            .chain_err(|| "failed to read gpg-id file")?;
-
-        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
-            .chain_err(|| "error obtaining GPGME context")?;
-
-        let key = ctx.get_key(gpgid).chain_err(|| "keys not found")?;
+        gpg_id_file.read_to_string(&mut gpgid)?;
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+        let key = ctx.get_key(gpgid)?;
 
         let mut ciphertext = Vec::new();
-        ctx.encrypt(Some(&key), secret, &mut ciphertext)
-            .chain_err(|| "encryption failed")?;
+        ctx.encrypt(Some(&key), secret, &mut ciphertext)?;
 
-        let mut output =
-            File::create(&self.filename).chain_err(|| "error opening file")?;
-        output
-            .write_all(&ciphertext)
-            .chain_err(|| "error writing new password file")
+        let mut output = File::create(&self.filename)?;
+        Ok(output.write_all(&ciphertext)?)
     }
 }
 
-fn updated(base: &PathBuf, path: &PathBuf) -> Result<DateTime<Local>> {
-    let repo = match git2::Repository::open(base) {
-        Ok(repo) => repo,
-        Err(e) => panic!("failed to open: {}", e),
-    };
-
-    let blame = repo
-        .blame_file(
-            path.strip_prefix(base)
-                .chain_err(|| "failed to strip prefix")?,
-            None,
-        ).chain_err(|| format!("failed to blame file {:?}", base))?;
+fn updated(
+    base: &path::PathBuf,
+    path: &path::PathBuf,
+) -> Result<DateTime<Local>> {
+    let repo = git2::Repository::open(base)?;
+    let blame = repo.blame_file(path.strip_prefix(base)?, None)?;
     let id = blame
         .get_line(1)
-        .chain_err(|| format!("failed to get line 1 {:?}", path))?
+        .ok_or(Error::Generic("no git history found"))?
         .orig_commit_id();
-    let time = repo
-        .find_commit(id)
-        .chain_err(|| "failed to find commit")?
-        .time();
+    let time = repo.find_commit(id)?.time();
     Ok(Local.timestamp(time.seconds(), 0))
 }
 
@@ -120,31 +147,31 @@ pub fn watch_iter() -> Result<impl Iterator<Item = PasswordEvent>> {
     let (watcher_tx, watcher_rx) = channel();
     // Existing files iterator
     let password_path_glob = dir.join("**/*.gpg");
-    let existing_iter = glob::glob(&password_path_glob.to_string_lossy())
-        .chain_err(|| "failed to open password directory")?;
+    let existing_iter =
+        glob::glob(&password_path_glob.to_string_lossy()).unwrap();
 
     // Watcher iterator
-    notify::RecommendedWatcher::new(watcher_tx, Duration::from_secs(2))
-        .chain_err(|| "failed to watch directory")?
-        .watch(&dir, notify::RecursiveMode::Recursive)
-        .chain_err(|| "failed to start watching")?;
+    notify::RecommendedWatcher::new(watcher_tx, Duration::from_secs(2))?
+        .watch(&dir, notify::RecursiveMode::Recursive)?;
     Ok(existing_iter
-        .map(|event| -> Result<PathBuf> {
+        .map(|event| -> Result<path::PathBuf> {
             match event {
                 Ok(x) => Ok(x),
-                Err(_) => {
-                    Err(ErrorKind::GenericError("test".to_string()).into())
-                }
+                Err(_) => Err(Error::Generic("test")),
             }
-        }).chain(watcher_rx.into_iter().map(|event| -> Result<PathBuf> {
-            match event {
-                notify::DebouncedEvent::Create(p) => Ok(p),
-                notify::DebouncedEvent::Error(_, _) => {
-                    Err(ErrorKind::GenericError("test".to_string()).into())
-                }
-                _ => Err("None".into()),
-            }
-        })).map(move |path| match path {
+        }).chain(
+            watcher_rx
+                .into_iter()
+                .map(|event| -> Result<path::PathBuf> {
+                    match event {
+                        notify::DebouncedEvent::Create(p) => Ok(p),
+                        notify::DebouncedEvent::Error(_, _) => {
+                            Err(Error::Generic("test"))
+                        }
+                        _ => Err(Error::Generic("None")),
+                    }
+                }),
+        ).map(move |path| match path {
             Ok(p) => match to_password(&dir, &p) {
                 Ok(password) => PasswordEvent::NewPassword(password),
                 Err(e) => PasswordEvent::Error(e),
@@ -173,7 +200,7 @@ pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
                     info!("password: {}", p.name);
                 }
                 PasswordEvent::Error(ref err) => {
-                    error!("Error: {}", err);
+                    error!("Error: {:?}", err);
                 }
             }
             match event_tx.send(event) {
@@ -185,7 +212,7 @@ pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
     Ok((event_rx, passwords_out))
 }
 
-fn to_name(base: &PathBuf, path: &PathBuf) -> String {
+fn to_name(base: &path::PathBuf, path: &path::PathBuf) -> String {
     path.strip_prefix(base)
         .unwrap()
         .to_string_lossy()
@@ -194,7 +221,10 @@ fn to_name(base: &PathBuf, path: &PathBuf) -> String {
         .to_string()
 }
 
-fn to_password(base: &PathBuf, path: &PathBuf) -> Result<PasswordEntry> {
+fn to_password(
+    base: &path::PathBuf,
+    path: &path::PathBuf,
+) -> Result<PasswordEntry> {
     Ok(PasswordEntry {
         name: to_name(base, path),
         meta: "".to_string(),
@@ -209,7 +239,7 @@ fn to_password(base: &PathBuf, path: &PathBuf) -> Result<PasswordEntry> {
 }
 
 /// Determine password directory
-fn password_dir() -> Result<PathBuf> {
+fn password_dir() -> Result<path::PathBuf> {
     // If a directory is provided via env var, use it
     let pass_home = match env::var("PASSWORD_STORE_DIR") {
         Ok(p) => p,
@@ -219,8 +249,8 @@ fn password_dir() -> Result<PathBuf> {
             .to_string_lossy()
             .into(),
     };
-    if !Path::new(&pass_home).exists() {
-        return Err(From::from("failed to locate password directory"));
+    if !path::Path::new(&pass_home).exists() {
+        return Err(Error::Generic("failed to locate password directory"));
     }
-    Ok(Path::new(&pass_home).to_path_buf())
+    Ok(path::Path::new(&pass_home).to_path_buf())
 }
