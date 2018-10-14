@@ -1,12 +1,11 @@
-#![cfg(feature = "use-qml")]
 extern crate clipboard;
-extern crate gpgme;
 extern crate qml;
+extern crate ripasso;
 
 use self::qml::*;
 
-use pass;
 use pass::PasswordEntry;
+use ripasso::pass;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -135,7 +134,7 @@ Q_LISTMODEL!(
     }
 );
 
-pub fn main() {
+fn main() {
     panic::set_hook(Box::new(|panic_info| {
         if let Some(location) = panic_info.location() {
             println!(

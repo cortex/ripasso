@@ -1,0 +1,9 @@
+[package]
+name = "ripasso-gtk"
+version = "0.1.0"
+authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>"]
+
+[dependencies]
+ripasso = { path = "../"}
+gtk = { version = "0.5.0", features = ["v3_10"] }
+glib = "0.6.0"

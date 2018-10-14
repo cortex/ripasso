@@ -1,0 +1,9 @@
+[package]
+name = "qml"
+version = "0.1.0"
+authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>"]
+
+[dependencies]
+clipboard = "0.5"
+ripasso = { path = "../"}
+qml = { git = "https://github.com/White-Oak/qml-rust" }

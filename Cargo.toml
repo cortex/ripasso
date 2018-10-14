@@ -3,26 +3,14 @@ name = "ripasso"
 version = "0.0.1"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com"]
 
-[features]
-default = ["qml"]
-use-gtk = ["gtk"]
-use-qml = ["qml"]
-use-tui = ["cursive"]
-
 [dependencies]
-qml = { git = "https://github.com/White-Oak/qml-rust", optional = true }
-gtk = { version = "0.5.0", features = ["v3_10"], optional = true }
-glib = "0.6.0"
-cursive = { version = "0.9", optional = true }
 notify = "4"
-glob = "0.2.11"
-clipboard =  "0.5.0"
-gpgme = { version = "0.8.0"}
+glob = "0.2"
+gpgme = "0.8"
 chrono = "0.4"
 git2 = "0.7.5"
 log = "0.4.5"
 env_logger = "0.5"
-pad = "0.1.5"
 dirs = "1.0"
 
 [dev-dependencies]

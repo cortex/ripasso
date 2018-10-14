@@ -1,14 +1,13 @@
-#![cfg(feature = "use-tui")]
 extern crate cursive;
-
 extern crate env_logger;
+extern crate ripasso;
 
 use self::cursive::traits::*;
 use self::cursive::views::{
     Dialog, EditView, LinearLayout, OnEventView, SelectView, TextArea, TextView,
 };
 
-use self::cursive::Cursive;
+use cursive::Cursive;
 
 use self::cursive::direction::Orientation;
 use self::cursive::event::{Event, Key};
@@ -16,12 +15,11 @@ use self::cursive::event::{Event, Key};
 extern crate clipboard;
 use self::clipboard::{ClipboardContext, ClipboardProvider};
 
-use pass;
+use ripasso::pass;
 use std::process;
 
 use std::sync::Mutex;
-
-pub fn main() {
+fn main() {
     env_logger::init();
 
     // Load and watch all the passwords in the background
