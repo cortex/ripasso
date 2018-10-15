@@ -121,7 +121,7 @@ fn main() {
                     l.clear();
                     for p in &r {
                         let label = format!(
-                            "{:32}  {}",
+                            "{:61}  {}", // Optimized for 80 cols
                             p.name,
                             match p.updated {
                                 Some(d) => format!("{}", d.format("%Y-%m-%d")),
