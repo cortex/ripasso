@@ -15,3 +15,10 @@ dirs = "1.0"
 
 [dev-dependencies]
 tempdir = "0.3"
+
+
+[workspace]
+
+members = [
+    "gtk","qml", "cursive"
+]
