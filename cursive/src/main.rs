@@ -111,7 +111,7 @@ fn main() {
         ui.add_layer(d);
     });
 
-    ui.load_theme_file("res/style.toml").unwrap();
+    ui.load_toml(include_str!("../res/style.toml")).unwrap();
     let searchbox = EditView::new()
         .on_edit(move |ui, query, _| {
             ui.call_on_id(
