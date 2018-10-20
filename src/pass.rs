@@ -103,7 +103,8 @@ impl PasswordEntry {
         ctx.encrypt(Some(&key), secret, &mut ciphertext)?;
 
         let mut output = File::create(&self.filename)?;
-        Ok(output.write_all(&ciphertext)?)
+        output.write_all(&ciphertext)?;
+        Ok(())
     }
 }
 
@@ -203,9 +204,7 @@ pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
                     error!("Error: {:?}", err);
                 }
             }
-            match event_tx.send(event) {
-                Err(_err) => (), //error!("Error sending event {}", err),
-                _ => (),
+            if let Err(_err) = event_tx.send(event) { //error!("Error sending event {}", err)
             }
         }
     });
