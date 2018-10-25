@@ -91,22 +91,27 @@ fn main() {
         let password_entry: pass::PasswordEntry = (*ui
             .call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
                 l.selection().unwrap()
-            }).unwrap()).clone();
+            })
+            .unwrap())
+        .clone();
 
         let password = password_entry.secret().unwrap();
         let d = Dialog::around(
             TextArea::new().content(password).with_id("editbox"),
-        ).button("Edit", move |s| {
+        )
+        .button("Edit", move |s| {
             let new_password = s
                 .call_on_id("editbox", |e: &mut TextArea| {
                     e.get_content().to_string()
-                }).unwrap();
+                })
+                .unwrap();
             let r = password_entry.update(new_password);
             match r {
                 Err(e) => errorbox(s, &e),
                 Ok(_) => (),
             }
-        }).dismiss_button("Ok");
+        })
+        .dismiss_button("Ok");
 
         ui.add_layer(d);
     });
@@ -114,6 +119,7 @@ fn main() {
     ui.load_toml(include_str!("../res/style.toml")).unwrap();
     let searchbox = EditView::new()
         .on_edit(move |ui, query, _| {
+            let col = ui.screen_size().x;
             ui.call_on_id(
                 "results",
                 |l: &mut SelectView<pass::PasswordEntry>| {
@@ -121,18 +127,20 @@ fn main() {
                     l.clear();
                     for p in &r {
                         let label = format!(
-                            "{:61}  {}", // Optimized for 80 cols
+                            "{:2$}  {}",
                             p.name,
                             match p.updated {
                                 Some(d) => format!("{}", d.format("%Y-%m-%d")),
                                 None => "n/a".to_string(),
-                            }
+                            },
+                            _ = col - 10 - 8, // Optimized for 80 cols
                         );
                         l.add_item(label, p.clone());
                     }
                 },
             );
-        }).with_id("searchbox")
+        })
+        .with_id("searchbox")
         .fixed_width(72);
 
     // Override shortcuts on search box
@@ -152,8 +160,10 @@ fn main() {
                         .child(searchbox)
                         .child(results)
                         .fixed_width(72),
-                ).title("Ripasso"),
-            ).child(
+                )
+                .title("Ripasso"),
+            )
+            .child(
                 LinearLayout::new(Orientation::Horizontal)
                     .child(TextView::new("CTRL-N: Next "))
                     .child(TextView::new("CTRL-P: Previous "))
