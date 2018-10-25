@@ -1,5 +1,5 @@
 [package]
-name = "qml"
+name = "ripasso-qt"
 version = "0.1.0"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>"]
 
