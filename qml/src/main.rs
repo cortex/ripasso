@@ -59,7 +59,7 @@ impl UI {
             self.current_passwords
                 .clone()
                 .into_iter()
-                .map(|p| (p.name.clone().into(), p.meta.clone().into()))
+                .map(|p| (p.name.clone(), p.meta.clone()))
                 .collect(),
         );
         None
