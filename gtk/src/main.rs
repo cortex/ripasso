@@ -87,7 +87,7 @@ fn main() {
 
     window.show_all();
     gtk::idle_add(move || {
-        if let Ok(_) = password_rx.try_recv() {
+        if password_rx.try_recv().is_ok() {
             receive();
         };
         glib::Continue(true)
@@ -110,7 +110,7 @@ fn receive() -> glib::Continue {
             *global.borrow()
         {
             let query = password_search.get_text().unwrap();
-            password_list.set_model(&results(&passwords, query));
+            password_list.set_model(&results(&passwords, &query));
         }
     });
     glib::Continue(false)
