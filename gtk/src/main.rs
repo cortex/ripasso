@@ -98,9 +98,9 @@ fn main() {
     gtk::main();
 }
 
-fn results(passwords: &pass::PasswordList, query: String) -> ListStore {
+fn results(passwords: &pass::PasswordList, query: &str) -> ListStore {
     let model = ListStore::new(&[String::static_type()]);
-    let filtered = pass::search(passwords, &query);
+    let filtered = pass::search(passwords, query);
     for (i, p) in filtered.iter().enumerate() {
         model.insert_with_values(Some(i as u32), &[0], &[&p.name]);
     }
