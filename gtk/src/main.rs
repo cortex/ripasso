@@ -87,11 +87,8 @@ fn main() {
 
     window.show_all();
     gtk::idle_add(move || {
-        match password_rx.try_recv() {
-            Ok(_) => {
-                receive();
-            }
-            Err(_) => {}
+        if let Ok(_) = password_rx.try_recv() {
+            receive();
         };
         glib::Continue(true)
     });
