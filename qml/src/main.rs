@@ -191,8 +191,8 @@ fn main() {
         "started".into(),
         0.0,
     );
-    let ref passwordsv = ui.passwords;
-    let ref password = ui.password;
+    let passwordsv = &ui.passwords;
+    let password = &ui.password;
     engine.set_and_store_property("ui", ui.get_qobj());
     engine.set_and_store_property("passwords", passwordsv);
     engine.set_and_store_property("password", password.get_qobj());
