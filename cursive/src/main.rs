@@ -17,6 +17,7 @@ use self::clipboard::{ClipboardContext, ClipboardProvider};
 
 use ripasso::pass;
 use std::process;
+use std::process::Command;
 
 use std::sync::Mutex;
 fn main() {
@@ -34,21 +35,19 @@ fn main() {
     let mut ui = Cursive::default();
     let rrx = Mutex::new(_password_rx);
 
-    fn errorbox(ui: &mut Cursive, err: &pass::Error) -> () {
-        let d = Dialog::around(TextView::new(format!("{:?}", err)))
-            .dismiss_button("Ok")
-            .title("Error");
-        ui.add_layer(d);
+    fn handleError(ui: &mut Cursive, err: Option<pass::Error>) -> () {
+        if let Some(e) = err {
+            let d = Dialog::around(TextView::new(format!("{:?}", e)))
+                .dismiss_button("Ok")
+                .title("Error");
+            ui.add_layer(d);
+        }
     }
 
     ui.cb_sink().send(Box::new(move |s: &mut Cursive| {
         let event = rrx.lock().unwrap().try_recv();
-        match event {
-            Ok(e) => match e {
-                pass::PasswordEvent::Error(ref err) => errorbox(s, err),
-                _ => (),
-            },
-            _ => (),
+        if let pass::PasswordEvent::Error(e) = event.unwrap() {
+            handleError(s, Some(e));
         }
     }));
 
@@ -57,7 +56,6 @@ fn main() {
             l.select_down(1);
         });
     }
-
     fn up(ui: &mut Cursive) -> () {
         ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
             l.select_up(1);
@@ -85,6 +83,42 @@ fn main() {
             e.set_content("");
         });
     });
+    // VIM
+    ui.add_global_callback(Event::CtrlChar('v'), |ui| {
+        let r = ui.call_on_id(
+            "results",
+            |l: &mut SelectView<pass::PasswordEntry>| {
+                let password_entry = l.selection().unwrap();
+                let password = password_entry.password()?;
+                let tmp_file_name: String = String::from_utf8_lossy(
+                    &Command::new("/bin/mktemp")
+                        .arg("/dev/shm/ripasso.XXXXXXXXXXXXX")
+                        .output()
+                        .expect("failed to create temporary file")
+                        .stdout,
+                )
+                .into();
+                use std::fs::File;
+                use std::io::prelude::*;
+                let mut tmp_file =
+                    File::create(&tmp_file_name).expect("failed to open file");
+                tmp_file
+                    .write_all(&password.into_bytes())
+                    .expect("failed to write to file");
+                let status = Command::new("/bin/vim")
+                    .arg(&tmp_file_name)
+                    .status()
+                    .expect("failed to execute process");
+                println!("process exited with: {}", status);
+                tmp_file =
+                    File::open(&tmp_file_name).expect("failed to open file");
+                let mut buffer = Vec::new();
+                tmp_file.read_to_end(&mut buffer)?;
+                password_entry.update(String::from_utf8(buffer)?)
+            },
+        );
+        handleError(ui, r.unwrap().err())
+    });
 
     // Editing
     ui.add_global_callback(Event::CtrlChar('o'), |ui| {
@@ -106,10 +140,7 @@ fn main() {
                 })
                 .unwrap();
             let r = password_entry.update(new_password);
-            match r {
-                Err(e) => errorbox(s, &e),
-                Ok(_) => (),
-            }
+            handleError(s, r.err())
         })
         .dismiss_button("Ok");
 
