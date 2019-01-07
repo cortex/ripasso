@@ -59,7 +59,7 @@ impl UI {
             self.current_passwords
                 .clone()
                 .into_iter()
-                .map(|p| (p.name.clone().into(), p.meta.clone().into()))
+                .map(|p| (p.name.clone(), p.meta.clone()))
                 .collect(),
         );
         None
@@ -191,8 +191,8 @@ fn main() {
         "started".into(),
         0.0,
     );
-    let ref passwordsv = ui.passwords;
-    let ref password = ui.password;
+    let passwordsv = &ui.passwords;
+    let password = &ui.password;
     engine.set_and_store_property("ui", ui.get_qobj());
     engine.set_and_store_property("passwords", passwordsv);
     engine.set_and_store_property("password", password.get_qobj());

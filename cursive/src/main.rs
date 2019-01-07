@@ -77,9 +77,8 @@ fn open(ui: &mut Cursive) -> () {
                         e.get_content().to_string()
                     }).unwrap();
                 let r = password_entry.update(new_password);
-                match r {
-                    Err(e) => errorbox(s, &e),
-                    Ok(_) => (),
+                if let Err(e) = r {
+                    errorbox(s, &e)
                 }
             }).dismiss_button("Ok");
 
@@ -123,12 +122,10 @@ fn main() {
     // Update UI on password change event
     ui.cb_sink().send(Box::new(move |s: &mut Cursive| {
         let event = password_rx.try_recv();
-        match event {
-            Ok(e) => match e {
-                pass::PasswordEvent::Error(ref err) => errorbox(s, err),
-                _ => (),
-            },
-            _ => (),
+        if let Ok(e) = event {
+            if let pass::PasswordEvent::Error(ref err) = e {
+                errorbox(s, err)
+            }
         }
     }));
 

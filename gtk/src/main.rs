@@ -87,20 +87,17 @@ fn main() {
 
     window.show_all();
     gtk::idle_add(move || {
-        match password_rx.try_recv() {
-            Ok(_) => {
-                receive();
-            }
-            Err(_) => {}
+        if password_rx.try_recv().is_ok() {
+            receive();
         };
         glib::Continue(true)
     });
     gtk::main();
 }
 
-fn results(passwords: &pass::PasswordList, query: String) -> ListStore {
+fn results(passwords: &pass::PasswordList, query: &str) -> ListStore {
     let model = ListStore::new(&[String::static_type()]);
-    let filtered = pass::search(passwords, &query);
+    let filtered = pass::search(passwords, query);
     for (i, p) in filtered.iter().enumerate() {
         model.insert_with_values(Some(i as u32), &[0], &[&p.name]);
     }
@@ -113,7 +110,7 @@ fn receive() -> glib::Continue {
             *global.borrow()
         {
             let query = password_search.get_text().unwrap();
-            password_list.set_model(&results(&passwords, query));
+            password_list.set_model(&results(&passwords, &query));
         }
     });
     glib::Continue(false)
