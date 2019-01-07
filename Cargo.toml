@@ -2,7 +2,6 @@
 name = "ripasso"
 version = "0.0.1"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com"]
-license = "GPL-3.0-or-later"
 license-file = "LICENCE"
 
 [dependencies]
