@@ -56,9 +56,20 @@ fn errorbox(ui: &mut Cursive, err: &pass::Error) -> () {
 
 fn copy(ui: &mut Cursive) -> () {
     ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
-        let password = l.selection().unwrap().password().unwrap();
+        let sel = l.selection();
+
+        if sel.is_none() {
+            return;
+        }
+
+        let password = sel.unwrap().password();
+
+        if password.is_err() {
+            return;
+        }
+
         let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-        ctx.set_contents(password.to_owned()).unwrap();
+        ctx.set_contents(password.unwrap().to_owned()).unwrap();
     });
 }
 
