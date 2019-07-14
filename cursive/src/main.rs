@@ -120,7 +120,7 @@ fn main() {
     let mut ui = Cursive::default();
 
     // Update UI on password change event
-    ui.cb_sink().send(Box::new(move |s: &mut Cursive| {
+    let e = ui.cb_sink().send(Box::new(move |s: &mut Cursive| {
         let event = password_rx.try_recv();
         if let Ok(e) = event {
             if let pass::PasswordEvent::Error(ref err) = e {
@@ -128,6 +128,11 @@ fn main() {
             }
         }
     }));
+
+    if e.is_err() {
+        eprintln!("Application error: {}", e.err().unwrap());
+        return;
+    }
 
     ui.add_global_callback(Event::CtrlChar('y'), copy);
     ui.add_global_callback(Key::Enter, copy);
