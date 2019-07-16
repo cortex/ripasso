@@ -94,7 +94,9 @@ fn view_persons(ui: &mut Cursive) -> () {
         persons.add_item(format!("{} {}",signer.key_id.clone(), signer.name.clone()), signer);
     }
 
-    let d = Dialog::around(persons).dismiss_button("Ok");
+    let d = Dialog::around(persons)
+        .title("People")
+        .dismiss_button("Ok");
 
     ui.add_layer(d);
 }
