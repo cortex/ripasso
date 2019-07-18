@@ -24,6 +24,10 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
 
+extern crate rand;
+use pass::rand::{thread_rng, Rng};
+use pass::rand::distributions::Alphanumeric;
+
 use chrono::prelude::*;
 use git2;
 use glob;
@@ -194,6 +198,41 @@ fn updated(
     Ok(Local.timestamp(time.seconds(), 0))
 }
 
+pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<String>) -> Result<()> {
+    let mut path = password_dir()?;
+
+    path.push((*path_end).clone() + ".gpg");
+
+    if path.exists() {
+        return Err(Error::Generic("file already exist"));
+    }
+
+    let mut file = match File::create(path) {
+        Err(why) => return Err(Error::from(why)),
+        Ok(file) => file,
+    };
+
+
+    let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+    ctx.set_armor(false);
+
+    let mut keys = Vec::new();
+
+    for signer in Signer::all_signers() {
+        keys.push(ctx.get_key(signer.key_id).unwrap());
+    }
+
+    let mut output = Vec::new();
+    ctx.encrypt(&keys, (*content).clone(), &mut output)?;
+
+    match file.write_all(&output) {
+        Err(why) => return Err(Error::from(why)),
+        Ok(_) => (),
+    }
+
+    return Ok(());
+}
+
 #[derive(Debug)]
 pub enum PasswordEvent {
     NewPassword(PasswordEntry),
@@ -281,6 +320,13 @@ pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
         }
     });
     Ok((event_rx, passwords_out))
+}
+
+pub fn generate_password(length: usize) -> String {
+    return thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(length)
+        .collect();
 }
 
 fn to_name(base: &path::PathBuf, path: &path::PathBuf) -> String {

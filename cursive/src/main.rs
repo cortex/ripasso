@@ -114,7 +114,7 @@ fn open(ui: &mut Cursive) -> () {
     };
     let d =
         Dialog::around(TextArea::new().content(password).with_id("editbox"))
-            .button("Edit", move |s| {
+            .button("Save", move |s| {
                 let new_password = s
                     .call_on_id("editbox", |e: &mut TextArea| {
                         e.get_content().to_string()
@@ -123,7 +123,82 @@ fn open(ui: &mut Cursive) -> () {
                 if let Err(e) = r {
                     errorbox(s, &e)
                 }
-            }).dismiss_button("Ok");
+            })
+            .button("Generate", move |s| {
+                let new_password = ripasso::pass::generate_password(24);
+                s.call_on_id("editbox", |e: &mut TextArea| {
+                    e.set_content(new_password);
+                });
+            })
+            .dismiss_button("Ok");
+
+    ui.add_layer(d);
+}
+
+fn get_value_from_input(s: &mut Cursive, input_name: &str) -> Option<std::rc::Rc<String>> {
+    let mut password= None;
+    s.call_on_id(input_name, |e: &mut EditView| {
+        password = Some(e.get_content());
+    });
+    return password;
+}
+
+fn create(ui: &mut Cursive) -> () {
+    let mut fields = LinearLayout::vertical();
+    let mut path_fields = LinearLayout::horizontal();
+    let mut password_fields = LinearLayout::horizontal();
+    path_fields.add_child(TextView::new("Path: ")
+        .with_id("path_name")
+        .fixed_size((10, 1)));
+    path_fields.add_child(EditView::new()
+            .with_id("new_path_input")
+            .fixed_size((50, 1)));
+    password_fields.add_child(TextView::new("Password: ")
+        .with_id("password_name")
+        .fixed_size((10, 1)));
+    password_fields.add_child(EditView::new()
+        .with_id("new_password_input")
+        .fixed_size((50, 1)));
+    fields.add_child(path_fields);
+    fields.add_child(password_fields);
+
+    let d =
+        Dialog::around(fields)
+            .title("Add new password")
+            .button("Generate", move |s| {
+                let new_password = ripasso::pass::generate_password(24);
+                s.call_on_id("new_password_input", |e: &mut EditView| {
+                    e.set_content(new_password);
+                });
+            })
+            .button("Save", move |s| {
+                let password = get_value_from_input(s, "new_password_input");
+                if password.is_none() {
+                    return;
+                }
+                let password = password.unwrap();
+                if *password == "" {
+                    return;
+                }
+
+                let path = get_value_from_input(s, "new_path_input");
+                if path.is_none() {
+                    return;
+                }
+                let path = path.unwrap();
+                if *path == "" {
+                    return;
+                }
+
+                let res = pass::new_password_file(path, password);
+
+                if res.is_err() {
+                    errorbox(s, &res.err().unwrap())
+                }
+
+                s.pop_layer();
+            })
+            .dismiss_button("Cancel");
 
     ui.add_layer(d);
 }
@@ -213,6 +288,7 @@ fn main() {
 
     // Editing
     ui.add_global_callback(Event::CtrlChar('o'), open);
+    ui.add_global_callback(Event::Key(cursive::event::Key::Ins), create);
 
     ui.add_global_callback(Event::Key(cursive::event::Key::Esc), |s| s.quit());
 
@@ -249,7 +325,8 @@ fn main() {
                     .child(TextView::new("C-W: Clear | "))
                     .child(TextView::new("C-O: Open | "))
                     .child(TextView::new("C-V: Signers | "))
-                    .child(TextView::new("Esc: Quit"))
+                    .child(TextView::new("ins: Create | "))
+                    .child(TextView::new("esc: Quit"))
                     .full_width(),
             ),
     );
