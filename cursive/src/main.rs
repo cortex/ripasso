@@ -34,6 +34,7 @@ use self::clipboard::{ClipboardContext, ClipboardProvider};
 
 use ripasso::pass;
 use std::process;
+use std::{thread, time};
 
 fn down(ui: &mut Cursive) -> () {
     ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
@@ -304,9 +305,10 @@ fn main() {
     ui.add_global_callback(Event::Key(cursive::event::Key::Esc), |s| s.quit());
 
     ui.load_toml(include_str!("../res/style.toml")).unwrap();
+    let passwords_clone = std::sync::Arc::clone(&passwords);
     let searchbox = EditView::new()
         .on_edit(move |ui: &mut cursive::Cursive, query, _| {
-            search(&passwords, ui, query)
+            search(&passwords_clone, ui, query)
         }).with_id("searchbox")
         .fixed_width(72);
 
@@ -341,5 +343,11 @@ fn main() {
                     .full_width(),
             ),
     );
+
+    // This construction is to make sure that the password list is populated when the program starts
+    // it would be better to signal this somehow from the library, but that got tricky
+    thread::sleep(time::Duration::from_millis(200));
+    search(&passwords, &mut ui, "");
+
     ui.run();
 }
