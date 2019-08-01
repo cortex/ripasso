@@ -233,7 +233,7 @@ fn to_name(base: &path::PathBuf, path: &path::PathBuf) -> String {
         .unwrap()
         .to_string_lossy()
         .into_owned()
-        .trim_right_matches(".gpg")
+        .trim_end_matches(".gpg")
         .to_string()
 }
 
