@@ -36,6 +36,8 @@ use ripasso::pass;
 use std::process;
 use std::{thread, time};
 
+use std::fmt::Write as FmtWrite;
+
 fn down(ui: &mut Cursive) -> () {
     ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
         l.select_down(1);
@@ -215,16 +217,54 @@ fn create(ui: &mut Cursive) -> () {
     ui.add_layer(d);
 }
 
-fn view_persons(ui: &mut Cursive) -> () {
-    let signers : Vec<ripasso::pass::Signer> = ripasso::pass::Signer::all_signers();
+fn delete_signer(ui: &mut Cursive) -> () {
+    let mut l = ui.find_id::<SelectView<pass::Signer>>("signers").unwrap();
+    let sel = l.selection();
 
-    let mut persons = SelectView::<pass::Signer>::new().h_align(cursive::align::HAlign::Left);
-
-    for signer in signers {
-        persons.add_item(format!("{} {}",signer.key_id.clone(), signer.name.clone()), signer);
+    if sel.is_none() {
+        return;
     }
 
-    let d = Dialog::around(persons)
+    let r = ripasso::pass::Signer::remove_signer_from_file(&sel.unwrap());
+
+    if r.is_err() {
+        let mut error_string = String::new();
+        let write_res = writeln!(&mut error_string, "Error {:?}", r.unwrap_err());
+        if write_res.is_err() {
+            error_string = "Error while formating error string".to_string();
+        }
+        ui.add_layer(CircularFocus::wrap_tab(
+            Dialog::around(TextView::new(error_string))
+                .title("Error")
+                .dismiss_button("Ok")));
+    } else {
+        let delete_id = l.selected_id().unwrap();
+        l.remove_item(delete_id);
+    }
+}
+
+fn delete_signer_verification(ui: &mut Cursive) -> () {
+    ui.add_layer(CircularFocus::wrap_tab(
+        Dialog::around(TextView::new("Are you sure you want to remove this person?"))
+            .button("Yes", delete_signer)
+            .dismiss_button("Cancel")));
+}
+
+fn view_signers(ui: &mut Cursive) -> () {
+    let signers : Vec<ripasso::pass::Signer> = ripasso::pass::Signer::all_signers();
+
+    let mut signers_view = SelectView::<pass::Signer>::new()
+        .h_align(cursive::align::HAlign::Left)
+        .with_id("signers");
+
+    for signer in signers {
+        signers_view.get_mut().add_item(format!("{} {}",signer.key_id.clone(), signer.name.clone()), signer);
+    }
+
+    let signers_event = OnEventView::new(signers_view)
+        .on_event(Key::Del, delete_signer_verification);
+
+    let d = Dialog::around(signers_event)
         .title("People")
         .dismiss_button("Ok");
 
@@ -289,7 +329,7 @@ fn main() {
     ui.add_global_callback(Event::CtrlChar('p'), up);
 
     // View list of persons that have access
-    ui.add_global_callback(Event::CtrlChar('v'), view_persons);
+    ui.add_global_callback(Event::CtrlChar('v'), view_signers);
 
     // Query editing
     ui.add_global_callback(Event::CtrlChar('w'), |ui| {

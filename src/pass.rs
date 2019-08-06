@@ -133,6 +133,32 @@ impl PasswordEntry {
     pub fn delete_file(&self) -> Result<()> {
         return Ok(std::fs::remove_file(&self.filename)?);
     }
+
+    pub fn all_password_entries() -> Result<Vec<PasswordEntry>> {
+        let dir = password_dir()?;
+
+        // Existing files iterator
+        let password_path_glob = dir.join("**/*.gpg");
+        let paths = glob::glob(&password_path_glob.to_string_lossy()).unwrap();
+
+        let mut passwords = Vec::<PasswordEntry>::new();
+        for path in paths {
+            match to_password(&dir, &path.unwrap()) {
+                Ok(password) => passwords.push(password),
+                Err(e) => return Err(e),
+            }
+        }
+
+        return Ok(passwords);
+    }
+
+    pub fn reencrypt_all_password_entries() -> Result<()> {
+
+        for entry in PasswordEntry::all_password_entries().unwrap() {
+            entry.update(entry.secret().unwrap())?;
+        }
+        return Ok(());
+    }
 }
 
 pub struct Signer {
@@ -181,6 +207,36 @@ impl Signer {
         }
 
         return signers;
+    }
+
+    pub fn remove_signer_from_file(s: &Signer) -> Result<()> {
+        let mut signers: Vec<Signer> = Signer::all_signers();
+
+        signers.retain(|ref vs| vs.key_id != s.key_id);
+
+        if signers.len() < 1 {
+            return Err(Error::Generic("Can't delete the last signing key"));
+        }
+
+        let mut signer_file = password_dir().unwrap();
+        signer_file.push(".gpg-id");
+
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(signer_file)
+            .unwrap();
+
+        for signer in signers {
+            file.write_all(b"0x")?;
+            file.write_all(signer.key_id.as_bytes())?;
+            file.write_all(b"\n")?;
+        }
+
+        PasswordEntry::reencrypt_all_password_entries()?;
+
+        return Ok(());
     }
 }
 
