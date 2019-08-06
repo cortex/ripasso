@@ -243,13 +243,13 @@ fn main() {
                 ).title("Ripasso"),
             ).child(
                 LinearLayout::new(Orientation::Horizontal)
-                    .child(TextView::new("CTRL-N: Next "))
-                    .child(TextView::new("CTRL-P: Previous "))
-                    .child(TextView::new("CTRL-Y: Copy "))
-                    .child(TextView::new("CTRL-W: Clear "))
-                    .child(TextView::new("CTRL-O: Open "))
-                    .child(TextView::new("CTRL-V: View Signers"))
-                    .child(TextView::new("esc: Quit"))
+                    .child(TextView::new("C-N: Next | "))
+                    .child(TextView::new("C-P: Previous | "))
+                    .child(TextView::new("C-Y: Copy | "))
+                    .child(TextView::new("C-W: Clear | "))
+                    .child(TextView::new("C-O: Open | "))
+                    .child(TextView::new("C-V: Signers | "))
+                    .child(TextView::new("Esc: Quit"))
                     .full_width(),
             ),
     );
