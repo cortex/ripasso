@@ -21,7 +21,7 @@ extern crate ripasso;
 
 use self::cursive::traits::*;
 use self::cursive::views::{
-    Dialog, EditView, LinearLayout, OnEventView, SelectView, TextArea, TextView,
+    Dialog, EditView, LinearLayout, OnEventView, SelectView, TextArea, TextView, CircularFocus,
 };
 
 use cursive::Cursive;
@@ -60,6 +60,36 @@ fn copy(ui: &mut Cursive) -> () {
         let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
         ctx.set_contents(password.to_owned()).unwrap();
     });
+}
+
+fn do_delete(ui: &mut Cursive) -> () {
+    ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
+        let sel = l.selection();
+
+        if sel.is_none() {
+            return;
+        }
+
+        let sel = sel.unwrap();
+
+        let r = sel.delete_file();
+
+        if r.is_err() {
+            return;
+        }
+
+        let delete_id = l.selected_id().unwrap();
+        l.remove_item(delete_id);
+    });
+
+    ui.pop_layer();
+}
+
+fn delete(ui: &mut Cursive) -> () {
+    ui.add_layer(CircularFocus::wrap_tab(
+    Dialog::around(TextView::new("Are you sure you want to delete the password"))
+        .button("Yes", do_delete)
+        .dismiss_button("Cancel")));
 }
 
 fn open(ui: &mut Cursive) -> () {
@@ -165,6 +195,7 @@ fn main() {
 
     ui.add_global_callback(Event::CtrlChar('y'), copy);
     ui.add_global_callback(Key::Enter, copy);
+    ui.add_global_callback(Key::Del, delete);
 
     // Movement
     ui.add_global_callback(Event::CtrlChar('n'), down);
