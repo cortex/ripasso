@@ -63,12 +63,25 @@ fn copy(ui: &mut Cursive) -> () {
 }
 
 fn open(ui: &mut Cursive) -> () {
-    let password_entry: pass::PasswordEntry = (*ui
+    let password_entry_option: Option<Option<std::rc::Rc<ripasso::pass::PasswordEntry>>> = ui
         .call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
-            l.selection().unwrap()
-        }).unwrap()).clone();
+            l.selection()
+        });
 
-    let password = password_entry.secret().unwrap();
+    let password_entry: pass::PasswordEntry = (*(match password_entry_option {
+        Some(level_1) => {
+            match level_1 {
+                Some(level_2) => level_2,
+                None => return
+            }
+        },
+        None => return
+    })).clone();
+
+    let password = match password_entry.secret() {
+        Ok(p) => p,
+        Err(_e) => return
+    };
     let d =
         Dialog::around(TextArea::new().content(password).with_id("editbox"))
             .button("Edit", move |s| {
@@ -136,7 +149,7 @@ fn main() {
     let mut ui = Cursive::default();
 
     // Update UI on password change event
-    ui.cb_sink().send(Box::new(move |s: &mut Cursive| {
+    let e = ui.cb_sink().send(Box::new(move |s: &mut Cursive| {
         let event = password_rx.try_recv();
         if let Ok(e) = event {
             if let pass::PasswordEvent::Error(ref err) = e {
@@ -144,6 +157,11 @@ fn main() {
             }
         }
     }));
+
+    if e.is_err() {
+        eprintln!("Application error: {}", e.err().unwrap());
+        return;
+    }
 
     ui.add_global_callback(Event::CtrlChar('y'), copy);
     ui.add_global_callback(Key::Enter, copy);
@@ -164,6 +182,8 @@ fn main() {
 
     // Editing
     ui.add_global_callback(Event::CtrlChar('o'), open);
+
+    ui.add_global_callback(Event::Key(cursive::event::Key::Esc), |s| s.quit());
 
     ui.load_toml(include_str!("../res/style.toml")).unwrap();
     let searchbox = EditView::new()
@@ -198,6 +218,7 @@ fn main() {
                     .child(TextView::new("CTRL-W: Clear "))
                     .child(TextView::new("CTRL-O: Open "))
                     .child(TextView::new("CTRL-V: View Signers"))
+                    .child(TextView::new("esc: Quit"))
                     .full_width(),
             ),
     );

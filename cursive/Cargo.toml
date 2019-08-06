@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>"]
 
 [dependencies]
-cursive = "0.9"
+cursive = "0.12"
 clipboard = "0.5"
 ripasso = { path = "../"}
-env_logger = "0.5"
+env_logger = "0.6"
