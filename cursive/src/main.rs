@@ -151,6 +151,8 @@ fn main() {
     // Editing
     ui.add_global_callback(Event::CtrlChar('o'), open);
 
+    ui.add_global_callback(Event::Key(cursive::event::Key::Esc), |s| s.quit());
+
     ui.load_toml(include_str!("../res/style.toml")).unwrap();
     let searchbox = EditView::new()
         .on_edit(move |ui: &mut cursive::Cursive, query, _| {
@@ -182,7 +184,8 @@ fn main() {
                     .child(TextView::new("CTRL-P: Previous "))
                     .child(TextView::new("CTRL-Y: Copy "))
                     .child(TextView::new("CTRL-W: Clear "))
-                    .child(TextView::new("CTRL-O: Open"))
+                    .child(TextView::new("CTRL-O: Open "))
+                    .child(TextView::new("esc: Quit"))
                     .full_width(),
             ),
     );
