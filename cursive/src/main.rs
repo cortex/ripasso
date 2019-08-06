@@ -78,7 +78,10 @@ fn open(ui: &mut Cursive) -> () {
         None => return
     })).clone();
 
-    let password = password_entry.secret().unwrap();
+    let password = match password_entry.secret() {
+        Ok(p) => p,
+        Err(_e) => return
+    };
     let d =
         Dialog::around(TextArea::new().content(password).with_id("editbox"))
             .button("Edit", move |s| {
