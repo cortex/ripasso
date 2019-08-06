@@ -16,6 +16,7 @@
 */
 
 use std::env;
+use std::fs;
 use std::fs::File;
 use std::path;
 use std::str;
@@ -36,6 +37,7 @@ extern crate dirs;
 use std;
 use std::io;
 use std::string;
+use std::collections::HashSet;
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -122,6 +124,55 @@ impl PasswordEntry {
         let mut output = File::create(&self.filename)?;
         output.write_all(&ciphertext)?;
         Ok(())
+    }
+}
+
+pub struct Signer {
+    pub name: String,
+    pub key_id: String,
+}
+
+fn build_signer(name: String, key_id: String) -> Signer {
+    Signer {
+        name: name,
+        key_id: key_id,
+    }
+}
+
+impl Signer {
+    pub fn all_signers() -> Vec<Signer> {
+
+        let mut signer_file = password_dir().unwrap();
+        signer_file.push(".gpg-id");
+        let contents = fs::read_to_string(signer_file)
+            .expect("Something went wrong reading the file");
+
+        let mut signers : Vec<Signer> = Vec::new();
+        let mut unique_signers_keys : HashSet<String> = HashSet::new();
+        for key in contents.split("\n") {
+            if key.len() > 1 {
+                unique_signers_keys.insert(key.to_string());
+            }
+        }
+
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp).unwrap();
+
+        for key in unique_signers_keys {
+            let mut key_option = ctx.get_key(key.clone());
+            if key_option.is_err() {
+                continue;
+            }
+
+            let mut real_key = key_option.unwrap();
+
+            let mut name = "?";
+            for user_id in real_key.user_ids() {
+                name = user_id.name().unwrap_or("?");
+            }
+            signers.push(build_signer(name.to_string(), real_key.id().unwrap_or("?").to_string()));
+        }
+
+        return signers;
     }
 }
 

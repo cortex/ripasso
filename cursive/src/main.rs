@@ -98,6 +98,22 @@ fn open(ui: &mut Cursive) -> () {
     ui.add_layer(d);
 }
 
+fn view_persons(ui: &mut Cursive) -> () {
+    let signers : Vec<ripasso::pass::Signer> = ripasso::pass::Signer::all_signers();
+
+    let mut persons = SelectView::<pass::Signer>::new().h_align(cursive::align::HAlign::Left);
+
+    for signer in signers {
+        persons.add_item(format!("{} {}",signer.key_id.clone(), signer.name.clone()), signer);
+    }
+
+    let d = Dialog::around(persons)
+        .title("People")
+        .dismiss_button("Ok");
+
+    ui.add_layer(d);
+}
+
 fn search(passwords: &pass::PasswordList, ui: &mut Cursive, query: &str) -> () {
     let col = ui.screen_size().x;
     ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
@@ -154,6 +170,9 @@ fn main() {
     ui.add_global_callback(Event::CtrlChar('n'), down);
     ui.add_global_callback(Event::CtrlChar('p'), up);
 
+    // View list of persons that have access
+    ui.add_global_callback(Event::CtrlChar('v'), view_persons);
+
     // Query editing
     ui.add_global_callback(Event::CtrlChar('w'), |ui| {
         ui.call_on_id("searchbox", |e: &mut EditView| {
@@ -198,6 +217,7 @@ fn main() {
                     .child(TextView::new("CTRL-Y: Copy "))
                     .child(TextView::new("CTRL-W: Clear "))
                     .child(TextView::new("CTRL-O: Open "))
+                    .child(TextView::new("CTRL-V: View Signers"))
                     .child(TextView::new("esc: Quit"))
                     .full_width(),
             ),
