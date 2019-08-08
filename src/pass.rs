@@ -155,7 +155,7 @@ impl PasswordEntry {
     pub fn reencrypt_all_password_entries() -> Result<()> {
 
         for entry in PasswordEntry::all_password_entries().unwrap() {
-            entry.update(entry.secret().unwrap())?;
+            entry.update(entry.secret()?)?;
         }
         return Ok(());
     }
@@ -174,6 +174,24 @@ fn build_signer(name: String, key_id: String) -> Signer {
 }
 
 impl Signer {
+    pub fn from_key_id(key_id: String) -> Result<Signer> {
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp).unwrap();
+
+        let key_option = ctx.get_key(key_id.clone());
+        if key_option.is_err() {
+            return Err(Error::Generic("Can't find key in keyring, please import it first"));
+        }
+
+        let real_key = key_option.unwrap();
+
+        let mut name = "?";
+        for user_id in real_key.user_ids() {
+            name = user_id.name().unwrap_or("?");
+        }
+
+        return Ok(build_signer(name.to_string(), key_id));
+    }
+
     pub fn all_signers() -> Vec<Signer> {
 
         let mut signer_file = password_dir().unwrap();
@@ -209,15 +227,7 @@ impl Signer {
         return signers;
     }
 
-    pub fn remove_signer_from_file(s: &Signer) -> Result<()> {
-        let mut signers: Vec<Signer> = Signer::all_signers();
-
-        signers.retain(|ref vs| vs.key_id != s.key_id);
-
-        if signers.len() < 1 {
-            return Err(Error::Generic("Can't delete the last signing key"));
-        }
-
+    fn write_signers_file(signers: &Vec<Signer>) -> Result<()> {
         let mut signer_file = password_dir().unwrap();
         signer_file.push(".gpg-id");
 
@@ -229,7 +239,9 @@ impl Signer {
             .unwrap();
 
         for signer in signers {
-            file.write_all(b"0x")?;
+            if !signer.key_id.starts_with("0x") {
+                file.write_all(b"0x")?;
+            }
             file.write_all(signer.key_id.as_bytes())?;
             file.write_all(b"\n")?;
         }
@@ -237,6 +249,32 @@ impl Signer {
         PasswordEntry::reencrypt_all_password_entries()?;
 
         return Ok(());
+    }
+
+    pub fn remove_signer_from_file(s: &Signer) -> Result<()> {
+        let mut signers: Vec<Signer> = Signer::all_signers();
+
+        signers.retain(|ref vs| vs.key_id != s.key_id);
+
+        if signers.len() < 1 {
+            return Err(Error::Generic("Can't delete the last signing key"));
+        }
+
+        return Signer::write_signers_file(&signers);
+    }
+
+    pub fn add_signer_to_file(s: &Signer) -> Result<()> {
+        let mut signers: Vec<Signer> = Signer::all_signers();
+
+        for signer in &signers {
+            if signer.key_id == s.key_id {
+                return Err(Error::Generic("Signer is already in the list of signing keys"));
+            }
+        }
+
+        signers.push(build_signer(s.name.clone(), s.key_id.clone()));
+
+        return Signer::write_signers_file(&signers);
     }
 }
 

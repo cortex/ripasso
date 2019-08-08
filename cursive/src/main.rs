@@ -231,7 +231,7 @@ fn delete_signer(ui: &mut Cursive) -> () {
         let mut error_string = String::new();
         let write_res = writeln!(&mut error_string, "Error {:?}", r.unwrap_err());
         if write_res.is_err() {
-            error_string = "Error while formating error string".to_string();
+            error_string = "Error while formatting error string".to_string();
         }
         ui.add_layer(CircularFocus::wrap_tab(
             Dialog::around(TextView::new(error_string))
@@ -250,6 +250,55 @@ fn delete_signer_verification(ui: &mut Cursive) -> () {
             .dismiss_button("Cancel")));
 }
 
+fn add_signer(ui: &mut Cursive) -> () {
+    let l = &*get_value_from_input(ui, "key_id_input").unwrap();
+
+    let signer_result = pass::Signer::from_key_id(l.clone());
+
+    if signer_result.is_err() {
+        ui.add_layer(CircularFocus::wrap_tab(
+            Dialog::around(TextView::new("Can't find key in keyring"))
+                .dismiss_button("Ok")));
+    } else {
+        let res = pass::Signer::add_signer_to_file(&signer_result.unwrap());
+        if res.is_err() {
+            let mut error_string = String::new();
+            let write_res = writeln!(&mut error_string, "Error adding user to signers file: {:?}", res.unwrap_err());
+            if write_res.is_err() {
+                ui.add_layer(CircularFocus::wrap_tab(
+                    Dialog::around(TextView::new("Error while trying to display error"))
+                        .dismiss_button("Ok")));
+            } else {
+                ui.add_layer(CircularFocus::wrap_tab(
+                    Dialog::around(TextView::new(error_string))
+                        .dismiss_button("Ok")));
+            }
+        } else {
+            ui.pop_layer();
+        }
+    }
+}
+
+fn add_signer_dialog(ui: &mut Cursive) -> () {
+    let mut signer_fields = LinearLayout::horizontal();
+
+    signer_fields.add_child(TextView::new("GPG Key Id: ")
+        .with_id("key_id")
+        .fixed_size((16, 1)));
+
+    let gpg_key_edit_view = OnEventView::new(EditView::new()
+        .with_id("key_id_input")
+        .fixed_size((50, 1)))
+        .on_event(Key::Enter, add_signer);
+
+    signer_fields.add_child(gpg_key_edit_view);
+
+    ui.add_layer(CircularFocus::wrap_tab(
+        Dialog::around(signer_fields)
+            .button("Yes", add_signer)
+            .dismiss_button("Cancel")));
+}
+
 fn view_signers(ui: &mut Cursive) -> () {
     let signers : Vec<ripasso::pass::Signer> = ripasso::pass::Signer::all_signers();
 
@@ -262,7 +311,8 @@ fn view_signers(ui: &mut Cursive) -> () {
     }
 
     let signers_event = OnEventView::new(signers_view)
-        .on_event(Key::Del, delete_signer_verification);
+        .on_event(Key::Del, delete_signer_verification)
+        .on_event(Key::Ins, add_signer_dialog);
 
     let d = Dialog::around(signers_event)
         .title("People")
