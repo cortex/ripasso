@@ -36,8 +36,6 @@ use ripasso::pass;
 use std::process;
 use std::{thread, time};
 
-use std::fmt::Write as FmtWrite;
-
 fn down(ui: &mut Cursive) -> () {
     ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
         l.select_down(1);
@@ -54,7 +52,13 @@ fn errorbox(ui: &mut Cursive, err: &pass::Error) -> () {
     let d = Dialog::around(TextView::new(format!("{:?}", err)))
         .dismiss_button("Ok")
         .title("Error");
-    ui.add_layer(d);
+
+    let ev = OnEventView::new(d)
+        .on_event(Key::Esc, |s| {
+            s.pop_layer();
+        });
+
+    ui.add_layer(ev);
 }
 
 fn copy(ui: &mut Cursive) -> () {
@@ -228,15 +232,7 @@ fn delete_signer(ui: &mut Cursive) -> () {
     let r = ripasso::pass::Signer::remove_signer_from_file(&sel.unwrap());
 
     if r.is_err() {
-        let mut error_string = String::new();
-        let write_res = writeln!(&mut error_string, "Error {:?}", r.unwrap_err());
-        if write_res.is_err() {
-            error_string = "Error while formatting error string".to_string();
-        }
-        ui.add_layer(CircularFocus::wrap_tab(
-            Dialog::around(TextView::new(error_string))
-                .title("Error")
-                .dismiss_button("Ok")));
+        errorbox(ui, &r.unwrap_err());
     } else {
         let delete_id = l.selected_id().unwrap();
         l.remove_item(delete_id);
@@ -256,23 +252,11 @@ fn add_signer(ui: &mut Cursive) -> () {
     let signer_result = pass::Signer::from_key_id(l.clone());
 
     if signer_result.is_err() {
-        ui.add_layer(CircularFocus::wrap_tab(
-            Dialog::around(TextView::new("Can't find key in keyring"))
-                .dismiss_button("Ok")));
+        errorbox(ui, &signer_result.err().unwrap());
     } else {
         let res = pass::Signer::add_signer_to_file(&signer_result.unwrap());
         if res.is_err() {
-            let mut error_string = String::new();
-            let write_res = writeln!(&mut error_string, "Error adding user to signers file: {:?}", res.unwrap_err());
-            if write_res.is_err() {
-                ui.add_layer(CircularFocus::wrap_tab(
-                    Dialog::around(TextView::new("Error while trying to display error"))
-                        .dismiss_button("Ok")));
-            } else {
-                ui.add_layer(CircularFocus::wrap_tab(
-                    Dialog::around(TextView::new(error_string))
-                        .dismiss_button("Ok")));
-            }
+            errorbox(ui, &res.unwrap_err());
         } else {
             ui.pop_layer();
         }
@@ -310,15 +294,18 @@ fn view_signers(ui: &mut Cursive) -> () {
         signers_view.get_mut().add_item(format!("{} {}",signer.key_id.clone(), signer.name.clone()), signer);
     }
 
-    let signers_event = OnEventView::new(signers_view)
-        .on_event(Key::Del, delete_signer_verification)
-        .on_event(Key::Ins, add_signer_dialog);
-
-    let d = Dialog::around(signers_event)
+    let d = Dialog::around(signers_view)
         .title("People")
         .dismiss_button("Ok");
 
-    ui.add_layer(d);
+    let signers_event = OnEventView::new(d)
+        .on_event(Key::Del, delete_signer_verification)
+        .on_event(Key::Ins, add_signer_dialog)
+        .on_event(Key::Esc, |s| {
+            s.pop_layer();
+        });
+
+    ui.add_layer(signers_event);
 }
 
 fn search(passwords: &pass::PasswordList, ui: &mut Cursive, query: &str) -> () {
