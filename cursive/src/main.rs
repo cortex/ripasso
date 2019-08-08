@@ -277,10 +277,17 @@ fn add_signer_dialog(ui: &mut Cursive) -> () {
 
     signer_fields.add_child(gpg_key_edit_view);
 
-    ui.add_layer(CircularFocus::wrap_tab(
+    let cf = CircularFocus::wrap_tab(
         Dialog::around(signer_fields)
             .button("Yes", add_signer)
-            .dismiss_button("Cancel")));
+            .dismiss_button("Cancel"));
+
+    let ev = OnEventView::new(cf)
+        .on_event(Key::Esc, |s| {
+            s.pop_layer();
+        });
+
+    ui.add_layer(ev);
 }
 
 fn view_signers(ui: &mut Cursive) -> () {
