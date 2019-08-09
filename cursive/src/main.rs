@@ -223,7 +223,12 @@ fn create(ui: &mut Cursive) -> () {
             })
             .dismiss_button("Cancel");
 
-    ui.add_layer(d);
+    let ev = OnEventView::new(d)
+        .on_event(Key::Esc, |s| {
+            s.pop_layer();
+        });
+
+    ui.add_layer(ev);
 }
 
 fn delete_signer(ui: &mut Cursive) -> () {
