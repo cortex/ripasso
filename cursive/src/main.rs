@@ -315,7 +315,13 @@ fn view_signers(ui: &mut Cursive) -> () {
         .title("People")
         .dismiss_button("Ok");
 
-    let signers_event = OnEventView::new(d)
+    let ll = LinearLayout::new(Orientation::Vertical)
+        .child(d)
+        .child(LinearLayout::new(Orientation::Horizontal)
+            .child(TextView::new("ins: Add | "))
+            .child(TextView::new("del: Remove")));
+
+    let signers_event = OnEventView::new(ll)
         .on_event(Key::Del, delete_signer_verification)
         .on_event(Key::Ins, add_signer_dialog)
         .on_event(Key::Esc, |s| {
