@@ -150,7 +150,12 @@ fn open(ui: &mut Cursive) -> () {
             })
             .dismiss_button("Ok");
 
-    ui.add_layer(d);
+    let ev = OnEventView::new(d)
+        .on_event(Key::Esc, |s| {
+            s.pop_layer();
+        });
+
+    ui.add_layer(ev);
 }
 
 fn get_value_from_input(s: &mut Cursive, input_name: &str) -> Option<std::rc::Rc<String>> {
