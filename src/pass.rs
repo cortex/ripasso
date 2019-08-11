@@ -113,7 +113,7 @@ impl PasswordEntry {
         Ok(self.secret()?.split('\n').take(1).collect())
     }
 
-    pub fn update(&self, secret: String) -> Result<()> {
+    fn update_internal(&self, secret: String) -> Result<()> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
         let mut keys = Vec::new();
@@ -130,8 +130,40 @@ impl PasswordEntry {
         Ok(())
     }
 
+    pub fn update(&self, secret: String) -> Result<()> {
+        self.update_internal(secret)?;
+
+        let repo_res = git2::Repository::open(password_dir().unwrap());
+
+        if repo_res.is_err() {
+            return Ok(());
+        }
+
+        let repo = repo_res.unwrap();
+
+        let message = format!("Edit password for {} using ripasso", &self.name);
+
+        add_and_commit(&repo, &vec![format!("{}.gpg", &self.name)], &message)?;
+
+        return Ok(());
+    }
+
     pub fn delete_file(&self) -> Result<()> {
-        return Ok(std::fs::remove_file(&self.filename)?);
+        let res = Ok(std::fs::remove_file(&self.filename)?);
+
+        let repo_res = git2::Repository::open(password_dir().unwrap());
+
+        if repo_res.is_err() {
+            return Ok(());
+        }
+
+        let repo = repo_res.unwrap();
+
+        let message = format!("Removed password file for {} using ripasso", &self.name);
+
+        remove_and_commit(&repo, &vec![format!("{}.gpg", &self.name)], &message)?;
+
+        return res;
     }
 
     pub fn all_password_entries() -> Result<Vec<PasswordEntry>> {
@@ -153,12 +185,79 @@ impl PasswordEntry {
     }
 
     pub fn reencrypt_all_password_entries() -> Result<()> {
-
+        let mut names: Vec<String> = Vec::new();
         for entry in PasswordEntry::all_password_entries().unwrap() {
-            entry.update(entry.secret()?)?;
+            entry.update_internal(entry.secret()?)?;
+            names.push(format!("{}.gpg", &entry.name));
         }
+        names.push(".gpg-id".to_string());
+
+        let repo_res = git2::Repository::open(password_dir().unwrap());
+
+        if repo_res.is_err() {
+            return Ok(());
+        }
+
+        let repo = repo_res.unwrap();
+
+        let keys = Signer::all_signers().into_iter().map(|s| format!("0x{}, ", s.key_id)).collect::<String>();
+        let message = format!("Reencrypt password store with new GPG ids {}", keys);
+
+        add_and_commit(&repo, &names, &message)?;
+
         return Ok(());
     }
+}
+
+fn find_last_commit(repo: &git2::Repository) -> Result<git2::Commit> {
+    let obj = repo.head()?.resolve()?.peel(git2::ObjectType::Commit)?;
+    obj.into_commit().map_err(|_| Error::Generic("Couldn't find commit"))
+}
+
+fn add_and_commit(repo: &git2::Repository, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
+    let mut index = repo.index()?;
+    for path in paths {
+        index.add_path(path::Path::new(path))?;
+    }
+    let oid = index.write_tree()?;
+    let signature = repo.signature()?;
+    let parent_commit = find_last_commit(&repo)?;
+    let tree = repo.find_tree(oid)?;
+    let commit = repo.commit(Some("HEAD"), //  point HEAD to our new commit
+                &signature, // author
+                &signature, // committer
+                message, // commit message
+                &tree, // tree
+                &[&parent_commit]); // parents
+
+    if commit.is_err() {
+        return Err(Error::Git(commit.unwrap_err()));
+    }
+
+    return Ok(commit.unwrap());
+}
+
+fn remove_and_commit(repo: &git2::Repository, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
+    let mut index = repo.index()?;
+    for path in paths {
+        index.remove_path(path::Path::new(path))?;
+    }
+    let oid = index.write_tree()?;
+    let signature = repo.signature()?;
+    let parent_commit = find_last_commit(&repo)?;
+    let tree = repo.find_tree(oid)?;
+    let commit = repo.commit(Some("HEAD"), //  point HEAD to our new commit
+                &signature, // author
+                &signature, // committer
+                message, // commit message
+                &tree, // tree
+                &[&parent_commit]); // parents
+
+    if commit.is_err() {
+        return Err(Error::Git(commit.unwrap_err()));
+    }
+
+    return Ok(commit.unwrap());
 }
 
 pub struct Signer {
@@ -278,10 +377,7 @@ impl Signer {
     }
 }
 
-fn updated(
-    base: &path::PathBuf,
-    path: &path::PathBuf,
-) -> Result<DateTime<Local>> {
+fn updated(base: &path::PathBuf, path: &path::PathBuf) -> Result<DateTime<Local>> {
     let repo = git2::Repository::open(base)?;
     let blame = repo.blame_file(path.strip_prefix(base)?, None)?;
     let id = blame
@@ -323,6 +419,18 @@ pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<Str
         Err(why) => return Err(Error::from(why)),
         Ok(_) => (),
     }
+
+    let repo_res = git2::Repository::open(password_dir().unwrap());
+
+    if repo_res.is_err() {
+        return Ok(());
+    }
+
+    let repo = repo_res.unwrap();
+
+    let message = format!("Add password for {} using ripasso", path_end);
+
+    add_and_commit(&repo, &vec![format!("{}.gpg", (*path_end).clone())], &message)?;
 
     return Ok(());
 }

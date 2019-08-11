@@ -217,9 +217,9 @@ fn create(ui: &mut Cursive) -> () {
 
                 if res.is_err() {
                     errorbox(s, &res.err().unwrap())
+                } else {
+                    s.pop_layer();
                 }
-
-                s.pop_layer();
             })
             .dismiss_button("Cancel");
 
