@@ -110,16 +110,16 @@ impl PasswordEntry {
     }
 
     pub fn update(&self, secret: String) -> Result<()> {
-        let pwdir = password_dir()?;
-
-        let mut gpg_id_file = File::open(pwdir.join(".gpg-id"))?;
-        let mut gpgid = String::new();
-        gpg_id_file.read_to_string(&mut gpgid)?;
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-        let key = ctx.get_key(gpgid)?;
+
+        let mut keys = Vec::new();
+
+        for signer in Signer::all_signers() {
+            keys.push(ctx.get_key(signer.key_id).unwrap());
+        }
 
         let mut ciphertext = Vec::new();
-        ctx.encrypt(Some(&key), secret, &mut ciphertext)?;
+        ctx.encrypt(&keys, secret, &mut ciphertext)?;
 
         let mut output = File::create(&self.filename)?;
         output.write_all(&ciphertext)?;
