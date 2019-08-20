@@ -573,3 +573,6 @@ fn password_dir() -> Result<path::PathBuf> {
     }
     Ok(path::Path::new(&pass_home).to_path_buf())
 }
+
+#[cfg(test)]
+mod test;

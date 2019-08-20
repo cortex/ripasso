@@ -17,6 +17,7 @@ rand = "0.7"
 
 [dev-dependencies]
 tempdir = "0.3"
+tempfile = "3.1.0"
 
 [workspace]
 
