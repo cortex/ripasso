@@ -77,6 +77,12 @@ fn copy(ui: &mut Cursive) -> () {
 
         let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
         ctx.set_contents(password.unwrap().to_owned()).unwrap();
+
+        thread::spawn(|| {
+            thread::sleep(time::Duration::from_secs(40));
+            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+            ctx.set_contents("".to_string()).unwrap();
+        });
     });
 }
 
