@@ -23,7 +23,6 @@ use std::str;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
-use std::time;
 
 extern crate rand;
 use pass::rand::{thread_rng, Rng};
@@ -238,7 +237,11 @@ fn add_and_commit(repo: &git2::Repository, paths: &Vec<String>, message: &str) -
 
     let oid = commit.unwrap();
     let obj = repo.find_object(oid, None).unwrap();
-    repo.reset(&obj, git2::ResetType::Hard, None);
+    let reset = repo.reset(&obj, git2::ResetType::Hard, None);
+    if reset.is_err() {
+        return Err(Error::Git(reset.unwrap_err()));
+    }
+
     return Ok(oid);
 }
 
