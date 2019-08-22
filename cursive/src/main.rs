@@ -144,8 +144,8 @@ fn open(ui: &mut Cursive) -> () {
                         e.get_content().to_string()
                     }).unwrap();
                 let r = password_entry.update(new_password);
-                if let Err(e) = r {
-                    errorbox(s, &e)
+                if r.is_err() {
+                    errorbox(s, &r.unwrap_err())
                 }
             })
             .button("Generate", move |s| {
