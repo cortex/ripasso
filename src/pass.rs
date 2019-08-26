@@ -317,12 +317,12 @@ impl Signer {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp).unwrap();
 
         for key in unique_signers_keys {
-            let mut key_option = ctx.get_key(key.clone());
+            let key_option = ctx.get_key(key.clone());
             if key_option.is_err() {
                 continue;
             }
 
-            let mut real_key = key_option.unwrap();
+            let real_key = key_option.unwrap();
 
             let mut name = "?";
             for user_id in real_key.user_ids() {
