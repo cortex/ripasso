@@ -399,7 +399,19 @@ fn updated(base: &path::PathBuf, path: &path::PathBuf) -> Result<DateTime<Local>
 pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<String>) -> Result<()> {
     let mut path = password_dir()?;
 
-    path.push((*path_end).clone() + ".gpg");
+    let path_deref = (*path_end).clone();
+    let path_iter = &mut path_deref.split("/").peekable();
+
+    while let Some(p) = path_iter.next() {
+        if path_iter.peek().is_some() {
+            path.push(p);
+            if !path.exists() {
+                std::fs::create_dir(&path)?;
+            }
+        } else {
+            path.push(format!("{}.gpg", p));
+        }
+    }
 
     if path.exists() {
         return Err(Error::Generic("file already exist"));
