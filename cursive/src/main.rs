@@ -172,6 +172,34 @@ fn get_value_from_input(s: &mut Cursive, input_name: &str) -> Option<std::rc::Rc
     return password;
 }
 
+fn create_save(s: &mut Cursive) -> () {
+    let password = get_value_from_input(s, "new_password_input");
+    if password.is_none() {
+        return;
+    }
+    let password = password.unwrap();
+    if *password == "" {
+        return;
+    }
+
+    let path = get_value_from_input(s, "new_path_input");
+    if path.is_none() {
+        return;
+    }
+    let path = path.unwrap();
+    if *path == "" {
+        return;
+    }
+
+    let res = pass::new_password_file(path, password);
+
+    if res.is_err() {
+        errorbox(s, &res.err().unwrap())
+    } else {
+        s.pop_layer();
+    }
+}
+
 fn create(ui: &mut Cursive) -> () {
     let mut fields = LinearLayout::vertical();
     let mut path_fields = LinearLayout::horizontal();
@@ -200,39 +228,14 @@ fn create(ui: &mut Cursive) -> () {
                     e.set_content(new_password);
                 });
             })
-            .button("Save", move |s| {
-                let password = get_value_from_input(s, "new_password_input");
-                if password.is_none() {
-                    return;
-                }
-                let password = password.unwrap();
-                if *password == "" {
-                    return;
-                }
-
-                let path = get_value_from_input(s, "new_path_input");
-                if path.is_none() {
-                    return;
-                }
-                let path = path.unwrap();
-                if *path == "" {
-                    return;
-                }
-
-                let res = pass::new_password_file(path, password);
-
-                if res.is_err() {
-                    errorbox(s, &res.err().unwrap())
-                } else {
-                    s.pop_layer();
-                }
-            })
+            .button("Save", create_save)
             .dismiss_button("Cancel");
 
     let ev = OnEventView::new(d)
         .on_event(Key::Esc, |s| {
             s.pop_layer();
-        });
+        })
+        .on_event(Key::Enter, create_save);
 
     ui.add_layer(ev);
 }
