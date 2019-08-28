@@ -24,9 +24,9 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
 
-extern crate rand;
-use pass::rand::{thread_rng, Rng};
-use pass::rand::distributions::Alphanumeric;
+extern crate xkcd_password;
+use self::xkcd_password::Dictionary::en_US as Dictionary;
+use self::xkcd_password::generate_password as GeneratePassword;
 
 use chrono::prelude::*;
 use git2;
@@ -545,10 +545,7 @@ pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
 }
 
 pub fn generate_password(length: usize) -> String {
-    return thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(length)
-        .collect();
+    return GeneratePassword(length, Dictionary);
 }
 
 fn to_name(base: &path::PathBuf, path: &path::PathBuf) -> String {
