@@ -149,7 +149,7 @@ fn open(ui: &mut Cursive) -> () {
                 }
             })
             .button("Generate", move |s| {
-                let new_password = ripasso::pass::generate_password(24);
+                let new_password = ripasso::pass::generate_password(4);
                 s.call_on_id("editbox", |e: &mut TextArea| {
                     e.set_content(new_password);
                 });
