@@ -14,6 +14,7 @@ log = "0.4.5"
 env_logger = "0.6"
 dirs = "1.0"
 rand = "0.7"
+xkcd-password = "0.1.1"
 
 [dev-dependencies]
 tempdir = "0.3"
