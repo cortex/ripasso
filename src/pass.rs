@@ -265,7 +265,14 @@ fn remove_and_commit(repo: &git2::Repository, paths: &Vec<String>, message: &str
         return Err(Error::Git(commit.unwrap_err()));
     }
 
-    return Ok(commit.unwrap());
+    let oid = commit.unwrap();
+    let obj = repo.find_object(oid, None).unwrap();
+    let reset = repo.reset(&obj, git2::ResetType::Hard, None);
+    if reset.is_err() {
+        return Err(Error::Git(reset.unwrap_err()));
+    }
+
+    return Ok(oid);
 }
 
 pub struct Signer {
