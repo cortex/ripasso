@@ -191,11 +191,26 @@ fn create_save(s: &mut Cursive) -> () {
         return;
     }
 
-    let res = pass::new_password_file(path, password);
+    let res = pass::new_password_file(path.clone(), password);
 
     if res.is_err() {
         errorbox(s, &res.err().unwrap())
     } else {
+        s.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
+            let mut path_buf: std::path::PathBuf = pass::password_dir().unwrap();
+
+            let path_iter = &mut path.split("/");
+            while let Some(p) = path_iter.next() {
+                path_buf.push(p);
+            }
+            path_buf.set_extension("gpg");
+
+            match pass::to_password(&pass::password_dir().unwrap(), &path_buf) {
+                Ok(e) => l.add_item((*path).clone(), e),
+                Err(_) => println!("error")
+            }
+        });
+
         s.pop_layer();
     }
 }

@@ -465,6 +465,7 @@ pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<Str
 #[derive(Debug)]
 pub enum PasswordEvent {
     NewPassword(PasswordEntry),
+    RemovedPassword(path::PathBuf),
     Error(Error),
 }
 
@@ -482,69 +483,72 @@ pub fn search(l: &PasswordList, query: &str) -> Vec<PasswordEntry> {
     matching.cloned().collect()
 }
 
-pub fn watch_iter() -> Result<impl Iterator<Item = PasswordEvent>> {
+pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
     let dir = password_dir()?;
 
     let (watcher_tx, watcher_rx) = channel();
-    // Existing files iterator
-    let password_path_glob = dir.join("**/*.gpg");
-    let existing_iter =
-        glob::glob(&password_path_glob.to_string_lossy()).unwrap();
 
     // Watcher iterator
-    notify::RecommendedWatcher::new(watcher_tx, Duration::from_secs(2))?
-        .watch(&dir, notify::RecursiveMode::Recursive)?;
-    Ok(existing_iter
-        .map(|event| -> Result<path::PathBuf> {
-            match event {
-                Ok(x) => Ok(x),
-                Err(_) => Err(Error::Generic("test")),
-            }
-        }).chain(
-            watcher_rx
-                .into_iter()
-                .map(|event| -> Result<path::PathBuf> {
-                    match event {
-                        notify::DebouncedEvent::Create(p) => Ok(p),
-                        notify::DebouncedEvent::Error(_, _) => {
-                            Err(Error::Generic("test"))
-                        }
-                        _ => Err(Error::Generic("None")),
-                    }
-                }),
-        ).map(move |path| match path {
-            Ok(p) => match to_password(&dir, &p) {
-                Ok(password) => PasswordEvent::NewPassword(password),
-                Err(e) => PasswordEvent::Error(e),
-            },
-            Err(e) => PasswordEvent::Error(e),
-        }))
-}
-
-pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
-    let wi = watch_iter()?;
-
     let (event_tx, event_rx): (
         Sender<PasswordEvent>,
         Receiver<PasswordEvent>,
     ) = channel();
 
-    let passwords = Arc::new(Mutex::new(Vec::new()));
+    let passwords = Arc::new(Mutex::new(Vec::<PasswordEntry>::new()));
     let passwords_out = passwords.clone();
+
+    // populate the password list with all the files that existed when the program started
+    let password_path_glob = dir.join("**/*.gpg");
+    let existing_iter = glob::glob(&password_path_glob.to_string_lossy()).unwrap();
+
+    for existing_file in existing_iter {
+        (passwords.lock().unwrap()).push(to_password(&dir, &existing_file.unwrap())?);
+    }
 
     thread::spawn(move || {
         info!("Starting thread");
-        for event in wi {
-            match event {
-                PasswordEvent::NewPassword(ref p) => {
-                    (passwords.lock().unwrap()).push(p.clone());
-                    info!("password: {}", p.name);
-                }
-                PasswordEvent::Error(ref err) => {
-                    error!("Error: {:?}", err);
-                }
-            }
-            if let Err(_err) = event_tx.send(event) { //error!("Error sending event {}", err)
+
+
+        // Automatically select the best implementation for your platform.
+        let mut watcher: notify::RecommendedWatcher = Watcher::new(watcher_tx, Duration::from_secs(1)).unwrap();
+
+        // Add a path to be watched. All files and directories at that path and
+        // below will be monitored for changes.
+        watcher.watch(&dir, notify::RecursiveMode::Recursive).unwrap();
+
+        loop {
+            match watcher_rx.recv() {
+                Ok(event) => {
+                    let mut pass_event = match event {
+                        notify::DebouncedEvent::Create(p) => {
+                            let ext = p.extension();
+                            if ext == None || ext.unwrap() != "gpg" {
+                                continue;
+                            }
+
+                            let p_e = to_password(&password_dir().unwrap(), &p.clone()).unwrap();
+                            (passwords.lock().unwrap()).push(p_e.clone());
+                            PasswordEvent::NewPassword(p_e)
+                        },
+                        notify::DebouncedEvent::Remove(p) => {
+                            let index = (passwords.lock().unwrap()).iter().position(|x| *x.path == p).unwrap();
+                            (passwords.lock().unwrap()).remove(index);
+                            PasswordEvent::RemovedPassword(p)
+                        },
+                        notify::DebouncedEvent::Error(e, _) => {
+                            PasswordEvent::Error(Error::Notify(e))
+                        },
+                        _ => PasswordEvent::Error(Error::Generic("None")),
+                    };
+
+                    if let Err(_err) = event_tx.send(pass_event) {
+                        //error!("Error sending event {}", err)
+                    }
+                },
+                Err(e) => {
+                    eprintln!("watch error: {:?}", e);
+                    panic!("error")
+                },
             }
         }
     });
@@ -564,7 +568,7 @@ fn to_name(base: &path::PathBuf, path: &path::PathBuf) -> String {
         .to_string()
 }
 
-fn to_password(
+pub fn to_password(
     base: &path::PathBuf,
     path: &path::PathBuf,
 ) -> Result<PasswordEntry> {
@@ -582,7 +586,7 @@ fn to_password(
 }
 
 /// Determine password directory
-fn password_dir() -> Result<path::PathBuf> {
+pub fn password_dir() -> Result<path::PathBuf> {
     // If a directory is provided via env var, use it
     let pass_home = match env::var("PASSWORD_STORE_DIR") {
         Ok(p) => p,
