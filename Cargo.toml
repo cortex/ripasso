@@ -23,5 +23,5 @@ tempfile = "3.1.0"
 [workspace]
 
 members = [
-    "gtk","qml", "cursive"
+    "gtk", "qml", "cursive", "man"
 ]

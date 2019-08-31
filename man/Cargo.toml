@@ -1,0 +1,7 @@
+[package]
+name = "ripasso-man"
+version = "0.1.0"
+authors = ["Alexander Kjäll <alexander.kjall@gmail.com>"]
+
+[dependencies]
+man = "0.3.0"

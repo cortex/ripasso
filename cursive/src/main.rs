@@ -375,8 +375,25 @@ fn search(passwords: &pass::PasswordList, ui: &mut Cursive, query: &str) -> () {
     });
 }
 
+fn help() {
+    println!("A password manager that uses the file format of the standard unix password manager 'pass', implemented in rust.
+Ripasso reads $HOME/.password-store/ by default, override this by setting the PASSWORD_STORE_DIR environmental variable.");
+}
+
 fn main() {
     env_logger::init();
+
+    let args: Vec<String> = std::env::args().collect();
+
+    match args.len() {
+        2 => {
+            if args[1] == "-h" || args[1] == "--help" {
+                help();
+                std::process::exit(0);
+            }
+        },
+        _ => {}
+    }
 
     // Load and watch all the passwords in the background
     let (password_rx, passwords) = match pass::watch() {
