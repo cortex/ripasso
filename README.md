@@ -67,7 +67,7 @@ cargo build -p ripasso-gtk
 
 ```
 $ brew update
-$ brew install automake cmake qt5 gtk+3
+$ brew install automake cmake gettext qt5 gtk+3
 $ export PATH="/usr/local/opt/qt/bin:$PATH"
 $ git clone https://github.com/cortex/ripasso.git
 $ cd ripasso
