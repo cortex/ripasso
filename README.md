@@ -76,7 +76,7 @@ $ cargo run
 
 ### Ubuntu
 ```
-$ apt install cargo libgtk-3-dev qtdeclarative5-dev libqt5svg5-dev cmake libncurses-dev
+$ apt install cargo libgtk-3-dev qtdeclarative5-dev libqt5svg5-dev cmake libncurses-dev libssl-dev
 $ cargo build
 ```
 
