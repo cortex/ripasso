@@ -587,6 +587,14 @@ pub fn to_password(
 
 /// Determine password directory
 pub fn password_dir() -> Result<path::PathBuf> {
+    let pass_home = password_dir_raw();
+    if !pass_home.exists() {
+        return Err(Error::Generic("failed to locate password directory"));
+    }
+    Ok(pass_home.to_path_buf())
+}
+
+pub fn password_dir_raw() -> path::PathBuf {
     // If a directory is provided via env var, use it
     let pass_home = match env::var("PASSWORD_STORE_DIR") {
         Ok(p) => p,
@@ -596,10 +604,7 @@ pub fn password_dir() -> Result<path::PathBuf> {
             .to_string_lossy()
             .into(),
     };
-    if !path::Path::new(&pass_home).exists() {
-        return Err(Error::Generic("failed to locate password directory"));
-    }
-    Ok(path::Path::new(&pass_home).to_path_buf())
+    return path::PathBuf::from(&pass_home);
 }
 
 #[cfg(test)]

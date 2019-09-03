@@ -380,6 +380,74 @@ fn help() {
 Ripasso reads $HOME/.password-store/ by default, override this by setting the PASSWORD_STORE_DIR environmental variable.");
 }
 
+fn show_init_menu() {
+    let mut ui = Cursive::default();
+
+    ui.load_toml(include_str!("../res/style.toml")).unwrap();
+
+    let results = SelectView::<pass::PasswordEntry>::new()
+        .with_id("results")
+        .full_height();
+
+    let searchbox = EditView::new().fixed_width(72);
+
+    ui.add_layer(
+        LinearLayout::new(Orientation::Vertical)
+            .child(
+                Dialog::around(
+                    LinearLayout::new(Orientation::Vertical)
+                        .child(searchbox)
+                        .child(results)
+                        .fixed_width(72),
+                ).title("Ripasso"),
+            ).child(
+            LinearLayout::new(Orientation::Horizontal)
+                .child(TextView::new("C-N: Next | "))
+                .child(TextView::new("C-P: Previous | "))
+                .child(TextView::new("C-Y: Copy | "))
+                .child(TextView::new("C-W: Clear | "))
+                .child(TextView::new("C-O: Open | "))
+                .child(TextView::new("C-V: Signers | "))
+                .child(TextView::new("ins: Create | "))
+                .child(TextView::new("esc: Quit"))
+                .full_width(),
+        ),
+    );
+
+    let d = Dialog::around(TextView::new("Welcome to ripasso, it seems like you don't have a password store directory yet
+would you like to create it?"))
+        .button("Create", |s| {
+            let d2 = Dialog::around(LinearLayout::new(Orientation::Vertical)
+                    .child(TextView::new("Please enter your gpg key id"))
+                    .child(EditView::new().with_id("initial_key_id"))
+                )
+                .button("Create", |s| {
+                    let l = s.find_id::<EditView>("initial_key_id").unwrap();
+                    let key_id = (*l.get_content()).clone();
+                    let mut pass_home = pass::password_dir_raw();
+                    let create_res = std::fs::create_dir_all(&pass_home);
+                    if create_res.is_err() {
+                        errorbox(s, &pass::Error::IO(create_res.unwrap_err()));
+                        s.quit();
+                    } else {
+                        pass_home.push(".gpg-id");
+                        std::fs::write(pass_home, key_id).expect("Unable to write file");
+                        s.quit();
+                    }
+                });
+
+            s.add_layer(d2);
+        })
+        .button("Cancel", |s| {
+            s.quit();
+        })
+        .title("Init");
+
+    ui.add_layer(d);
+
+    ui.run();
+}
+
 fn main() {
     env_logger::init();
 
@@ -393,6 +461,10 @@ fn main() {
             }
         },
         _ => {}
+    }
+
+    if pass::password_dir().is_err() {
+        show_init_menu();
     }
 
     // Load and watch all the passwords in the background
