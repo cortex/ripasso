@@ -519,7 +519,7 @@ pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
         loop {
             match watcher_rx.recv() {
                 Ok(event) => {
-                    let mut pass_event = match event {
+                    let pass_event = match event {
                         notify::DebouncedEvent::Create(p) => {
                             let ext = p.extension();
                             if ext == None || ext.unwrap() != "gpg" {
