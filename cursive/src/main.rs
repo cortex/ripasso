@@ -365,7 +365,6 @@ fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
                 },
                 _ = col - 10 - 8, // Optimized for 80 cols
             );
-
 }
 
 fn search(passwords: &pass::PasswordList, ui: &mut Cursive, query: &str) -> () {
@@ -382,6 +381,28 @@ fn search(passwords: &pass::PasswordList, ui: &mut Cursive, query: &str) -> () {
 fn help() {
     println!("A password manager that uses the file format of the standard unix password manager 'pass', implemented in rust.
 Ripasso reads $HOME/.password-store/ by default, override this by setting the PASSWORD_STORE_DIR environmental variable.");
+}
+
+fn git_pull(ui: &mut Cursive, passwords: pass::PasswordList) {
+    let pull_res = pass::pull();
+
+    if pull_res.is_err() {
+        errorbox(ui, &pull_res.unwrap_err());
+    }
+
+    let res = pass::populate_password_list(&passwords);
+    if res.is_err() {
+        errorbox(ui, &res.unwrap_err());
+    }
+
+    let col = ui.screen_size().x;
+
+    ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
+        l.clear();
+        for p in passwords.lock().unwrap().iter() {
+            l.add_item(create_label(&p, col), p.clone());
+        }
+    });
 }
 
 fn show_init_menu() {
@@ -517,6 +538,10 @@ fn main() {
 
     // Editing
     ui.add_global_callback(Event::CtrlChar('o'), open);
+    let passwords_git_pull_clone = std::sync::Arc::clone(&passwords);
+    ui.add_global_callback(Event::CtrlChar('f'), move |ui: &mut Cursive| {
+        git_pull(ui, passwords_git_pull_clone.clone())
+    });
     ui.add_global_callback(Event::Key(cursive::event::Key::Ins), create);
 
     ui.add_global_callback(Event::Key(cursive::event::Key::Esc), |s| s.quit());
@@ -555,6 +580,7 @@ fn main() {
                     .child(TextView::new("C-W: Clear | "))
                     .child(TextView::new("C-O: Open | "))
                     .child(TextView::new("C-V: Signers | "))
+                    .child(TextView::new("C-F: Git Pull | "))
                     .child(TextView::new("ins: Create | "))
                     .child(TextView::new("esc: Quit"))
                     .full_width(),

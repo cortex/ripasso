@@ -275,6 +275,19 @@ fn remove_and_commit(repo: &git2::Repository, paths: &Vec<String>, message: &str
     return Ok(oid);
 }
 
+pub fn pull() -> Result<()> {
+    let repo = git2::Repository::open(password_dir().unwrap())?;
+
+    let mut remote = repo.find_remote("origin")?;
+    remote.connect(git2::Direction::Fetch)?;
+    remote.fetch(&["master"], None, None)?;
+
+    let oid = repo.refname_to_id("refs/remotes/origin/master")?;
+    let object = repo.find_object(oid, None).unwrap();
+    repo.reset(&object, git2::ResetType::Hard, None)?;
+    return Ok(());
+}
+
 pub struct Signer {
     pub name: String,
     pub key_id: String,
@@ -483,6 +496,20 @@ pub fn search(l: &PasswordList, query: &str) -> Vec<PasswordEntry> {
     matching.cloned().collect()
 }
 
+pub fn populate_password_list(passwords: &PasswordList) -> Result<()> {
+    let dir = password_dir()?;
+
+    let password_path_glob = dir.join("**/*.gpg");
+    let existing_iter = glob::glob(&password_path_glob.to_string_lossy()).unwrap();
+
+    (passwords.lock().unwrap()).clear();
+    for existing_file in existing_iter {
+        (passwords.lock().unwrap()).push(to_password(&dir, &existing_file.unwrap())?);
+    }
+
+    Ok(())
+}
+
 pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
     let dir = password_dir()?;
 
@@ -497,13 +524,7 @@ pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
     let passwords = Arc::new(Mutex::new(Vec::<PasswordEntry>::new()));
     let passwords_out = passwords.clone();
 
-    // populate the password list with all the files that existed when the program started
-    let password_path_glob = dir.join("**/*.gpg");
-    let existing_iter = glob::glob(&password_path_glob.to_string_lossy()).unwrap();
-
-    for existing_file in existing_iter {
-        (passwords.lock().unwrap()).push(to_password(&dir, &existing_file.unwrap())?);
-    }
+    populate_password_list(&passwords_out)?;
 
     thread::spawn(move || {
         info!("Starting thread");
