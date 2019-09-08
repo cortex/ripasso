@@ -193,6 +193,7 @@ fn create_save(s: &mut Cursive) -> () {
 
     let res = pass::new_password_file(path.clone(), password);
 
+    let col = s.screen_size().x;
     if res.is_err() {
         errorbox(s, &res.err().unwrap())
     } else {
@@ -206,7 +207,7 @@ fn create_save(s: &mut Cursive) -> () {
             path_buf.set_extension("gpg");
 
             match pass::to_password(&pass::password_dir().unwrap(), &path_buf) {
-                Ok(e) => l.add_item((*path).clone(), e),
+                Ok(e) => l.add_item(create_label(&e, col), e),
                 Err(_) => println!("error")
             }
         });
@@ -355,22 +356,25 @@ fn view_signers(ui: &mut Cursive) -> () {
     ui.add_layer(signers_event);
 }
 
+fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
+    return format!("{:2$}  {}",
+                p.name,
+                match p.updated {
+                    Some(d) => format!("{}", d.format("%Y-%m-%d")),
+                    None => "n/a".to_string(),
+                },
+                _ = col - 10 - 8, // Optimized for 80 cols
+            );
+
+}
+
 fn search(passwords: &pass::PasswordList, ui: &mut Cursive, query: &str) -> () {
     let col = ui.screen_size().x;
     ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
         let r = pass::search(&passwords, &String::from(query));
         l.clear();
         for p in &r {
-            let label = format!(
-                            "{:2$}  {}",
-                            p.name,
-                            match p.updated {
-                                Some(d) => format!("{}", d.format("%Y-%m-%d")),
-                                None => "n/a".to_string(),
-                            },
-                            _ = col - 10 - 8, // Optimized for 80 cols
-                        );
-            l.add_item(label, p.clone());
+            l.add_item(create_label(&p, col), p.clone());
         }
     });
 }
