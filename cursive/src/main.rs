@@ -149,7 +149,7 @@ fn open(ui: &mut Cursive) -> () {
                 }
             })
             .button("Generate", move |s| {
-                let new_password = ripasso::pass::generate_password(4);
+                let new_password = ripasso::pass::generate_password(6);
                 s.call_on_id("editbox", |e: &mut TextArea| {
                     e.set_content(new_password);
                 });
@@ -239,7 +239,7 @@ fn create(ui: &mut Cursive) -> () {
         Dialog::around(fields)
             .title("Add new password")
             .button("Generate", move |s| {
-                let new_password = ripasso::pass::generate_password(24);
+                let new_password = ripasso::pass::generate_password(6);
                 s.call_on_id("new_password_input", |e: &mut EditView| {
                     e.set_content(new_password);
                 });
