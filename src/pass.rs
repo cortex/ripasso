@@ -283,8 +283,8 @@ pub fn pull() -> Result<()> {
     remote.fetch(&["master"], None, None)?;
 
     let oid = repo.refname_to_id("refs/remotes/origin/master")?;
-    let object = repo.find_object(oid, None).unwrap();
-    repo.reset(&object, git2::ResetType::Hard, None)?;
+    let object = repo.find_annotated_commit(oid)?;
+    repo.merge(&vec![&object], None, None)?;
     return Ok(());
 }
 
