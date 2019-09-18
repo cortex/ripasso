@@ -285,6 +285,23 @@ pub fn pull() -> Result<()> {
     let oid = repo.refname_to_id("refs/remotes/origin/master")?;
     let object = repo.find_annotated_commit(oid)?;
     repo.merge(&vec![&object], None, None)?;
+
+    //commit it
+    let mut index = repo.index()?;
+    let oid = index.write_tree()?;
+    let signature = repo.signature()?;
+    let parent_commit = find_last_commit(&repo)?;
+    let tree = repo.find_tree(oid)?;
+    let message = "pull and merge by ripasso";
+    let commit = repo.commit(Some("HEAD"), //  point HEAD to our new commit
+                             &signature, // author
+                             &signature, // committer
+                             message, // commit message
+                             &tree, // tree
+                             &[&parent_commit])?; // parents
+
+    //cleanup
+    repo.cleanup_state()?;
     return Ok(());
 }
 
@@ -504,7 +521,8 @@ pub fn populate_password_list(passwords: &PasswordList) -> Result<()> {
 
     (passwords.lock().unwrap()).clear();
     for existing_file in existing_iter {
-        (passwords.lock().unwrap()).push(to_password(&dir, &existing_file.unwrap())?);
+        let pbuf = existing_file.unwrap();
+        (passwords.lock().unwrap()).push(to_password(&dir, &pbuf)?);
     }
 
     Ok(())
@@ -548,7 +566,9 @@ pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
                             }
 
                             let p_e = to_password(&password_dir().unwrap(), &p.clone()).unwrap();
-                            (passwords.lock().unwrap()).push(p_e.clone());
+                            if !(passwords.lock().unwrap()).iter().any(|p| p.path == p_e.path) {
+                                (passwords.lock().unwrap()).push(p_e.clone());
+                            }
                             PasswordEvent::NewPassword(p_e)
                         },
                         notify::DebouncedEvent::Remove(p) => {
