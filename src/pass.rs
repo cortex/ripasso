@@ -282,9 +282,18 @@ pub fn pull() -> Result<()> {
     remote.connect(git2::Direction::Fetch)?;
     remote.fetch(&["master"], None, None)?;
 
-    let oid = repo.refname_to_id("refs/remotes/origin/master")?;
-    let object = repo.find_annotated_commit(oid)?;
-    repo.merge(&vec![&object], None, None)?;
+    let remote_oid = repo.refname_to_id("refs/remotes/origin/master")?;
+    let head_oid = repo.refname_to_id("HEAD")?;
+
+    let (_, behind) = repo.graph_ahead_behind(head_oid, remote_oid)?;
+
+    if behind == 0 {
+        return Ok(());
+    }
+
+    let remote_annotated_commit = repo.find_annotated_commit(remote_oid)?;
+    let remote_commit = repo.find_commit(remote_oid)?;
+    repo.merge(&vec![&remote_annotated_commit], None, None)?;
 
     //commit it
     let mut index = repo.index()?;
@@ -293,12 +302,12 @@ pub fn pull() -> Result<()> {
     let parent_commit = find_last_commit(&repo)?;
     let tree = repo.find_tree(oid)?;
     let message = "pull and merge by ripasso";
-    let commit = repo.commit(Some("HEAD"), //  point HEAD to our new commit
+    let _commit = repo.commit(Some("HEAD"), //  point HEAD to our new commit
                              &signature, // author
                              &signature, // committer
                              message, // commit message
                              &tree, // tree
-                             &[&parent_commit])?; // parents
+                             &[&parent_commit, &remote_commit])?; // parents
 
     //cleanup
     repo.cleanup_state()?;
