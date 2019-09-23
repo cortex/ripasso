@@ -279,8 +279,26 @@ pub fn pull() -> Result<()> {
     let repo = git2::Repository::open(password_dir().unwrap())?;
 
     let mut remote = repo.find_remote("origin")?;
-    remote.connect(git2::Direction::Fetch)?;
-    remote.fetch(&["master"], None, None)?;
+
+
+    let mut cb = git2::RemoteCallbacks::new();
+    cb.credentials(|url, username, allowed| {
+        let sys_username = whoami::username();
+        let user = match username {
+            Some(name) => name,
+            None => &sys_username
+        };
+
+        if allowed.contains(git2::CredentialType::USERNAME) {
+            return git2::Cred::username(user);
+        }
+
+        git2::Cred::ssh_key_from_agent(user)
+    });
+
+    let mut opts = git2::FetchOptions::new();
+    opts.remote_callbacks(cb);
+    remote.fetch(&["master"], Some(&mut opts), None)?;
 
     let remote_oid = repo.refname_to_id("refs/remotes/origin/master")?;
     let head_oid = repo.refname_to_id("HEAD")?;
