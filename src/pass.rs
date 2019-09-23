@@ -275,6 +275,63 @@ fn remove_and_commit(repo: &git2::Repository, paths: &Vec<String>, message: &str
     return Ok(oid);
 }
 
+pub fn pull() -> Result<()> {
+    let repo = git2::Repository::open(password_dir().unwrap())?;
+
+    let mut remote = repo.find_remote("origin")?;
+
+
+    let mut cb = git2::RemoteCallbacks::new();
+    cb.credentials(|url, username, allowed| {
+        let sys_username = whoami::username();
+        let user = match username {
+            Some(name) => name,
+            None => &sys_username
+        };
+
+        if allowed.contains(git2::CredentialType::USERNAME) {
+            return git2::Cred::username(user);
+        }
+
+        git2::Cred::ssh_key_from_agent(user)
+    });
+
+    let mut opts = git2::FetchOptions::new();
+    opts.remote_callbacks(cb);
+    remote.fetch(&["master"], Some(&mut opts), None)?;
+
+    let remote_oid = repo.refname_to_id("refs/remotes/origin/master")?;
+    let head_oid = repo.refname_to_id("HEAD")?;
+
+    let (_, behind) = repo.graph_ahead_behind(head_oid, remote_oid)?;
+
+    if behind == 0 {
+        return Ok(());
+    }
+
+    let remote_annotated_commit = repo.find_annotated_commit(remote_oid)?;
+    let remote_commit = repo.find_commit(remote_oid)?;
+    repo.merge(&vec![&remote_annotated_commit], None, None)?;
+
+    //commit it
+    let mut index = repo.index()?;
+    let oid = index.write_tree()?;
+    let signature = repo.signature()?;
+    let parent_commit = find_last_commit(&repo)?;
+    let tree = repo.find_tree(oid)?;
+    let message = "pull and merge by ripasso";
+    let _commit = repo.commit(Some("HEAD"), //  point HEAD to our new commit
+                             &signature, // author
+                             &signature, // committer
+                             message, // commit message
+                             &tree, // tree
+                             &[&parent_commit, &remote_commit])?; // parents
+
+    //cleanup
+    repo.cleanup_state()?;
+    return Ok(());
+}
+
 pub struct Signer {
     pub name: String,
     pub key_id: String,
@@ -483,6 +540,21 @@ pub fn search(l: &PasswordList, query: &str) -> Vec<PasswordEntry> {
     matching.cloned().collect()
 }
 
+pub fn populate_password_list(passwords: &PasswordList) -> Result<()> {
+    let dir = password_dir()?;
+
+    let password_path_glob = dir.join("**/*.gpg");
+    let existing_iter = glob::glob(&password_path_glob.to_string_lossy()).unwrap();
+
+    (passwords.lock().unwrap()).clear();
+    for existing_file in existing_iter {
+        let pbuf = existing_file.unwrap();
+        (passwords.lock().unwrap()).push(to_password(&dir, &pbuf)?);
+    }
+
+    Ok(())
+}
+
 pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
     let dir = password_dir()?;
 
@@ -497,13 +569,7 @@ pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
     let passwords = Arc::new(Mutex::new(Vec::<PasswordEntry>::new()));
     let passwords_out = passwords.clone();
 
-    // populate the password list with all the files that existed when the program started
-    let password_path_glob = dir.join("**/*.gpg");
-    let existing_iter = glob::glob(&password_path_glob.to_string_lossy()).unwrap();
-
-    for existing_file in existing_iter {
-        (passwords.lock().unwrap()).push(to_password(&dir, &existing_file.unwrap())?);
-    }
+    populate_password_list(&passwords_out)?;
 
     thread::spawn(move || {
         info!("Starting thread");
@@ -527,7 +593,9 @@ pub fn watch() -> Result<(Receiver<PasswordEvent>, PasswordList)> {
                             }
 
                             let p_e = to_password(&password_dir().unwrap(), &p.clone()).unwrap();
-                            (passwords.lock().unwrap()).push(p_e.clone());
+                            if !(passwords.lock().unwrap()).iter().any(|p| p.path == p_e.path) {
+                                (passwords.lock().unwrap()).push(p_e.clone());
+                            }
                             PasswordEvent::NewPassword(p_e)
                         },
                         notify::DebouncedEvent::Remove(p) => {
