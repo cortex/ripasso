@@ -53,6 +53,7 @@ pub enum Error {
     UTF8(string::FromUtf8Error),
     Notify(notify::Error),
     Generic(&'static str),
+    GenericDyn(String),
     PathError(path::StripPrefixError),
 }
 
@@ -275,14 +276,49 @@ fn remove_and_commit(repo: &git2::Repository, paths: &Vec<String>, message: &str
     return Ok(oid);
 }
 
+pub fn push() -> Result<()> {
+    let repo = git2::Repository::open(password_dir().unwrap())?;
+
+    let mut ref_status = None;
+    let mut origin = repo.find_remote("origin")?;
+    let res = {
+        let mut callbacks = git2::RemoteCallbacks::new();
+        callbacks.credentials(|_url, username, allowed| {
+            let sys_username = whoami::username();
+            let user = match username {
+                Some(name) => name,
+                None => &sys_username
+            };
+
+            if allowed.contains(git2::CredentialType::USERNAME) {
+                return git2::Cred::username(user);
+            }
+
+            git2::Cred::ssh_key_from_agent(user)
+        });
+        callbacks.push_update_reference(|refname, status| {
+            assert_eq!(refname, "refs/heads/master");
+            ref_status = status.map(|s| s.to_string());
+            Ok(())
+        });
+        let mut opts = git2::PushOptions::new();
+        opts.remote_callbacks(callbacks);
+        origin.push(&["refs/heads/master"], Some(&mut opts))
+    };
+    return match res {
+        Ok(()) if ref_status.is_none() => Ok(()),
+        Ok(()) =>  Err(Error::GenericDyn(format!("failed to push a ref: {:?}", ref_status))),
+        Err(e) => Err(Error::GenericDyn(format!("failure to push: {}", e))),
+    }
+}
+
 pub fn pull() -> Result<()> {
     let repo = git2::Repository::open(password_dir().unwrap())?;
 
     let mut remote = repo.find_remote("origin")?;
 
-
     let mut cb = git2::RemoteCallbacks::new();
-    cb.credentials(|url, username, allowed| {
+    cb.credentials(|_url, username, allowed| {
         let sys_username = whoami::username();
         let user = match username {
             Some(name) => name,

@@ -384,6 +384,14 @@ fn help() {
 Ripasso reads $HOME/.password-store/ by default, override this by setting the PASSWORD_STORE_DIR environmental variable.");
 }
 
+fn git_push(ui: &mut Cursive) {
+    let res = pass::push();
+
+    if res.is_err() {
+        errorbox(ui, &res.unwrap_err());
+    }
+}
+
 fn git_pull(ui: &mut Cursive, passwords: pass::PasswordList) {
     let pull_res = pass::pull();
 
@@ -543,6 +551,7 @@ fn main() {
     ui.add_global_callback(Event::CtrlChar('f'), move |ui: &mut Cursive| {
         git_pull(ui, passwords_git_pull_clone.clone())
     });
+    ui.add_global_callback(Event::CtrlChar('g'), git_push);
     ui.add_global_callback(Event::Key(cursive::event::Key::Ins), create);
 
     ui.add_global_callback(Event::Key(cursive::event::Key::Esc), |s| s.quit());
@@ -582,6 +591,7 @@ fn main() {
                     .child(TextView::new("C-O: Open | "))
                     .child(TextView::new("C-V: Signers | "))
                     .child(TextView::new("C-F: Git Pull | "))
+                    .child(TextView::new("C-G: Git Push | "))
                     .child(TextView::new("ins: Create | "))
                     .child(TextView::new("esc: Quit"))
                     .full_width(),
