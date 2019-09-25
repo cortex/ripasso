@@ -1,27 +1,27 @@
 # ripasso
 [![Build Status](https://travis-ci.org/cortex/ripasso.svg?branch=master)](https://travis-ci.org/cortex/ripasso)
 
-A simple password manager written in Rust
+A simple password manager written in Rust.
 
-The root crate `ripasso` is as a library for accessing and decrypting passwords
+The root crate `ripasso` is a library for accessing and decrypting passwords
 stored in pass format (GPG-encrypted files), with a file-watcher event emitter.
 
-Multiple UI:s in different stages of develapment are available in subcrates.
+Multiple UI's in different stages of development are available in subcrates.
 
-To build all UI:s
+To build all UI's:
 ```
 cargo build --all
 ```
 
-PRs are very welcome!
+PR's are very welcome!
 
 ## History
-This is a reimplementation of https://github.com/cortex/gopass in Rust. I started it mainly because since https://github.com/go-qml/qml
-is unmaintaned. Also, using a safe language for your passwords seems like a good idea.
+This is a reimplementation of https://github.com/cortex/gopass in Rust. I started it mainly because https://github.com/go-qml/qml
+is unmaintained. Also, using a safe language for your passwords seems like a good idea.
 
 It has not yet reached feature-parity, but the basic functionality works. If this plays out well, it will replace gopass.
 
-## UI:s
+## UI's
 
 ### Cursive - Terminal interface
 ![Screenshot of ripasso-cursive](doc/ripasso-cursive.png)
