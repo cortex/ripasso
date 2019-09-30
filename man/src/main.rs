@@ -1,7 +1,7 @@
 extern crate man;
 
 fn main() {
-    let page = man::prelude::Manual::new("ripasso")
+    let page = man::prelude::Manual::new("ripasso-cursive")
         .about("A password manager that uses the file format of the standard unix password manager 'pass', implemented in rust.")
         .author(man::prelude::Author::new("Joakim Lundborg").email("joakim.lundborg@gmail.com"))
         .author(man::prelude::Author::new("Alexander Kjäll").email("alexander.kjall@gmail.com"))
@@ -10,7 +10,7 @@ fn main() {
                 .long("--help")
                 .help("Print a help text"),
         )
-        .description("The ripasso password manager is an ncurses application that lets you manage your or your teams passwords.\
+        .description("ripasso-cursive is an ncurses application that lets you manage your or your teams passwords.\
 The passwords are encrypted with gpg and optionally stored in an gpg repository. The list of encryption recipients are stored \
 in the file .gpg-id, one gpg key id per line.")
 
@@ -27,7 +27,7 @@ in the file .gpg-id, one gpg key id per line.")
                     .paragraph("Control + g : push to the git repository")
                     .paragraph("Escape : quit "))
         .custom(man::prelude::Section::new("usage note")
-                .paragraph("Ripasso reads $HOME/.password-store/ by default, override this by setting
+                .paragraph("ripasso-cursive reads $HOME/.password-store/ by default, override this by setting
 the PASSWORD_STORE_DIR environmental variable.")
         )
         .render();
