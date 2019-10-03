@@ -222,7 +222,13 @@ fn add_and_commit(repo: &git2::Repository, paths: &Vec<String>, message: &str) -
     }
     let oid = index.write_tree()?;
     let signature = repo.signature()?;
-    let parent_commit = find_last_commit(&repo)?;
+    let parent_commit_res = find_last_commit(&repo);
+    let mut parents = vec![];
+    let parent_commit;
+    if !parent_commit_res.is_err() {
+        parent_commit = parent_commit_res.unwrap();
+        parents.push(&parent_commit);
+    }
     let tree = repo.find_tree(oid)?;
 
     let commit = repo.commit(Some("HEAD"), //  point HEAD to our new commit
@@ -230,7 +236,7 @@ fn add_and_commit(repo: &git2::Repository, paths: &Vec<String>, message: &str) -
                 &signature, // committer
                 message, // commit message
                 &tree, // tree
-                &[&parent_commit]); // parents
+                &parents); // parents
 
     if commit.is_err() {
         return Err(Error::Git(commit.unwrap_err()));
