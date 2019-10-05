@@ -35,6 +35,7 @@ use self::clipboard::{ClipboardContext, ClipboardProvider};
 use ripasso::pass;
 use std::process;
 use std::{thread, time};
+use std::sync::{Arc};
 
 fn down(ui: &mut Cursive) -> () {
     ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
@@ -92,7 +93,7 @@ fn copy(ui: &mut Cursive) -> () {
     });
 }
 
-fn do_delete(ui: &mut Cursive) -> () {
+fn do_delete(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
         let sel = l.selection();
 
@@ -102,7 +103,7 @@ fn do_delete(ui: &mut Cursive) -> () {
 
         let sel = sel.unwrap();
 
-        let r = sel.delete_file();
+        let r = sel.delete_file(repo_opt);
 
         if r.is_err() {
             return;
@@ -115,14 +116,16 @@ fn do_delete(ui: &mut Cursive) -> () {
     ui.pop_layer();
 }
 
-fn delete(ui: &mut Cursive) -> () {
+fn delete(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     ui.add_layer(CircularFocus::wrap_tab(
     Dialog::around(TextView::new("Are you sure you want to delete the password"))
-        .button("Yes", do_delete)
+        .button("Yes", move |ui: &mut Cursive| {
+            do_delete(ui, repo_opt.clone())
+        })
         .dismiss_button("Cancel")));
 }
 
-fn open(ui: &mut Cursive) -> () {
+fn open(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     let password_entry_option: Option<Option<std::rc::Rc<ripasso::pass::PasswordEntry>>> = ui
         .call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
             l.selection()
@@ -149,7 +152,7 @@ fn open(ui: &mut Cursive) -> () {
                     .call_on_id("editbox", |e: &mut TextArea| {
                         e.get_content().to_string()
                     }).unwrap();
-                let r = password_entry.update(new_password);
+                let r = password_entry.update(new_password, repo_opt.clone());
                 if r.is_err() {
                     errorbox(s, &r.unwrap_err())
                 }
@@ -178,7 +181,7 @@ fn get_value_from_input(s: &mut Cursive, input_name: &str) -> Option<std::rc::Rc
     return password;
 }
 
-fn create_save(s: &mut Cursive) -> () {
+fn create_save(s: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     let password = get_value_from_input(s, "new_password_input");
     if password.is_none() {
         return;
@@ -197,7 +200,7 @@ fn create_save(s: &mut Cursive) -> () {
         return;
     }
 
-    let res = pass::new_password_file(path.clone(), password);
+    let res = pass::new_password_file(path.clone(), password, repo_opt.clone());
 
     let col = s.screen_size().x;
     if res.is_err() {
@@ -212,7 +215,7 @@ fn create_save(s: &mut Cursive) -> () {
             }
             path_buf.set_extension("gpg");
 
-            match pass::to_password(&pass::password_dir().unwrap(), &path_buf) {
+            match pass::to_password(&pass::password_dir().unwrap(), &path_buf, repo_opt.clone()) {
                 Ok(e) => l.add_item(create_label(&e, col), e),
                 Err(_) => println!("error")
             }
@@ -222,7 +225,7 @@ fn create_save(s: &mut Cursive) -> () {
     }
 }
 
-fn create(ui: &mut Cursive) -> () {
+fn create(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     let mut fields = LinearLayout::vertical();
     let mut path_fields = LinearLayout::horizontal();
     let mut password_fields = LinearLayout::horizontal();
@@ -241,6 +244,7 @@ fn create(ui: &mut Cursive) -> () {
     fields.add_child(path_fields);
     fields.add_child(password_fields);
 
+    let repo_opt2 = repo_opt.clone();
     let d =
         Dialog::around(fields)
             .title("Add new password")
@@ -250,19 +254,23 @@ fn create(ui: &mut Cursive) -> () {
                     e.set_content(new_password);
                 });
             })
-            .button("Save", create_save)
+            .button("Save", move |ui: &mut Cursive| {
+                create_save(ui, repo_opt.clone())
+            })
             .dismiss_button("Cancel");
 
     let ev = OnEventView::new(d)
         .on_event(Key::Esc, |s| {
             s.pop_layer();
         })
-        .on_event(Key::Enter, create_save);
+        .on_event(Key::Enter, move |ui: &mut Cursive| {
+            create_save(ui, repo_opt2.clone())
+        });
 
     ui.add_layer(ev);
 }
 
-fn delete_signer(ui: &mut Cursive) -> () {
+fn delete_signer(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     let mut l = ui.find_id::<SelectView<pass::Signer>>("signers").unwrap();
     let sel = l.selection();
 
@@ -270,7 +278,7 @@ fn delete_signer(ui: &mut Cursive) -> () {
         return;
     }
 
-    let r = ripasso::pass::Signer::remove_signer_from_file(&sel.unwrap());
+    let r = ripasso::pass::Signer::remove_signer_from_file(&sel.unwrap(), repo_opt);
 
     if r.is_err() {
         errorbox(ui, &r.unwrap_err());
@@ -280,14 +288,16 @@ fn delete_signer(ui: &mut Cursive) -> () {
     }
 }
 
-fn delete_signer_verification(ui: &mut Cursive) -> () {
+fn delete_signer_verification(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     ui.add_layer(CircularFocus::wrap_tab(
         Dialog::around(TextView::new("Are you sure you want to remove this person?"))
-            .button("Yes", delete_signer)
+            .button("Yes", move |ui: &mut Cursive| {
+                delete_signer(ui, repo_opt.clone())
+            })
             .dismiss_button("Cancel")));
 }
 
-fn add_signer(ui: &mut Cursive) -> () {
+fn add_signer(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     let l = &*get_value_from_input(ui, "key_id_input").unwrap();
 
     let signer_result = pass::Signer::from_key_id(l.clone());
@@ -295,7 +305,7 @@ fn add_signer(ui: &mut Cursive) -> () {
     if signer_result.is_err() {
         errorbox(ui, &signer_result.err().unwrap());
     } else {
-        let res = pass::Signer::add_signer_to_file(&signer_result.unwrap());
+        let res = pass::Signer::add_signer_to_file(&signer_result.unwrap(), repo_opt);
         if res.is_err() {
             errorbox(ui, &res.unwrap_err());
         } else {
@@ -304,23 +314,28 @@ fn add_signer(ui: &mut Cursive) -> () {
     }
 }
 
-fn add_signer_dialog(ui: &mut Cursive) -> () {
+fn add_signer_dialog(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     let mut signer_fields = LinearLayout::horizontal();
 
     signer_fields.add_child(TextView::new("GPG Key Id: ")
         .with_id("key_id")
         .fixed_size((16, 1)));
 
+    let repo_opt2 = repo_opt.clone();
     let gpg_key_edit_view = OnEventView::new(EditView::new()
         .with_id("key_id_input")
         .fixed_size((50, 1)))
-        .on_event(Key::Enter, add_signer);
+        .on_event(Key::Enter, move |ui: &mut Cursive| {
+            add_signer(ui, repo_opt.clone())
+        });
 
     signer_fields.add_child(gpg_key_edit_view);
 
     let cf = CircularFocus::wrap_tab(
         Dialog::around(signer_fields)
-            .button("Yes", add_signer)
+            .button("Yes", move |ui: &mut Cursive| {
+                add_signer(ui, repo_opt2.clone())
+            })
             .dismiss_button("Cancel"));
 
     let ev = OnEventView::new(cf)
@@ -331,7 +346,7 @@ fn add_signer_dialog(ui: &mut Cursive) -> () {
     ui.add_layer(ev);
 }
 
-fn view_signers(ui: &mut Cursive) -> () {
+fn view_signers(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     let signers : Vec<ripasso::pass::Signer> = ripasso::pass::Signer::all_signers();
 
     let mut signers_view = SelectView::<pass::Signer>::new()
@@ -352,9 +367,14 @@ fn view_signers(ui: &mut Cursive) -> () {
             .child(TextView::new("ins: Add | "))
             .child(TextView::new("del: Remove")));
 
+    let repo_opt2 = repo_opt.clone();
     let signers_event = OnEventView::new(ll)
-        .on_event(Key::Del, delete_signer_verification)
-        .on_event(Key::Ins, add_signer_dialog)
+        .on_event(Key::Del, move |ui: &mut Cursive| {
+            delete_signer_verification(ui, repo_opt.clone())
+        })
+        .on_event(Key::Ins, move |ui: &mut Cursive| {
+            add_signer_dialog(ui, repo_opt2.clone())
+        })
         .on_event(Key::Esc, |s| {
             s.pop_layer();
         });
@@ -389,22 +409,22 @@ fn help() {
 Ripasso reads $HOME/.password-store/ by default, override this by setting the PASSWORD_STORE_DIR environmental variable.");
 }
 
-fn git_push(ui: &mut Cursive) {
-    let res = pass::push();
+fn git_push(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) {
+    let res = pass::push(repo_opt);
 
     if res.is_err() {
         errorbox(ui, &res.unwrap_err());
     }
 }
 
-fn git_pull(ui: &mut Cursive, passwords: pass::PasswordList) {
-    let pull_res = pass::pull();
+fn git_pull(ui: &mut Cursive, passwords: pass::PasswordList, repo_opt: Arc<Option<git2::Repository>>) {
+    let pull_res = pass::pull(repo_opt.clone());
 
     if pull_res.is_err() {
         errorbox(ui, &pull_res.unwrap_err());
     }
 
-    let res = pass::populate_password_list(&passwords);
+    let res = pass::populate_password_list(&passwords, repo_opt);
     if res.is_err() {
         errorbox(ui, &res.unwrap_err());
     }
@@ -506,8 +526,10 @@ fn main() {
         show_init_menu();
     }
 
+    let repo_opt = Arc::new(git2::Repository::open(pass::password_dir().unwrap()).ok());
+
     // Load and watch all the passwords in the background
-    let (password_rx, passwords) = match pass::watch() {
+    let (password_rx, passwords) = match pass::watch(repo_opt.clone()) {
         Ok(t) => t,
         Err(e) => {
             println!("Error {:?}", e);
@@ -532,16 +554,26 @@ fn main() {
         return;
     }
 
+    let repo_opt2 = repo_opt.clone();
+    let repo_opt3 = repo_opt.clone();
+    let repo_opt4 = repo_opt.clone();
+    let repo_opt5 = repo_opt.clone();
+    let repo_opt6 = repo_opt.clone();
+    let repo_opt7 = repo_opt.clone();
     ui.add_global_callback(Event::CtrlChar('y'), copy);
     ui.add_global_callback(Key::Enter, copy);
-    ui.add_global_callback(Key::Del, delete);
+    ui.add_global_callback(Key::Del, move |ui: &mut Cursive| {
+        delete(ui, repo_opt2.clone())
+    });
 
     // Movement
     ui.add_global_callback(Event::CtrlChar('n'), down);
     ui.add_global_callback(Event::CtrlChar('p'), up);
 
     // View list of persons that have access
-    ui.add_global_callback(Event::CtrlChar('v'), view_signers);
+    ui.add_global_callback(Event::CtrlChar('v'), move |ui: &mut Cursive| {
+        view_signers(ui, repo_opt3.clone())
+    });
 
     // Query editing
     ui.add_global_callback(Event::CtrlChar('w'), |ui| {
@@ -551,13 +583,19 @@ fn main() {
     });
 
     // Editing
-    ui.add_global_callback(Event::CtrlChar('o'), open);
+    ui.add_global_callback(Event::CtrlChar('o'), move |ui: &mut Cursive| {
+        open(ui, repo_opt4.clone())
+    });
     let passwords_git_pull_clone = std::sync::Arc::clone(&passwords);
     ui.add_global_callback(Event::CtrlChar('f'), move |ui: &mut Cursive| {
-        git_pull(ui, passwords_git_pull_clone.clone())
+        git_pull(ui, passwords_git_pull_clone.clone(), repo_opt5.clone())
     });
-    ui.add_global_callback(Event::CtrlChar('g'), git_push);
-    ui.add_global_callback(Event::Key(cursive::event::Key::Ins), create);
+    ui.add_global_callback(Event::CtrlChar('g'), move |ui: &mut Cursive| {
+        git_push(ui, repo_opt6.clone())
+    });
+    ui.add_global_callback(Event::Key(cursive::event::Key::Ins), move |ui: &mut Cursive| {
+        create(ui, repo_opt7.clone())
+    });
 
     ui.add_global_callback(Event::Key(cursive::event::Key::Esc), |s| s.quit());
 

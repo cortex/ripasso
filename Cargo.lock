@@ -1359,6 +1359,7 @@ dependencies = [
  "clipboard 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cursive 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "git2 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ripasso 0.3.0-alpha",
 ]
 
@@ -1366,6 +1367,7 @@ dependencies = [
 name = "ripasso-gtk"
 version = "0.3.0-alpha"
 dependencies = [
+ "git2 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "glib 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "gtk 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ripasso 0.3.0-alpha",
@@ -1383,6 +1385,7 @@ name = "ripasso-qt"
 version = "0.3.0-alpha"
 dependencies = [
  "clipboard 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "git2 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "qml 0.0.9 (git+https://github.com/White-Oak/qml-rust)",
  "ripasso 0.3.0-alpha",
 ]

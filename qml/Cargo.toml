@@ -7,3 +7,4 @@ authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>"]
 clipboard = "0.5"
 ripasso = { path = "../"}
 qml = { git = "https://github.com/White-Oak/qml-rust" }
+git2 = "0.10.0"

@@ -23,17 +23,19 @@ use gtk::*;
 
 use self::glib::StaticType;
 
+use std::sync::{Arc};
 use ripasso::pass;
 use std::cell::RefCell;
-use std::io::Write;
 use std::process;
 
 fn main() {
+    let repo_opt = Arc::new(git2::Repository::open(pass::password_dir().unwrap()).ok());
+
     // Load and watch all the passwords in the background
-    let (password_rx, passwords) = match pass::watch() {
+    let (password_rx, passwords) = match pass::watch(repo_opt.clone()) {
         Ok(t) => t,
         Err(e) => {
-            writeln!(&mut std::io::stderr(), "Error: {:?}", e);
+            eprintln!("Error: {:?}", e);
             process::exit(0x01);
         }
     };

@@ -169,8 +169,10 @@ fn main() {
         );
     }));
 
+    let repo_opt = Arc::new(git2::Repository::open(pass::password_dir().unwrap()).ok());
+
     // Load and watch all the passwords in the background
-    let (_, passwords) = pass::watch().expect("error");
+    let (_, passwords) = pass::watch(repo_opt.clone()).expect("error");
 
     // Set up all the UI stuff
     let mut engine = QmlEngine::new();
