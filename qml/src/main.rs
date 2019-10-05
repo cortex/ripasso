@@ -42,17 +42,12 @@ pub struct UI {
 impl UI {
     pub fn query(&mut self, query: String) -> Option<&QVariant> {
         println!("query");
-        let passwords = self.all_passwords.lock().unwrap();
-        fn normalized(s: &String) -> String {
-            s.to_lowercase()
-        };
-        fn matches(s: &String, q: &String) -> bool {
-            normalized(&s).as_str().contains(normalized(&q).as_str())
-        };
-        let matching = passwords.iter().filter(|p| matches(&p.name, &query));
+        let passwords = self.all_passwords.clone();
+        let matching = pass::search(&passwords, &String::from(query));
+
 
         // Save currently matched passwords
-        self.current_passwords = matching.cloned().collect();
+        self.current_passwords = matching.clone();
 
         // Update QML data with currently matched passwords
         self.passwords.set_data(
@@ -70,6 +65,9 @@ impl UI {
     }
 
     pub fn copy_to_clipboard(&mut self, i: i32) -> Option<&QVariant> {
+        if self.current_passwords.is_empty() {// Exit fun if we have no passwords to copy
+            return None;
+        }
         // Open password file
         let password = self.get_password(i).password().unwrap();
 
@@ -88,9 +86,11 @@ impl UI {
     }
     pub fn select(&mut self, i: i32) -> Option<&QVariant> {
         println!("select: {}", i);
-        let pass = self.get_password(i);
-        self.password.set_name(pass.name);
-        self.password.set_meta(pass.meta);
+        if !self.current_passwords.is_empty() { // Select notihng if passwords list is empty
+            let pass = self.get_password(i);
+            self.password.set_name(pass.name);
+            self.password.set_meta(pass.meta);
+        }
         None
     }
     pub fn add_password(&mut self) -> Option<&QVariant> {
