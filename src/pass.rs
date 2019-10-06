@@ -121,8 +121,8 @@ impl PasswordEntry {
 
         let mut keys = Vec::new();
 
-        for signer in Signer::all_signers() {
-            keys.push(ctx.get_key(signer.key_id).unwrap());
+        for recipient in Recipient::all_recipients() {
+            keys.push(ctx.get_key(recipient.key_id).unwrap());
         }
 
         let mut ciphertext = Vec::new();
@@ -191,7 +191,7 @@ impl PasswordEntry {
             return Ok(());
         }
 
-        let keys = Signer::all_signers().into_iter().map(|s| format!("0x{}, ", s.key_id)).collect::<String>();
+        let keys = Recipient::all_recipients().into_iter().map(|s| format!("0x{}, ", s.key_id)).collect::<String>();
         let message = format!("Reencrypt password store with new GPG ids {}", keys);
 
         add_and_commit(repo_opt, &names, &message)?;
@@ -368,20 +368,20 @@ pub fn pull(repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
     return Ok(());
 }
 
-pub struct Signer {
+pub struct Recipient {
     pub name: String,
     pub key_id: String,
 }
 
-fn build_signer(name: String, key_id: String) -> Signer {
-    Signer {
+fn build_recipient(name: String, key_id: String) -> Recipient {
+    Recipient {
         name: name,
         key_id: key_id,
     }
 }
 
-impl Signer {
-    pub fn from_key_id(key_id: String) -> Result<Signer> {
+impl Recipient {
+    pub fn from_key_id(key_id: String) -> Result<Recipient> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp).unwrap();
 
         let key_option = ctx.get_key(key_id.clone());
@@ -396,27 +396,27 @@ impl Signer {
             name = user_id.name().unwrap_or("?");
         }
 
-        return Ok(build_signer(name.to_string(), key_id));
+        return Ok(build_recipient(name.to_string(), key_id));
     }
 
-    pub fn all_signers() -> Vec<Signer> {
+    pub fn all_recipients() -> Vec<Recipient> {
 
-        let mut signer_file = password_dir().unwrap();
-        signer_file.push(".gpg-id");
-        let contents = fs::read_to_string(signer_file)
+        let mut recipient_file = password_dir().unwrap();
+        recipient_file.push(".gpg-id");
+        let contents = fs::read_to_string(recipient_file)
             .expect("Something went wrong reading the file");
 
-        let mut signers : Vec<Signer> = Vec::new();
-        let mut unique_signers_keys : HashSet<String> = HashSet::new();
+        let mut recipients : Vec<Recipient> = Vec::new();
+        let mut unique_recipients_keys : HashSet<String> = HashSet::new();
         for key in contents.split("\n") {
             if key.len() > 1 {
-                unique_signers_keys.insert(key.to_string());
+                unique_recipients_keys.insert(key.to_string());
             }
         }
 
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp).unwrap();
 
-        for key in unique_signers_keys {
+        for key in unique_recipients_keys {
             let key_option = ctx.get_key(key.clone());
             if key_option.is_err() {
                 continue;
@@ -428,28 +428,28 @@ impl Signer {
             for user_id in real_key.user_ids() {
                 name = user_id.name().unwrap_or("?");
             }
-            signers.push(build_signer(name.to_string(), real_key.id().unwrap_or("?").to_string()));
+            recipients.push(build_recipient(name.to_string(), real_key.id().unwrap_or("?").to_string()));
         }
 
-        return signers;
+        return recipients;
     }
 
-    fn write_signers_file(signers: &Vec<Signer>, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
-        let mut signer_file = password_dir().unwrap();
-        signer_file.push(".gpg-id");
+    fn write_recipients_file(recipients: &Vec<Recipient>, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
+        let mut recipient_file = password_dir().unwrap();
+        recipient_file.push(".gpg-id");
 
         let mut file = std::fs::OpenOptions::new()
             .write(true)
             .create(true)
             .truncate(true)
-            .open(signer_file)
+            .open(recipient_file)
             .unwrap();
 
-        for signer in signers {
-            if !signer.key_id.starts_with("0x") {
+        for recipient in recipients {
+            if !recipient.key_id.starts_with("0x") {
                 file.write_all(b"0x")?;
             }
-            file.write_all(signer.key_id.as_bytes())?;
+            file.write_all(recipient.key_id.as_bytes())?;
             file.write_all(b"\n")?;
         }
 
@@ -458,30 +458,30 @@ impl Signer {
         return Ok(());
     }
 
-    pub fn remove_signer_from_file(s: &Signer, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
-        let mut signers: Vec<Signer> = Signer::all_signers();
+    pub fn remove_recipient_from_file(s: &Recipient, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
+        let mut recipients: Vec<Recipient> = Recipient::all_recipients();
 
-        signers.retain(|ref vs| vs.key_id != s.key_id);
+        recipients.retain(|ref vs| vs.key_id != s.key_id);
 
-        if signers.len() < 1 {
-            return Err(Error::Generic("Can't delete the last signing key"));
+        if recipients.len() < 1 {
+            return Err(Error::Generic("Can't delete the last encryption key"));
         }
 
-        return Signer::write_signers_file(&signers, repo_opt);
+        return Recipient::write_recipients_file(&recipients, repo_opt);
     }
 
-    pub fn add_signer_to_file(s: &Signer, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
-        let mut signers: Vec<Signer> = Signer::all_signers();
+    pub fn add_recipient_to_file(s: &Recipient, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
+        let mut recipients: Vec<Recipient> = Recipient::all_recipients();
 
-        for signer in &signers {
-            if signer.key_id == s.key_id {
-                return Err(Error::Generic("Signer is already in the list of signing keys"));
+        for recipient in &recipients {
+            if recipient.key_id == s.key_id {
+                return Err(Error::Generic("Recipient is already in the list of key ids"));
             }
         }
 
-        signers.push(build_signer(s.name.clone(), s.key_id.clone()));
+        recipients.push(build_recipient(s.name.clone(), s.key_id.clone()));
 
-        return Signer::write_signers_file(&signers, repo_opt);
+        return Recipient::write_recipients_file(&recipients, repo_opt);
     }
 }
 
@@ -531,8 +531,8 @@ pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<Str
 
     let mut keys = Vec::new();
 
-    for signer in Signer::all_signers() {
-        keys.push(ctx.get_key(signer.key_id).unwrap());
+    for recipient in Recipient::all_recipients() {
+        keys.push(ctx.get_key(recipient.key_id).unwrap());
     }
 
     let mut output = Vec::new();

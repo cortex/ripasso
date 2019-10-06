@@ -270,15 +270,15 @@ fn create(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     ui.add_layer(ev);
 }
 
-fn delete_signer(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
-    let mut l = ui.find_id::<SelectView<pass::Signer>>("signers").unwrap();
+fn delete_recipient(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
+    let mut l = ui.find_id::<SelectView<pass::Recipient>>("recipients").unwrap();
     let sel = l.selection();
 
     if sel.is_none() {
         return;
     }
 
-    let r = ripasso::pass::Signer::remove_signer_from_file(&sel.unwrap(), repo_opt);
+    let r = ripasso::pass::Recipient::remove_recipient_from_file(&sel.unwrap(), repo_opt);
 
     if r.is_err() {
         errorbox(ui, &r.unwrap_err());
@@ -288,24 +288,24 @@ fn delete_signer(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> (
     }
 }
 
-fn delete_signer_verification(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
+fn delete_recipient_verification(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     ui.add_layer(CircularFocus::wrap_tab(
         Dialog::around(TextView::new("Are you sure you want to remove this person?"))
             .button("Yes", move |ui: &mut Cursive| {
-                delete_signer(ui, repo_opt.clone())
+                delete_recipient(ui, repo_opt.clone())
             })
             .dismiss_button("Cancel")));
 }
 
-fn add_signer(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
+fn add_recipient(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     let l = &*get_value_from_input(ui, "key_id_input").unwrap();
 
-    let signer_result = pass::Signer::from_key_id(l.clone());
+    let recipient_result = pass::Recipient::from_key_id(l.clone());
 
-    if signer_result.is_err() {
-        errorbox(ui, &signer_result.err().unwrap());
+    if recipient_result.is_err() {
+        errorbox(ui, &recipient_result.err().unwrap());
     } else {
-        let res = pass::Signer::add_signer_to_file(&signer_result.unwrap(), repo_opt);
+        let res = pass::Recipient::add_recipient_to_file(&recipient_result.unwrap(), repo_opt);
         if res.is_err() {
             errorbox(ui, &res.unwrap_err());
         } else {
@@ -314,10 +314,10 @@ fn add_signer(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     }
 }
 
-fn add_signer_dialog(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
-    let mut signer_fields = LinearLayout::horizontal();
+fn add_recipient_dialog(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
+    let mut recipient_fields = LinearLayout::horizontal();
 
-    signer_fields.add_child(TextView::new("GPG Key Id: ")
+    recipient_fields.add_child(TextView::new("GPG Key Id: ")
         .with_id("key_id")
         .fixed_size((16, 1)));
 
@@ -326,15 +326,15 @@ fn add_signer_dialog(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) 
         .with_id("key_id_input")
         .fixed_size((50, 1)))
         .on_event(Key::Enter, move |ui: &mut Cursive| {
-            add_signer(ui, repo_opt.clone())
+            add_recipient(ui, repo_opt.clone())
         });
 
-    signer_fields.add_child(gpg_key_edit_view);
+    recipient_fields.add_child(gpg_key_edit_view);
 
     let cf = CircularFocus::wrap_tab(
-        Dialog::around(signer_fields)
+        Dialog::around(recipient_fields)
             .button("Yes", move |ui: &mut Cursive| {
-                add_signer(ui, repo_opt2.clone())
+                add_recipient(ui, repo_opt2.clone())
             })
             .dismiss_button("Cancel"));
 
@@ -346,18 +346,18 @@ fn add_signer_dialog(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) 
     ui.add_layer(ev);
 }
 
-fn view_signers(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
-    let signers : Vec<ripasso::pass::Signer> = ripasso::pass::Signer::all_signers();
+fn view_recipients(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
+    let recipients : Vec<ripasso::pass::Recipient> = ripasso::pass::Recipient::all_recipients();
 
-    let mut signers_view = SelectView::<pass::Signer>::new()
+    let mut recipients_view = SelectView::<pass::Recipient>::new()
         .h_align(cursive::align::HAlign::Left)
-        .with_id("signers");
+        .with_id("recipients");
 
-    for signer in signers {
-        signers_view.get_mut().add_item(format!("{} {}",signer.key_id.clone(), signer.name.clone()), signer);
+    for recipient in recipients {
+        recipients_view.get_mut().add_item(format!("{} {}", recipient.key_id.clone(), recipient.name.clone()), recipient);
     }
 
-    let d = Dialog::around(signers_view)
+    let d = Dialog::around(recipients_view)
         .title("People")
         .dismiss_button("Ok");
 
@@ -368,18 +368,18 @@ fn view_signers(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> ()
             .child(TextView::new("del: Remove")));
 
     let repo_opt2 = repo_opt.clone();
-    let signers_event = OnEventView::new(ll)
+    let recipients_event = OnEventView::new(ll)
         .on_event(Key::Del, move |ui: &mut Cursive| {
-            delete_signer_verification(ui, repo_opt.clone())
+            delete_recipient_verification(ui, repo_opt.clone())
         })
         .on_event(Key::Ins, move |ui: &mut Cursive| {
-            add_signer_dialog(ui, repo_opt2.clone())
+            add_recipient_dialog(ui, repo_opt2.clone())
         })
         .on_event(Key::Esc, |s| {
             s.pop_layer();
         });
 
-    ui.add_layer(signers_event);
+    ui.add_layer(recipients_event);
 }
 
 fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
@@ -466,7 +466,7 @@ fn show_init_menu() {
                 .child(TextView::new("C-Y: Copy | "))
                 .child(TextView::new("C-W: Clear | "))
                 .child(TextView::new("C-O: Open | "))
-                .child(TextView::new("C-V: Signers | "))
+                .child(TextView::new("C-V: Recipients | "))
                 .child(TextView::new("ins: Create | "))
                 .child(TextView::new("esc: Quit"))
                 .full_width(),
@@ -572,7 +572,7 @@ fn main() {
 
     // View list of persons that have access
     ui.add_global_callback(Event::CtrlChar('v'), move |ui: &mut Cursive| {
-        view_signers(ui, repo_opt3.clone())
+        view_recipients(ui, repo_opt3.clone())
     });
 
     // Query editing
@@ -632,7 +632,7 @@ fn main() {
                     .child(TextView::new("C-Y: Copy | "))
                     .child(TextView::new("C-W: Clear | "))
                     .child(TextView::new("C-O: Open | "))
-                    .child(TextView::new("C-V: Signers | "))
+                    .child(TextView::new("C-V: Recipients | "))
                     .child(TextView::new("C-F: Git Pull | "))
                     .child(TextView::new("C-G: Git Push | "))
                     .child(TextView::new("ins: Create | "))
