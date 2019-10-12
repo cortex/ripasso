@@ -21,8 +21,9 @@ extern crate ripasso;
 
 use self::cursive::traits::*;
 use self::cursive::views::{
-    Dialog, EditView, LinearLayout, SelectView, TextView,
+    Dialog, EditView, LinearLayout, SelectView, TextView, OnEventView,
 };
+use self::cursive::event::Key;
 
 use cursive::Cursive;
 
@@ -50,35 +51,40 @@ fn create_git_repo(ui: &mut Cursive) {
     }
 }
 
+fn do_create(ui: &mut Cursive) {
+    let l = ui.find_id::<EditView>("initial_key_id").unwrap();
+    let key_id = (*l.get_content()).clone();
+    let mut pass_home = pass::password_dir_raw();
+    let create_res = std::fs::create_dir_all(&pass_home);
+    if create_res.is_err() {
+        helpers::errorbox(ui, &pass::Error::IO(create_res.unwrap_err()));
+        ui.quit();
+    } else {
+        pass_home.push(".gpg-id");
+        std::fs::write(pass_home, key_id).expect("Unable to write file");
+
+        let d = Dialog::around(TextView::new("Also create a git repository for the encrypted files?"))
+            .button("Create", create_git_repo)
+            .button("No", |s| {
+                s.quit();
+            })
+            .title("Git init");
+
+        ui.add_layer(d);
+    }
+}
+
 fn create_store(ui: &mut Cursive) {
     let d2 = Dialog::around(LinearLayout::new(Orientation::Vertical)
         .child(TextView::new("Ripasso uses gpg in order to encrypt the stored passwords.\nPlease enter your gpg key id"))
         .child(EditView::new().with_id("initial_key_id"))
     )
-        .button("Create", |s| {
-            let l = s.find_id::<EditView>("initial_key_id").unwrap();
-            let key_id = (*l.get_content()).clone();
-            let mut pass_home = pass::password_dir_raw();
-            let create_res = std::fs::create_dir_all(&pass_home);
-            if create_res.is_err() {
-                helpers::errorbox(s, &pass::Error::IO(create_res.unwrap_err()));
-                s.quit();
-            } else {
-                pass_home.push(".gpg-id");
-                std::fs::write(pass_home, key_id).expect("Unable to write file");
+        .button("Create", do_create);
 
-                let d = Dialog::around(TextView::new("Also create a git repository for the encrypted files?"))
-                    .button("Create", create_git_repo)
-                    .button("No", |s| {
-                        s.quit();
-                    })
-                    .title("Git init");
+    let recipients_event = OnEventView::new(d2)
+        .on_event(Key::Enter, do_create);
 
-                s.add_layer(d);
-            }
-        });
-
-    ui.add_layer(d2);
+    ui.add_layer(recipients_event);
 }
 
 pub fn show_init_menu() {
