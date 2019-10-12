@@ -477,7 +477,7 @@ fn show_init_menu() {
 would you like to create it?"))
         .button("Create", |s| {
             let d2 = Dialog::around(LinearLayout::new(Orientation::Vertical)
-                    .child(TextView::new("Please enter your gpg key id"))
+                    .child(TextView::new("Ripasso uses gpg in order to encrypt the stored passwords.\nPlease enter your gpg key id"))
                     .child(EditView::new().with_id("initial_key_id"))
                 )
                 .button("Create", |s| {
