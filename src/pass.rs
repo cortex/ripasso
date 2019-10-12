@@ -660,7 +660,7 @@ pub fn watch(repo_opt: Arc<Option<git2::Repository>>) -> Result<(Receiver<Passwo
 }
 
 pub fn generate_password(length: usize) -> String {
-    return GeneratePassword(length, Dictionary);
+    return GeneratePassword(length, Dictionary).trim().to_string();
 }
 
 fn to_name(base: &path::PathBuf, path: &path::PathBuf) -> String {
