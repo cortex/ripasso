@@ -35,7 +35,10 @@ use self::clipboard::{ClipboardContext, ClipboardProvider};
 use ripasso::pass;
 use std::process;
 use std::{thread, time};
-use std::sync::{Arc};
+use std::sync::Arc;
+
+mod helpers;
+mod wizard;
 
 fn down(ui: &mut Cursive) -> () {
     ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
@@ -47,19 +50,6 @@ fn up(ui: &mut Cursive) -> () {
     ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
         l.select_up(1);
     });
-}
-
-fn errorbox(ui: &mut Cursive, err: &pass::Error) -> () {
-    let d = Dialog::around(TextView::new(format!("{:?}", err)))
-        .dismiss_button("Ok")
-        .title("Error");
-
-    let ev = OnEventView::new(d)
-        .on_event(Key::Esc, |s| {
-            s.pop_layer();
-        });
-
-    ui.add_layer(ev);
 }
 
 fn copy(ui: &mut Cursive) -> () {
@@ -74,13 +64,13 @@ fn copy(ui: &mut Cursive) -> () {
     let password = sel.unwrap().password();
 
     if password.is_err() {
-        errorbox(ui, &password.unwrap_err());
+        helpers::errorbox(ui, &password.unwrap_err());
         return;
     }
 
     let ctx_res = clipboard::ClipboardContext::new();
     if ctx_res.is_err() {
-        errorbox(ui, &pass::Error::GenericDyn(format!("{}", &ctx_res.err().unwrap())));
+        helpers::errorbox(ui, &pass::Error::GenericDyn(format!("{}", &ctx_res.err().unwrap())));
         return;
     }
     let mut ctx: ClipboardContext = ctx_res.unwrap();
@@ -154,7 +144,7 @@ fn open(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
                     }).unwrap();
                 let r = password_entry.update(new_password, repo_opt.clone());
                 if r.is_err() {
-                    errorbox(s, &r.unwrap_err())
+                    helpers::errorbox(s, &r.unwrap_err())
                 }
             })
             .button("Generate", move |s| {
@@ -204,7 +194,7 @@ fn create_save(s: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
 
     let col = s.screen_size().x;
     if res.is_err() {
-        errorbox(s, &res.err().unwrap())
+        helpers::errorbox(s, &res.err().unwrap())
     } else {
         s.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
             let mut path_buf: std::path::PathBuf = pass::password_dir().unwrap();
@@ -281,7 +271,7 @@ fn delete_recipient(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -
     let r = ripasso::pass::Recipient::remove_recipient_from_file(&sel.unwrap(), repo_opt);
 
     if r.is_err() {
-        errorbox(ui, &r.unwrap_err());
+        helpers::errorbox(ui, &r.unwrap_err());
     } else {
         let delete_id = l.selected_id().unwrap();
         l.remove_item(delete_id);
@@ -303,11 +293,11 @@ fn add_recipient(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> (
     let recipient_result = pass::Recipient::from_key_id(l.clone());
 
     if recipient_result.is_err() {
-        errorbox(ui, &recipient_result.err().unwrap());
+        helpers::errorbox(ui, &recipient_result.err().unwrap());
     } else {
         let res = pass::Recipient::add_recipient_to_file(&recipient_result.unwrap(), repo_opt);
         if res.is_err() {
-            errorbox(ui, &res.unwrap_err());
+            helpers::errorbox(ui, &res.unwrap_err());
         } else {
             ui.pop_layer();
         }
@@ -413,7 +403,7 @@ fn git_push(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) {
     let res = pass::push(repo_opt);
 
     if res.is_err() {
-        errorbox(ui, &res.unwrap_err());
+        helpers::errorbox(ui, &res.unwrap_err());
     }
 }
 
@@ -421,12 +411,12 @@ fn git_pull(ui: &mut Cursive, passwords: pass::PasswordList, repo_opt: Arc<Optio
     let pull_res = pass::pull(repo_opt.clone());
 
     if pull_res.is_err() {
-        errorbox(ui, &pull_res.unwrap_err());
+        helpers::errorbox(ui, &pull_res.unwrap_err());
     }
 
     let res = pass::populate_password_list(&passwords, repo_opt);
     if res.is_err() {
-        errorbox(ui, &res.unwrap_err());
+        helpers::errorbox(ui, &res.unwrap_err());
     }
 
     let col = ui.screen_size().x;
@@ -437,74 +427,6 @@ fn git_pull(ui: &mut Cursive, passwords: pass::PasswordList, repo_opt: Arc<Optio
             l.add_item(create_label(&p, col), p.clone());
         }
     });
-}
-
-fn show_init_menu() {
-    let mut ui = Cursive::default();
-
-    ui.load_toml(include_str!("../res/style.toml")).unwrap();
-
-    let results = SelectView::<pass::PasswordEntry>::new()
-        .with_id("results")
-        .full_height();
-
-    let searchbox = EditView::new().fixed_width(72);
-
-    ui.add_layer(
-        LinearLayout::new(Orientation::Vertical)
-            .child(
-                Dialog::around(
-                    LinearLayout::new(Orientation::Vertical)
-                        .child(searchbox)
-                        .child(results)
-                        .fixed_width(72),
-                ).title("Ripasso"),
-            ).child(
-            LinearLayout::new(Orientation::Horizontal)
-                .child(TextView::new("C-N: Next | "))
-                .child(TextView::new("C-P: Previous | "))
-                .child(TextView::new("C-Y: Copy | "))
-                .child(TextView::new("C-W: Clear | "))
-                .child(TextView::new("C-O: Open | "))
-                .child(TextView::new("C-V: Recipients | "))
-                .child(TextView::new("ins: Create | "))
-                .child(TextView::new("esc: Quit"))
-                .full_width(),
-        ),
-    );
-
-    let d = Dialog::around(TextView::new("Welcome to ripasso, it seems like you don't have a password store directory yet
-would you like to create it?"))
-        .button("Create", |s| {
-            let d2 = Dialog::around(LinearLayout::new(Orientation::Vertical)
-                    .child(TextView::new("Ripasso uses gpg in order to encrypt the stored passwords.\nPlease enter your gpg key id"))
-                    .child(EditView::new().with_id("initial_key_id"))
-                )
-                .button("Create", |s| {
-                    let l = s.find_id::<EditView>("initial_key_id").unwrap();
-                    let key_id = (*l.get_content()).clone();
-                    let mut pass_home = pass::password_dir_raw();
-                    let create_res = std::fs::create_dir_all(&pass_home);
-                    if create_res.is_err() {
-                        errorbox(s, &pass::Error::IO(create_res.unwrap_err()));
-                        s.quit();
-                    } else {
-                        pass_home.push(".gpg-id");
-                        std::fs::write(pass_home, key_id).expect("Unable to write file");
-                        s.quit();
-                    }
-                });
-
-            s.add_layer(d2);
-        })
-        .button("Cancel", |s| {
-            s.quit();
-        })
-        .title("Init");
-
-    ui.add_layer(d);
-
-    ui.run();
 }
 
 fn main() {
@@ -523,7 +445,7 @@ fn main() {
     }
 
     if pass::password_dir().is_err() {
-        show_init_menu();
+        wizard::show_init_menu();
     }
 
     let repo_opt = Arc::new(git2::Repository::open(pass::password_dir().unwrap()).ok());
@@ -544,7 +466,7 @@ fn main() {
         let event = password_rx.try_recv();
         if let Ok(e) = event {
             if let pass::PasswordEvent::Error(ref err) = e {
-                errorbox(s, err)
+                helpers::errorbox(s, err)
             }
         }
     }));

@@ -205,7 +205,7 @@ fn find_last_commit(repo: &git2::Repository) -> Result<git2::Commit> {
     obj.into_commit().map_err(|_| Error::Generic("Couldn't find commit"))
 }
 
-fn add_and_commit(repo_opt: Arc<Option<git2::Repository>>, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
+pub fn add_and_commit(repo_opt: Arc<Option<git2::Repository>>, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
     let mut index = (*repo_opt).as_ref().unwrap().index()?;
     for path in paths {
         index.add_path(path::Path::new(path))?;
@@ -550,6 +550,12 @@ pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<Str
     let message = format!("Add password for {} using ripasso", path_end);
 
     add_and_commit(repo_opt, &vec![format!("{}.gpg", (*path_end).clone())], &message)?;
+
+    return Ok(());
+}
+
+pub fn init_git_repo(base: &path::PathBuf) -> Result<()> {
+    git2::Repository::init(base)?;
 
     return Ok(());
 }
