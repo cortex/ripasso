@@ -199,11 +199,16 @@ fn create_save(s: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
         s.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
             let mut path_buf: std::path::PathBuf = pass::password_dir().unwrap();
 
-            let path_iter = &mut path.split("/");
+            let path_deref = (*path).clone();
+            let path_iter = &mut path_deref.split("/").peekable();
+
             while let Some(p) = path_iter.next() {
-                path_buf.push(p);
+                if path_iter.peek().is_some() {
+                    path_buf.push(p);
+                } else {
+                    path_buf.push(format!("{}.gpg", p));
+                }
             }
-            path_buf.set_extension("gpg");
 
             match pass::to_password(&pass::password_dir().unwrap(), &path_buf, repo_opt.clone()) {
                 Ok(e) => l.add_item(create_label(&e, col), e),
