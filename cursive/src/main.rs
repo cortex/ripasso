@@ -25,6 +25,7 @@ use self::cursive::views::{
 };
 
 use cursive::Cursive;
+use cursive::menu::MenuTree;
 
 use self::cursive::direction::Orientation;
 use self::cursive::event::{Event, Key};
@@ -81,6 +82,10 @@ fn copy(ui: &mut Cursive) -> () {
         let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
         ctx.set_contents("".to_string()).unwrap();
     });
+
+    ui.call_on_id("status_bar", |l: &mut TextView| {
+        l.set_content("copied password to copy buffer for 40 seconds");
+    });
 }
 
 fn do_delete(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
@@ -110,7 +115,10 @@ fn delete(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     ui.add_layer(CircularFocus::wrap_tab(
     Dialog::around(TextView::new("Are you sure you want to delete the password"))
         .button("Yes", move |ui: &mut Cursive| {
-            do_delete(ui, repo_opt.clone())
+            do_delete(ui, repo_opt.clone());
+            ui.call_on_id("status_bar", |l: &mut TextView| {
+                l.set_content("password deleted");
+            });
         })
         .dismiss_button("Cancel")));
 }
@@ -217,6 +225,10 @@ fn create_save(s: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
         });
 
         s.pop_layer();
+
+        s.call_on_id("status_bar", |l: &mut TextView| {
+            l.set_content("created new password");
+        });
     }
 }
 
@@ -280,6 +292,10 @@ fn delete_recipient(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -
     } else {
         let delete_id = l.selected_id().unwrap();
         l.remove_item(delete_id);
+
+        ui.call_on_id("status_bar", |l: &mut TextView| {
+            l.set_content("deleted recipient from password store");
+        });
     }
 }
 
@@ -305,6 +321,9 @@ fn add_recipient(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> (
             helpers::errorbox(ui, &res.unwrap_err());
         } else {
             ui.pop_layer();
+            ui.call_on_id("status_bar", |l: &mut TextView| {
+                l.set_content("added recipient to password store");
+            });
         }
     }
 }
@@ -409,6 +428,10 @@ fn git_push(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) {
 
     if res.is_err() {
         helpers::errorbox(ui, &res.unwrap_err());
+    } else {
+        ui.call_on_id("status_bar", |l: &mut TextView| {
+            l.set_content("pushed to remote git repository");
+        });
     }
 }
 
@@ -431,6 +454,9 @@ fn git_pull(ui: &mut Cursive, passwords: pass::PasswordList, repo_opt: Arc<Optio
         for p in passwords.lock().unwrap().iter() {
             l.add_item(create_label(&p, col), p.clone());
         }
+    });
+    ui.call_on_id("status_bar", |l: &mut TextView| {
+        l.set_content("pulled from remote git repository");
     });
 }
 
@@ -487,6 +513,13 @@ fn main() {
     let repo_opt5 = repo_opt.clone();
     let repo_opt6 = repo_opt.clone();
     let repo_opt7 = repo_opt.clone();
+    let repo_opt8 = repo_opt.clone();
+    let repo_opt9 = repo_opt.clone();
+    let repo_opt10 = repo_opt.clone();
+    let repo_opt11 = repo_opt.clone();
+    let repo_opt12 = repo_opt.clone();
+    let repo_opt13 = repo_opt.clone();
+
     ui.add_global_callback(Event::CtrlChar('y'), copy);
     ui.add_global_callback(Key::Enter, copy);
     ui.add_global_callback(Key::Del, move |ui: &mut Cursive| {
@@ -554,19 +587,40 @@ fn main() {
                 ).title("Ripasso"),
             ).child(
                 LinearLayout::new(Orientation::Horizontal)
-                    .child(TextView::new("C-N: Next | "))
-                    .child(TextView::new("C-P: Previous | "))
-                    .child(TextView::new("C-Y: Copy | "))
-                    .child(TextView::new("C-W: Clear | "))
-                    .child(TextView::new("C-O: Open | "))
-                    .child(TextView::new("C-V: Recipients | "))
-                    .child(TextView::new("C-F: Git Pull | "))
-                    .child(TextView::new("C-G: Git Push | "))
-                    .child(TextView::new("ins: Create | "))
-                    .child(TextView::new("esc: Quit"))
+                    .child(TextView::new("F1: Meny | "))
+                    .child(TextView::new("").with_id("status_bar"))
                     .full_width(),
             ),
     );
+
+    let passwords_git_pull_clone2 = std::sync::Arc::clone(&passwords);
+    ui.menubar()
+        .add_subtree("Operations",
+                     MenuTree::new()
+                         .leaf("Copy (ctrl-y)", copy)
+                         .leaf("Create (ins) ", move |ui: &mut Cursive| {
+                             create(ui, repo_opt8.clone())
+                         })
+                         .leaf("Open (ctrl-o)", move |ui: &mut Cursive| {
+                             open(ui, repo_opt9.clone())
+                         })
+                         .leaf("Delete (del)", move |ui: &mut Cursive| {
+                             delete(ui, repo_opt10.clone())
+                         })
+                         .leaf("Recipients (ctrl-v)", move |ui: &mut Cursive| {
+                             view_recipients(ui, repo_opt11.clone())
+                         })
+                         .delimiter()
+                         .leaf("Git Pull (ctrl-f)", move |ui: &mut Cursive| {
+                             git_pull(ui, passwords_git_pull_clone2.clone(), repo_opt12.clone())
+                         })
+                         .leaf("Git Push (ctrl-g)", move |ui: &mut Cursive| {
+                             git_push(ui, repo_opt13.clone())
+                         })
+                         .delimiter()
+                         .leaf("Quit (esc)", |s| s.quit()));
+
+    ui.add_global_callback(Key::F1, |s| s.select_menubar());
 
     // This construction is to make sure that the password list is populated when the program starts
     // it would be better to signal this somehow from the library, but that got tricky
