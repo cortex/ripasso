@@ -99,7 +99,8 @@ pub struct PasswordEntry {
     pub meta: String,    // Metadata
     path: path::PathBuf, // Path, relative to the store
     base: path::PathBuf, // Base path of password entry
-    pub updated: Option<DateTime<Local>>,
+    pub updated: Option<DateTime<Local>>, // if we have a git repo, then commit time
+    pub committed_by: Option<String>, // if we have a git repo, then the name of the committer
     filename: String,
 }
 
@@ -499,6 +500,23 @@ fn updated(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Arc<Option<git2
     Ok(Local.timestamp(time.seconds(), 0))
 }
 
+fn committed_by(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Arc<Option<git2::Repository>>) -> Result<String> {
+    if repo_opt.is_none() {
+        return Err(Error::Generic("need repository to have DateTime information"));
+    }
+
+    let blame = (*repo_opt).as_ref().unwrap().blame_file(path.strip_prefix(base)?, None)?;
+    let id = blame
+        .get_line(1)
+        .ok_or(Error::Generic("no git history found"))?
+        .orig_commit_id();
+
+    match (*repo_opt).as_ref().unwrap().find_commit(id)?.committer().name() {
+        Some(s) => Ok(s.to_string()),
+        None => Err(Error::Generic("missing committer name"))
+    }
+}
+
 pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<String>, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
     let mut path = password_dir()?;
 
@@ -684,10 +702,14 @@ pub fn to_password(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Arc<Opt
         meta: "".to_string(),
         base: base.to_path_buf(),
         path: path.to_path_buf(),
-        updated: match updated(base, path, repo_opt) {
+        updated: match updated(base, path, repo_opt.clone()) {
             Ok(p) => Some(p),
             Err(_) => None,
-        }, // TODO: do we need lossy?
+        },
+        committed_by: match committed_by(base, path, repo_opt) {
+            Ok(p) => Some(p),
+            Err(_) => None,
+        },
         filename: path.to_string_lossy().into_owned().clone(),
     })
 }

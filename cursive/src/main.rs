@@ -397,18 +397,26 @@ fn view_recipients(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) ->
 }
 
 fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
-    return format!("{:2$}  {}",
+    let committed_by = p.committed_by.clone();
+    let updated = p.updated;
+    let name = &match committed_by {
+        Some(d) => d,
+        None => "n/a".to_string(),
+    }[0..15];
+    return format!("{:3$}  {} {}",
                 p.name,
-                match p.updated {
+                name,
+                match updated {
                     Some(d) => format!("{}", d.format("%Y-%m-%d")),
                     None => "n/a".to_string(),
                 },
-                _ = col - 10 - 8, // Optimized for 80 cols
+                _ = col - 10 - 15 - 8, // Optimized for 80 cols
             );
 }
 
 fn search(passwords: &pass::PasswordList, ui: &mut Cursive, query: &str) -> () {
     let col = ui.screen_size().x;
+    eprintln!("screen width: {}", &col);
     ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
         let r = pass::search(&passwords, &String::from(query));
         l.clear();
