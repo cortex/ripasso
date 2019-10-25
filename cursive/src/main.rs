@@ -416,7 +416,6 @@ fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
 
 fn search(passwords: &pass::PasswordList, ui: &mut Cursive, query: &str) -> () {
     let col = ui.screen_size().x;
-    eprintln!("screen width: {}", &col);
     ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
         let r = pass::search(&passwords, &String::from(query));
         l.clear();
