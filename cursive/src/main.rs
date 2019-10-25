@@ -467,6 +467,24 @@ fn git_pull(ui: &mut Cursive, passwords: pass::PasswordList, repo_opt: Arc<Optio
     });
 }
 
+fn do_delete_last_word(ui: &mut Cursive, passwords: pass::PasswordList) -> () {
+    ui.call_on_id("searchbox", |e: &mut EditView| {
+        let s = e.get_content();
+        let last_space = s.trim().rfind(" ");
+        match last_space {
+            Some(pos) => {
+                e.set_content(s[0..pos+1].to_string());
+            },
+            None => {
+                e.set_content("");
+                ()
+            }
+        };
+    });
+    let search_text = ui.find_id::<EditView>("searchbox").unwrap().get_content();
+    search(&passwords, ui, &search_text);
+}
+
 fn main() {
     env_logger::init();
 
@@ -543,10 +561,9 @@ fn main() {
     });
 
     // Query editing
-    ui.add_global_callback(Event::CtrlChar('w'), |ui| {
-        ui.call_on_id("searchbox", |e: &mut EditView| {
-            e.set_content("");
-        });
+    let passwords_clone = std::sync::Arc::clone(&passwords);
+    ui.add_global_callback(Event::CtrlChar('w'), move |ui: &mut Cursive| {
+        do_delete_last_word(ui, passwords_clone.clone());
     });
 
     // Editing
