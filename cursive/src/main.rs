@@ -396,13 +396,17 @@ fn view_recipients(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) ->
     ui.add_layer(recipients_event);
 }
 
+fn substr(str: &String, start: usize, len: usize) -> String {
+    return str.chars().skip(start).take(len).collect();
+}
+
 fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
     let committed_by = p.committed_by.clone();
     let updated = p.updated;
-    let name = &match committed_by {
+    let name = substr(&match committed_by {
         Some(d) => d,
         None => "n/a".to_string(),
-    }[0..15];
+    }, 0, 15);
     return format!("{:3$}  {} {}",
                 p.name,
                 name,
