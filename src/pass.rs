@@ -235,7 +235,7 @@ pub fn gpg_sign_string(commit: &String) -> Result<String> {
             return e;
         })?;
 
-    ctx.add_signer(&key);
+    ctx.add_signer(&key)?;
     let mut output = Vec::new();
     let signature = ctx.sign_detached(commit.clone(), &mut output);
 
@@ -268,24 +268,17 @@ pub fn add_and_commit(repo_opt: Arc<Option<git2::Repository>>, paths: &Vec<Strin
             &signature, // committer
             message, // commit message
             &tree, // tree
-            &parents); // parents
+            &parents)?; // parents
 
-        if commit_buf.is_err() {
-            return Err(Error::Git(commit_buf.err().unwrap()));
-        }
-
-        let commit_as_str = str::from_utf8(&commit_buf.unwrap()).unwrap().to_string();
+        let commit_as_str = str::from_utf8(&commit_buf).unwrap().to_string();
 
         let sig = gpg_sign_string(&commit_as_str)?;
 
-        let mut commit = (*repo_opt).as_ref().unwrap().commit_signed(&commit_as_str, &sig, Some("gpgsig"));
+        let commit = (*repo_opt).as_ref().unwrap().commit_signed(&commit_as_str, &sig, Some("gpgsig"));
 
         let oid = commit.unwrap();
         let obj = (*repo_opt).as_ref().unwrap().find_object(oid, None).unwrap();
-        let reset = (*repo_opt).as_ref().unwrap().reset(&obj, git2::ResetType::Hard, None);
-        if reset.is_err() {
-            return Err(Error::Git(reset.unwrap_err()));
-        }
+        (*repo_opt).as_ref().unwrap().reset(&obj, git2::ResetType::Hard, None)?;
 
         return Ok(oid);
     } else {
