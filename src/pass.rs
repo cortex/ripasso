@@ -242,6 +242,33 @@ fn gpg_sign_string(commit: &String) -> Result<String> {
     return Ok(String::from_utf8(output)?);
 }
 
+fn commit(repo_opt: Arc<Option<git2::Repository>>, signature: &git2::Signature, message: &String, tree: &git2::Tree, parents: &Vec<&git2::Commit>) -> Result<git2::Oid> {
+    if should_sign() {
+        let commit_buf = (*repo_opt).as_ref().unwrap().commit_create_buffer(
+            signature, // author
+            signature, // committer
+            message, // commit message
+            tree, // tree
+            parents)?; // parents
+
+        let commit_as_str = str::from_utf8(&commit_buf).unwrap().to_string();
+
+        let sig = gpg_sign_string(&commit_as_str)?;
+
+        let commit = (*repo_opt).as_ref().unwrap().commit_signed(&commit_as_str, &sig, Some("gpgsig"))?;
+        return Ok(commit);
+    } else {
+        let commit = (*repo_opt).as_ref().unwrap().commit(Some("HEAD"), //  point HEAD to our new commit
+                                                          signature, // author
+                                                          signature, // committer
+                                                          message, // commit message
+                                                          tree, // tree
+                                                          parents)?; // parents
+
+        return Ok(commit);
+    }
+}
+
 pub fn add_and_commit(repo_opt: Arc<Option<git2::Repository>>, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
     let mut index = (*repo_opt).as_ref().unwrap().index()?;
     for path in paths {
@@ -258,46 +285,11 @@ pub fn add_and_commit(repo_opt: Arc<Option<git2::Repository>>, paths: &Vec<Strin
     }
     let tree = (*repo_opt).as_ref().unwrap().find_tree(oid)?;
 
-    if should_sign() {
-        let commit_buf = (*repo_opt).as_ref().unwrap().commit_create_buffer(
-            &signature, // author
-            &signature, // committer
-            message, // commit message
-            &tree, // tree
-            &parents)?; // parents
+    let oid = commit(repo_opt.clone(), &signature, &message.to_string(), &tree, &parents)?;
+    let obj = (*repo_opt).as_ref().unwrap().find_object(oid, None)?;
+    (*repo_opt).as_ref().unwrap().reset(&obj, git2::ResetType::Hard, None)?;
 
-        let commit_as_str = str::from_utf8(&commit_buf).unwrap().to_string();
-
-        let sig = gpg_sign_string(&commit_as_str)?;
-
-        let commit = (*repo_opt).as_ref().unwrap().commit_signed(&commit_as_str, &sig, Some("gpgsig"));
-
-        let oid = commit.unwrap();
-        let obj = (*repo_opt).as_ref().unwrap().find_object(oid, None).unwrap();
-        (*repo_opt).as_ref().unwrap().reset(&obj, git2::ResetType::Hard, None)?;
-
-        return Ok(oid);
-    } else {
-        let commit = (*repo_opt).as_ref().unwrap().commit(Some("HEAD"), //  point HEAD to our new commit
-                                                          &signature, // author
-                                                          &signature, // committer
-                                                          message, // commit message
-                                                          &tree, // tree
-                                                          &parents); // parents
-
-        if commit.is_err() {
-            return Err(Error::Git(commit.unwrap_err()));
-        }
-
-        let oid = commit.unwrap();
-        let obj = (*repo_opt).as_ref().unwrap().find_object(oid, None).unwrap();
-        let reset = (*repo_opt).as_ref().unwrap().reset(&obj, git2::ResetType::Hard, None);
-        if reset.is_err() {
-            return Err(Error::Git(reset.unwrap_err()));
-        }
-
-        return Ok(oid);
-    }
+    return Ok(oid);
 }
 
 fn remove_and_commit(repo_opt: Arc<Option<git2::Repository>>, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
@@ -307,25 +299,18 @@ fn remove_and_commit(repo_opt: Arc<Option<git2::Repository>>, paths: &Vec<String
     }
     let oid = index.write_tree()?;
     let signature = (*repo_opt).as_ref().unwrap().signature()?;
-    let parent_commit = find_last_commit((*repo_opt).as_ref().unwrap())?;
+    let parent_commit_res = find_last_commit((*repo_opt).as_ref().unwrap());
+    let mut parents = vec![];
+    let parent_commit;
+    if !parent_commit_res.is_err() {
+        parent_commit = parent_commit_res.unwrap();
+        parents.push(&parent_commit);
+    }
     let tree = (*repo_opt).as_ref().unwrap().find_tree(oid)?;
-    let commit = (*repo_opt).as_ref().unwrap().commit(Some("HEAD"), //  point HEAD to our new commit
-                &signature, // author
-                &signature, // committer
-                message, // commit message
-                &tree, // tree
-                &[&parent_commit]); // parents
 
-    if commit.is_err() {
-        return Err(Error::Git(commit.unwrap_err()));
-    }
-
-    let oid = commit.unwrap();
-    let obj = (*repo_opt).as_ref().unwrap().find_object(oid, None).unwrap();
-    let reset = (*repo_opt).as_ref().unwrap().reset(&obj, git2::ResetType::Hard, None);
-    if reset.is_err() {
-        return Err(Error::Git(reset.unwrap_err()));
-    }
+    let oid = commit(repo_opt.clone(), &signature, &message.to_string(), &tree, &parents)?;
+    let obj = (*repo_opt).as_ref().unwrap().find_object(oid, None)?;
+    (*repo_opt).as_ref().unwrap().reset(&obj, git2::ResetType::Hard, None)?;
 
     return Ok(oid);
 }
