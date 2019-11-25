@@ -222,18 +222,14 @@ pub fn should_sign() -> bool {
     return true;
 }
 
-pub fn gpg_sign_string(commit: &String) -> Result<String> {
+fn gpg_sign_string(commit: &String) -> Result<String> {
     let config = git2::Config::open_default()?;
 
     let signing_key = config.get_string("user.signingkey")?;
 
-    let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp).unwrap();
+    let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
     ctx.set_armor(true);
-    let key = ctx.get_secret_key(signing_key)
-        .map_err(|e| {
-            eprintln!("unable to find signing key: {:?}", e);
-            return e;
-        })?;
+    let key = ctx.get_secret_key(signing_key)?;
 
     ctx.add_signer(&key)?;
     let mut output = Vec::new();
@@ -243,7 +239,7 @@ pub fn gpg_sign_string(commit: &String) -> Result<String> {
         return Err(Error::GPG(signature.unwrap_err()));
     }
 
-    return Ok(String::from_utf8(output).unwrap());
+    return Ok(String::from_utf8(output)?);
 }
 
 pub fn add_and_commit(repo_opt: Arc<Option<git2::Repository>>, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
