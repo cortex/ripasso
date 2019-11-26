@@ -414,7 +414,7 @@ fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
                     Some(d) => format!("{}", d.format("%Y-%m-%d")),
                     None => "n/a".to_string(),
                 },
-                _ = col - 10 - 15 - 8, // Optimized for 80 cols
+                _ = col - 10 - 15 - 9, // Optimized for 80 cols
             );
 }
 
