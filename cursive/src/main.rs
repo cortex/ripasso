@@ -615,7 +615,7 @@ fn main() {
                 ).title("Ripasso"),
             ).child(
                 LinearLayout::new(Orientation::Horizontal)
-                    .child(TextView::new("F1: Meny | "))
+                    .child(TextView::new("F1: Menu | "))
                     .child(TextView::new("").with_id("status_bar"))
                     .full_width(),
             ),

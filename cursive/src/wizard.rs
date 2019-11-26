@@ -109,14 +109,7 @@ pub fn show_init_menu() {
                 ).title("Ripasso"),
             ).child(
             LinearLayout::new(Orientation::Horizontal)
-                .child(TextView::new("C-N: Next | "))
-                .child(TextView::new("C-P: Previous | "))
-                .child(TextView::new("C-Y: Copy | "))
-                .child(TextView::new("C-W: Clear | "))
-                .child(TextView::new("C-O: Open | "))
-                .child(TextView::new("C-V: Recipients | "))
-                .child(TextView::new("ins: Create | "))
-                .child(TextView::new("esc: Quit"))
+                .child(TextView::new("F1: Menu | "))
                 .full_width(),
         ),
     );
