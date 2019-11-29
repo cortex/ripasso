@@ -1,6 +1,6 @@
 [package]
 name = "ripasso"
-version = "0.3.0-alpha"
+version = "0.3.0"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com", "Alexander Kjäll <alexander.kjall@gmail.com>"]
 license-file = "LICENCE"
 edition = '2018'
