@@ -1,7 +1,11 @@
 [package]
 name = "ripasso"
+description = "A password manager that uses the file format of the standard unix password manager 'pass'"
+repository = "https://github.com/cortex/ripasso/"
+keywords = ["password-manager", "pass"]
 version = "0.3.0"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com", "Alexander Kjäll <alexander.kjall@gmail.com>"]
+license = "GPL-3.0-only"
 license-file = "LICENCE"
 edition = '2018'
 

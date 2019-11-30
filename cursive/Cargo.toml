@@ -1,12 +1,16 @@
 [package]
 name = "ripasso-cursive"
+description = "A password manager that uses the file format of the standard unix password manager 'pass', this is the ncurses frontend application"
+repository = "https://github.com/cortex/ripasso/"
+keywords = ["password-manager", "pass"]
 version = "0.3.0"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>", "Alexander Kjäll <alexander.kjall@gmail.com>"]
+license = "GPL-3.0-only"
 edition = '2018'
 
 [dependencies]
 cursive = "0.12"
 clipboard = "0.5"
-ripasso = { path = "../"}
+ripasso = { path = "../", version = "0.3.0" }
 env_logger = "0.6"
 git2 = "0.10.2"
