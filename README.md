@@ -84,3 +84,27 @@ $ cargo build
 ```
 $ pacman -S qt5-base qt5-svg qt5-declarative
 ```
+
+## Packaging status
+
+### Fedora
+
+Avaliable in [Copr](https://copr.fedorainfracloud.org/coprs/atim/ripasso/)
+```
+sudo dnf copr enable atim/ripasso -y
+```
+
+TUI version
+```
+sudo dnf install ripasso
+```
+
+GTK version
+```
+sudo dnf install ripasso-gtk
+```
+
+Qt version
+```
+sudo dnf install ripasso-qt
+```
