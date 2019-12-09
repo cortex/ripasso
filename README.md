@@ -87,6 +87,13 @@ $ pacman -S qt5-base qt5-svg qt5-declarative
 
 ## Packaging status
 
+### Arch
+
+TUI version
+```
+yay install ripasso-cursive
+```
+
 ### Fedora
 
 Avaliable in [Copr](https://copr.fedorainfracloud.org/coprs/atim/ripasso/)
@@ -99,12 +106,17 @@ TUI version
 sudo dnf install ripasso
 ```
 
-GTK version
+GTK version (unstable)
 ```
 sudo dnf install ripasso-gtk
 ```
 
-Qt version
+Qt version (unstable)
 ```
 sudo dnf install ripasso-qt
 ```
+
+#### Nix
+
+TUI version
+`nix-env -iA nixpkgs.ripasso-cursive`
