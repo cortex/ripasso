@@ -119,4 +119,6 @@ sudo dnf install ripasso-qt
 #### Nix
 
 TUI version
-`nix-env -iA nixpkgs.ripasso-cursive`
+```
+nix-env -iA nixpkgs.ripasso-cursive
+```
