@@ -94,6 +94,13 @@ impl From<path::StripPrefixError> for Error {
 }
 
 #[derive(Clone, Debug)]
+pub enum SignatureStatus {
+    GoodSignature,
+    AlmostGoodSignature,
+    BadSignature
+}
+
+#[derive(Clone, Debug)]
 pub struct PasswordEntry {
     pub name: String,    // Name of the entry
     pub meta: String,    // Metadata
@@ -101,6 +108,7 @@ pub struct PasswordEntry {
     base: path::PathBuf, // Base path of password entry
     pub updated: Option<DateTime<Local>>, // if we have a git repo, then commit time
     pub committed_by: Option<String>, // if we have a git repo, then the name of the committer
+    pub signature_status: Option<SignatureStatus>, // if we have a git repo, and the commit was signed
     filename: String,
 }
 
@@ -418,8 +426,8 @@ pub struct Recipient {
 
 fn build_recipient(name: String, key_id: String) -> Recipient {
     Recipient {
-        name: name,
-        key_id: key_id,
+        name,
+        key_id,
     }
 }
 
@@ -556,6 +564,50 @@ fn committed_by(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Arc<Option
     match (*repo_opt).as_ref().unwrap().find_commit(id)?.committer().name() {
         Some(s) => Ok(s.to_string()),
         None => Err(Error::Generic("missing committer name"))
+    }
+}
+
+fn verify_gpg_signature(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Arc<Option<git2::Repository>>) -> Result<SignatureStatus> {
+    if repo_opt.is_none() {
+        return Err(Error::Generic("need repository to have DateTime information"));
+    }
+
+    let blame = (*repo_opt).as_ref().unwrap().blame_file(path.strip_prefix(base)?, None)?;
+    let id = blame
+        .get_line(1)
+        .ok_or(Error::Generic("no git history found"))?
+        .orig_commit_id();
+
+    let (signature, signed_data) = (*repo_opt).as_ref().unwrap().extract_signature(&id, Some("gpgsig"))?;
+
+    let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+
+    let signature_str = str::from_utf8(&signature).unwrap().to_string();
+    let signed_data_str = str::from_utf8(&signed_data).unwrap().to_string();
+    let result = ctx.verify_detached(signature_str, signed_data_str)?;
+
+    let mut sig_sum = None;
+
+    for (i, sig) in result.signatures().enumerate() {
+        if i == 0 {
+            sig_sum = Some(sig.summary());
+        } else {
+            return Err(Error::Generic("If a git contains more than one signature, something is fishy"));
+        }
+    }
+
+    if sig_sum.is_none() {
+        return Err(Error::Generic("Missing signature"));
+    }
+
+    let sig_sum = sig_sum.unwrap();
+
+    if sig_sum.contains(gpgme::SignatureSummary::GREEN) {
+        return Ok(SignatureStatus::GoodSignature);
+    } else if sig_sum.contains(gpgme::SignatureSummary::VALID) {
+        return Ok(SignatureStatus::AlmostGoodSignature);
+    } else {
+        return Ok(SignatureStatus::BadSignature);
     }
 }
 
@@ -748,8 +800,12 @@ pub fn to_password(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Arc<Opt
             Ok(p) => Some(p),
             Err(_) => None,
         },
-        committed_by: match committed_by(base, path, repo_opt) {
+        committed_by: match committed_by(base, path, repo_opt.clone()) {
             Ok(p) => Some(p),
+            Err(_) => None,
+        },
+        signature_status: match verify_gpg_signature(base, path, repo_opt) {
+            Ok(ss) => Some(ss),
             Err(_) => None,
         },
         filename: path.to_string_lossy().into_owned().clone(),

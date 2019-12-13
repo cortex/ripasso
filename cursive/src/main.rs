@@ -34,6 +34,8 @@ extern crate clipboard;
 use self::clipboard::{ClipboardContext, ClipboardProvider};
 
 use ripasso::pass;
+use ripasso::pass::SignatureStatus;
+
 use std::process;
 use std::{thread, time};
 use std::sync::Arc;
@@ -407,14 +409,23 @@ fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
         Some(d) => d,
         None => "n/a".to_string(),
     }, 0, 15);
-    return format!("{:3$}  {} {}",
+    let mut verification_status = " ";
+    if p.signature_status.is_some() {
+        verification_status = match p.signature_status.as_ref().unwrap() {
+            SignatureStatus::GoodSignature => "🔒",
+            SignatureStatus::AlmostGoodSignature => "🔓",
+            SignatureStatus::BadSignature => "⛔",
+        }
+    }
+    return format!("{:4$} {} {} {}",
                 p.name,
+                verification_status,
                 name,
                 match updated {
                     Some(d) => format!("{}", d.format("%Y-%m-%d")),
                     None => "n/a".to_string(),
                 },
-                _ = col - 10 - 15 - 9, // Optimized for 80 cols
+                _ = col - 11 - 15 - 9, // Optimized for 80 cols
             );
 }
 
