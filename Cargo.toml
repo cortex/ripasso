@@ -12,9 +12,9 @@ edition = '2018'
 [dependencies]
 notify = "4"
 glob = "0.3.0"
-gpgme = "0.9.1"
+gpgme = "0.9.2"
 chrono = "0.4"
-git2 = "0.10.2"
+git2 = "0.11.0"
 log = "0.4.8"
 env_logger = "0.7.0"
 dirs = "2.0.2"

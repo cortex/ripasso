@@ -13,4 +13,4 @@ cursive = "0.12"
 clipboard = "0.5"
 ripasso = { path = "../", version = "0.4.0-alpha" }
 env_logger = "0.6"
-git2 = "0.10.2"
+git2 = "0.11.0"
