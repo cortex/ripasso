@@ -23,7 +23,6 @@ xkcd-password = "0.1.1"
 whoami = "0.5.3"
 
 [dev-dependencies]
-tempdir = "0.3"
 tempfile = "3.1.0"
 
 [workspace]
