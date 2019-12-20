@@ -1,6 +1,7 @@
 # ripasso
 [![Build Status](https://travis-ci.org/cortex/ripasso.svg?branch=master)](https://travis-ci.org/cortex/ripasso)
 [![Crates Version](https://meritbadge.herokuapp.com/ripasso)](https://crates.io/crates/ripasso)
+[![Documentation Status](https://docs.rs/ripasso/badge.svg)](https://docs.rs/ripasso/)
 
 A simple password manager written in Rust.
 
