@@ -55,6 +55,9 @@ pub enum Error {
     Generic(&'static str),
     GenericDyn(String),
     PathError(path::StripPrefixError),
+    PatternError(glob::PatternError),
+    GlobError(glob::GlobError),
+    Utf8Error(std::str::Utf8Error),
 }
 
 impl From<io::Error> for Error {
@@ -90,6 +93,24 @@ impl From<notify::Error> for Error {
 impl From<path::StripPrefixError> for Error {
     fn from(err: path::StripPrefixError) -> Error {
         Error::PathError(err)
+    }
+}
+
+impl From<glob::PatternError> for Error {
+    fn from(err: glob::PatternError) -> Error {
+        Error::PatternError(err)
+    }
+}
+
+impl From<glob::GlobError> for Error {
+    fn from(err: glob::GlobError) -> Error {
+        Error::GlobError(err)
+    }
+}
+
+impl From<std::str::Utf8Error> for Error {
+    fn from(err: std::str::Utf8Error) -> Error {
+        Error::Utf8Error(err)
     }
 }
 
@@ -130,8 +151,8 @@ impl PasswordEntry {
 
         let mut keys = Vec::new();
 
-        for recipient in Recipient::all_recipients() {
-            keys.push(ctx.get_key(recipient.key_id).unwrap());
+        for recipient in Recipient::all_recipients()? {
+            keys.push(ctx.get_key(recipient.key_id)?);
         }
 
         let mut ciphertext = Vec::new();
@@ -175,11 +196,11 @@ impl PasswordEntry {
 
         // Existing files iterator
         let password_path_glob = dir.join("**/*.gpg");
-        let paths = glob::glob(&password_path_glob.to_string_lossy()).unwrap();
+        let paths = glob::glob(&password_path_glob.to_string_lossy())?;
 
         let mut passwords = Vec::<PasswordEntry>::new();
         for path in paths {
-            match to_password(&dir, &path.unwrap(), repo_opt.clone()) {
+            match to_password(&dir, &path?, repo_opt.clone()) {
                 Ok(password) => passwords.push(password),
                 Err(e) => return Err(e),
             }
@@ -190,7 +211,7 @@ impl PasswordEntry {
 
     pub fn reencrypt_all_password_entries(repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
         let mut names: Vec<String> = Vec::new();
-        for entry in PasswordEntry::all_password_entries(repo_opt.clone()).unwrap() {
+        for entry in PasswordEntry::all_password_entries(repo_opt.clone())? {
             entry.update_internal(entry.secret()?)?;
             names.push(format!("{}.gpg", &entry.name));
         }
@@ -200,7 +221,7 @@ impl PasswordEntry {
             return Ok(());
         }
 
-        let keys = Recipient::all_recipients().into_iter().map(|s| format!("0x{}, ", s.key_id)).collect::<String>();
+        let keys = Recipient::all_recipients()?.into_iter().map(|s| format!("0x{}, ", s.key_id)).collect::<String>();
         let message = format!("Reencrypt password store with new GPG ids {}", keys);
 
         add_and_commit(repo_opt, &names, &message)?;
@@ -259,7 +280,7 @@ fn commit(repo_opt: Arc<Option<git2::Repository>>, signature: &git2::Signature, 
             tree, // tree
             parents)?; // parents
 
-        let commit_as_str = str::from_utf8(&commit_buf).unwrap().to_string();
+        let commit_as_str = str::from_utf8(&commit_buf)?.to_string();
 
         let sig = gpg_sign_string(&commit_as_str)?;
 
@@ -288,7 +309,7 @@ pub fn add_and_commit(repo_opt: Arc<Option<git2::Repository>>, paths: &Vec<Strin
     let mut parents = vec![];
     let parent_commit;
     if !parent_commit_res.is_err() {
-        parent_commit = parent_commit_res.unwrap();
+        parent_commit = parent_commit_res?;
         parents.push(&parent_commit);
     }
     let tree = (*repo_opt).as_ref().unwrap().find_tree(oid)?;
@@ -311,7 +332,7 @@ fn remove_and_commit(repo_opt: Arc<Option<git2::Repository>>, paths: &Vec<String
     let mut parents = vec![];
     let parent_commit;
     if !parent_commit_res.is_err() {
-        parent_commit = parent_commit_res.unwrap();
+        parent_commit = parent_commit_res?;
         parents.push(&parent_commit);
     }
     let tree = (*repo_opt).as_ref().unwrap().find_tree(oid)?;
@@ -433,14 +454,14 @@ fn build_recipient(name: String, key_id: String) -> Recipient {
 
 impl Recipient {
     pub fn from_key_id(key_id: String) -> Result<Recipient> {
-        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp).unwrap();
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
         let key_option = ctx.get_key(key_id.clone());
         if key_option.is_err() {
             return Err(Error::Generic("Can't find key in keyring, please import it first"));
         }
 
-        let real_key = key_option.unwrap();
+        let real_key = key_option?;
 
         let mut name = "?";
         for user_id in real_key.user_ids() {
@@ -450,9 +471,9 @@ impl Recipient {
         return Ok(build_recipient(name.to_string(), key_id));
     }
 
-    pub fn all_recipients() -> Vec<Recipient> {
+    pub fn all_recipients() -> Result<Vec<Recipient>> {
 
-        let mut recipient_file = password_dir().unwrap();
+        let mut recipient_file = password_dir()?;
         recipient_file.push(".gpg-id");
         let contents = fs::read_to_string(recipient_file)
             .expect("Something went wrong reading the file");
@@ -465,7 +486,7 @@ impl Recipient {
             }
         }
 
-        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp).unwrap();
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
         for key in unique_recipients_keys {
             let key_option = ctx.get_key(key.clone());
@@ -473,7 +494,7 @@ impl Recipient {
                 continue;
             }
 
-            let real_key = key_option.unwrap();
+            let real_key = key_option?;
 
             let mut name = "?";
             for user_id in real_key.user_ids() {
@@ -482,19 +503,18 @@ impl Recipient {
             recipients.push(build_recipient(name.to_string(), real_key.id().unwrap_or("?").to_string()));
         }
 
-        return recipients;
+        return Ok(recipients);
     }
 
     fn write_recipients_file(recipients: &Vec<Recipient>, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
-        let mut recipient_file = password_dir().unwrap();
+        let mut recipient_file = password_dir()?;
         recipient_file.push(".gpg-id");
 
         let mut file = std::fs::OpenOptions::new()
             .write(true)
             .create(true)
             .truncate(true)
-            .open(recipient_file)
-            .unwrap();
+            .open(recipient_file)?;
 
         for recipient in recipients {
             if !recipient.key_id.starts_with("0x") {
@@ -510,7 +530,7 @@ impl Recipient {
     }
 
     pub fn remove_recipient_from_file(s: &Recipient, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
-        let mut recipients: Vec<Recipient> = Recipient::all_recipients();
+        let mut recipients: Vec<Recipient> = Recipient::all_recipients()?;
 
         recipients.retain(|ref vs| vs.key_id != s.key_id);
 
@@ -522,7 +542,7 @@ impl Recipient {
     }
 
     pub fn add_recipient_to_file(s: &Recipient, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
-        let mut recipients: Vec<Recipient> = Recipient::all_recipients();
+        let mut recipients: Vec<Recipient> = Recipient::all_recipients()?;
 
         for recipient in &recipients {
             if recipient.key_id == s.key_id {
@@ -582,8 +602,8 @@ fn verify_gpg_signature(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Ar
 
     let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
-    let signature_str = str::from_utf8(&signature).unwrap().to_string();
-    let signed_data_str = str::from_utf8(&signed_data).unwrap().to_string();
+    let signature_str = str::from_utf8(&signature)?.to_string();
+    let signed_data_str = str::from_utf8(&signed_data)?.to_string();
     let result = ctx.verify_detached(signature_str, signed_data_str)?;
 
     let mut sig_sum = None;
@@ -643,8 +663,8 @@ pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<Str
 
     let mut keys = Vec::new();
 
-    for recipient in Recipient::all_recipients() {
-        keys.push(ctx.get_key(recipient.key_id).unwrap());
+    for recipient in Recipient::all_recipients()? {
+        keys.push(ctx.get_key(recipient.key_id)?);
     }
 
     let mut output = Vec::new();
@@ -681,7 +701,7 @@ pub enum PasswordEvent {
 
 pub type PasswordList = Arc<Mutex<Vec<PasswordEntry>>>;
 
-pub fn search(l: &PasswordList, query: &str) -> Vec<PasswordEntry> {
+pub fn search(l: &PasswordList, query: &str) -> Result<Vec<PasswordEntry>> {
     let passwords = l.lock().unwrap();
     fn normalized(s: &str) -> String {
         s.to_lowercase()
@@ -690,18 +710,18 @@ pub fn search(l: &PasswordList, query: &str) -> Vec<PasswordEntry> {
         normalized(s).as_str().contains(normalized(q).as_str())
     };
     let matching = passwords.iter().filter(|p| matches(&p.name, query));
-    matching.cloned().collect()
+    Ok(matching.cloned().collect())
 }
 
 pub fn populate_password_list(passwords: &PasswordList, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
     let dir = password_dir()?;
 
     let password_path_glob = dir.join("**/*.gpg");
-    let existing_iter = glob::glob(&password_path_glob.to_string_lossy()).unwrap();
+    let existing_iter = glob::glob(&password_path_glob.to_string_lossy())?;
 
     (passwords.lock().unwrap()).clear();
     for existing_file in existing_iter {
-        let pbuf = existing_file.unwrap();
+        let pbuf = existing_file?;
         (passwords.lock().unwrap()).push(to_password(&dir, &pbuf, repo_opt.clone())?);
     }
 

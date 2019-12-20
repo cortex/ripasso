@@ -363,7 +363,13 @@ fn add_recipient_dialog(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>
 }
 
 fn view_recipients(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
-    let recipients : Vec<ripasso::pass::Recipient> = ripasso::pass::Recipient::all_recipients();
+    let recipients_res : Result<Vec<ripasso::pass::Recipient>, pass::Error> = ripasso::pass::Recipient::all_recipients();
+
+    if recipients_res.is_err() {
+        helpers::errorbox(ui, &recipients_res.err().unwrap());
+        return ();
+    }
+    let recipients = recipients_res.unwrap();
 
     let mut recipients_view = SelectView::<pass::Recipient>::new()
         .h_align(cursive::align::HAlign::Left)
@@ -431,13 +437,18 @@ fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
 
 fn search(passwords: &pass::PasswordList, ui: &mut Cursive, query: &str) -> () {
     let col = ui.screen_size().x;
-    ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
-        let r = pass::search(&passwords, &String::from(query));
-        l.clear();
-        for p in &r {
-            l.add_item(create_label(&p, col), p.clone());
-        }
-    });
+    let mut l = ui.find_id::<SelectView<pass::PasswordEntry>>("results").unwrap();
+
+    let r_res = pass::search(&passwords, &String::from(query));
+    if r_res.is_err() {
+        helpers::errorbox(ui, &r_res.err().unwrap());
+        return ();
+    }
+    let r = r_res.unwrap();
+    l.clear();
+    for p in &r {
+        l.add_item(create_label(&p, col), p.clone());
+    }
 }
 
 fn help() {

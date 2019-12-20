@@ -43,7 +43,7 @@ impl UI {
     pub fn query(&mut self, query: String) -> Option<&QVariant> {
         println!("query");
         let passwords = self.all_passwords.clone();
-        let matching = pass::search(&passwords, &String::from(query));
+        let matching = pass::search(&passwords, &String::from(query)).unwrap();
 
 
         // Save currently matched passwords
