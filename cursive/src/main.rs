@@ -55,6 +55,16 @@ fn up(ui: &mut Cursive) -> () {
     });
 }
 
+fn page_down(ui: &mut Cursive) -> () {
+    let mut l = ui.find_id::<SelectView<pass::PasswordEntry>>("results").unwrap();
+    l.select_down(ui.screen_size().y);
+}
+
+fn page_up(ui: &mut Cursive) -> () {
+    let mut l = ui.find_id::<SelectView<pass::PasswordEntry>>("results").unwrap();
+    l.select_up(ui.screen_size().y);
+}
+
 fn copy(ui: &mut Cursive) -> () {
     let l = ui.find_id::<SelectView<pass::PasswordEntry>>("results").unwrap();
 
@@ -580,6 +590,8 @@ fn main() {
     // Movement
     ui.add_global_callback(Event::CtrlChar('n'), down);
     ui.add_global_callback(Event::CtrlChar('p'), up);
+    ui.add_global_callback(Event::Key(cursive::event::Key::PageDown), page_down);
+    ui.add_global_callback(Event::Key(cursive::event::Key::PageUp), page_up);
 
     // View list of persons that have access
     ui.add_global_callback(Event::CtrlChar('v'), move |ui: &mut Cursive| {
