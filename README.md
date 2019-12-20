@@ -20,8 +20,6 @@ PR's are very welcome!
 This is a reimplementation of https://github.com/cortex/gopass in Rust. I started it mainly because https://github.com/go-qml/qml
 is unmaintained. Also, using a safe language for your passwords seems like a good idea.
 
-It has not yet reached feature-parity, but the basic functionality works. If this plays out well, it will replace gopass.
-
 ## UI's
 
 ### Cursive - Terminal interface
