@@ -1,0 +1,155 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-12-21 22:03+0100\n"
+"PO-Revision-Date: 2019-12-21 22:24+0100\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: sv\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.2.4\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: cursive/src/main.rs:474
+msgid ""
+"A password manager that uses the file format of the standard unix password "
+"manager 'pass', implemented in rust. Ripasso reads $HOME/.password-store/ by "
+"default, override this by setting the PASSWORD_STORE_DIR environmental "
+"variable."
+msgstr ""
+"En lösenordshanterare som använder samma filformat som a lösenordshanteraren "
+"'pass', implementerad i rust. Ripasso läser och sparar lösenord i $HOME/."
+"password-store/ som standard, ändra det här genom att sätta miljövariabeln "
+"PASSWORD_STORE_DIR till ett nytt värde."
+
+#: cursive/src/main.rs:278
+msgid "Add new password"
+msgstr "Lägg till nytt lösenord"
+
+#: cursive/src/main.rs:137
+msgid "Are you sure you want to delete the password"
+msgstr "Är du säker på att du vill ta bort lösenordet"
+
+#: cursive/src/main.rs:325
+msgid "Are you sure you want to remove this person?"
+msgstr "Är du säker på att vi vill ta bort den här personen?"
+
+#: cursive/src/main.rs:144 cursive/src/main.rs:288 cursive/src/main.rs:329
+#: cursive/src/main.rs:374
+msgid "Cancel"
+msgstr "Avbryt"
+
+#: cursive/src/main.rs:698
+msgid "Copy (ctrl-y)"
+msgstr "Kopiera (ctrl-y)"
+
+#: cursive/src/main.rs:699
+msgid "Create (ins) "
+msgstr "Skapa (ins) "
+
+#: cursive/src/main.rs:705
+msgid "Delete (del)"
+msgstr "Ta bort (del)"
+
+#: cursive/src/main.rs:355
+msgid "GPG Key Id: "
+msgstr "GPG nyckelid: "
+
+#: cursive/src/main.rs:179 cursive/src/main.rs:279
+msgid "Generate"
+msgstr "Generera"
+
+#: cursive/src/main.rs:712
+msgid "Git Pull (ctrl-f)"
+msgstr "Git Pull (ctrl-f)"
+
+#: cursive/src/main.rs:715
+msgid "Git Push (ctrl-g)"
+msgstr "Git Push (ctrl-g)"
+
+#: cursive/src/main.rs:185
+msgid "Ok"
+msgstr "Ok"
+
+#: cursive/src/main.rs:702
+msgid "Open (ctrl-o)"
+msgstr "Öppna (ctrl-o)"
+
+#: cursive/src/main.rs:696
+msgid "Operations"
+msgstr "Handlingar"
+
+#: cursive/src/main.rs:266
+msgid "Password: "
+msgstr "Lösenord: "
+
+#: cursive/src/main.rs:260
+msgid "Path: "
+msgstr "Sökväg: "
+
+#: cursive/src/main.rs:402
+msgid "People"
+msgstr "Personer"
+
+#: cursive/src/main.rs:719
+msgid "Quit (esc)"
+msgstr "Avsluta (esc)"
+
+#: cursive/src/main.rs:708
+msgid "Recipients (ctrl-v)"
+msgstr "Mottagare (ctrl-v)"
+
+#: cursive/src/main.rs:169 cursive/src/main.rs:285
+msgid "Save"
+msgstr "Spara"
+
+#: cursive/src/main.rs:138 cursive/src/main.rs:371
+msgid "Yes"
+msgstr "Ja"
+
+#: cursive/src/main.rs:346
+msgid "added recipient to password store"
+msgstr "lade till mottagare till lösenordslistan"
+
+#: cursive/src/main.rs:108
+msgid "copied password to copy buffer for 40 seconds"
+msgstr "kopierade lösenordet till urklippsbufferten i 40 sekunder"
+
+#: cursive/src/main.rs:251
+msgid "created new password"
+msgstr "skapade ett nytt lösenord"
+
+#: cursive/src/main.rs:409
+msgid "del: Remove"
+msgstr "del: Fjärna"
+
+#: cursive/src/main.rs:318
+msgid "deleted recipient from password store"
+msgstr "tog bort mottagaren från lösenordslistan"
+
+#: cursive/src/main.rs:408
+msgid "ins: Add | "
+msgstr "ins: Lägg till | "
+
+#: cursive/src/main.rs:435 cursive/src/main.rs:451
+msgid "n/a"
+msgstr "n/a"
+
+#: cursive/src/main.rs:141
+msgid "password deleted"
+msgstr "lösenordet borttaget"
+
+#: cursive/src/main.rs:484
+msgid "pushed to remote git repository"
+msgstr "laddade upp till externt git repository"
+
+#~ msgid "-h"
+#~ msgstr "-h"

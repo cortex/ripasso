@@ -14,3 +14,7 @@ clipboard = "0.5"
 ripasso = { path = "../", version = "0.4.0-alpha" }
 env_logger = "0.6"
 git2 = "0.11.0"
+locale_config = "0.3.0"
+unic-langid = "0.7.1"
+gettext = "0.4.0"
+lazy_static = "1.4.0"

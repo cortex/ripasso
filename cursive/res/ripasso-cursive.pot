@@ -1,0 +1,147 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-12-21 22:03+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: cursive/src/main.rs:474
+msgid ""
+"A password manager that uses the file format of the standard unix password "
+"manager 'pass', implemented in rust. Ripasso reads $HOME/.password-store/ by "
+"default, override this by setting the PASSWORD_STORE_DIR environmental "
+"variable."
+msgstr ""
+
+#: cursive/src/main.rs:278
+msgid "Add new password"
+msgstr ""
+
+#: cursive/src/main.rs:137
+msgid "Are you sure you want to delete the password"
+msgstr ""
+
+#: cursive/src/main.rs:325
+msgid "Are you sure you want to remove this person?"
+msgstr ""
+
+#: cursive/src/main.rs:144 cursive/src/main.rs:288 cursive/src/main.rs:329
+#: cursive/src/main.rs:374
+msgid "Cancel"
+msgstr ""
+
+#: cursive/src/main.rs:698
+msgid "Copy (ctrl-y)"
+msgstr ""
+
+#: cursive/src/main.rs:699
+msgid "Create (ins) "
+msgstr ""
+
+#: cursive/src/main.rs:705
+msgid "Delete (del)"
+msgstr ""
+
+#: cursive/src/main.rs:355
+msgid "GPG Key Id: "
+msgstr ""
+
+#: cursive/src/main.rs:179 cursive/src/main.rs:279
+msgid "Generate"
+msgstr ""
+
+#: cursive/src/main.rs:712
+msgid "Git Pull (ctrl-f)"
+msgstr ""
+
+#: cursive/src/main.rs:715
+msgid "Git Push (ctrl-g)"
+msgstr ""
+
+#: cursive/src/main.rs:185
+msgid "Ok"
+msgstr ""
+
+#: cursive/src/main.rs:702
+msgid "Open (ctrl-o)"
+msgstr ""
+
+#: cursive/src/main.rs:696
+msgid "Operations"
+msgstr ""
+
+#: cursive/src/main.rs:266
+msgid "Password: "
+msgstr ""
+
+#: cursive/src/main.rs:260
+msgid "Path: "
+msgstr ""
+
+#: cursive/src/main.rs:402
+msgid "People"
+msgstr ""
+
+#: cursive/src/main.rs:719
+msgid "Quit (esc)"
+msgstr ""
+
+#: cursive/src/main.rs:708
+msgid "Recipients (ctrl-v)"
+msgstr ""
+
+#: cursive/src/main.rs:169 cursive/src/main.rs:285
+msgid "Save"
+msgstr ""
+
+#: cursive/src/main.rs:138 cursive/src/main.rs:371
+msgid "Yes"
+msgstr ""
+
+#: cursive/src/main.rs:346
+msgid "added recipient to password store"
+msgstr ""
+
+#: cursive/src/main.rs:108
+msgid "copied password to copy buffer for 40 seconds"
+msgstr ""
+
+#: cursive/src/main.rs:251
+msgid "created new password"
+msgstr ""
+
+#: cursive/src/main.rs:409
+msgid "del: Remove"
+msgstr ""
+
+#: cursive/src/main.rs:318
+msgid "deleted recipient from password store"
+msgstr ""
+
+#: cursive/src/main.rs:408
+msgid "ins: Add | "
+msgstr ""
+
+#: cursive/src/main.rs:435 cursive/src/main.rs:451
+msgid "n/a"
+msgstr ""
+
+#: cursive/src/main.rs:141
+msgid "password deleted"
+msgstr ""
+
+#: cursive/src/main.rs:484
+msgid "pushed to remote git repository"
+msgstr ""
