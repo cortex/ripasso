@@ -26,3 +26,4 @@ matrix:
         - brew update
         - brew install qt5
         - brew install gtk+3
+        - brew install gpgme
