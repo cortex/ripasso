@@ -45,6 +45,7 @@ use std::collections::HashSet;
 
 type Result<T> = std::result::Result<T, Error>;
 
+/// A enum that contains the different types of errors that the library returns as part of Result's.
 #[derive(Debug)]
 pub enum Error {
     IO(io::Error),
@@ -114,26 +115,40 @@ impl From<std::str::Utf8Error> for Error {
     }
 }
 
+/// A git commit for a password might be signed by a gpg key, and this signature's verification
+/// state is one of these values.
 #[derive(Clone, Debug)]
 pub enum SignatureStatus {
+    /// Everything is fine with the signature, corresponds to the gpg status of GREEN
     GoodSignature,
+    /// There was a non-critical failure in the verification, corresponds to the gpg status of VALID
     AlmostGoodSignature,
+    /// Verification failed, corresponds to the gpg status of RED
     BadSignature
 }
 
+/// One password in the password store
 #[derive(Clone, Debug)]
 pub struct PasswordEntry {
-    pub name: String,    // Name of the entry
-    pub meta: String,    // Metadata
-    path: path::PathBuf, // Path, relative to the store
-    base: path::PathBuf, // Base path of password entry
-    pub updated: Option<DateTime<Local>>, // if we have a git repo, then commit time
-    pub committed_by: Option<String>, // if we have a git repo, then the name of the committer
-    pub signature_status: Option<SignatureStatus>, // if we have a git repo, and the commit was signed
+    /// Name of the entry
+    pub name: String,
+    /// Metadata
+    pub meta: String,
+    /// Path, relative to the store
+    path: path::PathBuf,
+    /// Base path of password entry
+    base: path::PathBuf,
+    /// if we have a git repo, then commit time
+    pub updated: Option<DateTime<Local>>,
+    /// if we have a git repo, then the name of the committer
+    pub committed_by: Option<String>,
+    /// if we have a git repo, and the commit was signed
+    pub signature_status: Option<SignatureStatus>,
     filename: String,
 }
 
 impl PasswordEntry {
+    /// Decrypts and returns the full content of the PasswordEntry
     pub fn secret(&self) -> Result<String> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
         let mut input = File::open(&self.filename)?;
@@ -142,6 +157,7 @@ impl PasswordEntry {
         Ok(String::from_utf8(output)?)
     }
 
+    /// Decrypts and returns the first line of the PasswordEntry
     pub fn password(&self) -> Result<String> {
         Ok(self.secret()?.split('\n').take(1).collect())
     }
@@ -163,6 +179,8 @@ impl PasswordEntry {
         Ok(())
     }
 
+    /// Updates the password store entry with new content, and commits those to git if a repository
+    /// is supplied.
     pub fn update(&self, secret: String, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
         self.update_internal(secret)?;
 
@@ -177,6 +195,7 @@ impl PasswordEntry {
         return Ok(());
     }
 
+    /// Removes this entry from the filesystem and commit that to git if a repository is supplied.
     pub fn delete_file(&self, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
         let res = Ok(std::fs::remove_file(&self.filename)?);
 
@@ -191,6 +210,7 @@ impl PasswordEntry {
         return res;
     }
 
+    /// Returns a list of all password entries in the store.
     pub fn all_password_entries(repo_opt: Arc<Option<git2::Repository>>) -> Result<Vec<PasswordEntry>> {
         let dir = password_dir()?;
 
@@ -209,6 +229,8 @@ impl PasswordEntry {
         return Ok(passwords);
     }
 
+    /// Reencrypt all the entries in the store, for example when a new collaborator is added
+    /// to the team.
     pub fn reencrypt_all_password_entries(repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
         let mut names: Vec<String> = Vec::new();
         for entry in PasswordEntry::all_password_entries(repo_opt.clone())? {
@@ -235,7 +257,8 @@ fn find_last_commit(repo: &git2::Repository) -> Result<git2::Commit> {
     obj.into_commit().map_err(|_| Error::Generic("Couldn't find commit"))
 }
 
-pub fn should_sign() -> bool {
+/// Returns if a git commit should be gpg signed or not.
+fn should_sign() -> bool {
     let config = git2::Config::open_default();
     if config.is_err() {
         return false;
@@ -251,6 +274,7 @@ pub fn should_sign() -> bool {
     return true;
 }
 
+/// Returns a gpg signature for the supplied string. Suitable to add to a gpg commit.
 fn gpg_sign_string(commit: &String) -> Result<String> {
     let config = git2::Config::open_default()?;
 
@@ -271,6 +295,7 @@ fn gpg_sign_string(commit: &String) -> Result<String> {
     return Ok(String::from_utf8(output)?);
 }
 
+/// Apply the changes to the git repository.
 fn commit(repo_opt: Arc<Option<git2::Repository>>, signature: &git2::Signature, message: &String, tree: &git2::Tree, parents: &Vec<&git2::Commit>) -> Result<git2::Oid> {
     if should_sign() {
         let commit_buf = (*repo_opt).as_ref().unwrap().commit_create_buffer(
@@ -298,6 +323,7 @@ fn commit(repo_opt: Arc<Option<git2::Repository>>, signature: &git2::Signature, 
     }
 }
 
+/// Add a file to the store, and commit it to the supplied git repository.
 pub fn add_and_commit(repo_opt: Arc<Option<git2::Repository>>, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
     let mut index = (*repo_opt).as_ref().unwrap().index()?;
     for path in paths {
@@ -321,6 +347,7 @@ pub fn add_and_commit(repo_opt: Arc<Option<git2::Repository>>, paths: &Vec<Strin
     return Ok(oid);
 }
 
+/// Remove a file from the store, and commit the deletion to the supplied git repository.
 fn remove_and_commit(repo_opt: Arc<Option<git2::Repository>>, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
     let mut index = (*repo_opt).as_ref().unwrap().index()?;
     for path in paths {
@@ -344,6 +371,7 @@ fn remove_and_commit(repo_opt: Arc<Option<git2::Repository>>, paths: &Vec<String
     return Ok(oid);
 }
 
+/// Push your changes to the remote git repository.
 pub fn push(repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
     if repo_opt.is_none() {
         return Ok(());
@@ -382,6 +410,7 @@ pub fn push(repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
     }
 }
 
+/// Pull new changes from the remote git repository.
 pub fn pull(repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
     if repo_opt.is_none() {
         return Ok(());
@@ -440,8 +469,13 @@ pub fn pull(repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
     return Ok(());
 }
 
+/// Represents one person on the team.
+///
+/// All secrets are encrypted with the key_id of the recipients.
 pub struct Recipient {
+    /// Human readable name of the person.
     pub name: String,
+    /// Machine readable identity, in the form of a gpg key.
     pub key_id: String,
 }
 
@@ -453,6 +487,7 @@ fn build_recipient(name: String, key_id: String) -> Recipient {
 }
 
 impl Recipient {
+    /// Creates a Recipient from a gpg key id string
     pub fn from_key_id(key_id: String) -> Result<Recipient> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
@@ -471,6 +506,7 @@ impl Recipient {
         return Ok(build_recipient(name.to_string(), key_id));
     }
 
+    /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
     pub fn all_recipients() -> Result<Vec<Recipient>> {
 
         let mut recipient_file = password_dir()?;
@@ -529,6 +565,7 @@ impl Recipient {
         return Ok(());
     }
 
+    /// Delete one of the persons from the list of people to encrypt the passwords for.
     pub fn remove_recipient_from_file(s: &Recipient, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
         let mut recipients: Vec<Recipient> = Recipient::all_recipients()?;
 
@@ -541,6 +578,7 @@ impl Recipient {
         return Recipient::write_recipients_file(&recipients, repo_opt);
     }
 
+    /// Add a new person to the list of people to encrypt the passwords for.
     pub fn add_recipient_to_file(s: &Recipient, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
         let mut recipients: Vec<Recipient> = Recipient::all_recipients()?;
 
@@ -631,6 +669,7 @@ fn verify_gpg_signature(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Ar
     }
 }
 
+/// Creates a new password file in the store.
 pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<String>, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
     let mut path = password_dir()?;
 
@@ -686,21 +725,28 @@ pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<Str
     return Ok(());
 }
 
+/// Initialize a git repository for the store.
 pub fn init_git_repo(base: &path::PathBuf) -> Result<()> {
     git2::Repository::init(base)?;
 
     return Ok(());
 }
 
+/// When setting up a `watch` for the password store directory, events of these types will be sent.
 #[derive(Debug)]
 pub enum PasswordEvent {
+    /// A new password file was created.
     NewPassword(PasswordEntry),
+    /// A password file was removed.
     RemovedPassword(path::PathBuf),
+    /// An error occured
     Error(Error),
 }
 
+/// The global state of all passwords are an instance of this type.
 pub type PasswordList = Arc<Mutex<Vec<PasswordEntry>>>;
 
+/// Return a list of all passwords whose name contains `query`.
 pub fn search(l: &PasswordList, query: &str) -> Result<Vec<PasswordEntry>> {
     let passwords = l.lock().unwrap();
     fn normalized(s: &str) -> String {
@@ -713,6 +759,7 @@ pub fn search(l: &PasswordList, query: &str) -> Result<Vec<PasswordEntry>> {
     Ok(matching.cloned().collect())
 }
 
+/// Read the password store directory and populate the password list supplied.
 pub fn populate_password_list(passwords: &PasswordList, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
     let dir = password_dir()?;
 
@@ -728,6 +775,7 @@ pub fn populate_password_list(passwords: &PasswordList, repo_opt: Arc<Option<git
     Ok(())
 }
 
+/// Subscribe to events, that happen when password files are added or removed
 pub fn watch(repo_opt: Arc<Option<git2::Repository>>) -> Result<(Receiver<PasswordEvent>, PasswordList)> {
     let dir = password_dir()?;
 
@@ -797,6 +845,7 @@ pub fn watch(repo_opt: Arc<Option<git2::Repository>>) -> Result<(Receiver<Passwo
     Ok((event_rx, passwords_out))
 }
 
+/// Generate a random password, consisting of `length` words.
 pub fn generate_password(length: usize) -> String {
     return GeneratePassword(length, Dictionary).trim().to_string();
 }
@@ -810,6 +859,7 @@ fn to_name(base: &path::PathBuf, path: &path::PathBuf) -> String {
         .to_string()
 }
 
+/// creates a `PasswordEntry`
 pub fn to_password(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Arc<Option<git2::Repository>>) -> Result<PasswordEntry> {
     Ok(PasswordEntry {
         name: to_name(base, path),
@@ -841,6 +891,7 @@ pub fn password_dir() -> Result<path::PathBuf> {
     Ok(pass_home.to_path_buf())
 }
 
+/// Determine password directory
 pub fn password_dir_raw() -> path::PathBuf {
     // If a directory is provided via env var, use it
     let pass_home = match env::var("PASSWORD_STORE_DIR") {
