@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-12-21 22:03+0100\n"
+"POT-Creation-Date: 2019-12-22 08:33+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -29,6 +29,10 @@ msgstr ""
 msgid "Add new password"
 msgstr ""
 
+#: cursive/src/wizard.rs:66
+msgid "Also create a git repository for the encrypted files?"
+msgstr ""
+
 #: cursive/src/main.rs:137
 msgid "Are you sure you want to delete the password"
 msgstr ""
@@ -38,12 +42,16 @@ msgid "Are you sure you want to remove this person?"
 msgstr ""
 
 #: cursive/src/main.rs:144 cursive/src/main.rs:288 cursive/src/main.rs:329
-#: cursive/src/main.rs:374
+#: cursive/src/main.rs:374 cursive/src/wizard.rs:119
 msgid "Cancel"
 msgstr ""
 
 #: cursive/src/main.rs:698
 msgid "Copy (ctrl-y)"
+msgstr ""
+
+#: cursive/src/wizard.rs:67 cursive/src/wizard.rs:82 cursive/src/wizard.rs:118
+msgid "Create"
 msgstr ""
 
 #: cursive/src/main.rs:699
@@ -52,6 +60,14 @@ msgstr ""
 
 #: cursive/src/main.rs:705
 msgid "Delete (del)"
+msgstr ""
+
+#: cursive/src/helpers.rs:34
+msgid "Error"
+msgstr ""
+
+#: cursive/src/wizard.rs:112
+msgid "F1: Menu | "
 msgstr ""
 
 #: cursive/src/main.rs:355
@@ -70,7 +86,23 @@ msgstr ""
 msgid "Git Push (ctrl-g)"
 msgstr ""
 
-#: cursive/src/main.rs:185
+#: cursive/src/wizard.rs:71
+msgid "Git init"
+msgstr ""
+
+#: cursive/src/wizard.rs:122
+msgid "Init"
+msgstr ""
+
+#: cursive/src/wizard.rs:43
+msgid "Initialized password repo with ripasso"
+msgstr ""
+
+#: cursive/src/wizard.rs:68
+msgid "No"
+msgstr ""
+
+#: cursive/src/helpers.rs:33 cursive/src/main.rs:185
 msgid "Ok"
 msgstr ""
 
@@ -102,8 +134,24 @@ msgstr ""
 msgid "Recipients (ctrl-v)"
 msgstr ""
 
+#: cursive/src/wizard.rs:79
+msgid ""
+"Ripasso uses gpg in order to encrypt the stored passwords.\n"
+"Please enter your gpg key id"
+msgstr ""
+
 #: cursive/src/main.rs:169 cursive/src/main.rs:285
 msgid "Save"
+msgstr ""
+
+#: cursive/src/wizard.rs:64
+msgid "Unable to write file"
+msgstr ""
+
+#: cursive/src/wizard.rs:117
+msgid ""
+"Welcome to ripasso, it seems like you don't have a password store directory "
+"yet would you like to create it?"
 msgstr ""
 
 #: cursive/src/main.rs:138 cursive/src/main.rs:371

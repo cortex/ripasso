@@ -30,8 +30,8 @@ use ripasso::pass;
 
 pub fn errorbox(ui: &mut Cursive, err: &pass::Error) -> () {
     let d = Dialog::around(TextView::new(format!("{:?}", err)))
-        .dismiss_button("Ok")
-        .title("Error");
+        .dismiss_button(super::CATALOG.gettext("Ok"))
+        .title(super::CATALOG.gettext("Error"));
 
     let ev = OnEventView::new(d)
         .on_event(Key::Esc, |s| {

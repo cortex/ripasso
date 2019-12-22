@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-12-21 22:03+0100\n"
-"PO-Revision-Date: 2019-12-21 22:24+0100\n"
+"POT-Creation-Date: 2019-12-22 08:33+0100\n"
+"PO-Revision-Date: 2019-12-22 08:41+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: sv\n"
@@ -34,6 +34,10 @@ msgstr ""
 msgid "Add new password"
 msgstr "Lägg till nytt lösenord"
 
+#: cursive/src/wizard.rs:66
+msgid "Also create a git repository for the encrypted files?"
+msgstr "Skapa också ett git repository för de krypterade filerna?"
+
 #: cursive/src/main.rs:137
 msgid "Are you sure you want to delete the password"
 msgstr "Är du säker på att du vill ta bort lösenordet"
@@ -43,13 +47,17 @@ msgid "Are you sure you want to remove this person?"
 msgstr "Är du säker på att vi vill ta bort den här personen?"
 
 #: cursive/src/main.rs:144 cursive/src/main.rs:288 cursive/src/main.rs:329
-#: cursive/src/main.rs:374
+#: cursive/src/main.rs:374 cursive/src/wizard.rs:119
 msgid "Cancel"
 msgstr "Avbryt"
 
 #: cursive/src/main.rs:698
 msgid "Copy (ctrl-y)"
 msgstr "Kopiera (ctrl-y)"
+
+#: cursive/src/wizard.rs:67 cursive/src/wizard.rs:82 cursive/src/wizard.rs:118
+msgid "Create"
+msgstr "Skapa (ins)"
 
 #: cursive/src/main.rs:699
 msgid "Create (ins) "
@@ -58,6 +66,14 @@ msgstr "Skapa (ins) "
 #: cursive/src/main.rs:705
 msgid "Delete (del)"
 msgstr "Ta bort (del)"
+
+#: cursive/src/helpers.rs:34
+msgid "Error"
+msgstr "Fel"
+
+#: cursive/src/wizard.rs:112
+msgid "F1: Menu | "
+msgstr "F1: Meny | "
 
 #: cursive/src/main.rs:355
 msgid "GPG Key Id: "
@@ -75,7 +91,23 @@ msgstr "Git Pull (ctrl-f)"
 msgid "Git Push (ctrl-g)"
 msgstr "Git Push (ctrl-g)"
 
-#: cursive/src/main.rs:185
+#: cursive/src/wizard.rs:71
+msgid "Git init"
+msgstr "Git init"
+
+#: cursive/src/wizard.rs:122
+msgid "Init"
+msgstr "Initialisera"
+
+#: cursive/src/wizard.rs:43
+msgid "Initialized password repo with ripasso"
+msgstr "Initialiserade ett lösenordsrepository med ripasso"
+
+#: cursive/src/wizard.rs:68
+msgid "No"
+msgstr "Nej"
+
+#: cursive/src/helpers.rs:33 cursive/src/main.rs:185
 msgid "Ok"
 msgstr "Ok"
 
@@ -107,9 +139,29 @@ msgstr "Avsluta (esc)"
 msgid "Recipients (ctrl-v)"
 msgstr "Mottagare (ctrl-v)"
 
+#: cursive/src/wizard.rs:79
+msgid ""
+"Ripasso uses gpg in order to encrypt the stored passwords.\n"
+"Please enter your gpg key id"
+msgstr ""
+"Ripasso använder gpg för att kryptera de sparade lösenorden.\n"
+"Vänligen skriv in din gpg nyckel identifierare"
+
 #: cursive/src/main.rs:169 cursive/src/main.rs:285
 msgid "Save"
 msgstr "Spara"
+
+#: cursive/src/wizard.rs:64
+msgid "Unable to write file"
+msgstr "Kan inte skriva till fil"
+
+#: cursive/src/wizard.rs:117
+msgid ""
+"Welcome to ripasso, it seems like you don't have a password store directory "
+"yet would you like to create it?"
+msgstr ""
+"Välkommen till ripasso, det verkar som att du inte har en katalog för att "
+"spara de krypterade lösenorden ännu, vill du skapa den?"
 
 #: cursive/src/main.rs:138 cursive/src/main.rs:371
 msgid "Yes"

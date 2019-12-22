@@ -40,7 +40,7 @@ fn create_git_repo(ui: &mut Cursive) {
         helpers::errorbox(ui, &init_res.err().unwrap());
     } else {
         let repo = git2::Repository::open(&pass::password_dir().unwrap()).unwrap();
-        let message = "Initialized password repo with ripasso";
+        let message = super::CATALOG.gettext("Initialized password repo with ripasso");
         let commit_res = pass::add_and_commit(Arc::new(Some(repo)), &vec![".gpg-id".to_string()], &message);
 
         if commit_res.is_err() {
@@ -60,15 +60,15 @@ fn do_create(ui: &mut Cursive) {
         helpers::errorbox(ui, &pass::Error::IO(create_res.unwrap_err()));
         ui.quit();
     } else {
-        pass_home.push(".gpg-id");
-        std::fs::write(pass_home, key_id).expect("Unable to write file");
+        pass_home.push(".gpg-id");super::CATALOG.gettext(
+        std::fs::write)(pass_home, key_id).expect(super::CATALOG.gettext("Unable to write file"));
 
-        let d = Dialog::around(TextView::new("Also create a git repository for the encrypted files?"))
-            .button("Create", create_git_repo)
-            .button("No", |s| {
+        let d = Dialog::around(TextView::new(super::CATALOG.gettext("Also create a git repository for the encrypted files?")))
+            .button(super::CATALOG.gettext("Create"), create_git_repo)
+            .button(super::CATALOG.gettext("No"), |s| {
                 s.quit();
             })
-            .title("Git init");
+            .title(super::CATALOG.gettext("Git init"));
 
         ui.add_layer(d);
     }
@@ -76,10 +76,10 @@ fn do_create(ui: &mut Cursive) {
 
 fn create_store(ui: &mut Cursive) {
     let d2 = Dialog::around(LinearLayout::new(Orientation::Vertical)
-        .child(TextView::new("Ripasso uses gpg in order to encrypt the stored passwords.\nPlease enter your gpg key id"))
+        .child(TextView::new(super::CATALOG.gettext("Ripasso uses gpg in order to encrypt the stored passwords.\nPlease enter your gpg key id")))
         .child(EditView::new().with_id("initial_key_id"))
     )
-        .button("Create", do_create);
+        .button(super::CATALOG.gettext("Create"), do_create);
 
     let recipients_event = OnEventView::new(d2)
         .on_event(Key::Enter, do_create);
@@ -109,18 +109,17 @@ pub fn show_init_menu() {
                 ).title("Ripasso"),
             ).child(
             LinearLayout::new(Orientation::Horizontal)
-                .child(TextView::new("F1: Menu | "))
+                .child(TextView::new(super::CATALOG.gettext("F1: Menu | ")))
                 .full_width(),
         ),
     );
 
-    let d = Dialog::around(TextView::new("Welcome to ripasso, it seems like you don't have a password store directory yet
-would you like to create it?"))
-        .button("Create", create_store)
-        .button("Cancel", |s| {
+    let d = Dialog::around(TextView::new(super::CATALOG.gettext("Welcome to ripasso, it seems like you don't have a password store directory yet would you like to create it?")))
+        .button(super::CATALOG.gettext("Create"), create_store)
+        .button(super::CATALOG.gettext("Cancel"), |s| {
             s.quit();
         })
-        .title("Init");
+        .title(super::CATALOG.gettext("Init"));
 
     ui.add_layer(d);
 
