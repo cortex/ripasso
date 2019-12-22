@@ -332,7 +332,7 @@ fn delete_recipient_verification(ui: &mut Cursive, repo_opt: Arc<Option<git2::Re
 fn add_recipient(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     let l = &*get_value_from_input(ui, "key_id_input").unwrap();
 
-    let recipient_result = pass::Recipient::from_key_id(l.clone());
+    let recipient_result = pass::Recipient::new(l.clone());
 
     if recipient_result.is_err() {
         helpers::errorbox(ui, &recipient_result.err().unwrap());

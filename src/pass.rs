@@ -511,7 +511,7 @@ fn build_recipient(name: String, key_id: String) -> Recipient {
 
 impl Recipient {
     /// Creates a Recipient from a gpg key id string
-    pub fn from_key_id(key_id: String) -> Result<Recipient> {
+    pub fn new(key_id: String) -> Result<Recipient> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
         let key_option = ctx.get_key(key_id.clone());
