@@ -882,10 +882,17 @@ fn to_name(base: &path::PathBuf, path: &path::PathBuf) -> String {
         .to_string()
 }
 
-/// Determine password directory.
-/// This is done by reading the `PASSWORD_STORE_DIR` environmental variable or if that doesn't
-/// exist read the HOME directory of the user.
+/// Determine password directory
 pub fn password_dir() -> Result<path::PathBuf> {
+    let pass_home = password_dir_raw();
+    if !pass_home.exists() {
+        return Err(Error::Generic("failed to locate password directory"));
+    }
+    Ok(pass_home.to_path_buf())
+}
+
+/// Determine password directory
+pub fn password_dir_raw() -> path::PathBuf {
     // If a directory is provided via env var, use it
     let pass_home = match env::var("PASSWORD_STORE_DIR") {
         Ok(p) => p,
@@ -895,12 +902,7 @@ pub fn password_dir() -> Result<path::PathBuf> {
             .to_string_lossy()
             .into(),
     };
-    let pass_home = path::PathBuf::from(&pass_home);
-
-    if !pass_home.exists() {
-        return Err(Error::Generic("failed to locate password directory"));
-    }
-    Ok(pass_home.to_path_buf())
+    return path::PathBuf::from(&pass_home);
 }
 
 #[cfg(test)]
