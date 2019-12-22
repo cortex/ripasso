@@ -148,6 +148,29 @@ pub struct PasswordEntry {
 }
 
 impl PasswordEntry {
+    /// creates a `PasswordEntry`
+    pub fn new(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Arc<Option<git2::Repository>>) -> Result<PasswordEntry> {
+        Ok(PasswordEntry {
+            name: to_name(base, path),
+            meta: "".to_string(),
+            base: base.to_path_buf(),
+            path: path.to_path_buf(),
+            updated: match updated(base, path, repo_opt.clone()) {
+                Ok(p) => Some(p),
+                Err(_) => None,
+            },
+            committed_by: match committed_by(base, path, repo_opt.clone()) {
+                Ok(p) => Some(p),
+                Err(_) => None,
+            },
+            signature_status: match verify_gpg_signature(base, path, repo_opt) {
+                Ok(ss) => Some(ss),
+                Err(_) => None,
+            },
+            filename: path.to_string_lossy().into_owned().clone(),
+        })
+    }
+
     /// Decrypts and returns the full content of the PasswordEntry
     pub fn secret(&self) -> Result<String> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
@@ -220,7 +243,7 @@ impl PasswordEntry {
 
         let mut passwords = Vec::<PasswordEntry>::new();
         for path in paths {
-            match to_password(&dir, &path?, repo_opt.clone()) {
+            match PasswordEntry::new(&dir, &path?, repo_opt.clone()) {
                 Ok(password) => passwords.push(password),
                 Err(e) => return Err(e),
             }
@@ -769,7 +792,7 @@ pub fn populate_password_list(passwords: &PasswordList, repo_opt: Arc<Option<git
     (passwords.lock().unwrap()).clear();
     for existing_file in existing_iter {
         let pbuf = existing_file?;
-        (passwords.lock().unwrap()).push(to_password(&dir, &pbuf, repo_opt.clone())?);
+        (passwords.lock().unwrap()).push(PasswordEntry::new(&dir, &pbuf, repo_opt.clone())?);
     }
 
     Ok(())
@@ -814,7 +837,7 @@ pub fn watch(repo_opt: Arc<Option<git2::Repository>>) -> Result<(Receiver<Passwo
                             }
 
                             let repo_opt = Arc::new(git2::Repository::open(password_dir().unwrap()).ok());
-                            let p_e = to_password(&password_dir().unwrap(), &p.clone(), repo_opt).unwrap();
+                            let p_e = PasswordEntry::new(&password_dir().unwrap(), &p.clone(), repo_opt).unwrap();
                             if !(passwords.lock().unwrap()).iter().any(|p| p.path == p_e.path) {
                                 (passwords.lock().unwrap()).push(p_e.clone());
                             }
@@ -857,29 +880,6 @@ fn to_name(base: &path::PathBuf, path: &path::PathBuf) -> String {
         .into_owned()
         .trim_end_matches(".gpg")
         .to_string()
-}
-
-/// creates a `PasswordEntry`
-pub fn to_password(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Arc<Option<git2::Repository>>) -> Result<PasswordEntry> {
-    Ok(PasswordEntry {
-        name: to_name(base, path),
-        meta: "".to_string(),
-        base: base.to_path_buf(),
-        path: path.to_path_buf(),
-        updated: match updated(base, path, repo_opt.clone()) {
-            Ok(p) => Some(p),
-            Err(_) => None,
-        },
-        committed_by: match committed_by(base, path, repo_opt.clone()) {
-            Ok(p) => Some(p),
-            Err(_) => None,
-        },
-        signature_status: match verify_gpg_signature(base, path, repo_opt) {
-            Ok(ss) => Some(ss),
-            Err(_) => None,
-        },
-        filename: path.to_string_lossy().into_owned().clone(),
-    })
 }
 
 /// Determine password directory
