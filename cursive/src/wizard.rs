@@ -60,8 +60,8 @@ fn do_create(ui: &mut Cursive) {
         helpers::errorbox(ui, &pass::Error::IO(create_res.unwrap_err()));
         ui.quit();
     } else {
-        pass_home.push(".gpg-id");super::CATALOG.gettext(
-        std::fs::write)(pass_home, key_id).expect(super::CATALOG.gettext("Unable to write file"));
+        pass_home.push(".gpg-id");
+        std::fs::write(pass_home, key_id).expect(super::CATALOG.gettext("Unable to write file"));
 
         let d = Dialog::around(TextView::new(super::CATALOG.gettext("Also create a git repository for the encrypted files?")))
             .button(super::CATALOG.gettext("Create"), create_git_repo)

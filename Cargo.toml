@@ -6,7 +6,6 @@ keywords = ["password-manager", "pass"]
 version = "0.4.0-alpha"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com", "Alexander Kjäll <alexander.kjall@gmail.com>"]
 license = "GPL-3.0-only"
-license-file = "LICENCE"
 edition = '2018'
 
 [dependencies]
