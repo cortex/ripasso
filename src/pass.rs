@@ -43,7 +43,14 @@ use std::io;
 use std::string;
 use std::collections::HashSet;
 
+/// Convenience type for Results
 type Result<T> = std::result::Result<T, Error>;
+
+/// The global state of all passwords are an instance of this type.
+pub type PasswordList = Arc<Mutex<Vec<PasswordEntry>>>;
+
+/// The type for how we handle git repositories
+pub type GitRepo = Arc<Option<Mutex<git2::Repository>>>;
 
 /// A enum that contains the different types of errors that the library returns as part of Result's.
 #[derive(Debug)]
@@ -149,7 +156,7 @@ pub struct PasswordEntry {
 
 impl PasswordEntry {
     /// creates a `PasswordEntry`
-    pub fn new(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Arc<Option<git2::Repository>>) -> Result<PasswordEntry> {
+    pub fn new(base: &path::PathBuf, path: &path::PathBuf, repo_opt: GitRepo) -> Result<PasswordEntry> {
         Ok(PasswordEntry {
             name: to_name(base, path),
             meta: "".to_string(),
@@ -204,7 +211,7 @@ impl PasswordEntry {
 
     /// Updates the password store entry with new content, and commits those to git if a repository
     /// is supplied.
-    pub fn update(&self, secret: String, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
+    pub fn update(&self, secret: String, repo_opt: GitRepo) -> Result<()> {
         self.update_internal(secret)?;
 
         if repo_opt.is_none() {
@@ -219,7 +226,7 @@ impl PasswordEntry {
     }
 
     /// Removes this entry from the filesystem and commit that to git if a repository is supplied.
-    pub fn delete_file(&self, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
+    pub fn delete_file(&self, repo_opt: GitRepo) -> Result<()> {
         let res = Ok(std::fs::remove_file(&self.filename)?);
 
         if repo_opt.is_none() {
@@ -234,7 +241,7 @@ impl PasswordEntry {
     }
 
     /// Returns a list of all password entries in the store.
-    pub fn all_password_entries(repo_opt: Arc<Option<git2::Repository>>) -> Result<Vec<PasswordEntry>> {
+    pub fn all_password_entries(repo_opt: GitRepo) -> Result<Vec<PasswordEntry>> {
         let dir = password_dir()?;
 
         // Existing files iterator
@@ -254,7 +261,7 @@ impl PasswordEntry {
 
     /// Reencrypt all the entries in the store, for example when a new collaborator is added
     /// to the team.
-    pub fn reencrypt_all_password_entries(repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
+    pub fn reencrypt_all_password_entries(repo_opt: GitRepo) -> Result<()> {
         let mut names: Vec<String> = Vec::new();
         for entry in PasswordEntry::all_password_entries(repo_opt.clone())? {
             entry.update_internal(entry.secret()?)?;
@@ -319,9 +326,9 @@ fn gpg_sign_string(commit: &String) -> Result<String> {
 }
 
 /// Apply the changes to the git repository.
-fn commit(repo_opt: Arc<Option<git2::Repository>>, signature: &git2::Signature, message: &String, tree: &git2::Tree, parents: &Vec<&git2::Commit>) -> Result<git2::Oid> {
+fn commit(repo: &git2::Repository, signature: &git2::Signature, message: &String, tree: &git2::Tree, parents: &Vec<&git2::Commit>) -> Result<git2::Oid> {
     if should_sign() {
-        let commit_buf = (*repo_opt).as_ref().unwrap().commit_create_buffer(
+        let commit_buf = repo.commit_create_buffer(
             signature, // author
             signature, // committer
             message, // commit message
@@ -332,76 +339,95 @@ fn commit(repo_opt: Arc<Option<git2::Repository>>, signature: &git2::Signature, 
 
         let sig = gpg_sign_string(&commit_as_str)?;
 
-        let commit = (*repo_opt).as_ref().unwrap().commit_signed(&commit_as_str, &sig, Some("gpgsig"))?;
+        let commit = repo.commit_signed(&commit_as_str, &sig, Some("gpgsig"))?;
         return Ok(commit);
     } else {
-        let commit = (*repo_opt).as_ref().unwrap().commit(Some("HEAD"), //  point HEAD to our new commit
+        let commit = repo.commit(Some("HEAD"), //  point HEAD to our new commit
                                                           signature, // author
                                                           signature, // committer
                                                           message, // commit message
                                                           tree, // tree
                                                           parents)?; // parents
 
+
         return Ok(commit);
     }
 }
 
 /// Add a file to the store, and commit it to the supplied git repository.
-pub fn add_and_commit(repo_opt: Arc<Option<git2::Repository>>, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
-    let mut index = (*repo_opt).as_ref().unwrap().index()?;
+pub fn add_and_commit(repo_opt: GitRepo, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
+    let repo_res = (*repo_opt).as_ref().unwrap().try_lock();
+    if repo_res.is_err() {
+        return Err(Error::GenericDyn(format!("{:?}", repo_res.err())))
+    }
+    let repo = repo_res.unwrap();
+
+    let mut index = repo.index()?;
     for path in paths {
         index.add_path(path::Path::new(path))?;
     }
     let oid = index.write_tree()?;
-    let signature = (*repo_opt).as_ref().unwrap().signature()?;
-    let parent_commit_res = find_last_commit((*repo_opt).as_ref().unwrap());
+    let signature = repo.signature()?;
+    let parent_commit_res = find_last_commit(&repo);
     let mut parents = vec![];
     let parent_commit;
     if !parent_commit_res.is_err() {
         parent_commit = parent_commit_res?;
         parents.push(&parent_commit);
     }
-    let tree = (*repo_opt).as_ref().unwrap().find_tree(oid)?;
+    let tree = repo.find_tree(oid)?;
 
-    let oid = commit(repo_opt.clone(), &signature, &message.to_string(), &tree, &parents)?;
-    let obj = (*repo_opt).as_ref().unwrap().find_object(oid, None)?;
-    (*repo_opt).as_ref().unwrap().reset(&obj, git2::ResetType::Hard, None)?;
+    let oid = commit(&repo, &signature, &message.to_string(), &tree, &parents)?;
+    let obj = repo.find_object(oid, None)?;
+    repo.reset(&obj, git2::ResetType::Hard, None)?;
 
     return Ok(oid);
 }
 
 /// Remove a file from the store, and commit the deletion to the supplied git repository.
-fn remove_and_commit(repo_opt: Arc<Option<git2::Repository>>, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
-    let mut index = (*repo_opt).as_ref().unwrap().index()?;
+fn remove_and_commit(repo_opt: GitRepo, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
+    let repo_res = (*repo_opt).as_ref().unwrap().try_lock();
+    if repo_res.is_err() {
+        return Err(Error::GenericDyn(format!("{:?}", repo_res.err())))
+    }
+    let repo = repo_res.unwrap();
+
+    let mut index = repo.index()?;
     for path in paths {
         index.remove_path(path::Path::new(path))?;
     }
     let oid = index.write_tree()?;
-    let signature = (*repo_opt).as_ref().unwrap().signature()?;
-    let parent_commit_res = find_last_commit((*repo_opt).as_ref().unwrap());
+    let signature = repo.signature()?;
+    let parent_commit_res = find_last_commit(&repo);
     let mut parents = vec![];
     let parent_commit;
     if !parent_commit_res.is_err() {
         parent_commit = parent_commit_res?;
         parents.push(&parent_commit);
     }
-    let tree = (*repo_opt).as_ref().unwrap().find_tree(oid)?;
+    let tree = repo.find_tree(oid)?;
 
-    let oid = commit(repo_opt.clone(), &signature, &message.to_string(), &tree, &parents)?;
-    let obj = (*repo_opt).as_ref().unwrap().find_object(oid, None)?;
-    (*repo_opt).as_ref().unwrap().reset(&obj, git2::ResetType::Hard, None)?;
+    let oid = commit(&repo, &signature, &message.to_string(), &tree, &parents)?;
+    let obj = repo.find_object(oid, None)?;
+    repo.reset(&obj, git2::ResetType::Hard, None)?;
 
     return Ok(oid);
 }
 
 /// Push your changes to the remote git repository.
-pub fn push(repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
+pub fn push(repo_opt: GitRepo) -> Result<()> {
     if repo_opt.is_none() {
         return Ok(());
     }
 
+    let repo_res = (*repo_opt).as_ref().unwrap().try_lock();
+    if repo_res.is_err() {
+        return Err(Error::GenericDyn(format!("{:?}", repo_res.err())))
+    }
+    let repo = repo_res.unwrap();
+
     let mut ref_status = None;
-    let mut origin = (*repo_opt).as_ref().unwrap().find_remote("origin")?;
+    let mut origin = repo.find_remote("origin")?;
     let res = {
         let mut callbacks = git2::RemoteCallbacks::new();
         callbacks.credentials(|_url, username, allowed| {
@@ -434,12 +460,18 @@ pub fn push(repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
 }
 
 /// Pull new changes from the remote git repository.
-pub fn pull(repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
+pub fn pull(repo_opt: GitRepo) -> Result<()> {
     if repo_opt.is_none() {
         return Ok(());
     }
 
-    let mut remote = (*repo_opt).as_ref().unwrap().find_remote("origin")?;
+    let repo_res = (*repo_opt).as_ref().unwrap().try_lock();
+    if repo_res.is_err() {
+        return Err(Error::GenericDyn(format!("{:?}", repo_res.err())))
+    }
+    let repo = repo_res.unwrap();
+
+    let mut remote = repo.find_remote("origin")?;
 
     let mut cb = git2::RemoteCallbacks::new();
     cb.credentials(|_url, username, allowed| {
@@ -460,27 +492,27 @@ pub fn pull(repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
     opts.remote_callbacks(cb);
     remote.fetch(&["master"], Some(&mut opts), None)?;
 
-    let remote_oid = (*repo_opt).as_ref().unwrap().refname_to_id("refs/remotes/origin/master")?;
-    let head_oid = (*repo_opt).as_ref().unwrap().refname_to_id("HEAD")?;
+    let remote_oid = repo.refname_to_id("refs/remotes/origin/master")?;
+    let head_oid = repo.refname_to_id("HEAD")?;
 
-    let (_, behind) = (*repo_opt).as_ref().unwrap().graph_ahead_behind(head_oid, remote_oid)?;
+    let (_, behind) = repo.graph_ahead_behind(head_oid, remote_oid)?;
 
     if behind == 0 {
         return Ok(());
     }
 
-    let remote_annotated_commit = (*repo_opt).as_ref().unwrap().find_annotated_commit(remote_oid)?;
-    let remote_commit = (*repo_opt).as_ref().unwrap().find_commit(remote_oid)?;
-    (*repo_opt).as_ref().unwrap().merge(&vec![&remote_annotated_commit], None, None)?;
+    let remote_annotated_commit = repo.find_annotated_commit(remote_oid)?;
+    let remote_commit = repo.find_commit(remote_oid)?;
+    repo.merge(&vec![&remote_annotated_commit], None, None)?;
 
     //commit it
-    let mut index = (*repo_opt).as_ref().unwrap().index()?;
+    let mut index = repo.index()?;
     let oid = index.write_tree()?;
-    let signature = (*repo_opt).as_ref().unwrap().signature()?;
-    let parent_commit = find_last_commit(&(*repo_opt).as_ref().unwrap())?;
-    let tree = (*repo_opt).as_ref().unwrap().find_tree(oid)?;
+    let signature = repo.signature()?;
+    let parent_commit = find_last_commit(&repo)?;
+    let tree = repo.find_tree(oid)?;
     let message = "pull and merge by ripasso";
-    let _commit = (*repo_opt).as_ref().unwrap().commit(Some("HEAD"), //  point HEAD to our new commit
+    let _commit = repo.commit(Some("HEAD"), //  point HEAD to our new commit
                              &signature, // author
                              &signature, // committer
                              message, // commit message
@@ -488,7 +520,7 @@ pub fn pull(repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
                              &[&parent_commit, &remote_commit])?; // parents
 
     //cleanup
-    (*repo_opt).as_ref().unwrap().cleanup_state()?;
+    repo.cleanup_state()?;
     return Ok(());
 }
 
@@ -565,7 +597,7 @@ impl Recipient {
         return Ok(recipients);
     }
 
-    fn write_recipients_file(recipients: &Vec<Recipient>, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
+    fn write_recipients_file(recipients: &Vec<Recipient>, repo_opt: GitRepo) -> Result<()> {
         let mut recipient_file = password_dir()?;
         recipient_file.push(".gpg-id");
 
@@ -589,7 +621,7 @@ impl Recipient {
     }
 
     /// Delete one of the persons from the list of people to encrypt the passwords for.
-    pub fn remove_recipient_from_file(s: &Recipient, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
+    pub fn remove_recipient_from_file(s: &Recipient, repo_opt: GitRepo) -> Result<()> {
         let mut recipients: Vec<Recipient> = Recipient::all_recipients()?;
 
         recipients.retain(|ref vs| vs.key_id != s.key_id);
@@ -602,7 +634,7 @@ impl Recipient {
     }
 
     /// Add a new person to the list of people to encrypt the passwords for.
-    pub fn add_recipient_to_file(s: &Recipient, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
+    pub fn add_recipient_to_file(s: &Recipient, repo_opt: GitRepo) -> Result<()> {
         let mut recipients: Vec<Recipient> = Recipient::all_recipients()?;
 
         for recipient in &recipients {
@@ -617,49 +649,69 @@ impl Recipient {
     }
 }
 
-fn updated(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Arc<Option<git2::Repository>>) -> Result<DateTime<Local>> {
+fn updated(base: &path::PathBuf, path: &path::PathBuf, repo_opt: GitRepo) -> Result<DateTime<Local>> {
     if repo_opt.is_none() {
         return Err(Error::Generic("need repository to have DateTime information"));
     }
 
-    let blame = (*repo_opt).as_ref().unwrap().blame_file(path.strip_prefix(base)?, None)?;
+    let repo_res = (*repo_opt).as_ref().unwrap().try_lock();
+    if repo_res.is_err() {
+        return Err(Error::GenericDyn(format!("{:?}", repo_res.err())))
+    }
+    let repo = repo_res.unwrap();
+
+    let blame = repo.blame_file(path.strip_prefix(base)?, None)?;
     let id = blame
         .get_line(1)
         .ok_or(Error::Generic("no git history found"))?
         .orig_commit_id();
-    let time = (*repo_opt).as_ref().unwrap().find_commit(id)?.time();
+    let time = repo.find_commit(id)?.time();
     Ok(Local.timestamp(time.seconds(), 0))
 }
 
-fn committed_by(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Arc<Option<git2::Repository>>) -> Result<String> {
+fn committed_by(base: &path::PathBuf, path: &path::PathBuf, repo_opt: GitRepo) -> Result<String> {
     if repo_opt.is_none() {
         return Err(Error::Generic("need repository to have DateTime information"));
     }
 
-    let blame = (*repo_opt).as_ref().unwrap().blame_file(path.strip_prefix(base)?, None)?;
+    let repo_res = (*repo_opt).as_ref().unwrap().try_lock();
+    if repo_res.is_err() {
+        return Err(Error::GenericDyn(format!("{:?}", repo_res.err())))
+    }
+    let repo = repo_res.unwrap();
+
+    let blame = repo.blame_file(path.strip_prefix(base)?, None)?;
     let id = blame
         .get_line(1)
         .ok_or(Error::Generic("no git history found"))?
         .orig_commit_id();
 
-    match (*repo_opt).as_ref().unwrap().find_commit(id)?.committer().name() {
+    let r: Result<String> = match repo.find_commit(id)?.committer().name() {
         Some(s) => Ok(s.to_string()),
         None => Err(Error::Generic("missing committer name"))
-    }
+    };
+
+    return r;
 }
 
-fn verify_gpg_signature(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Arc<Option<git2::Repository>>) -> Result<SignatureStatus> {
+fn verify_gpg_signature(base: &path::PathBuf, path: &path::PathBuf, repo_opt: GitRepo) -> Result<SignatureStatus> {
     if repo_opt.is_none() {
         return Err(Error::Generic("need repository to have DateTime information"));
     }
 
-    let blame = (*repo_opt).as_ref().unwrap().blame_file(path.strip_prefix(base)?, None)?;
+    let repo_res = (*repo_opt).as_ref().unwrap().try_lock();
+    if repo_res.is_err() {
+        return Err(Error::GenericDyn(format!("{:?}", repo_res.err())))
+    }
+    let repo = repo_res.unwrap();
+
+    let blame = repo.blame_file(path.strip_prefix(base)?, None)?;
     let id = blame
         .get_line(1)
         .ok_or(Error::Generic("no git history found"))?
         .orig_commit_id();
 
-    let (signature, signed_data) = (*repo_opt).as_ref().unwrap().extract_signature(&id, Some("gpgsig"))?;
+    let (signature, signed_data) = repo.extract_signature(&id, Some("gpgsig"))?;
 
     let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
@@ -693,7 +745,7 @@ fn verify_gpg_signature(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Ar
 }
 
 /// Creates a new password file in the store.
-pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<String>, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
+pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<String>, repo_opt: GitRepo) -> Result<()> {
     let mut path = password_dir()?;
 
     let path_deref = (*path_end).clone();
@@ -766,9 +818,6 @@ pub enum PasswordEvent {
     Error(Error),
 }
 
-/// The global state of all passwords are an instance of this type.
-pub type PasswordList = Arc<Mutex<Vec<PasswordEntry>>>;
-
 /// Return a list of all passwords whose name contains `query`.
 pub fn search(l: &PasswordList, query: &str) -> Result<Vec<PasswordEntry>> {
     let passwords = l.lock().unwrap();
@@ -783,7 +832,7 @@ pub fn search(l: &PasswordList, query: &str) -> Result<Vec<PasswordEntry>> {
 }
 
 /// Read the password store directory and populate the password list supplied.
-pub fn populate_password_list(passwords: &PasswordList, repo_opt: Arc<Option<git2::Repository>>) -> Result<()> {
+pub fn populate_password_list(passwords: &PasswordList, repo_opt: GitRepo) -> Result<()> {
     let dir = password_dir()?;
 
     let password_path_glob = dir.join("**/*.gpg");
@@ -799,7 +848,7 @@ pub fn populate_password_list(passwords: &PasswordList, repo_opt: Arc<Option<git
 }
 
 /// Subscribe to events, that happen when password files are added or removed
-pub fn watch(repo_opt: Arc<Option<git2::Repository>>) -> Result<(Receiver<PasswordEvent>, PasswordList)> {
+pub fn watch(repo_opt: GitRepo) -> Result<(Receiver<PasswordEvent>, PasswordList)> {
     let dir = password_dir()?;
 
     let (watcher_tx, watcher_rx) = channel();
@@ -836,7 +885,7 @@ pub fn watch(repo_opt: Arc<Option<git2::Repository>>) -> Result<(Receiver<Passwo
                                 continue;
                             }
 
-                            let repo_opt = Arc::new(git2::Repository::open(password_dir().unwrap()).ok());
+                            let repo_opt = Arc::new(Some(Mutex::new(git2::Repository::open(password_dir().unwrap()).unwrap())));
                             let p_e = PasswordEntry::new(&password_dir().unwrap(), &p.clone(), repo_opt).unwrap();
                             if !(passwords.lock().unwrap()).iter().any(|p| p.path == p_e.path) {
                                 (passwords.lock().unwrap()).push(p_e.clone());

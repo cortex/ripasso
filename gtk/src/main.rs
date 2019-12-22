@@ -23,13 +23,13 @@ use gtk::*;
 
 use self::glib::StaticType;
 
-use std::sync::{Arc};
+use std::sync::{Arc, Mutex};
 use ripasso::pass;
 use std::cell::RefCell;
 use std::process;
 
 fn main() {
-    let repo_opt = Arc::new(git2::Repository::open(pass::password_dir().unwrap()).ok());
+    let repo_opt = Arc::new(Some(Mutex::new(git2::Repository::open(pass::password_dir().unwrap()).unwrap())));
 
     // Load and watch all the passwords in the background
     let (password_rx, passwords) = match pass::watch(repo_opt.clone()) {

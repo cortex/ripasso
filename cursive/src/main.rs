@@ -35,10 +35,11 @@ use self::clipboard::{ClipboardContext, ClipboardProvider};
 
 use ripasso::pass;
 use ripasso::pass::SignatureStatus;
+use ripasso::pass::GitRepo;
 
 use std::process;
 use std::{thread, time};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use unic_langid::LanguageIdentifier;
 
@@ -109,7 +110,7 @@ fn copy(ui: &mut Cursive) -> () {
     });
 }
 
-fn do_delete(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
+fn do_delete(ui: &mut Cursive, repo_opt: GitRepo) -> () {
     ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
         let sel = l.selection();
 
@@ -132,7 +133,7 @@ fn do_delete(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     ui.pop_layer();
 }
 
-fn delete(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
+fn delete(ui: &mut Cursive, repo_opt: GitRepo) -> () {
     ui.add_layer(CircularFocus::wrap_tab(
     Dialog::around(TextView::new(CATALOG.gettext("Are you sure you want to delete the password")))
         .button(CATALOG.gettext("Yes"), move |ui: &mut Cursive| {
@@ -144,7 +145,7 @@ fn delete(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
         .dismiss_button(CATALOG.gettext("Cancel"))));
 }
 
-fn open(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
+fn open(ui: &mut Cursive, repo_opt: GitRepo) -> () {
     let password_entry_option: Option<Option<std::rc::Rc<ripasso::pass::PasswordEntry>>> = ui
         .call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
             l.selection()
@@ -200,7 +201,7 @@ fn get_value_from_input(s: &mut Cursive, input_name: &str) -> Option<std::rc::Rc
     return password;
 }
 
-fn create_save(s: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
+fn create_save(s: &mut Cursive, repo_opt: GitRepo) -> () {
     let password = get_value_from_input(s, "new_password_input");
     if password.is_none() {
         return;
@@ -253,7 +254,7 @@ fn create_save(s: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     }
 }
 
-fn create(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
+fn create(ui: &mut Cursive, repo_opt: GitRepo) -> () {
     let mut fields = LinearLayout::vertical();
     let mut path_fields = LinearLayout::horizontal();
     let mut password_fields = LinearLayout::horizontal();
@@ -298,7 +299,7 @@ fn create(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
     ui.add_layer(ev);
 }
 
-fn delete_recipient(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
+fn delete_recipient(ui: &mut Cursive, repo_opt: GitRepo) -> () {
     let mut l = ui.find_id::<SelectView<pass::Recipient>>("recipients").unwrap();
     let sel = l.selection();
 
@@ -320,7 +321,7 @@ fn delete_recipient(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -
     }
 }
 
-fn delete_recipient_verification(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
+fn delete_recipient_verification(ui: &mut Cursive, repo_opt: GitRepo) -> () {
     ui.add_layer(CircularFocus::wrap_tab(
         Dialog::around(TextView::new(CATALOG.gettext("Are you sure you want to remove this person?")))
             .button("Yes", move |ui: &mut Cursive| {
@@ -329,7 +330,7 @@ fn delete_recipient_verification(ui: &mut Cursive, repo_opt: Arc<Option<git2::Re
             .dismiss_button(CATALOG.gettext("Cancel"))));
 }
 
-fn add_recipient(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
+fn add_recipient(ui: &mut Cursive, repo_opt: GitRepo) -> () {
     let l = &*get_value_from_input(ui, "key_id_input").unwrap();
 
     let recipient_result = pass::Recipient::new(l.clone());
@@ -349,7 +350,7 @@ fn add_recipient(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> (
     }
 }
 
-fn add_recipient_dialog(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
+fn add_recipient_dialog(ui: &mut Cursive, repo_opt: GitRepo) -> () {
     let mut recipient_fields = LinearLayout::horizontal();
 
     recipient_fields.add_child(TextView::new(CATALOG.gettext("GPG Key Id: "))
@@ -381,7 +382,7 @@ fn add_recipient_dialog(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>
     ui.add_layer(ev);
 }
 
-fn view_recipients(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) -> () {
+fn view_recipients(ui: &mut Cursive, repo_opt: GitRepo) -> () {
     let recipients_res : Result<Vec<ripasso::pass::Recipient>, pass::Error> = ripasso::pass::Recipient::all_recipients();
 
     if recipients_res.is_err() {
@@ -474,7 +475,7 @@ fn help() {
     println!("{}", CATALOG.gettext("A password manager that uses the file format of the standard unix password manager 'pass', implemented in rust. Ripasso reads $HOME/.password-store/ by default, override this by setting the PASSWORD_STORE_DIR environmental variable."));
 }
 
-fn git_push(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) {
+fn git_push(ui: &mut Cursive, repo_opt: GitRepo) {
     let res = pass::push(repo_opt);
 
     if res.is_err() {
@@ -486,7 +487,7 @@ fn git_push(ui: &mut Cursive, repo_opt: Arc<Option<git2::Repository>>) {
     }
 }
 
-fn git_pull(ui: &mut Cursive, passwords: pass::PasswordList, repo_opt: Arc<Option<git2::Repository>>) {
+fn git_pull(ui: &mut Cursive, passwords: pass::PasswordList, repo_opt: GitRepo) {
     let pull_res = pass::pull(repo_opt.clone());
 
     if pull_res.is_err() {
@@ -576,7 +577,7 @@ fn main() {
         wizard::show_init_menu();
     }
 
-    let repo_opt = Arc::new(git2::Repository::open(pass::password_dir().unwrap()).ok());
+    let repo_opt = Arc::new(Some(Mutex::new(git2::Repository::open(pass::password_dir().unwrap()).unwrap())));
 
     // Load and watch all the passwords in the background
     let (password_rx, passwords) = match pass::watch(repo_opt.clone()) {

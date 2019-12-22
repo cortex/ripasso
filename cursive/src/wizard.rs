@@ -29,7 +29,7 @@ use cursive::Cursive;
 
 use self::cursive::direction::Orientation;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use ripasso::pass;
 use crate::helpers;
@@ -41,7 +41,7 @@ fn create_git_repo(ui: &mut Cursive) {
     } else {
         let repo = git2::Repository::open(&pass::password_dir().unwrap()).unwrap();
         let message = super::CATALOG.gettext("Initialized password repo with ripasso");
-        let commit_res = pass::add_and_commit(Arc::new(Some(repo)), &vec![".gpg-id".to_string()], &message);
+        let commit_res = pass::add_and_commit(Arc::new(Some(Mutex::new(repo))), &vec![".gpg-id".to_string()], &message);
 
         if commit_res.is_err() {
             helpers::errorbox(ui, &commit_res.err().unwrap());

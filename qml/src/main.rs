@@ -169,7 +169,7 @@ fn main() {
         );
     }));
 
-    let repo_opt = Arc::new(git2::Repository::open(pass::password_dir().unwrap()).ok());
+    let repo_opt = Arc::new(Some(Mutex::new(git2::Repository::open(pass::password_dir().unwrap()).unwrap())));
 
     // Load and watch all the passwords in the background
     let (_, passwords) = pass::watch(repo_opt.clone()).expect("error");
