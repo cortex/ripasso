@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2019-12-22 08:33+0100\n"
-"PO-Revision-Date: 2019-12-22 08:41+0100\n"
+"PO-Revision-Date: 2019-12-22 21:08+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: sv\n"
@@ -57,7 +57,7 @@ msgstr "Kopiera (ctrl-y)"
 
 #: cursive/src/wizard.rs:67 cursive/src/wizard.rs:82 cursive/src/wizard.rs:118
 msgid "Create"
-msgstr "Skapa (ins)"
+msgstr "Skapa"
 
 #: cursive/src/main.rs:699
 msgid "Create (ins) "
