@@ -54,7 +54,13 @@ fn create_git_repo(ui: &mut Cursive) {
 fn do_create(ui: &mut Cursive) {
     let l = ui.find_id::<EditView>("initial_key_id").unwrap();
     let key_id = (*l.get_content()).clone();
-    let mut pass_home = pass::password_dir_raw();
+    let pass_home_res = pass::password_dir();
+    if pass_home_res.is_err() {
+        helpers::errorbox(ui, &pass_home_res.unwrap_err());
+        ui.quit();
+        return;
+    }
+    let mut pass_home = pass_home_res.unwrap();
     let create_res = std::fs::create_dir_all(&pass_home);
     if create_res.is_err() {
         helpers::errorbox(ui, &pass::Error::IO(create_res.unwrap_err()));
