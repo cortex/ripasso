@@ -178,7 +178,7 @@ fn open(ui: &mut Cursive, repo_opt: GitRepo) -> () {
                 }
             })
             .button(CATALOG.gettext("Generate"), move |s| {
-                let new_password = ripasso::pass::generate_password(6);
+                let new_password = ripasso::words::generate_password(6);
                 s.call_on_id("editbox", |e: &mut TextArea| {
                     e.set_content(new_password);
                 });
@@ -278,7 +278,7 @@ fn create(ui: &mut Cursive, repo_opt: GitRepo) -> () {
         Dialog::around(fields)
             .title(CATALOG.gettext("Add new password"))
             .button(CATALOG.gettext("Generate"), move |s| {
-                let new_password = ripasso::pass::generate_password(6);
+                let new_password = ripasso::words::generate_password(6);
                 s.call_on_id("new_password_input", |e: &mut EditView| {
                     e.set_content(new_password);
                 });

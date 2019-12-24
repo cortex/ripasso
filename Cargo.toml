@@ -18,7 +18,6 @@ log = "0.4.8"
 env_logger = "0.7.0"
 dirs = "2.0.2"
 rand = "0.7.2"
-xkcd-password = "0.1.1"
 whoami = "0.5.3"
 
 [dev-dependencies]

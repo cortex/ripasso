@@ -24,10 +24,6 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
 
-extern crate xkcd_password;
-use self::xkcd_password::Dictionary::en_US as Dictionary;
-use self::xkcd_password::generate_password as GeneratePassword;
-
 use chrono::prelude::*;
 use git2;
 use glob;
@@ -915,11 +911,6 @@ pub fn watch(repo_opt: GitRepo) -> Result<(Receiver<PasswordEvent>, PasswordList
         }
     });
     Ok((event_rx, passwords_out))
-}
-
-/// Generate a random password, consisting of `length` words.
-pub fn generate_password(length: usize) -> String {
-    return GeneratePassword(length, Dictionary).trim().to_string();
 }
 
 fn to_name(base: &path::PathBuf, path: &path::PathBuf) -> String {
