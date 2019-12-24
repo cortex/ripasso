@@ -1031,3 +1031,6 @@ const WORDS: &'static [&'static str] = &["abacus", "abdomen", "abdominal", "abid
                  "zebra", "zen", "zeppelin", "zero", "zestfully", "zesty", "zigzagged", "zipfile",
                  "zipping", "zippy", "zips", "zit", "zodiac", "zombie", "zone", "zoning", "zookeeper",
                  "zoologist", "zoology", "zoom"];
+
+#[cfg(test)]
+mod test;
