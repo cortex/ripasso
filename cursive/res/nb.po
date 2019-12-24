@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2019-12-24 11:50+0100\n"
-"PO-Revision-Date: 2019-12-22 12:25+0100\n"
+"PO-Revision-Date: 2019-12-24 12:11+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: nb\n"
@@ -19,7 +19,6 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: cursive/src/main.rs:475
-#, fuzzy
 msgid ""
 "A password manager that uses the file format of the standard unix password "
 "manager 'pass', implemented in Rust. Ripasso reads $HOME/.password-store/ by "
@@ -36,18 +35,16 @@ msgid "Add new password"
 msgstr "Legg til nytt passord"
 
 #: cursive/src/main.rs:347
-#, fuzzy
 msgid "Added team member to password store"
-msgstr "la til mottaker i passordmappen"
+msgstr "La til medlem i passordmappen"
 
 #: cursive/src/wizard.rs:66
 msgid "Also create a git repository for the encrypted files?"
 msgstr "Opprett et git-depot for de krypterte filene?"
 
 #: cursive/src/main.rs:138
-#, fuzzy
 msgid "Are you sure you want to delete the password?"
-msgstr "Er du sikker på at du vil slette passordet"
+msgstr "Er du sikker på at du vil slette passordet?"
 
 #: cursive/src/main.rs:326
 msgid "Are you sure you want to remove this person?"
@@ -59,9 +56,8 @@ msgid "Cancel"
 msgstr "Avbryt"
 
 #: cursive/src/main.rs:109
-#, fuzzy
 msgid "Copied password to copy buffer for 40 seconds"
-msgstr "kopierer passordet til utklippstavlen i 40 sekunder"
+msgstr "Kopierer passordet til utklippstavlen i 40 sekunder"
 
 #: cursive/src/main.rs:699
 msgid "Copy (ctrl-y)"
@@ -76,18 +72,16 @@ msgid "Create (ins) "
 msgstr "Opprett (ins) "
 
 #: cursive/src/main.rs:252
-#, fuzzy
 msgid "Created new password"
-msgstr "opprettet et nytt passord"
+msgstr "Opprettet et nytt passord"
 
 #: cursive/src/main.rs:706
 msgid "Delete (del)"
 msgstr "Slett (del)"
 
 #: cursive/src/main.rs:319
-#, fuzzy
 msgid "Deleted team member from password store"
-msgstr "slettet mottaker fra passordmappen"
+msgstr "Slettet medlem fra passordmappen"
 
 #: cursive/src/helpers.rs:34
 msgid "Error"
@@ -98,16 +92,14 @@ msgid "F1: Menu | "
 msgstr "F1: Meny | "
 
 #: cursive/src/main.rs:356
-#, fuzzy
 msgid "GPG Key ID: "
-msgstr "GPG-nøkkel Id: "
+msgstr "GPG-nøkkel ID: "
 
 #: cursive/src/main.rs:180 cursive/src/main.rs:280
 msgid "Generate"
 msgstr "Generere"
 
 #: cursive/src/wizard.rs:71
-#, fuzzy
 msgid "Git Init"
 msgstr "Git Init"
 
@@ -124,9 +116,8 @@ msgid "Init"
 msgstr "Initier"
 
 #: cursive/src/wizard.rs:43
-#, fuzzy
 msgid "Initialized password repo with Ripasso"
-msgstr "Lag en passordmappe med ripasso"
+msgstr "Opprettet en passordmappe med Ripasso"
 
 #: cursive/src/wizard.rs:68
 msgid "No"
@@ -145,9 +136,8 @@ msgid "Operations"
 msgstr "Handlinger"
 
 #: cursive/src/main.rs:142
-#, fuzzy
 msgid "Password deleted"
-msgstr "passord slettet"
+msgstr "Passord slettet"
 
 #: cursive/src/main.rs:267
 msgid "Password: "
@@ -158,27 +148,24 @@ msgid "Path: "
 msgstr "Søkesti: "
 
 #: cursive/src/main.rs:511
-#, fuzzy
 msgid "Pulled from remote git repository"
-msgstr "sendt til eksternt git-depot"
+msgstr "Hentet fra eksternt git-depot"
 
 #: cursive/src/main.rs:485
-#, fuzzy
 msgid "Pushed to remote git repository"
-msgstr "sendt til eksternt git-depot"
+msgstr "Sendt til eksternt git-depot"
 
 #: cursive/src/main.rs:720
 msgid "Quit (esc)"
 msgstr "Avslutt (esc)"
 
 #: cursive/src/wizard.rs:79
-#, fuzzy
 msgid ""
 "Ripasso uses GPG in order to encrypt the stored passwords.\n"
 "Please enter your GPG key ID"
 msgstr ""
-"Ripasso bruker gpg for å kryptere de lagrede passordene.\n"
-"Vennligst oppgi din gpg-nøkkel id"
+"Ripasso bruker GPG for å kryptere de lagrede passordene.\n"
+"Vennligst oppgi din GPG-nøkkel ID"
 
 #: cursive/src/main.rs:170 cursive/src/main.rs:286
 msgid "Save"
@@ -186,19 +173,17 @@ msgstr "Lagre"
 
 #: cursive/src/main.rs:403
 msgid "Team Members"
-msgstr ""
+msgstr "Medlemmer"
 
 #: cursive/src/main.rs:709
-#, fuzzy
 msgid "Team Members (ctrl-v)"
-msgstr "Mottakere (ctrl-v)"
+msgstr "Medlemmer (ctrl-v)"
 
 #: cursive/src/wizard.rs:64
 msgid "Unable to write file"
 msgstr "Kunne ikke skrive til fil"
 
 #: cursive/src/wizard.rs:117
-#, fuzzy
 msgid ""
 "Welcome to Ripasso, it seems like you don't have a password store directory "
 "yet would you like to create it?"
