@@ -11,7 +11,7 @@ fn main() {
                 .help("Print a help text"),
         )
         .description("ripasso-cursive is an ncurses application that lets you manage your or your teams passwords.\
-The passwords are encrypted with gpg and optionally stored in an gpg repository. The list of encryption recipients are stored \
+The passwords are encrypted with gpg and optionally stored in an gpg repository. The list of team members are stored \
 in the file .gpg-id, one gpg key id per line.")
 
         .custom(man::prelude::Section::new("Keyboard shortcuts")
@@ -21,7 +21,7 @@ in the file .gpg-id, one gpg key id per line.")
                     .paragraph("Control + y : same as Enter")
                     .paragraph("Control + n : move marker down")
                     .paragraph("Control + p : move marker up")
-                    .paragraph("Control + v : view the list of encryption recipients")
+                    .paragraph("Control + v : view the list of team members")
                     .paragraph("Control + o : open en password edit dialog")
                     .paragraph("Control + f : pull from the git repository")
                     .paragraph("Control + g : push to the git repository")

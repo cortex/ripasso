@@ -40,7 +40,7 @@ fn create_git_repo(ui: &mut Cursive) {
         helpers::errorbox(ui, &init_res.err().unwrap());
     } else {
         let repo = git2::Repository::open(&pass::password_dir().unwrap()).unwrap();
-        let message = super::CATALOG.gettext("Initialized password repo with ripasso");
+        let message = super::CATALOG.gettext("Initialized password repo with Ripasso");
         let commit_res = pass::add_and_commit(Arc::new(Some(Mutex::new(repo))), &vec![".gpg-id".to_string()], &message);
 
         if commit_res.is_err() {
@@ -68,7 +68,7 @@ fn do_create(ui: &mut Cursive) {
             .button(super::CATALOG.gettext("No"), |s| {
                 s.quit();
             })
-            .title(super::CATALOG.gettext("Git init"));
+            .title(super::CATALOG.gettext("Git Init"));
 
         ui.add_layer(d);
     }
@@ -76,7 +76,7 @@ fn do_create(ui: &mut Cursive) {
 
 fn create_store(ui: &mut Cursive) {
     let d2 = Dialog::around(LinearLayout::new(Orientation::Vertical)
-        .child(TextView::new(super::CATALOG.gettext("Ripasso uses gpg in order to encrypt the stored passwords.\nPlease enter your gpg key id")))
+        .child(TextView::new(super::CATALOG.gettext("Ripasso uses GPG in order to encrypt the stored passwords.\nPlease enter your GPG key ID")))
         .child(EditView::new().with_id("initial_key_id"))
     )
         .button(super::CATALOG.gettext("Create"), do_create);
@@ -114,7 +114,7 @@ pub fn show_init_menu() {
         ),
     );
 
-    let d = Dialog::around(TextView::new(super::CATALOG.gettext("Welcome to ripasso, it seems like you don't have a password store directory yet would you like to create it?")))
+    let d = Dialog::around(TextView::new(super::CATALOG.gettext("Welcome to Ripasso, it seems like you don't have a password store directory yet would you like to create it?")))
         .button(super::CATALOG.gettext("Create"), create_store)
         .button(super::CATALOG.gettext("Cancel"), |s| {
             s.quit();

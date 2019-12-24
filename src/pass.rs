@@ -616,7 +616,7 @@ impl Recipient {
         return Ok(());
     }
 
-    /// Delete one of the persons from the list of people to encrypt the passwords for.
+    /// Delete one of the persons from the list of team members to encrypt the passwords for.
     pub fn remove_recipient_from_file(s: &Recipient, repo_opt: GitRepo) -> Result<()> {
         let mut recipients: Vec<Recipient> = Recipient::all_recipients()?;
 
@@ -629,13 +629,13 @@ impl Recipient {
         return Recipient::write_recipients_file(&recipients, repo_opt);
     }
 
-    /// Add a new person to the list of people to encrypt the passwords for.
+    /// Add a new person to the list of team members to encrypt the passwords for.
     pub fn add_recipient_to_file(s: &Recipient, repo_opt: GitRepo) -> Result<()> {
         let mut recipients: Vec<Recipient> = Recipient::all_recipients()?;
 
         for recipient in &recipients {
             if recipient.key_id == s.key_id {
-                return Err(Error::Generic("Recipient is already in the list of key ids"));
+                return Err(Error::Generic("Team member is already in the list of key ids"));
             }
         }
 

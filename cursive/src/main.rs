@@ -106,7 +106,7 @@ fn copy(ui: &mut Cursive) -> () {
     });
 
     ui.call_on_id("status_bar", |l: &mut TextView| {
-        l.set_content(CATALOG.gettext("copied password to copy buffer for 40 seconds"));
+        l.set_content(CATALOG.gettext("Copied password to copy buffer for 40 seconds"));
     });
 }
 
@@ -135,11 +135,11 @@ fn do_delete(ui: &mut Cursive, repo_opt: GitRepo) -> () {
 
 fn delete(ui: &mut Cursive, repo_opt: GitRepo) -> () {
     ui.add_layer(CircularFocus::wrap_tab(
-    Dialog::around(TextView::new(CATALOG.gettext("Are you sure you want to delete the password")))
+    Dialog::around(TextView::new(CATALOG.gettext("Are you sure you want to delete the password?")))
         .button(CATALOG.gettext("Yes"), move |ui: &mut Cursive| {
             do_delete(ui, repo_opt.clone());
             ui.call_on_id("status_bar", |l: &mut TextView| {
-                l.set_content(CATALOG.gettext("password deleted"));
+                l.set_content(CATALOG.gettext("Password deleted"));
             });
         })
         .dismiss_button(CATALOG.gettext("Cancel"))));
@@ -249,7 +249,7 @@ fn create_save(s: &mut Cursive, repo_opt: GitRepo) -> () {
         s.pop_layer();
 
         s.call_on_id("status_bar", |l: &mut TextView| {
-            l.set_content(CATALOG.gettext("created new password"));
+            l.set_content(CATALOG.gettext("Created new password"));
         });
     }
 }
@@ -316,7 +316,7 @@ fn delete_recipient(ui: &mut Cursive, repo_opt: GitRepo) -> () {
         l.remove_item(delete_id);
 
         ui.call_on_id("status_bar", |l: &mut TextView| {
-            l.set_content(CATALOG.gettext("deleted recipient from password store"));
+            l.set_content(CATALOG.gettext("Deleted team member from password store"));
         });
     }
 }
@@ -344,7 +344,7 @@ fn add_recipient(ui: &mut Cursive, repo_opt: GitRepo) -> () {
         } else {
             ui.pop_layer();
             ui.call_on_id("status_bar", |l: &mut TextView| {
-                l.set_content(CATALOG.gettext("added recipient to password store"));
+                l.set_content(CATALOG.gettext("Added team member to password store"));
             });
         }
     }
@@ -353,7 +353,7 @@ fn add_recipient(ui: &mut Cursive, repo_opt: GitRepo) -> () {
 fn add_recipient_dialog(ui: &mut Cursive, repo_opt: GitRepo) -> () {
     let mut recipient_fields = LinearLayout::horizontal();
 
-    recipient_fields.add_child(TextView::new(CATALOG.gettext("GPG Key Id: "))
+    recipient_fields.add_child(TextView::new(CATALOG.gettext("GPG Key ID: "))
         .with_id("key_id")
         .fixed_size((16, 1)));
 
@@ -400,7 +400,7 @@ fn view_recipients(ui: &mut Cursive, repo_opt: GitRepo) -> () {
     }
 
     let d = Dialog::around(recipients_view)
-        .title(CATALOG.gettext("People"))
+        .title(CATALOG.gettext("Team Members"))
         .dismiss_button("Ok");
 
     let ll = LinearLayout::new(Orientation::Vertical)
@@ -472,7 +472,7 @@ fn search(passwords: &pass::PasswordList, ui: &mut Cursive, query: &str) -> () {
 }
 
 fn help() {
-    println!("{}", CATALOG.gettext("A password manager that uses the file format of the standard unix password manager 'pass', implemented in rust. Ripasso reads $HOME/.password-store/ by default, override this by setting the PASSWORD_STORE_DIR environmental variable."));
+    println!("{}", CATALOG.gettext("A password manager that uses the file format of the standard unix password manager 'pass', implemented in Rust. Ripasso reads $HOME/.password-store/ by default, override this by setting the PASSWORD_STORE_DIR environmental variable."));
 }
 
 fn git_push(ui: &mut Cursive, repo_opt: GitRepo) {
@@ -482,7 +482,7 @@ fn git_push(ui: &mut Cursive, repo_opt: GitRepo) {
         helpers::errorbox(ui, &res.unwrap_err());
     } else {
         ui.call_on_id("status_bar", |l: &mut TextView| {
-            l.set_content(CATALOG.gettext("pushed to remote git repository"));
+            l.set_content(CATALOG.gettext("Pushed to remote git repository"));
         });
     }
 }
@@ -508,7 +508,7 @@ fn git_pull(ui: &mut Cursive, passwords: pass::PasswordList, repo_opt: GitRepo) 
         }
     });
     ui.call_on_id("status_bar", |l: &mut TextView| {
-        l.set_content("pulled from remote git repository");
+        l.set_content(CATALOG.gettext("Pulled from remote git repository"));
     });
 }
 
@@ -706,7 +706,7 @@ fn main() {
                          .leaf(CATALOG.gettext("Delete (del)"), move |ui: &mut Cursive| {
                              delete(ui, repo_opt10.clone())
                          })
-                         .leaf(CATALOG.gettext("Recipients (ctrl-v)"), move |ui: &mut Cursive| {
+                         .leaf(CATALOG.gettext("Team Members (ctrl-v)"), move |ui: &mut Cursive| {
                              view_recipients(ui, repo_opt11.clone())
                          })
                          .delimiter()
