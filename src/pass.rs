@@ -15,7 +15,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::env;
 use std::fs;
 use std::fs::File;
 use std::path;
@@ -188,12 +187,12 @@ impl PasswordEntry {
         Ok(self.secret()?.split('\n').take(1).collect())
     }
 
-    fn update_internal(&self, secret: String) -> Result<()> {
+    fn update_internal(&self, secret: String, password_store_dir: Arc<Option<String>>) -> Result<()> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
         let mut keys = Vec::new();
 
-        for recipient in Recipient::all_recipients()? {
+        for recipient in Recipient::all_recipients(password_store_dir)? {
             keys.push(ctx.get_key(recipient.key_id)?);
         }
 
@@ -207,8 +206,8 @@ impl PasswordEntry {
 
     /// Updates the password store entry with new content, and commits those to git if a repository
     /// is supplied.
-    pub fn update(&self, secret: String, repo_opt: GitRepo) -> Result<()> {
-        self.update_internal(secret)?;
+    pub fn update(&self, secret: String, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<()> {
+        self.update_internal(secret, password_store_dir)?;
 
         if repo_opt.is_none() {
             return Ok(());
@@ -237,8 +236,8 @@ impl PasswordEntry {
     }
 
     /// Returns a list of all password entries in the store.
-    pub fn all_password_entries(repo_opt: GitRepo) -> Result<Vec<PasswordEntry>> {
-        let dir = password_dir()?;
+    pub fn all_password_entries(repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<Vec<PasswordEntry>> {
+        let dir = password_dir(password_store_dir)?;
 
         // Existing files iterator
         let password_path_glob = dir.join("**/*.gpg");
@@ -257,10 +256,10 @@ impl PasswordEntry {
 
     /// Reencrypt all the entries in the store, for example when a new collaborator is added
     /// to the team.
-    pub fn reencrypt_all_password_entries(repo_opt: GitRepo) -> Result<()> {
+    pub fn reencrypt_all_password_entries(repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<()> {
         let mut names: Vec<String> = Vec::new();
-        for entry in PasswordEntry::all_password_entries(repo_opt.clone())? {
-            entry.update_internal(entry.secret()?)?;
+        for entry in PasswordEntry::all_password_entries(repo_opt.clone(), password_store_dir.clone())? {
+            entry.update_internal(entry.secret()?, password_store_dir.clone())?;
             names.push(format!("{}.gpg", &entry.name));
         }
         names.push(".gpg-id".to_string());
@@ -269,7 +268,7 @@ impl PasswordEntry {
             return Ok(());
         }
 
-        let keys = Recipient::all_recipients()?.into_iter().map(|s| format!("0x{}, ", s.key_id)).collect::<String>();
+        let keys = Recipient::all_recipients(password_store_dir)?.into_iter().map(|s| format!("0x{}, ", s.key_id)).collect::<String>();
         let message = format!("Reencrypt password store with new GPG ids {}", keys);
 
         add_and_commit(repo_opt, &names, &message)?;
@@ -558,9 +557,9 @@ impl Recipient {
     }
 
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
-    pub fn all_recipients() -> Result<Vec<Recipient>> {
+    pub fn all_recipients(password_store_dir: Arc<Option<String>>) -> Result<Vec<Recipient>> {
 
-        let mut recipient_file = password_dir()?;
+        let mut recipient_file = password_dir(password_store_dir)?;
         recipient_file.push(".gpg-id");
         let contents = fs::read_to_string(recipient_file)
             .expect("Something went wrong reading the file");
@@ -593,8 +592,8 @@ impl Recipient {
         return Ok(recipients);
     }
 
-    fn write_recipients_file(recipients: &Vec<Recipient>, repo_opt: GitRepo) -> Result<()> {
-        let mut recipient_file = password_dir()?;
+    fn write_recipients_file(recipients: &Vec<Recipient>, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<()> {
+        let mut recipient_file = password_dir(password_store_dir.clone())?;
         recipient_file.push(".gpg-id");
 
         let mut file = std::fs::OpenOptions::new()
@@ -611,14 +610,14 @@ impl Recipient {
             file.write_all(b"\n")?;
         }
 
-        PasswordEntry::reencrypt_all_password_entries(repo_opt)?;
+        PasswordEntry::reencrypt_all_password_entries(repo_opt, password_store_dir)?;
 
         return Ok(());
     }
 
     /// Delete one of the persons from the list of team members to encrypt the passwords for.
-    pub fn remove_recipient_from_file(s: &Recipient, repo_opt: GitRepo) -> Result<()> {
-        let mut recipients: Vec<Recipient> = Recipient::all_recipients()?;
+    pub fn remove_recipient_from_file(s: &Recipient, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<()> {
+        let mut recipients: Vec<Recipient> = Recipient::all_recipients(password_store_dir.clone())?;
 
         recipients.retain(|ref vs| vs.key_id != s.key_id);
 
@@ -626,12 +625,12 @@ impl Recipient {
             return Err(Error::Generic("Can't delete the last encryption key"));
         }
 
-        return Recipient::write_recipients_file(&recipients, repo_opt);
+        return Recipient::write_recipients_file(&recipients, repo_opt, password_store_dir);
     }
 
     /// Add a new person to the list of team members to encrypt the passwords for.
-    pub fn add_recipient_to_file(s: &Recipient, repo_opt: GitRepo) -> Result<()> {
-        let mut recipients: Vec<Recipient> = Recipient::all_recipients()?;
+    pub fn add_recipient_to_file(s: &Recipient, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<()> {
+        let mut recipients: Vec<Recipient> = Recipient::all_recipients(password_store_dir.clone())?;
 
         for recipient in &recipients {
             if recipient.key_id == s.key_id {
@@ -641,7 +640,7 @@ impl Recipient {
 
         recipients.push(build_recipient(s.name.clone(), s.key_id.clone()));
 
-        return Recipient::write_recipients_file(&recipients, repo_opt);
+        return Recipient::write_recipients_file(&recipients, repo_opt, password_store_dir);
     }
 }
 
@@ -741,8 +740,8 @@ fn verify_gpg_signature(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Gi
 }
 
 /// Creates a new password file in the store.
-pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<String>, repo_opt: GitRepo) -> Result<()> {
-    let mut path = password_dir()?;
+pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<String>, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<()> {
+    let mut path = password_dir(password_store_dir.clone())?;
 
     let path_deref = (*path_end).clone();
     let path_iter = &mut path_deref.split("/").peekable();
@@ -773,7 +772,7 @@ pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<Str
 
     let mut keys = Vec::new();
 
-    for recipient in Recipient::all_recipients()? {
+    for recipient in Recipient::all_recipients(password_store_dir)? {
         keys.push(ctx.get_key(recipient.key_id)?);
     }
 
@@ -828,8 +827,8 @@ pub fn search(l: &PasswordList, query: &str) -> Result<Vec<PasswordEntry>> {
 }
 
 /// Read the password store directory and populate the password list supplied.
-pub fn populate_password_list(passwords: &PasswordList, repo_opt: GitRepo) -> Result<()> {
-    let dir = password_dir()?;
+pub fn populate_password_list(passwords: &PasswordList, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<()> {
+    let dir = password_dir(password_store_dir)?;
 
     let password_path_glob = dir.join("**/*.gpg");
     let existing_iter = glob::glob(&password_path_glob.to_string_lossy())?;
@@ -844,8 +843,8 @@ pub fn populate_password_list(passwords: &PasswordList, repo_opt: GitRepo) -> Re
 }
 
 /// Subscribe to events, that happen when password files are added or removed
-pub fn watch(repo_opt: GitRepo) -> Result<(Receiver<PasswordEvent>, PasswordList)> {
-    let dir = password_dir()?;
+pub fn watch(repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<(Receiver<PasswordEvent>, PasswordList)> {
+    let dir = password_dir(password_store_dir.clone())?;
 
     let (watcher_tx, watcher_rx) = channel();
 
@@ -858,7 +857,7 @@ pub fn watch(repo_opt: GitRepo) -> Result<(Receiver<PasswordEvent>, PasswordList
     let passwords = Arc::new(Mutex::new(Vec::<PasswordEntry>::new()));
     let passwords_out = passwords.clone();
 
-    populate_password_list(&passwords_out, repo_opt)?;
+    populate_password_list(&passwords_out, repo_opt, password_store_dir)?;
 
     thread::spawn(move || {
         info!("Starting thread");
@@ -880,9 +879,13 @@ pub fn watch(repo_opt: GitRepo) -> Result<(Receiver<PasswordEvent>, PasswordList
                             if ext == None || ext.unwrap() != "gpg" {
                                 continue;
                             }
+                            let password_store_dir = Arc::new(match std::env::var("PASSWORD_STORE_DIR") {
+                                Ok(p) => Some(p),
+                                Err(_) => None
+                            });
 
-                            let repo_opt = Arc::new(Some(Mutex::new(git2::Repository::open(password_dir().unwrap()).unwrap())));
-                            let p_e = PasswordEntry::new(&password_dir().unwrap(), &p.clone(), repo_opt).unwrap();
+                            let repo_opt = Arc::new(Some(Mutex::new(git2::Repository::open(password_dir(password_store_dir.clone()).unwrap()).unwrap())));
+                            let p_e = PasswordEntry::new(&password_dir(password_store_dir).unwrap(), &p.clone(), repo_opt).unwrap();
                             if !(passwords.lock().unwrap()).iter().any(|p| p.path == p_e.path) {
                                 (passwords.lock().unwrap()).push(p_e.clone());
                             }
@@ -923,8 +926,8 @@ fn to_name(base: &path::PathBuf, path: &path::PathBuf) -> String {
 }
 
 /// Determine password directory
-pub fn password_dir() -> Result<path::PathBuf> {
-    let pass_home = password_dir_raw();
+pub fn password_dir(password_store_dir: Arc<Option<String>>) -> Result<path::PathBuf> {
+    let pass_home = password_dir_raw(password_store_dir);
     if !pass_home.exists() {
         return Err(Error::Generic("failed to locate password directory"));
     }
@@ -932,11 +935,11 @@ pub fn password_dir() -> Result<path::PathBuf> {
 }
 
 /// Determine password directory
-pub fn password_dir_raw() -> path::PathBuf {
+pub fn password_dir_raw(password_store_dir: Arc<Option<String>>) -> path::PathBuf {
     // If a directory is provided via env var, use it
-    let pass_home = match env::var("PASSWORD_STORE_DIR") {
-        Ok(p) => p,
-        Err(_) => dirs::home_dir()
+    let pass_home = match password_store_dir.as_ref() {
+        Some(p) => p.clone(),
+        None => dirs::home_dir()
             .unwrap()
             .join(".password-store")
             .to_string_lossy()
