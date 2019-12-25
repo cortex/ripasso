@@ -326,7 +326,7 @@ fn delete_recipient(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc
 fn delete_recipient_verification(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> () {
     ui.add_layer(CircularFocus::wrap_tab(
         Dialog::around(TextView::new(CATALOG.gettext("Are you sure you want to remove this person?")))
-            .button("Yes", move |ui: &mut Cursive| {
+            .button(CATALOG.gettext("Yes"), move |ui: &mut Cursive| {
                 delete_recipient(ui, repo_opt.clone(), password_store_dir.clone())
             })
             .dismiss_button(CATALOG.gettext("Cancel"))));
