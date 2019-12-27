@@ -1,0 +1,208 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-12-24 11:50+0100\n"
+"PO-Revision-Date: 2019-12-27 19:09+0100\n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.0.6\n"
+"Last-Translator: Eivind Syvertsen <eivindsy+ripasso@pvv.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language: nn\n"
+
+#: cursive/src/main.rs:475
+msgid ""
+"A password manager that uses the file format of the standard unix password "
+"manager 'pass', implemented in Rust. Ripasso reads $HOME/.password-store/ by "
+"default, override this by setting the PASSWORD_STORE_DIR environmental "
+"variable."
+msgstr ""
+"Ein passordhandsamar som nyttar det same filformatet som passordhandsamaren "
+"'pass', implementert i Rust. Ripasso les og lagrar passord i $HOME/.password-"
+"store/ som standardoppsett. For å lese frå ei anna mappe, sett "
+"miljøvariabelen PASSWORD_STORE_DIR."
+
+#: cursive/src/main.rs:279
+msgid "Add new password"
+msgstr "Legg til nytt passord"
+
+#: cursive/src/main.rs:347
+msgid "Added team member to password store"
+msgstr "La til gruppemedlem i passordlageret"
+
+#: cursive/src/wizard.rs:66
+msgid "Also create a git repository for the encrypted files?"
+msgstr "Opprett også eit git-depot for dei krypterte filene?"
+
+#: cursive/src/main.rs:138
+msgid "Are you sure you want to delete the password?"
+msgstr "Er du sikker du vil fjerne passordet?"
+
+#: cursive/src/main.rs:326
+msgid "Are you sure you want to remove this person?"
+msgstr "Er du sikker du vil fjerne denne personen?"
+
+#: cursive/src/main.rs:145 cursive/src/main.rs:289 cursive/src/main.rs:330
+#: cursive/src/main.rs:375 cursive/src/wizard.rs:119
+msgid "Cancel"
+msgstr "Avbryt"
+
+#: cursive/src/main.rs:109
+msgid "Copied password to copy buffer for 40 seconds"
+msgstr "Passordet er kopiert til utklippstavla for 40 sekunder"
+
+#: cursive/src/main.rs:699
+msgid "Copy (ctrl-y)"
+msgstr "Kopier (ctrl-y)"
+
+#: cursive/src/wizard.rs:67 cursive/src/wizard.rs:82 cursive/src/wizard.rs:118
+msgid "Create"
+msgstr "Opprett"
+
+#: cursive/src/main.rs:700
+msgid "Create (ins) "
+msgstr "Opprett (ins) "
+
+#: cursive/src/main.rs:252
+msgid "Created new password"
+msgstr "Oppretta eit nytt passord"
+
+#: cursive/src/main.rs:706
+msgid "Delete (del)"
+msgstr "Fjern (del)"
+
+#: cursive/src/main.rs:319
+msgid "Deleted team member from password store"
+msgstr "Fjerna gruppemedlem frå passordlageret"
+
+#: cursive/src/helpers.rs:34
+msgid "Error"
+msgstr "Feil"
+
+#: cursive/src/main.rs:689 cursive/src/wizard.rs:112
+msgid "F1: Menu | "
+msgstr "F1: Meny | "
+
+#: cursive/src/main.rs:356
+msgid "GPG Key ID: "
+msgstr "GPG-nøkkel-ID: "
+
+#: cursive/src/main.rs:180 cursive/src/main.rs:280
+msgid "Generate"
+msgstr "Generer"
+
+#: cursive/src/wizard.rs:71
+msgid "Git Init"
+msgstr "Git Init"
+
+#: cursive/src/main.rs:713
+msgid "Git Pull (ctrl-f)"
+msgstr "Git Pull (ctrl-f)"
+
+#: cursive/src/main.rs:716
+msgid "Git Push (ctrl-g)"
+msgstr "Git Push (ctrl-g)"
+
+#: cursive/src/wizard.rs:122
+msgid "Init"
+msgstr "Initialiser"
+
+#: cursive/src/wizard.rs:43
+msgid "Initialized password repo with Ripasso"
+msgstr "Oppretta eit passordlager med Ripasso"
+
+#: cursive/src/wizard.rs:68
+msgid "No"
+msgstr "Nei"
+
+#: cursive/src/helpers.rs:33 cursive/src/main.rs:186
+msgid "Ok"
+msgstr "Ok"
+
+#: cursive/src/main.rs:703
+msgid "Open (ctrl-o)"
+msgstr "Opne (ctrl-o)"
+
+#: cursive/src/main.rs:697
+msgid "Operations"
+msgstr "Handlingar"
+
+#: cursive/src/main.rs:142
+msgid "Password deleted"
+msgstr "Passordet blei fjerna"
+
+#: cursive/src/main.rs:267
+msgid "Password: "
+msgstr "Passord: "
+
+#: cursive/src/main.rs:261
+msgid "Path: "
+msgstr "Søkesti: "
+
+#: cursive/src/main.rs:511
+msgid "Pulled from remote git repository"
+msgstr "Henta frå eksternt git-depot"
+
+#: cursive/src/main.rs:485
+msgid "Pushed to remote git repository"
+msgstr "Sende til eksternt git-depot"
+
+#: cursive/src/main.rs:720
+msgid "Quit (esc)"
+msgstr "Avslutt (esc)"
+
+#: cursive/src/wizard.rs:79
+msgid ""
+"Ripasso uses GPG in order to encrypt the stored passwords.\n"
+"Please enter your GPG key ID"
+msgstr ""
+"Ripasso nyttar GPG for å kryptere dei lagra passorda.\n"
+"Ver venleg og oppgje GPG-nøkkel-ID-en din"
+
+#: cursive/src/main.rs:170 cursive/src/main.rs:286
+msgid "Save"
+msgstr "Lagre"
+
+#: cursive/src/main.rs:403
+msgid "Team Members"
+msgstr "Gruppemedlemmar"
+
+#: cursive/src/main.rs:709
+msgid "Team Members (ctrl-v)"
+msgstr "Gruppemedlemmar (ctrl-v)"
+
+#: cursive/src/wizard.rs:64
+msgid "Unable to write file"
+msgstr "Klarte ikkje å skrive fila"
+
+#: cursive/src/wizard.rs:117
+msgid ""
+"Welcome to Ripasso, it seems like you don't have a password store directory "
+"yet would you like to create it?"
+msgstr ""
+"Velkomen til Ripasso! Det ser ut som du ikkje har noka mappe for "
+"passordlageret enno, vil du opprette ei?"
+
+#: cursive/src/main.rs:139 cursive/src/main.rs:372
+msgid "Yes"
+msgstr "Ja"
+
+#: cursive/src/main.rs:410
+msgid "del: Remove"
+msgstr "del: Fjern"
+
+#: cursive/src/main.rs:409
+msgid "ins: Add | "
+msgstr "ins: Legg til | "
+
+#: cursive/src/main.rs:436 cursive/src/main.rs:452
+msgid "n/a"
+msgstr "i/t"
