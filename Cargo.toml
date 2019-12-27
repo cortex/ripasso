@@ -24,9 +24,15 @@ whoami = "0.5.3"
 tempfile = "3.1.0"
 flate2 = "1.0.13"
 tar = "0.4.26"
+criterion = "0.3.0"
 
 [workspace]
 
 members = [
     "gtk", "qml", "cursive", "man"
 ]
+
+[[bench]]
+name = "library_benchmark"
+harness = false
+
