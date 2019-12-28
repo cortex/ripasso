@@ -37,6 +37,7 @@ use std;
 use std::io;
 use std::string;
 use std::collections::HashSet;
+use git2::{Oid, Repository};
 
 /// Convenience type for Results
 type Result<T> = std::result::Result<T, Error>;
@@ -152,20 +153,22 @@ pub struct PasswordEntry {
 impl PasswordEntry {
     /// creates a `PasswordEntry`
     pub fn new(base: &path::PathBuf, path: &path::PathBuf, repo_opt: GitRepo) -> Result<PasswordEntry> {
+        let (update_time, committed_by, signature_status) = read_git_meta_data(base, path, repo_opt.clone());
+
         Ok(PasswordEntry {
             name: to_name(base, path),
             meta: "".to_string(),
             base: base.to_path_buf(),
             path: path.to_path_buf(),
-            updated: match updated(base, path, repo_opt.clone()) {
+            updated: match update_time {
                 Ok(p) => Some(p),
                 Err(_) => None,
             },
-            committed_by: match committed_by(base, path, repo_opt.clone()) {
+            committed_by: match committed_by {
                 Ok(p) => Some(p),
                 Err(_) => None,
             },
-            signature_status: match verify_gpg_signature(base, path, repo_opt) {
+            signature_status: match signature_status {
                 Ok(ss) => Some(ss),
                 Err(_) => None,
             },
@@ -644,68 +647,73 @@ impl Recipient {
     }
 }
 
-fn updated(base: &path::PathBuf, path: &path::PathBuf, repo_opt: GitRepo) -> Result<DateTime<Local>> {
+fn read_git_meta_data(base: &path::PathBuf, path: &path::PathBuf, repo_opt: GitRepo) -> (Result<DateTime<Local>>, Result<String>, Result<SignatureStatus>) {
     if repo_opt.is_none() {
-        return Err(Error::Generic("need repository to have DateTime information"));
+        return (Err(Error::Generic("need repository to have meta information")),
+                Err(Error::Generic("need repository to have meta information")),
+                Err(Error::Generic("need repository to have meta information")));
     }
 
     let repo_res = (*repo_opt).as_ref().unwrap().try_lock();
     if repo_res.is_err() {
-        return Err(Error::GenericDyn(format!("{:?}", repo_res.err())))
+        let e = repo_res.err().unwrap();
+        return (Err(Error::GenericDyn(format!("{:?}", e))),
+                Err(Error::GenericDyn(format!("{:?}", e))),
+                Err(Error::GenericDyn(format!("{:?}", e))));
     }
     let repo = repo_res.unwrap();
 
-    let blame = repo.blame_file(path.strip_prefix(base)?, None)?;
-    let id = blame
-        .get_line(1)
-        .ok_or(Error::Generic("no git history found"))?
-        .orig_commit_id();
-    let time = repo.find_commit(id)?.time();
-    Ok(Local.timestamp(time.seconds(), 0))
-}
-
-fn committed_by(base: &path::PathBuf, path: &path::PathBuf, repo_opt: GitRepo) -> Result<String> {
-    if repo_opt.is_none() {
-        return Err(Error::Generic("need repository to have DateTime information"));
+    let path_res = path.strip_prefix(base);
+    if path_res.is_err() {
+        let e = path_res.err().unwrap();
+        return (Err(Error::GenericDyn(format!("{:?}", e))),
+                Err(Error::GenericDyn(format!("{:?}", e))),
+                Err(Error::GenericDyn(format!("{:?}", e))));
     }
 
-    let repo_res = (*repo_opt).as_ref().unwrap().try_lock();
-    if repo_res.is_err() {
-        return Err(Error::GenericDyn(format!("{:?}", repo_res.err())))
+    let blame_res = repo.blame_file(path_res.unwrap(), None);
+    if blame_res.is_err() {
+        let e = blame_res.err().unwrap();
+        return (Err(Error::GenericDyn(format!("{:?}", e))),
+                Err(Error::GenericDyn(format!("{:?}", e))),
+                Err(Error::GenericDyn(format!("{:?}", e))));
     }
-    let repo = repo_res.unwrap();
-
-    let blame = repo.blame_file(path.strip_prefix(base)?, None)?;
-    let id = blame
+    let blame = blame_res.unwrap();
+    let id_res = blame
         .get_line(1)
-        .ok_or(Error::Generic("no git history found"))?
-        .orig_commit_id();
+        .ok_or(Error::Generic("no git history found"));
 
-    let r: Result<String> = match repo.find_commit(id)?.committer().name() {
+    if id_res.is_err() {
+        let e = id_res.err().unwrap();
+        return (Err(Error::GenericDyn(format!("{:?}", e))),
+                Err(Error::GenericDyn(format!("{:?}", e))),
+                Err(Error::GenericDyn(format!("{:?}", e))));
+    }
+    let id = id_res.unwrap().orig_commit_id();
+
+    let commit_res = repo.find_commit(id);
+    if commit_res.is_err() {
+        let e = commit_res.err().unwrap();
+        return (Err(Error::GenericDyn(format!("{:?}", e))),
+                Err(Error::GenericDyn(format!("{:?}", e))),
+                Err(Error::GenericDyn(format!("{:?}", e))));
+    }
+    let commit = commit_res.unwrap();
+
+    let time = commit.time();
+    let time_return = Ok(Local.timestamp(time.seconds(), 0));
+
+    let name_return: Result<String> = match commit.committer().name() {
         Some(s) => Ok(s.to_string()),
         None => Err(Error::Generic("missing committer name"))
     };
 
-    return r;
+    let signature_return = verify_git_signature(&repo, &id);
+
+    return (time_return, name_return, signature_return);
 }
 
-fn verify_gpg_signature(base: &path::PathBuf, path: &path::PathBuf, repo_opt: GitRepo) -> Result<SignatureStatus> {
-    if repo_opt.is_none() {
-        return Err(Error::Generic("need repository to have DateTime information"));
-    }
-
-    let repo_res = (*repo_opt).as_ref().unwrap().try_lock();
-    if repo_res.is_err() {
-        return Err(Error::GenericDyn(format!("{:?}", repo_res.err())))
-    }
-    let repo = repo_res.unwrap();
-
-    let blame = repo.blame_file(path.strip_prefix(base)?, None)?;
-    let id = blame
-        .get_line(1)
-        .ok_or(Error::Generic("no git history found"))?
-        .orig_commit_id();
-
+fn verify_git_signature(repo: &std::sync::MutexGuard<Repository>, id: &Oid) -> Result<SignatureStatus> {
     let (signature, signed_data) = repo.extract_signature(&id, Some("gpgsig"))?;
 
     let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
@@ -737,6 +745,7 @@ fn verify_gpg_signature(base: &path::PathBuf, path: &path::PathBuf, repo_opt: Gi
     } else {
         return Ok(SignatureStatus::BadSignature);
     }
+
 }
 
 /// Creates a new password file in the store.
