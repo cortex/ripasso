@@ -268,6 +268,7 @@ fn create(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Option<St
         .with_id("password_name")
         .fixed_size((10, 1)));
     password_fields.add_child(EditView::new()
+        .secret()
         .with_id("new_password_input")
         .fixed_size((50, 1)));
     fields.add_child(path_fields);
