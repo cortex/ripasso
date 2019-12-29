@@ -751,6 +751,7 @@ fn verify_git_signature(repo: &std::sync::MutexGuard<Repository>, id: &Oid) -> R
 /// Creates a new password file in the store.
 pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<String>, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<()> {
     let mut path = password_dir(password_store_dir.clone())?;
+    let c_path = std::fs::canonicalize(path.as_path())?;
 
     let path_deref = (*path_end).clone();
     let path_iter = &mut path_deref.split("/").peekable();
@@ -758,6 +759,10 @@ pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<Str
     while let Some(p) = path_iter.next() {
         if path_iter.peek().is_some() {
             path.push(p);
+            let c_file = std::fs::canonicalize(path.as_path())?;
+            if !c_file.starts_with(c_path.as_path()) {
+                return Err(Error::Generic("trying to write outside of password store directory"));
+            }
             if !path.exists() {
                 std::fs::create_dir(&path)?;
             }
