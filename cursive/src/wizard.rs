@@ -122,7 +122,7 @@ pub fn show_init_menu(password_store_dir: Arc<Option<String>>) {
         ),
     );
 
-    let d = Dialog::around(TextView::new(super::CATALOG.gettext("Welcome to Ripasso, it seems like you don't have a password store directory yet would you like to create it?")))
+    let d = Dialog::around(TextView::new(super::CATALOG.gettext("Welcome to Ripasso, it seems like you don't have a password store directory yet would you like to create it?\nIt's created in $HOME/.password-store or where the PASSWORD_STORE_DIR environmental variable points.")))
         .button(super::CATALOG.gettext("Create"), move |ui: &mut Cursive| {
             create_store(ui, password_store_dir.clone());
         })
