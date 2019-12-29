@@ -893,7 +893,11 @@ pub fn watch(repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Resu
                                 Err(_) => None
                             });
 
-                            let repo_opt = Arc::new(Some(Mutex::new(git2::Repository::open(password_dir(password_store_dir.clone()).unwrap()).unwrap())));
+                            let repo_res = git2::Repository::open(password_dir(password_store_dir.clone()).unwrap());
+                            let mut repo_opt: GitRepo = Arc::new(None::<Mutex<git2::Repository>>);
+                            if repo_res.is_ok() {
+                                repo_opt = Arc::new(Some(Mutex::new(repo_res.unwrap())));
+                            }
                             let p_e = PasswordEntry::new(&password_dir(password_store_dir).unwrap(), &p.clone(), repo_opt).unwrap();
                             if !(passwords.lock().unwrap()).iter().any(|p| p.path == p_e.path) {
                                 (passwords.lock().unwrap()).push(p_e.clone());

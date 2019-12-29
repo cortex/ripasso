@@ -128,6 +128,7 @@ pub fn show_init_menu(password_store_dir: Arc<Option<String>>) {
         })
         .button(super::CATALOG.gettext("Cancel"), |s| {
             s.quit();
+            std::process::exit(0);
         })
         .title(super::CATALOG.gettext("Init"));
 

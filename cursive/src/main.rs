@@ -587,7 +587,24 @@ fn main() {
         wizard::show_init_menu(password_store_dir.clone());
     }
 
-    let repo_opt = Arc::new(Some(Mutex::new(git2::Repository::open(pass::password_dir(password_store_dir.clone()).unwrap()).unwrap())));
+    if pass::password_dir(password_store_dir.clone()).is_ok() {
+        let mut gpg_id_file = pass::password_dir(password_store_dir.clone()).unwrap();
+        gpg_id_file.push(".gpg-id");
+        if !gpg_id_file.exists() {
+            eprintln!("{}", CATALOG.gettext("You have pointed ripasso towards an existing directory without an .gpg-id file, this doesn't seem like a password store directory, quiting."));
+            process::exit(1);
+        }
+    }
+    let pdir_res = pass::password_dir(password_store_dir.clone());
+    if pdir_res.is_err() {
+        eprintln!("Error {:?}", pdir_res.err().unwrap());
+        process::exit(1);
+    }
+    let repo_res = git2::Repository::open(pdir_res.unwrap());
+    let mut repo_opt: GitRepo = Arc::new(None::<Mutex<git2::Repository>>);
+    if repo_res.is_ok() {
+        repo_opt = Arc::new(Some(Mutex::new(repo_res.unwrap())));
+    }
 
     // Load and watch all the passwords in the background
     let (password_rx, passwords) = match pass::watch(repo_opt.clone(), password_store_dir.clone()) {
