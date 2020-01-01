@@ -77,3 +77,32 @@ fn populate_password_list_small_repo() {
     assert_eq!((*(*results).lock().unwrap())[0].committed_by, Some("Alexander Kjäll".to_string()));
     assert_eq!((*(*results).lock().unwrap())[0].signature_status.is_none(), true);
 }
+
+#[test]
+fn populate_password_list_repo_with_deleted_files() {
+    let mut base_path: PathBuf = std::env::current_exe().unwrap();
+    base_path.pop();
+    base_path.pop();
+    base_path.pop();
+    base_path.pop();
+    base_path.push("testres");
+
+    let mut password_dir: PathBuf = base_path.clone();
+    password_dir.push("populate_password_list_repo_with_deleted_files");
+
+    unpack_tar_gz(base_path.clone(), "populate_password_list_repo_with_deleted_files.tar.gz").unwrap();
+
+    let password_store_dir = Arc::new(Some(format!("{}", password_dir.as_path().display())));
+
+    let results = Arc::new(Mutex::new(Vec::<PasswordEntry>::new()));
+    let repo_opt = Arc::new(Some(Mutex::new(git2::Repository::open(password_dir).unwrap())));
+
+    populate_password_list(&results, repo_opt, password_store_dir).unwrap();
+
+    cleanup(base_path, "populate_password_list_repo_with_deleted_files").unwrap();
+
+    assert_eq!((*(*results).lock().unwrap()).len(), 1);
+    assert_eq!((*(*results).lock().unwrap())[0].name, "10");
+    assert_eq!((*(*results).lock().unwrap())[0].committed_by, Some("Alexander Kjäll".to_string()));
+    assert_eq!((*(*results).lock().unwrap())[0].signature_status.is_none(), true);
+}
