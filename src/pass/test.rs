@@ -106,3 +106,43 @@ fn populate_password_list_repo_with_deleted_files() {
     assert_eq!((*(*results).lock().unwrap())[0].committed_by, Some("Alexander Kjäll".to_string()));
     assert_eq!((*(*results).lock().unwrap())[0].signature_status.is_none(), true);
 }
+
+#[test]
+fn populate_password_list_directory_without_git() {
+    let mut base_path: PathBuf = std::env::current_exe().unwrap();
+    base_path.pop();
+    base_path.pop();
+    base_path.pop();
+    base_path.pop();
+    base_path.push("testres");
+
+    let mut password_dir: PathBuf = base_path.clone();
+    password_dir.push("populate_password_list_directory_without_git");
+
+    unpack_tar_gz(base_path.clone(), "populate_password_list_directory_without_git.tar.gz").unwrap();
+
+    let password_store_dir = Arc::new(Some(format!("{}", password_dir.as_path().display())));
+
+    let results = Arc::new(Mutex::new(Vec::<PasswordEntry>::new()));
+    let repo_opt: GitRepo = Arc::new(None::<Mutex<git2::Repository>>);
+
+    populate_password_list(&results, repo_opt, password_store_dir).unwrap();
+
+    cleanup(base_path, "populate_password_list_directory_without_git").unwrap();
+
+    assert_eq!((*(*results).lock().unwrap()).len(), 3);
+    assert_eq!((*(*results).lock().unwrap())[0].name, "first");
+    assert_eq!((*(*results).lock().unwrap())[0].committed_by.is_none(), true);
+    assert_eq!((*(*results).lock().unwrap())[0].updated.is_none(), true);
+    assert_eq!((*(*results).lock().unwrap())[0].signature_status.is_none(), true);
+
+    assert_eq!((*(*results).lock().unwrap())[1].name, "second");
+    assert_eq!((*(*results).lock().unwrap())[1].committed_by.is_none(), true);
+    assert_eq!((*(*results).lock().unwrap())[1].updated.is_none(), true);
+    assert_eq!((*(*results).lock().unwrap())[1].signature_status.is_none(), true);
+
+    assert_eq!((*(*results).lock().unwrap())[2].name, "third");
+    assert_eq!((*(*results).lock().unwrap())[2].committed_by.is_none(), true);
+    assert_eq!((*(*results).lock().unwrap())[2].updated.is_none(), true);
+    assert_eq!((*(*results).lock().unwrap())[2].signature_status.is_none(), true);
+}
