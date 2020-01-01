@@ -151,8 +151,31 @@ pub struct PasswordEntry {
 }
 
 impl PasswordEntry {
-    /// creates a `PasswordEntry`
-    pub fn new(base: &path::PathBuf, path: &path::PathBuf, repo_opt: GitRepo) -> Result<PasswordEntry> {
+    /// constructs a a `PasswordEntry` from the suplied parts
+    pub fn new(base: &path::PathBuf, path: &path::PathBuf, update_time: Result<DateTime<Local>>, committed_by: Result<String>, signature_status: Result<SignatureStatus>) -> PasswordEntry {
+        PasswordEntry {
+            name: to_name(base, path),
+            meta: "".to_string(),
+            base: base.to_path_buf(),
+            path: path.to_path_buf(),
+            updated: match update_time {
+                Ok(p) => Some(p),
+                Err(_) => None,
+            },
+            committed_by: match committed_by {
+                Ok(p) => Some(p),
+                Err(_) => None,
+            },
+            signature_status: match signature_status {
+                Ok(ss) => Some(ss),
+                Err(_) => None,
+            },
+            filename: path.to_string_lossy().into_owned().clone(),
+        }
+    }
+
+    /// creates a `PasswordEntry` by running git blame on the specified path
+    pub fn load_from_git(base: &path::PathBuf, path: &path::PathBuf, repo_opt: GitRepo) -> Result<PasswordEntry> {
         let (update_time, committed_by, signature_status) = read_git_meta_data(base, path, repo_opt.clone());
 
         Ok(PasswordEntry {
@@ -248,7 +271,7 @@ impl PasswordEntry {
 
         let mut passwords = Vec::<PasswordEntry>::new();
         for path in paths {
-            match PasswordEntry::new(&dir, &path?, repo_opt.clone()) {
+            match PasswordEntry::load_from_git(&dir, &path?, repo_opt.clone()) {
                 Ok(password) => passwords.push(password),
                 Err(e) => return Err(e),
             }
@@ -528,7 +551,7 @@ pub fn pull(repo_opt: GitRepo) -> Result<()> {
 pub struct Recipient {
     /// Human readable name of the person.
     pub name: String,
-    /// Machine readable identity, in the form of a gpg key.
+    /// Machine readable identity, in the form of a gpg key id.
     pub key_id: String,
 }
 
@@ -842,15 +865,75 @@ pub fn search(l: &PasswordList, query: &str) -> Result<Vec<PasswordEntry>> {
 
 /// Read the password store directory and populate the password list supplied.
 pub fn populate_password_list(passwords: &PasswordList, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<()> {
+    if (*repo_opt).as_ref().is_none() {
+        let dir = password_dir(password_store_dir)?;
+        let password_path_glob = dir.join("**/*.gpg");
+        let existing_iter = glob::glob(&password_path_glob.to_string_lossy())?;
+
+        (passwords.lock().unwrap()).clear();
+        for existing_file in existing_iter {
+            let pbuf = existing_file?;
+            (passwords.lock().unwrap()).push(PasswordEntry::load_from_git(&dir, &pbuf, repo_opt.clone())?);
+        }
+
+        return Ok(());
+    }
+
     let dir = password_dir(password_store_dir)?;
 
     let password_path_glob = dir.join("**/*.gpg");
     let existing_iter = glob::glob(&password_path_glob.to_string_lossy())?;
 
-    (passwords.lock().unwrap()).clear();
+    let mut files_to_consider: Vec<String> = vec![];
     for existing_file in existing_iter {
-        let pbuf = existing_file?;
-        (passwords.lock().unwrap()).push(PasswordEntry::new(&dir, &pbuf, repo_opt.clone())?);
+        let pbuf = format!("{}", existing_file?.display());
+        let filename = pbuf.trim_start_matches(format!("{}", dir.display()).as_str()).to_string();
+        files_to_consider.push(filename.trim_start_matches("/").to_string());
+    }
+
+    let repo_res = (*repo_opt).as_ref().unwrap().try_lock();
+    if repo_res.is_err() {
+        return Err(Error::GenericDyn(format!("{:?}", repo_res.err())))
+    }
+    let repo = repo_res.unwrap();
+
+    let mut walk = repo.revwalk()?;
+    walk.push(repo.head()?.target().unwrap())?;
+    let mut last_tree = repo.find_commit(repo.head()?.target().unwrap())?.tree()?;
+    for rev in walk {
+        let oid = rev?;
+
+        let commit = repo.find_commit(oid)?;
+        let tree = commit.tree()?;
+
+        let diff = repo.diff_tree_to_tree(Some(&last_tree), Some(&tree), None)?;
+
+        diff.foreach(&mut |delta: git2::DiffDelta, _f: f32| {
+            let entry_name = format!("{}", delta.new_file().path().unwrap().display());
+            &files_to_consider.retain(|filename| {
+                if *filename == entry_name {
+                    let time = commit.time();
+                    let time_return = Ok(Local.timestamp(time.seconds(), 0));
+
+                    let name_return: Result<String> = match commit.committer().name() {
+                        Some(s) => Ok(s.to_string()),
+                        None => Err(Error::Generic("missing committer name"))
+                    };
+
+                    let signature_return = verify_git_signature(&repo, &oid);
+
+                    let mut pbuf = dir.clone();
+                    pbuf.push(filename);
+
+                    (passwords.lock().unwrap()).push(PasswordEntry::new(&dir, &pbuf, time_return, name_return, signature_return));
+                    return false;
+                }
+                true
+            });
+            true
+        }, None, None, None)?;
+
+        last_tree = tree;
     }
 
     Ok(())
@@ -903,7 +986,7 @@ pub fn watch(repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Resu
                             if repo_res.is_ok() {
                                 repo_opt = Arc::new(Some(Mutex::new(repo_res.unwrap())));
                             }
-                            let p_e = PasswordEntry::new(&password_dir(password_store_dir).unwrap(), &p.clone(), repo_opt).unwrap();
+                            let p_e = PasswordEntry::load_from_git(&password_dir(password_store_dir).unwrap(), &p.clone(), repo_opt).unwrap();
                             if !(passwords.lock().unwrap()).iter().any(|p| p.path == p_e.path) {
                                 (passwords.lock().unwrap()).push(p_e.clone());
                             }
