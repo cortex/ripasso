@@ -240,7 +240,7 @@ fn create_save(s: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Optio
                 }
             }
 
-            match pass::PasswordEntry::new(&pass::password_dir(password_store_dir).unwrap(), &path_buf, repo_opt.clone()) {
+            match pass::PasswordEntry::load_from_git(&pass::password_dir(password_store_dir).unwrap(), &path_buf, repo_opt.clone()) {
                 Ok(e) => l.add_item(create_label(&e, col), e),
                 Err(_) => eprintln!("error")
             }
