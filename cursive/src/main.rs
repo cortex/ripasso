@@ -541,6 +541,10 @@ fn get_translation_catalog() -> gettext::Catalog {
     let locale = locale_config::Locale::current();
 
     let mut translation_locations = vec!["/usr/share/ripasso"];
+    let translation_input_path = option_env!("TRANSLATION_INPUT_PATH");
+    if translation_input_path.is_some() {
+        translation_locations.insert(0, translation_input_path.unwrap());
+    }
     if cfg!(debug_assertions) {
         translation_locations.insert(0, "./cursive/res");
     }
