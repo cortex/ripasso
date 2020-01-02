@@ -618,6 +618,18 @@ fn main() {
         repo_opt = Arc::new(Some(Mutex::new(repo_res.unwrap())));
     }
 
+    // verify that the git config is correct
+    if repo_opt.is_some() {
+        let config = git2::Config::open_default().unwrap();
+
+        let user_name = config.get_string("user.name");
+
+        if user_name.is_err() {
+            eprintln!("{}", CATALOG.gettext("You haven't configured you name and email in git, doing so will make cooperation with your team easier, you can do it like this:\ngit config --global user.name \"John Doe\"\ngit config --global user.email \"email@example.com\"\n\nAlso consider configuring git to sign your commits with GPG:\ngit config --global user.signingkey 3AA5C34371567BD2\ngit config --global commit.gpgsign true"));
+            process::exit(1);
+        }
+    }
+
     // Load and watch all the passwords in the background
     let (password_rx, passwords) = match pass::watch(repo_opt.clone(), password_store_dir.clone()) {
         Ok(t) => t,
