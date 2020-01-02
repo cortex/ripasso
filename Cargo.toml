@@ -29,10 +29,12 @@ criterion = "0.3.0"
 [workspace]
 
 members = [
-    "gtk", "qml", "cursive", "man"
+    "gtk", "qml", "cursive", "man", "qmetaobject"
 ]
 
 [[bench]]
 name = "library_benchmark"
 harness = false
 
+[profile.release]
+lto = true
