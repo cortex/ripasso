@@ -50,7 +50,6 @@ ApplicationWindow {
 
             onPressed: {
                 clickPos  = Qt.point(mouse.x,mouse.y)
-                console.log(searchInput.cursorDelegate.stop())
             }
 
 
@@ -390,9 +389,11 @@ Component{
         border.color: "#666"
         color: "#999"
         radius: 2
-        /*SequentialAnimation on opacity{
+        SequentialAnimation on opacity{
             id: cursorAnimation
             loops: Animation.Infinite
+            running: !maMainWindow.pressed
+
             PropertyAnimation {
                 easing.type: "OutQuad"
                 from: 0
@@ -405,7 +406,7 @@ Component{
                 to: 0
                 duration: 750
             }
-        }*/
+        }
     }
 }
     }
