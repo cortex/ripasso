@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-12-24 11:50+0100\n"
+"POT-Creation-Date: 2020-01-04 16:17+0100\n"
 "PO-Revision-Date: 2019-12-24 11:50+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -18,7 +18,7 @@ msgstr ""
 "X-Generator: Poedit 2.2.4\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: cursive/src/main.rs:475
+#: cursive/src/main.rs:482
 msgid ""
 "A password manager that uses the file format of the standard unix password "
 "manager 'pass', implemented in Rust. Ripasso reads $HOME/.password-store/ by "
@@ -30,11 +30,11 @@ msgstr ""
 "password-store/ som standard, ändra det genom att sätta miljövariabeln "
 "PASSWORD_STORE_DIR till ett nytt värde."
 
-#: cursive/src/main.rs:279
+#: cursive/src/main.rs:282
 msgid "Add new password"
 msgstr "Lägg till nytt lösenord"
 
-#: cursive/src/main.rs:347
+#: cursive/src/main.rs:350
 msgid "Added team member to password store"
 msgstr "Lade till mottagare till lösenordslistan"
 
@@ -46,12 +46,12 @@ msgstr "Skapa också ett git repository för de krypterade filerna?"
 msgid "Are you sure you want to delete the password?"
 msgstr "Är du säker på att du vill ta bort lösenordet?"
 
-#: cursive/src/main.rs:326
+#: cursive/src/main.rs:329
 msgid "Are you sure you want to remove this person?"
 msgstr "Är du säker på att vi vill ta bort den här personen?"
 
-#: cursive/src/main.rs:145 cursive/src/main.rs:289 cursive/src/main.rs:330
-#: cursive/src/main.rs:375 cursive/src/wizard.rs:119
+#: cursive/src/main.rs:145 cursive/src/main.rs:292 cursive/src/main.rs:333
+#: cursive/src/main.rs:380 cursive/src/wizard.rs:129
 msgid "Cancel"
 msgstr "Avbryt"
 
@@ -59,15 +59,15 @@ msgstr "Avbryt"
 msgid "Copied password to copy buffer for 40 seconds"
 msgstr "Kopierade lösenordet till urklippsbufferten i 40 sekunder"
 
-#: cursive/src/main.rs:699
+#: cursive/src/main.rs:750
 msgid "Copy (ctrl-y)"
 msgstr "Kopiera (ctrl-y)"
 
-#: cursive/src/wizard.rs:67 cursive/src/wizard.rs:82 cursive/src/wizard.rs:118
+#: cursive/src/wizard.rs:67 cursive/src/wizard.rs:86 cursive/src/wizard.rs:126
 msgid "Create"
 msgstr "Skapa"
 
-#: cursive/src/main.rs:700
+#: cursive/src/main.rs:751
 msgid "Create (ins) "
 msgstr "Skapa (ins) "
 
@@ -75,11 +75,11 @@ msgstr "Skapa (ins) "
 msgid "Created new password"
 msgstr "Skapade ett nytt lösenord"
 
-#: cursive/src/main.rs:706
+#: cursive/src/main.rs:757
 msgid "Delete (del)"
 msgstr "Ta bort (del)"
 
-#: cursive/src/main.rs:319
+#: cursive/src/main.rs:322
 msgid "Deleted team member from password store"
 msgstr "Tog bort gruppmedlemmen från lösenordslistan"
 
@@ -87,31 +87,31 @@ msgstr "Tog bort gruppmedlemmen från lösenordslistan"
 msgid "Error"
 msgstr "Fel"
 
-#: cursive/src/main.rs:689 cursive/src/wizard.rs:112
+#: cursive/src/main.rs:740 cursive/src/wizard.rs:120
 msgid "F1: Menu | "
 msgstr "F1: Meny | "
 
-#: cursive/src/main.rs:356
+#: cursive/src/main.rs:359
 msgid "GPG Key ID: "
 msgstr "GPG nyckelid: "
 
-#: cursive/src/main.rs:180 cursive/src/main.rs:280
+#: cursive/src/main.rs:180 cursive/src/main.rs:283
 msgid "Generate"
 msgstr "Generera"
 
-#: cursive/src/wizard.rs:71
+#: cursive/src/wizard.rs:73
 msgid "Git Init"
 msgstr "Git Init"
 
-#: cursive/src/main.rs:713
+#: cursive/src/main.rs:764
 msgid "Git Pull (ctrl-f)"
 msgstr "Git Pull (ctrl-f)"
 
-#: cursive/src/main.rs:716
+#: cursive/src/main.rs:767
 msgid "Git Push (ctrl-g)"
 msgstr "Git Push (ctrl-g)"
 
-#: cursive/src/wizard.rs:122
+#: cursive/src/wizard.rs:133
 msgid "Init"
 msgstr "Initialisera"
 
@@ -119,7 +119,7 @@ msgstr "Initialisera"
 msgid "Initialized password repo with Ripasso"
 msgstr "Initialiserade ett lösenordsrepository med Ripasso"
 
-#: cursive/src/wizard.rs:68
+#: cursive/src/wizard.rs:70
 msgid "No"
 msgstr "Nej"
 
@@ -127,11 +127,11 @@ msgstr "Nej"
 msgid "Ok"
 msgstr "Ok"
 
-#: cursive/src/main.rs:703
+#: cursive/src/main.rs:754
 msgid "Open (ctrl-o)"
 msgstr "Öppna (ctrl-o)"
 
-#: cursive/src/main.rs:697
+#: cursive/src/main.rs:748
 msgid "Operations"
 msgstr "Handlingar"
 
@@ -147,19 +147,19 @@ msgstr "Lösenord: "
 msgid "Path: "
 msgstr "Sökväg: "
 
-#: cursive/src/main.rs:511
+#: cursive/src/main.rs:518
 msgid "Pulled from remote git repository"
 msgstr "Hämtade från externt git repository"
 
-#: cursive/src/main.rs:485
+#: cursive/src/main.rs:492
 msgid "Pushed to remote git repository"
 msgstr "Laddade upp till externt git repository"
 
-#: cursive/src/main.rs:720
+#: cursive/src/main.rs:771
 msgid "Quit (esc)"
 msgstr "Avsluta (esc)"
 
-#: cursive/src/wizard.rs:79
+#: cursive/src/wizard.rs:83
 msgid ""
 "Ripasso uses GPG in order to encrypt the stored passwords.\n"
 "Please enter your GPG key ID"
@@ -167,15 +167,15 @@ msgstr ""
 "Ripasso använder gpg för att kryptera de sparade lösenorden.\n"
 "Vänligen skriv in din GPG nyckel identifierare"
 
-#: cursive/src/main.rs:170 cursive/src/main.rs:286
+#: cursive/src/main.rs:170 cursive/src/main.rs:289
 msgid "Save"
 msgstr "Spara"
 
-#: cursive/src/main.rs:403
+#: cursive/src/main.rs:408
 msgid "Team Members"
 msgstr "Gruppmedlemmar"
 
-#: cursive/src/main.rs:709
+#: cursive/src/main.rs:760
 msgid "Team Members (ctrl-v)"
 msgstr "Gruppmedlemmar (ctrl-v)"
 
@@ -183,27 +183,52 @@ msgstr "Gruppmedlemmar (ctrl-v)"
 msgid "Unable to write file"
 msgstr "Kan inte skriva till fil"
 
-#: cursive/src/wizard.rs:117
+#: cursive/src/main.rs:588 cursive/src/main.rs:593
+msgid "Unknown argument, usage: ripasso-cursive [-h|--help]"
+msgstr ""
+
+#: cursive/src/wizard.rs:125
+#, fuzzy
 msgid ""
 "Welcome to Ripasso, it seems like you don't have a password store directory "
-"yet would you like to create it?"
+"yet would you like to create it?\n"
+"It's created in $HOME/.password-store or where the PASSWORD_STORE_DIR "
+"environmental variable points."
 msgstr ""
 "Välkommen till Ripasso, det verkar som att du inte har en katalog för att "
 "spara de krypterade lösenorden ännu, vill du skapa den?"
 
-#: cursive/src/main.rs:139 cursive/src/main.rs:372
+#: cursive/src/main.rs:139 cursive/src/main.rs:330 cursive/src/main.rs:377
 msgid "Yes"
 msgstr "Ja"
 
-#: cursive/src/main.rs:410
+#: cursive/src/main.rs:606
+msgid ""
+"You have pointed ripasso towards an existing directory without an .gpg-id "
+"file, this doesn't seem like a password store directory, quiting."
+msgstr ""
+
+#: cursive/src/main.rs:628
+msgid ""
+"You haven't configured you name and email in git, doing so will make "
+"cooperation with your team easier, you can do it like this:\n"
+"git config --global user.name \"John Doe\"\n"
+"git config --global user.email \"email@example.com\"\n"
+"\n"
+"Also consider configuring git to sign your commits with GPG:\n"
+"git config --global user.signingkey 3AA5C34371567BD2\n"
+"git config --global commit.gpgsign true"
+msgstr ""
+
+#: cursive/src/main.rs:415
 msgid "del: Remove"
 msgstr "del: Fjärna"
 
-#: cursive/src/main.rs:409
+#: cursive/src/main.rs:414
 msgid "ins: Add | "
 msgstr "ins: Lägg till | "
 
-#: cursive/src/main.rs:436 cursive/src/main.rs:452
+#: cursive/src/main.rs:443 cursive/src/main.rs:459
 msgid "n/a"
 msgstr "n/a"
 
