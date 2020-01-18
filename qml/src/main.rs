@@ -33,7 +33,7 @@ use std::panic;
 
 // UI state
 pub struct UI {
-    all_passwords: Arc<Mutex<Vec<PasswordEntry>>>,
+    store: pass::PasswordStoreType,
     current_passwords: Vec<PasswordEntry>,
     password: Box<QPasswordView>,
     passwords: QPasswordEntry,
@@ -42,8 +42,7 @@ pub struct UI {
 impl UI {
     pub fn query(&mut self, query: String) -> Option<&QVariant> {
         println!("query");
-        let passwords = self.all_passwords.clone();
-        let matching = pass::search(&passwords, &String::from(query)).unwrap();
+        let matching = pass::search(&self.store, &String::from(query)).unwrap();
 
 
         // Save currently matched passwords
@@ -177,14 +176,14 @@ fn main() {
     let store = Arc::new(Mutex::new(pass::PasswordStore::new(password_store_dir.clone()).unwrap()));
 
     // Load and watch all the passwords in the background
-    let (_, passwords) = pass::watch(store).expect("error");
+    let _ = pass::watch(store.clone()).expect("error");
 
     // Set up all the UI stuff
     let mut engine = QmlEngine::new();
 
     let ui = QUI::new(
         UI {
-            all_passwords: passwords.clone(),
+            store: store.clone(),
             current_passwords: Vec::<PasswordEntry>::new(),
             passwords: QPasswordEntry::new(),
             password: QPasswordView::new(

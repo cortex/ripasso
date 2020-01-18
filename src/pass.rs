@@ -43,12 +43,6 @@ use git2::{Oid, Repository};
 type Result<T> = std::result::Result<T, Error>;
 
 /// The global state of all passwords are an instance of this type.
-pub type PasswordList = Arc<Mutex<Vec<PasswordEntry>>>;
-
-/// The type for how we handle git repositories
-pub type GitRepo = Arc<Option<Mutex<git2::Repository>>>;
-
-/// The global state of all passwords are an instance of this type.
 pub type PasswordStoreType = Arc<Mutex<PasswordStore>>;
 
 /// A enum that contains the different types of errors that the library returns as part of Result's.
@@ -137,7 +131,7 @@ pub enum SignatureStatus {
 pub struct PasswordStore {
     root: path::PathBuf,
     valid_gpg_signing_keys: Vec<String>,
-    passwords: Vec<PasswordEntry>,
+    pub passwords: Vec<PasswordEntry>,
     repo: Option<git2::Repository>
 }
 
@@ -225,6 +219,16 @@ impl PasswordStore {
         add_and_commit_internal(self.repo.as_ref().unwrap(), &vec![format!("{}.gpg", (*path_end).clone())], &message)?;
 
         return PasswordEntry::load_from_git(&self.root, &path, self.repo.as_ref().unwrap());
+    }
+
+    pub fn reload_password_list(&mut self) -> Result<()> {
+        let mut new_passwords = create_password_list(&self.repo, &self.root)?;
+
+        self.passwords.clear();
+
+        self.passwords.append(&mut new_passwords);
+
+        Ok(())
     }
 
     pub fn has_configured_username(&self) -> bool {
@@ -363,6 +367,7 @@ impl PasswordEntry {
         self.update_internal(secret, store.clone())?;
 
         {
+            eprintln!("lock 1");
             let store_res = (*store).try_lock();
             if store_res.is_err() {
                 return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
@@ -384,6 +389,7 @@ impl PasswordEntry {
         let res = Ok(std::fs::remove_file(&self.filename)?);
 
         {
+            eprintln!("lock 2");
             let store_res = (*store).try_lock();
             if store_res.is_err() {
                 return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
@@ -403,6 +409,7 @@ impl PasswordEntry {
     /// Returns a list of all password entries in the store.
     pub fn all_password_entries(store: PasswordStoreType) -> Result<Vec<PasswordEntry>> {
         let dir = {
+            eprintln!("lock 3");
             let store_res = (*store).try_lock();
             if store_res.is_err() {
                 return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
@@ -418,7 +425,9 @@ impl PasswordEntry {
 
         let mut passwords = Vec::<PasswordEntry>::new();
         for path in paths {
+            eprintln!("lock 4");
             if (*store).lock().unwrap().repo.is_some() {
+                eprintln!("lock 5");
                 match PasswordEntry::load_from_git(&dir, &path?, (*store).lock().unwrap().repo.as_ref().unwrap()) {
                     Ok(password) => passwords.push(password),
                     Err(e) => return Err(e),
@@ -444,6 +453,7 @@ impl PasswordEntry {
         }
         names.push(".gpg-id".to_string());
 
+        eprintln!("lock 6");
         if (*store).lock().unwrap().repo.is_none() {
             return Ok(());
         }
@@ -531,6 +541,7 @@ fn commit(repo: &git2::Repository, signature: &git2::Signature, message: &String
 
 /// Add a file to the store, and commit it to the supplied git repository.
 pub fn add_and_commit(store: PasswordStoreType, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
+    eprintln!("lock 7");
     let store_res = (*store).try_lock();
     if store_res.is_err() {
         return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
@@ -589,6 +600,7 @@ fn add_and_commit_internal(repo: &git2::Repository, paths: &Vec<String>, message
 
 /// Remove a file from the store, and commit the deletion to the supplied git repository.
 fn remove_and_commit(store: PasswordStoreType, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
+    eprintln!("lock 8");
     let store_res = (*store).try_lock();
     if store_res.is_err() {
         return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
@@ -623,6 +635,7 @@ fn remove_and_commit(store: PasswordStoreType, paths: &Vec<String>, message: &st
 
 /// Push your changes to the remote git repository.
 pub fn push(store: PasswordStoreType) -> Result<()> {
+    eprintln!("lock 9");
     let store_res = (*store).try_lock();
     if store_res.is_err() {
         return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
@@ -668,6 +681,7 @@ pub fn push(store: PasswordStoreType) -> Result<()> {
 
 /// Pull new changes from the remote git repository.
 pub fn pull(store: PasswordStoreType) -> Result<()> {
+    eprintln!("lock 10");
     let store_res = (*store).try_lock();
     if store_res.is_err() {
         return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
@@ -770,6 +784,7 @@ impl Recipient {
 
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
     pub fn all_recipients(store: PasswordStoreType) -> Result<Vec<Recipient>> {
+        eprintln!("lock 11");
         let store_res = (*store).try_lock();
         if store_res.is_err() {
             return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
@@ -813,6 +828,7 @@ impl Recipient {
     }
 
     fn write_recipients_file(recipients: &Vec<Recipient>, store: PasswordStoreType) -> Result<()> {
+        eprintln!("lock 12");
         let store_res = (*store).try_lock();
         if store_res.is_err() {
             return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
@@ -973,8 +989,9 @@ pub enum PasswordEvent {
 }
 
 /// Return a list of all passwords whose name contains `query`.
-pub fn search(l: &PasswordList, query: &str) -> Result<Vec<PasswordEntry>> {
-    let passwords = l.lock().unwrap();
+pub fn search(store: &PasswordStoreType, query: &str) -> Result<Vec<PasswordEntry>> {
+    eprintln!("lock 13");
+    let passwords = &(*store).lock().unwrap().passwords;
     fn normalized(s: &str) -> String {
         s.to_lowercase()
     };
@@ -985,87 +1002,7 @@ pub fn search(l: &PasswordList, query: &str) -> Result<Vec<PasswordEntry>> {
     Ok(matching.cloned().collect())
 }
 
-/// Read the password store directory and populate the password list supplied.
-pub fn populate_password_list(passwords: &PasswordList, store: PasswordStoreType) -> Result<()> {
-    let (dir, is_repo_none) = {
-        let store_res = (*store).try_lock();
-        if store_res.is_err() {
-            return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
-        }
-        let s = store_res.unwrap();
-
-        (s.root.clone(), s.repo.is_none())
-    };
-
-    if is_repo_none {
-        let password_path_glob = dir.join("**/*.gpg");
-        let existing_iter = glob::glob(&password_path_glob.to_string_lossy())?;
-
-        (passwords.lock().unwrap()).clear();
-        for existing_file in existing_iter {
-            let pbuf = existing_file?;
-            (passwords.lock().unwrap()).push(PasswordEntry::load_from_filesystem(&dir, &pbuf)?);
-        }
-
-        return Ok(());
-    }
-
-    let password_path_glob = dir.join("**/*.gpg");
-    let existing_iter = glob::glob(&password_path_glob.to_string_lossy())?;
-
-    let mut files_to_consider: Vec<String> = vec![];
-    for existing_file in existing_iter {
-        let pbuf = format!("{}", existing_file?.display());
-        let filename = pbuf.trim_start_matches(format!("{}", dir.display()).as_str()).to_string();
-        files_to_consider.push(filename.trim_start_matches("/").to_string());
-    }
-
-    let locked_store = (*store).lock().unwrap();
-    let repo = locked_store.repo.as_ref().unwrap();
-
-    let mut walk = repo.revwalk()?;
-    walk.push(repo.head()?.target().unwrap())?;
-    let mut last_tree = repo.find_commit(repo.head()?.target().unwrap())?.tree()?;
-    for rev in walk {
-        let oid = rev?;
-
-        let commit = repo.find_commit(oid)?;
-        let tree = commit.tree()?;
-
-        let diff = repo.diff_tree_to_tree(Some(&last_tree), Some(&tree), None)?;
-
-        diff.foreach(&mut |delta: git2::DiffDelta, _f: f32| {
-            let entry_name = format!("{}", delta.new_file().path().unwrap().display());
-            &files_to_consider.retain(|filename| {
-                if *filename == entry_name {
-                    let time = commit.time();
-                    let time_return = Ok(Local.timestamp(time.seconds(), 0));
-
-                    let name_return: Result<String> = match commit.committer().name() {
-                        Some(s) => Ok(s.to_string()),
-                        None => Err(Error::Generic("missing committer name"))
-                    };
-
-                    let signature_return = verify_git_signature(&repo, &oid);
-
-                    let mut pbuf = dir.clone();
-                    pbuf.push(filename);
-
-                    (passwords.lock().unwrap()).push(PasswordEntry::new(&dir, &pbuf, time_return, name_return, signature_return));
-                    return false;
-                }
-                true
-            });
-            true
-        }, None, None, None)?;
-
-        last_tree = tree;
-    }
-
-    Ok(())
-}
-
-/// Read the password store directory and populate the password list supplied.
+/// Read the password store directory and return a list of all the password files.
 pub fn create_password_list(repo_opt: &Option<git2::Repository>, root_dir: &path::PathBuf) -> Result<Vec<PasswordEntry>> {
     let mut passwords = vec![];
 
@@ -1142,12 +1079,18 @@ pub fn create_password_list(repo_opt: &Option<git2::Repository>, root_dir: &path
 }
 
 /// Subscribe to events, that happen when password files are added or removed
-pub fn watch(store: PasswordStoreType) -> Result<(Receiver<PasswordEvent>, PasswordList)> {
-    let store_res = (*store).try_lock();
-    if store_res.is_err() {
-        return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
-    }
-    let dir = store_res.unwrap().root.clone();
+pub fn watch(store: PasswordStoreType) -> Result<Receiver<PasswordEvent>> {
+    let (dir, passwords_out) = {
+        eprintln!("lock 14");
+        let store_res = (*store).try_lock();
+        if store_res.is_err() {
+            return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
+        }
+        let s = store_res.unwrap();
+
+        let passwords_out = Arc::new(Mutex::new(create_password_list(&s.repo, &s.root)?));
+        (s.root.clone(), passwords_out)
+    };
 
     let (watcher_tx, watcher_rx) = channel();
 
@@ -1157,10 +1100,7 @@ pub fn watch(store: PasswordStoreType) -> Result<(Receiver<PasswordEvent>, Passw
         Receiver<PasswordEvent>,
     ) = channel();
 
-    let passwords = Arc::new(Mutex::new(Vec::<PasswordEntry>::new()));
-    let passwords_out = passwords.clone();
-
-    populate_password_list(&passwords_out, store.clone())?;
+    let passwords = passwords_out.clone();
 
     thread::spawn(move || {
         info!("Starting thread");
@@ -1184,10 +1124,14 @@ pub fn watch(store: PasswordStoreType) -> Result<(Receiver<PasswordEvent>, Passw
                             }
 
                             let p_e = {
-                                if (*store).lock().unwrap().repo.is_none() {
-                                    PasswordEntry::load_from_filesystem(&store.lock().as_ref().unwrap().root, &p.clone()).unwrap()
+                                eprintln!("lock 15");
+                                let s = (*store).lock().unwrap();
+                                if s.repo.is_none() {
+                                    eprintln!("lock 16");
+                                    PasswordEntry::load_from_filesystem(&s.root, &p.clone()).unwrap()
                                 } else {
-                                    PasswordEntry::load_from_git(&store.lock().as_ref().unwrap().root, &p.clone(), (*store).lock().unwrap().repo.as_ref().unwrap()).unwrap()
+                                    eprintln!("lock 17");
+                                    PasswordEntry::load_from_git(&s.root, &p.clone(), s.repo.as_ref().unwrap()).unwrap()
                                 }
                             };
                             if !(passwords.lock().unwrap()).iter().any(|p| p.path == p_e.path) {
@@ -1217,7 +1161,7 @@ pub fn watch(store: PasswordStoreType) -> Result<(Receiver<PasswordEvent>, Passw
             }
         }
     });
-    Ok((event_rx, passwords_out))
+    Ok(event_rx)
 }
 
 fn to_name(base: &path::PathBuf, path: &path::PathBuf) -> String {

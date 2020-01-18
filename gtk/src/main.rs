@@ -37,7 +37,7 @@ fn main() {
     let store = Arc::new(Mutex::new(pass::PasswordStore::new(password_store_dir.clone()).unwrap()));
 
     // Load and watch all the passwords in the background
-    let (password_rx, passwords) = match pass::watch(store) {
+    let password_rx = match pass::watch(store.clone()) {
         Ok(t) => t,
         Err(e) => {
             eprintln!("Error: {:?}", e);
@@ -89,7 +89,7 @@ fn main() {
 
     GLOBAL.with(move |global| {
         *global.borrow_mut() =
-            Some((password_search, password_list, passwords));
+            Some((password_search, password_list, store));
     });
 
     window.show_all();
@@ -102,9 +102,9 @@ fn main() {
     gtk::main();
 }
 
-fn results(passwords: &pass::PasswordList, query: &str) -> ListStore {
+fn results(store: &pass::PasswordStoreType, query: &str) -> ListStore {
     let model = ListStore::new(&[String::static_type()]);
-    let filtered = pass::search(passwords, query).unwrap();
+    let filtered = pass::search(store, query).unwrap();
     for (i, p) in filtered.iter().enumerate() {
         model.insert_with_values(Some(i as u32), &[0], &[&p.name]);
     }
@@ -113,11 +113,11 @@ fn results(passwords: &pass::PasswordList, query: &str) -> ListStore {
 
 fn receive() -> glib::Continue {
     GLOBAL.with(|global| {
-        if let Some((ref password_search, ref password_list, ref passwords)) =
+        if let Some((ref password_search, ref password_list, ref store)) =
             *global.borrow()
         {
             let query = password_search.get_text().unwrap();
-            password_list.set_model(&results(&passwords, &query));
+            password_list.set_model(&results(&store, &query));
         }
     });
     glib::Continue(false)
@@ -126,6 +126,6 @@ fn receive() -> glib::Continue {
 thread_local!(
     static GLOBAL: RefCell<Option<(gtk::SearchEntry,
         TreeView,
-        pass::PasswordList,
+        pass::PasswordStoreType,
     )>> = RefCell::new(None)
 );

@@ -443,11 +443,11 @@ fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
             );
 }
 
-fn search(passwords: &pass::PasswordList, ui: &mut Cursive, query: &str) -> () {
+fn search(store: &PasswordStoreType, ui: &mut Cursive, query: &str) -> () {
     let col = ui.screen_size().x;
     let mut l = ui.find_id::<SelectView<pass::PasswordEntry>>("results").unwrap();
 
-    let r_res = pass::search(&passwords, &String::from(query));
+    let r_res = pass::search(&store, &String::from(query));
     if r_res.is_err() {
         helpers::errorbox(ui, &r_res.err().unwrap());
         return ();
@@ -475,14 +475,14 @@ fn git_push(ui: &mut Cursive, store: PasswordStoreType) {
     }
 }
 
-fn git_pull(ui: &mut Cursive, passwords: pass::PasswordList, store: PasswordStoreType) {
+fn git_pull(ui: &mut Cursive, store: PasswordStoreType) {
     let pull_res = pass::pull(store.clone());
 
     if pull_res.is_err() {
         helpers::errorbox(ui, &pull_res.unwrap_err());
     }
 
-    let res = pass::populate_password_list(&passwords, store);
+    let res = (*store).lock().unwrap().reload_password_list();
     if res.is_err() {
         helpers::errorbox(ui, &res.unwrap_err());
     }
@@ -491,7 +491,7 @@ fn git_pull(ui: &mut Cursive, passwords: pass::PasswordList, store: PasswordStor
 
     ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
         l.clear();
-        for p in passwords.lock().unwrap().iter() {
+        for p in (*store).lock().unwrap().passwords.iter() {
             l.add_item(create_label(&p, col), p.clone());
         }
     });
@@ -500,7 +500,7 @@ fn git_pull(ui: &mut Cursive, passwords: pass::PasswordList, store: PasswordStor
     });
 }
 
-fn do_delete_last_word(ui: &mut Cursive, passwords: pass::PasswordList) -> () {
+fn do_delete_last_word(ui: &mut Cursive, store: PasswordStoreType) -> () {
     ui.call_on_id("searchbox", |e: &mut EditView| {
         let s = e.get_content();
         let last_space = s.trim().rfind(" ");
@@ -515,7 +515,7 @@ fn do_delete_last_word(ui: &mut Cursive, passwords: pass::PasswordList) -> () {
         };
     });
     let search_text = ui.find_id::<EditView>("searchbox").unwrap().get_content();
-    search(&passwords, ui, &search_text);
+    search(&store, ui, &search_text);
 }
 
 fn get_translation_catalog() -> gettext::Catalog {
@@ -603,7 +603,7 @@ fn main() {
     }
 
     // Load and watch all the passwords in the background
-    let (password_rx, passwords) = match pass::watch(store.clone()) {
+    let password_rx = match pass::watch(store.clone()) {
         Ok(t) => t,
         Err(e) => {
             eprintln!("Error {:?}", e);
@@ -640,6 +640,8 @@ fn main() {
     let store11 = store.clone();
     let store12 = store.clone();
     let store13 = store.clone();
+    let store14 = store.clone();
+    let store15 = store.clone();
 
     ui.add_global_callback(Event::CtrlChar('y'), copy);
     ui.add_global_callback(Key::Enter, copy);
@@ -659,18 +661,16 @@ fn main() {
     });
 
     // Query editing
-    let passwords_clone = std::sync::Arc::clone(&passwords);
     ui.add_global_callback(Event::CtrlChar('w'), move |ui: &mut Cursive| {
-        do_delete_last_word(ui, passwords_clone.clone());
+        do_delete_last_word(ui, store14.clone());
     });
 
     // Editing
     ui.add_global_callback(Event::CtrlChar('o'), move |ui: &mut Cursive| {
         open(ui, store4.clone())
     });
-    let passwords_git_pull_clone = std::sync::Arc::clone(&passwords);
     ui.add_global_callback(Event::CtrlChar('f'), move |ui: &mut Cursive| {
-        git_pull(ui, passwords_git_pull_clone.clone(), store5.clone())
+        git_pull(ui, store5.clone())
     });
     ui.add_global_callback(Event::CtrlChar('g'), move |ui: &mut Cursive| {
         git_push(ui, store6.clone())
@@ -682,10 +682,9 @@ fn main() {
     ui.add_global_callback(Event::Key(cursive::event::Key::Esc), |s| s.quit());
 
     ui.load_toml(include_str!("../res/style.toml")).unwrap();
-    let passwords_clone = std::sync::Arc::clone(&passwords);
     let searchbox = EditView::new()
         .on_edit(move |ui: &mut cursive::Cursive, query, _| {
-            search(&passwords_clone, ui, query)
+            search(&store15, ui, query)
         }).with_id("searchbox")
         .fixed_width(72);
 
@@ -715,7 +714,6 @@ fn main() {
             ),
     );
 
-    let passwords_git_pull_clone2 = std::sync::Arc::clone(&passwords);
     ui.menubar()
         .add_subtree(CATALOG.gettext("Operations"),
                      MenuTree::new()
@@ -734,7 +732,7 @@ fn main() {
                          })
                          .delimiter()
                          .leaf(CATALOG.gettext("Git Pull (ctrl-f)"), move |ui: &mut Cursive| {
-                             git_pull(ui, passwords_git_pull_clone2.clone(), store12.clone())
+                             git_pull(ui, store12.clone())
                          })
                          .leaf(CATALOG.gettext("Git Push (ctrl-g)"), move |ui: &mut Cursive| {
                              git_push(ui, store13.clone())
@@ -747,7 +745,7 @@ fn main() {
     // This construction is to make sure that the password list is populated when the program starts
     // it would be better to signal this somehow from the library, but that got tricky
     thread::sleep(time::Duration::from_millis(200));
-    search(&passwords, &mut ui, "");
+    search(&store, &mut ui, "");
 
     ui.run();
 }
