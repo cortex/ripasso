@@ -57,7 +57,7 @@ fn create_git_repo(ui: &mut Cursive, password_store_dir: Arc<Option<String>>) {
 }
 
 fn do_create(ui: &mut Cursive, password_store_dir: Arc<Option<String>>) {
-    let l = ui.find_id::<EditView>("initial_key_id").unwrap();
+    let l = ui.find_name::<EditView>("initial_key_id").unwrap();
     let key_id = (*l.get_content()).clone();
     let mut pass_home = pass::password_dir_raw(password_store_dir.clone());
     let create_res = std::fs::create_dir_all(&pass_home);
@@ -86,7 +86,7 @@ fn create_store(ui: &mut Cursive, password_store_dir: Arc<Option<String>>) {
 
     let d2 = Dialog::around(LinearLayout::new(Orientation::Vertical)
         .child(TextView::new(super::CATALOG.gettext("Ripasso uses GPG in order to encrypt the stored passwords.\nPlease enter your GPG key ID")))
-        .child(EditView::new().with_id("initial_key_id"))
+        .child(EditView::new().with_name("initial_key_id"))
     )
         .button(super::CATALOG.gettext("Create"), move |ui: &mut Cursive| {
             do_create(ui, password_store_dir.clone());
@@ -106,7 +106,7 @@ pub fn show_init_menu(password_store_dir: Arc<Option<String>>) {
     ui.load_toml(include_str!("../res/style.toml")).unwrap();
 
     let results = SelectView::<pass::PasswordEntry>::new()
-        .with_id("results")
+        .with_name("results")
         .full_height();
 
     let searchbox = EditView::new().fixed_width(72);
