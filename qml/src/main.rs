@@ -174,10 +174,10 @@ fn main() {
         Err(_) => None
     });
 
-    let repo_opt = Arc::new(Some(Mutex::new(git2::Repository::open(pass::password_dir(password_store_dir.clone()).unwrap()).unwrap())));
+    let store = Arc::new(Mutex::new(pass::PasswordStore::new(password_store_dir.clone()).unwrap()));
 
     // Load and watch all the passwords in the background
-    let (_, passwords) = pass::watch(repo_opt.clone(), password_store_dir).expect("error");
+    let (_, passwords) = pass::watch(store).expect("error");
 
     // Set up all the UI stuff
     let mut engine = QmlEngine::new();

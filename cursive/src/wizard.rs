@@ -39,14 +39,19 @@ fn create_git_repo(ui: &mut Cursive, password_store_dir: Arc<Option<String>>) {
     if init_res.is_err() {
         helpers::errorbox(ui, &init_res.err().unwrap());
     } else {
-        let repo = git2::Repository::open(&pass::password_dir(password_store_dir).unwrap()).unwrap();
         let message = super::CATALOG.gettext("Initialized password repo with Ripasso");
-        let commit_res = pass::add_and_commit(Arc::new(Some(Mutex::new(repo))), &vec![".gpg-id".to_string()], &message);
-
-        if commit_res.is_err() {
-            helpers::errorbox(ui, &commit_res.err().unwrap());
+        let store_res = pass::PasswordStore::new(password_store_dir);
+        if store_res.is_err() {
+            helpers::errorbox(ui, &store_res.err().unwrap());
         } else {
-            ui.quit();
+            let store = Arc::new(Mutex::new(store_res.unwrap()));
+            let commit_res = pass::add_and_commit(store, &vec![".gpg-id".to_string()], &message);
+
+            if commit_res.is_err() {
+                helpers::errorbox(ui, &commit_res.err().unwrap());
+            } else {
+                ui.quit();
+            }
         }
     }
 }

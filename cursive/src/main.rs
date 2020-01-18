@@ -34,8 +34,7 @@ extern crate clipboard;
 use self::clipboard::{ClipboardContext, ClipboardProvider};
 
 use ripasso::pass;
-use ripasso::pass::SignatureStatus;
-use ripasso::pass::GitRepo;
+use ripasso::pass::{SignatureStatus, PasswordStore, PasswordStoreType};
 
 use std::process;
 use std::{thread, time};
@@ -110,7 +109,7 @@ fn copy(ui: &mut Cursive) -> () {
     });
 }
 
-fn do_delete(ui: &mut Cursive, repo_opt: GitRepo) -> () {
+fn do_delete(ui: &mut Cursive, store: PasswordStoreType) -> () {
     ui.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
         let sel = l.selection();
 
@@ -120,7 +119,7 @@ fn do_delete(ui: &mut Cursive, repo_opt: GitRepo) -> () {
 
         let sel = sel.unwrap();
 
-        let r = sel.delete_file(repo_opt);
+        let r = sel.delete_file(store);
 
         if r.is_err() {
             return;
@@ -133,11 +132,11 @@ fn do_delete(ui: &mut Cursive, repo_opt: GitRepo) -> () {
     ui.pop_layer();
 }
 
-fn delete(ui: &mut Cursive, repo_opt: GitRepo) -> () {
+fn delete(ui: &mut Cursive, store: PasswordStoreType) -> () {
     ui.add_layer(CircularFocus::wrap_tab(
     Dialog::around(TextView::new(CATALOG.gettext("Are you sure you want to delete the password?")))
         .button(CATALOG.gettext("Yes"), move |ui: &mut Cursive| {
-            do_delete(ui, repo_opt.clone());
+            do_delete(ui, store.clone());
             ui.call_on_id("status_bar", |l: &mut TextView| {
                 l.set_content(CATALOG.gettext("Password deleted"));
             });
@@ -145,7 +144,7 @@ fn delete(ui: &mut Cursive, repo_opt: GitRepo) -> () {
         .dismiss_button(CATALOG.gettext("Cancel"))));
 }
 
-fn open(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> () {
+fn open(ui: &mut Cursive, store: PasswordStoreType) -> () {
     let password_entry_option: Option<Option<std::rc::Rc<ripasso::pass::PasswordEntry>>> = ui
         .call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
             l.selection()
@@ -172,7 +171,7 @@ fn open(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Option<Stri
                     .call_on_id("editbox", |e: &mut TextArea| {
                         e.get_content().to_string()
                     }).unwrap();
-                let r = password_entry.update(new_password, repo_opt.clone(), password_store_dir.clone());
+                let r = password_entry.update(new_password, store.clone());
                 if r.is_err() {
                     helpers::errorbox(s, &r.unwrap_err())
                 }
@@ -201,7 +200,7 @@ fn get_value_from_input(s: &mut Cursive, input_name: &str) -> Option<std::rc::Rc
     return password;
 }
 
-fn create_save(s: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> () {
+fn create_save(s: &mut Cursive, store: PasswordStoreType) -> () {
     let password = get_value_from_input(s, "new_password_input");
     if password.is_none() {
         return;
@@ -220,30 +219,15 @@ fn create_save(s: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Optio
         return;
     }
 
-    let res = pass::new_password_file(path.clone(), password, repo_opt.clone(), password_store_dir.clone());
+    let res = (*store).lock().unwrap().new_password_file(path.clone(), password);
 
     let col = s.screen_size().x;
     if res.is_err() {
         helpers::errorbox(s, &res.err().unwrap())
     } else {
         s.call_on_id("results", |l: &mut SelectView<pass::PasswordEntry>| {
-            let mut path_buf: std::path::PathBuf = pass::password_dir(password_store_dir.clone()).unwrap();
-
-            let path_deref = (*path).clone();
-            let path_iter = &mut path_deref.split("/").peekable();
-
-            while let Some(p) = path_iter.next() {
-                if path_iter.peek().is_some() {
-                    path_buf.push(p);
-                } else {
-                    path_buf.push(format!("{}.gpg", p));
-                }
-            }
-
-            match pass::PasswordEntry::load_from_git(&pass::password_dir(password_store_dir).unwrap(), &path_buf, repo_opt.clone()) {
-                Ok(e) => l.add_item(create_label(&e, col), e),
-                Err(_) => eprintln!("error")
-            }
+            let e = res.unwrap();
+            l.add_item(create_label(&e, col), e);
         });
 
         s.pop_layer();
@@ -254,7 +238,7 @@ fn create_save(s: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Optio
     }
 }
 
-fn create(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> () {
+fn create(ui: &mut Cursive, store: PasswordStoreType) -> () {
     let mut fields = LinearLayout::vertical();
     let mut path_fields = LinearLayout::horizontal();
     let mut password_fields = LinearLayout::horizontal();
@@ -274,8 +258,7 @@ fn create(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Option<St
     fields.add_child(path_fields);
     fields.add_child(password_fields);
 
-    let repo_opt2 = repo_opt.clone();
-    let password_store_dir2 = password_store_dir.clone();
+    let store2 = store.clone();
 
     let d =
         Dialog::around(fields)
@@ -287,7 +270,7 @@ fn create(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Option<St
                 });
             })
             .button(CATALOG.gettext("Save"), move |ui: &mut Cursive| {
-                create_save(ui, repo_opt.clone(), password_store_dir.clone())
+                create_save(ui, store.clone())
             })
             .dismiss_button(CATALOG.gettext("Cancel"));
 
@@ -296,13 +279,13 @@ fn create(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Option<St
             s.pop_layer();
         })
         .on_event(Key::Enter, move |ui: &mut Cursive| {
-            create_save(ui, repo_opt2.clone(), password_store_dir2.clone())
+            create_save(ui, store2.clone())
         });
 
     ui.add_layer(ev);
 }
 
-fn delete_recipient(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> () {
+fn delete_recipient(ui: &mut Cursive, store: PasswordStoreType) -> () {
     let mut l = ui.find_id::<SelectView<pass::Recipient>>("recipients").unwrap();
     let sel = l.selection();
 
@@ -310,7 +293,7 @@ fn delete_recipient(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc
         return;
     }
 
-    let r = ripasso::pass::Recipient::remove_recipient_from_file(&sel.unwrap(), repo_opt, password_store_dir);
+    let r = ripasso::pass::Recipient::remove_recipient_from_file(&sel.unwrap(), store);
 
     if r.is_err() {
         helpers::errorbox(ui, &r.unwrap_err());
@@ -324,16 +307,16 @@ fn delete_recipient(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc
     }
 }
 
-fn delete_recipient_verification(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> () {
+fn delete_recipient_verification(ui: &mut Cursive, store: PasswordStoreType) -> () {
     ui.add_layer(CircularFocus::wrap_tab(
         Dialog::around(TextView::new(CATALOG.gettext("Are you sure you want to remove this person?")))
             .button(CATALOG.gettext("Yes"), move |ui: &mut Cursive| {
-                delete_recipient(ui, repo_opt.clone(), password_store_dir.clone())
+                delete_recipient(ui, store.clone())
             })
             .dismiss_button(CATALOG.gettext("Cancel"))));
 }
 
-fn add_recipient(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> () {
+fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) -> () {
     let l = &*get_value_from_input(ui, "key_id_input").unwrap();
 
     let recipient_result = pass::Recipient::new(l.clone());
@@ -341,7 +324,7 @@ fn add_recipient(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Op
     if recipient_result.is_err() {
         helpers::errorbox(ui, &recipient_result.err().unwrap());
     } else {
-        let res = pass::Recipient::add_recipient_to_file(&recipient_result.unwrap(), repo_opt, password_store_dir.clone());
+        let res = pass::Recipient::add_recipient_to_file(&recipient_result.unwrap(), store.clone());
         if res.is_err() {
             helpers::errorbox(ui, &res.unwrap_err());
         } else {
@@ -353,21 +336,20 @@ fn add_recipient(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Op
     }
 }
 
-fn add_recipient_dialog(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> () {
+fn add_recipient_dialog(ui: &mut Cursive, store: PasswordStoreType) -> () {
     let mut recipient_fields = LinearLayout::horizontal();
 
     recipient_fields.add_child(TextView::new(CATALOG.gettext("GPG Key ID: "))
         .with_id("key_id")
         .fixed_size((16, 1)));
 
-    let repo_opt2 = repo_opt.clone();
-    let password_store_dir2 = password_store_dir.clone();
+    let store2 = store.clone();
 
     let gpg_key_edit_view = OnEventView::new(EditView::new()
         .with_id("key_id_input")
         .fixed_size((50, 1)))
         .on_event(Key::Enter, move |ui: &mut Cursive| {
-            add_recipient(ui, repo_opt.clone(), password_store_dir.clone())
+            add_recipient(ui, store.clone())
         });
 
     recipient_fields.add_child(gpg_key_edit_view);
@@ -375,7 +357,7 @@ fn add_recipient_dialog(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir:
     let cf = CircularFocus::wrap_tab(
         Dialog::around(recipient_fields)
             .button(CATALOG.gettext("Yes"), move |ui: &mut Cursive| {
-                add_recipient(ui, repo_opt2.clone(), password_store_dir2.clone())
+                add_recipient(ui, store2.clone())
             })
             .dismiss_button(CATALOG.gettext("Cancel")));
 
@@ -387,8 +369,8 @@ fn add_recipient_dialog(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir:
     ui.add_layer(ev);
 }
 
-fn view_recipients(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> () {
-    let recipients_res : Result<Vec<ripasso::pass::Recipient>, pass::Error> = ripasso::pass::Recipient::all_recipients(password_store_dir.clone());
+fn view_recipients(ui: &mut Cursive, store: PasswordStoreType) -> () {
+    let recipients_res : Result<Vec<ripasso::pass::Recipient>, pass::Error> = ripasso::pass::Recipient::all_recipients(store.clone());
 
     if recipients_res.is_err() {
         helpers::errorbox(ui, &recipients_res.err().unwrap());
@@ -414,15 +396,14 @@ fn view_recipients(ui: &mut Cursive, repo_opt: GitRepo, password_store_dir: Arc<
             .child(TextView::new(CATALOG.gettext("ins: Add | ")))
             .child(TextView::new(CATALOG.gettext("del: Remove"))));
 
-    let repo_opt2 = repo_opt.clone();
-    let password_store_dir2 = password_store_dir.clone();
+    let store2 = store.clone();
 
     let recipients_event = OnEventView::new(ll)
         .on_event(Key::Del, move |ui: &mut Cursive| {
-            delete_recipient_verification(ui, repo_opt.clone(), password_store_dir.clone())
+            delete_recipient_verification(ui, store.clone())
         })
         .on_event(Key::Ins, move |ui: &mut Cursive| {
-            add_recipient_dialog(ui, repo_opt2.clone(), password_store_dir2.clone())
+            add_recipient_dialog(ui, store2.clone())
         })
         .on_event(Key::Esc, |s| {
             s.pop_layer();
@@ -482,8 +463,8 @@ fn help() {
     println!("{}", CATALOG.gettext("A password manager that uses the file format of the standard unix password manager 'pass', implemented in Rust. Ripasso reads $HOME/.password-store/ by default, override this by setting the PASSWORD_STORE_DIR environmental variable."));
 }
 
-fn git_push(ui: &mut Cursive, repo_opt: GitRepo) {
-    let res = pass::push(repo_opt);
+fn git_push(ui: &mut Cursive, store: PasswordStoreType) {
+    let res = pass::push(store);
 
     if res.is_err() {
         helpers::errorbox(ui, &res.unwrap_err());
@@ -494,14 +475,14 @@ fn git_push(ui: &mut Cursive, repo_opt: GitRepo) {
     }
 }
 
-fn git_pull(ui: &mut Cursive, passwords: pass::PasswordList, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) {
-    let pull_res = pass::pull(repo_opt.clone());
+fn git_pull(ui: &mut Cursive, passwords: pass::PasswordList, store: PasswordStoreType) {
+    let pull_res = pass::pull(store.clone());
 
     if pull_res.is_err() {
         helpers::errorbox(ui, &pull_res.unwrap_err());
     }
 
-    let res = pass::populate_password_list(&passwords, repo_opt, password_store_dir);
+    let res = pass::populate_password_list(&passwords, store);
     if res.is_err() {
         helpers::errorbox(ui, &res.unwrap_err());
     }
@@ -612,26 +593,17 @@ fn main() {
         eprintln!("Error {:?}", pdir_res.err().unwrap());
         process::exit(1);
     }
-    let repo_res = git2::Repository::open(pdir_res.unwrap());
-    let mut repo_opt: GitRepo = Arc::new(None::<Mutex<git2::Repository>>);
-    if repo_res.is_ok() {
-        repo_opt = Arc::new(Some(Mutex::new(repo_res.unwrap())));
-    }
+
+    let store = Arc::new(Mutex::new(PasswordStore::new(password_store_dir.clone()).unwrap()));
 
     // verify that the git config is correct
-    if repo_opt.is_some() {
-        let config = git2::Config::open_default().unwrap();
-
-        let user_name = config.get_string("user.name");
-
-        if user_name.is_err() {
-            eprintln!("{}", CATALOG.gettext("You haven't configured you name and email in git, doing so will make cooperation with your team easier, you can do it like this:\ngit config --global user.name \"John Doe\"\ngit config --global user.email \"email@example.com\"\n\nAlso consider configuring git to sign your commits with GPG:\ngit config --global user.signingkey 3AA5C34371567BD2\ngit config --global commit.gpgsign true"));
-            process::exit(1);
-        }
+    if !(*store).lock().unwrap().has_configured_username() {
+        eprintln!("{}", CATALOG.gettext("You haven't configured you name and email in git, doing so will make cooperation with your team easier, you can do it like this:\ngit config --global user.name \"John Doe\"\ngit config --global user.email \"email@example.com\"\n\nAlso consider configuring git to sign your commits with GPG:\ngit config --global user.signingkey 3AA5C34371567BD2\ngit config --global commit.gpgsign true"));
+        process::exit(1);
     }
 
     // Load and watch all the passwords in the background
-    let (password_rx, passwords) = match pass::watch(repo_opt.clone(), password_store_dir.clone()) {
+    let (password_rx, passwords) = match pass::watch(store.clone()) {
         Ok(t) => t,
         Err(e) => {
             eprintln!("Error {:?}", e);
@@ -656,23 +628,23 @@ fn main() {
         return;
     }
 
-    let (repo_opt2, password_store_dir2) = (repo_opt.clone(), password_store_dir.clone());
-    let (repo_opt3, password_store_dir3) = (repo_opt.clone(), password_store_dir.clone());
-    let (repo_opt4, password_store_dir4) = (repo_opt.clone(), password_store_dir.clone());
-    let (repo_opt5, password_store_dir5) = (repo_opt.clone(), password_store_dir.clone());
-    let (repo_opt6, password_store_dir6) = (repo_opt.clone(), password_store_dir.clone());
-    let (repo_opt7, password_store_dir7) = (repo_opt.clone(), password_store_dir.clone());
-    let (repo_opt8, password_store_dir8) = (repo_opt.clone(), password_store_dir.clone());
-    let (repo_opt9, password_store_dir9) = (repo_opt.clone(), password_store_dir.clone());
-    let repo_opt10 = repo_opt.clone();
-    let repo_opt11 = repo_opt.clone();
-    let repo_opt12 = repo_opt.clone();
-    let repo_opt13 = repo_opt.clone();
+    let store2 = store.clone();
+    let store3 = store.clone();
+    let store4 = store.clone();
+    let store5 = store.clone();
+    let store6 = store.clone();
+    let store7 = store.clone();
+    let store8 = store.clone();
+    let store9 = store.clone();
+    let store10 = store.clone();
+    let store11 = store.clone();
+    let store12 = store.clone();
+    let store13 = store.clone();
 
     ui.add_global_callback(Event::CtrlChar('y'), copy);
     ui.add_global_callback(Key::Enter, copy);
     ui.add_global_callback(Key::Del, move |ui: &mut Cursive| {
-        delete(ui, repo_opt2.clone())
+        delete(ui, store2.clone())
     });
 
     // Movement
@@ -683,7 +655,7 @@ fn main() {
 
     // View list of persons that have access
     ui.add_global_callback(Event::CtrlChar('v'), move |ui: &mut Cursive| {
-        view_recipients(ui, repo_opt3.clone(), password_store_dir2.clone())
+        view_recipients(ui, store3.clone())
     });
 
     // Query editing
@@ -694,17 +666,17 @@ fn main() {
 
     // Editing
     ui.add_global_callback(Event::CtrlChar('o'), move |ui: &mut Cursive| {
-        open(ui, repo_opt4.clone(), password_store_dir3.clone())
+        open(ui, store4.clone())
     });
     let passwords_git_pull_clone = std::sync::Arc::clone(&passwords);
     ui.add_global_callback(Event::CtrlChar('f'), move |ui: &mut Cursive| {
-        git_pull(ui, passwords_git_pull_clone.clone(), repo_opt5.clone(), password_store_dir4.clone())
+        git_pull(ui, passwords_git_pull_clone.clone(), store5.clone())
     });
     ui.add_global_callback(Event::CtrlChar('g'), move |ui: &mut Cursive| {
-        git_push(ui, repo_opt6.clone())
+        git_push(ui, store6.clone())
     });
     ui.add_global_callback(Event::Key(cursive::event::Key::Ins), move |ui: &mut Cursive| {
-        create(ui, repo_opt7.clone(), password_store_dir5.clone())
+        create(ui, store7.clone())
     });
 
     ui.add_global_callback(Event::Key(cursive::event::Key::Esc), |s| s.quit());
@@ -749,23 +721,23 @@ fn main() {
                      MenuTree::new()
                          .leaf(CATALOG.gettext("Copy (ctrl-y)"), copy)
                          .leaf(CATALOG.gettext("Create (ins) "), move |ui: &mut Cursive| {
-                             create(ui, repo_opt8.clone(), password_store_dir6.clone())
+                             create(ui, store8.clone())
                          })
                          .leaf(CATALOG.gettext("Open (ctrl-o)"), move |ui: &mut Cursive| {
-                             open(ui, repo_opt9.clone(), password_store_dir7.clone())
+                             open(ui, store9.clone())
                          })
                          .leaf(CATALOG.gettext("Delete (del)"), move |ui: &mut Cursive| {
-                             delete(ui, repo_opt10.clone())
+                             delete(ui, store10.clone())
                          })
                          .leaf(CATALOG.gettext("Team Members (ctrl-v)"), move |ui: &mut Cursive| {
-                             view_recipients(ui, repo_opt11.clone(), password_store_dir8.clone())
+                             view_recipients(ui, store11.clone())
                          })
                          .delimiter()
                          .leaf(CATALOG.gettext("Git Pull (ctrl-f)"), move |ui: &mut Cursive| {
-                             git_pull(ui, passwords_git_pull_clone2.clone(), repo_opt12.clone(), password_store_dir9.clone())
+                             git_pull(ui, passwords_git_pull_clone2.clone(), store12.clone())
                          })
                          .leaf(CATALOG.gettext("Git Push (ctrl-g)"), move |ui: &mut Cursive| {
-                             git_push(ui, repo_opt13.clone())
+                             git_push(ui, store13.clone())
                          })
                          .delimiter()
                          .leaf(CATALOG.gettext("Quit (esc)"), |s| s.quit()));

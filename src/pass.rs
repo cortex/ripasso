@@ -48,6 +48,9 @@ pub type PasswordList = Arc<Mutex<Vec<PasswordEntry>>>;
 /// The type for how we handle git repositories
 pub type GitRepo = Arc<Option<Mutex<git2::Repository>>>;
 
+/// The global state of all passwords are an instance of this type.
+pub type PasswordStoreType = Arc<Mutex<PasswordStore>>;
+
 /// A enum that contains the different types of errors that the library returns as part of Result's.
 #[derive(Debug)]
 pub enum Error {
@@ -130,6 +133,116 @@ pub enum SignatureStatus {
     BadSignature
 }
 
+///
+pub struct PasswordStore {
+    root: path::PathBuf,
+    valid_gpg_signing_keys: Vec<String>,
+    passwords: Vec<PasswordEntry>,
+    repo: Option<git2::Repository>
+}
+
+impl PasswordStore {
+    /// Determine password directory
+    pub fn new(password_store_dir: Arc<Option<String>>) -> Result<PasswordStore> {
+        let pass_home = password_dir_raw(password_store_dir);
+        if !pass_home.exists() {
+            return Err(Error::Generic("failed to locate password directory"));
+        }
+
+        let repo_res = git2::Repository::open(pass_home.to_path_buf().clone());
+        let mut repo_opt: Option<git2::Repository> = None::<git2::Repository>;
+        if repo_res.is_ok() {
+            repo_opt = Some(repo_res.unwrap());
+        }
+
+        let all_passwords = create_password_list(&repo_opt, &pass_home)?;
+
+        return Ok(PasswordStore {
+            root: pass_home.to_path_buf(),
+            valid_gpg_signing_keys: vec![],
+            passwords: all_passwords,
+            repo: repo_opt
+        })
+    }
+
+    /// Creates a new password file in the store.
+    pub fn new_password_file(&mut self, path_end: std::rc::Rc<String>, content: std::rc::Rc<String>) -> Result<PasswordEntry> {
+        let mut path = self.root.clone();
+
+        let c_path = std::fs::canonicalize(path.as_path())?;
+
+        let path_deref = (*path_end).clone();
+        let path_iter = &mut path_deref.split("/").peekable();
+
+        while let Some(p) = path_iter.next() {
+            if path_iter.peek().is_some() {
+                path.push(p);
+                let c_file = std::fs::canonicalize(path.as_path())?;
+                if !c_file.starts_with(c_path.as_path()) {
+                    return Err(Error::Generic("trying to write outside of password store directory"));
+                }
+                if !path.exists() {
+                    std::fs::create_dir(&path)?;
+                }
+            } else {
+                path.push(format!("{}.gpg", p));
+            }
+        }
+
+        if path.exists() {
+            return Err(Error::Generic("file already exist"));
+        }
+
+        let mut file = match File::create(path.clone()) {
+            Err(why) => return Err(Error::from(why)),
+            Ok(file) => file,
+        };
+
+
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+        ctx.set_armor(false);
+
+        let mut keys = Vec::new();
+
+        for recipient in Recipient::all_recipients_internal(&self.root)? {
+            keys.push(ctx.get_key(recipient.key_id)?);
+        }
+
+        let mut output = Vec::new();
+        ctx.encrypt(&keys, (*content).clone(), &mut output)?;
+
+        match file.write_all(&output) {
+            Err(why) => return Err(Error::from(why)),
+            Ok(_) => (),
+        }
+
+        if self.repo.is_none() {
+            return PasswordEntry::load_from_filesystem(&self.root, &path);
+        }
+
+        let message = format!("Add password for {} using ripasso", path_end);
+
+        add_and_commit_internal(self.repo.as_ref().unwrap(), &vec![format!("{}.gpg", (*path_end).clone())], &message)?;
+
+        return PasswordEntry::load_from_git(&self.root, &path, self.repo.as_ref().unwrap());
+    }
+
+    pub fn has_configured_username(&self) -> bool {
+        if self.repo.is_none() {
+            return true;
+        }
+
+        let config = git2::Config::open_default().unwrap();
+
+        let user_name = config.get_string("user.name");
+
+        if user_name.is_err() {
+            return false;
+        }
+        return true;
+    }
+}
+
 /// One password in the password store
 #[derive(Clone, Debug)]
 pub struct PasswordEntry {
@@ -175,8 +288,8 @@ impl PasswordEntry {
     }
 
     /// creates a `PasswordEntry` by running git blame on the specified path
-    pub fn load_from_git(base: &path::PathBuf, path: &path::PathBuf, repo_opt: GitRepo) -> Result<PasswordEntry> {
-        let (update_time, committed_by, signature_status) = read_git_meta_data(base, path, repo_opt.clone());
+    pub fn load_from_git(base: &path::PathBuf, path: &path::PathBuf, repo: &git2::Repository) -> Result<PasswordEntry> {
+        let (update_time, committed_by, signature_status) = read_git_meta_data(base, path, repo);
 
         Ok(PasswordEntry {
             name: to_name(base, path),
@@ -199,6 +312,20 @@ impl PasswordEntry {
         })
     }
 
+    /// creates a `PasswordEntry` based on data in the filesystem
+    pub fn load_from_filesystem(base: &path::PathBuf, path: &path::PathBuf) -> Result<PasswordEntry> {
+        Ok(PasswordEntry {
+            name: to_name(base, path),
+            meta: "".to_string(),
+            base: base.to_path_buf(),
+            path: path.to_path_buf(),
+            updated: None,
+            committed_by: None,
+            signature_status: None,
+            filename: path.to_string_lossy().into_owned().clone(),
+        })
+    }
+
     /// Decrypts and returns the full content of the PasswordEntry
     pub fn secret(&self) -> Result<String> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
@@ -213,12 +340,12 @@ impl PasswordEntry {
         Ok(self.secret()?.split('\n').take(1).collect())
     }
 
-    fn update_internal(&self, secret: String, password_store_dir: Arc<Option<String>>) -> Result<()> {
+    fn update_internal(&self, secret: String, store: PasswordStoreType) -> Result<()> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
         let mut keys = Vec::new();
 
-        for recipient in Recipient::all_recipients(password_store_dir)? {
+        for recipient in Recipient::all_recipients(store)? {
             keys.push(ctx.get_key(recipient.key_id)?);
         }
 
@@ -232,38 +359,58 @@ impl PasswordEntry {
 
     /// Updates the password store entry with new content, and commits those to git if a repository
     /// is supplied.
-    pub fn update(&self, secret: String, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<()> {
-        self.update_internal(secret, password_store_dir)?;
+    pub fn update(&self, secret: String, store: PasswordStoreType) -> Result<()> {
+        self.update_internal(secret, store.clone())?;
 
-        if repo_opt.is_none() {
-            return Ok(());
+        {
+            let store_res = (*store).try_lock();
+            if store_res.is_err() {
+                return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
+            }
+            if store_res.unwrap().repo.is_none() {
+                return Ok(());
+            }
         }
 
         let message = format!("Edit password for {} using ripasso", &self.name);
 
-        add_and_commit(repo_opt, &vec![format!("{}.gpg", &self.name)], &message)?;
+        add_and_commit(store, &vec![format!("{}.gpg", &self.name)], &message)?;
 
         return Ok(());
     }
 
     /// Removes this entry from the filesystem and commit that to git if a repository is supplied.
-    pub fn delete_file(&self, repo_opt: GitRepo) -> Result<()> {
+    pub fn delete_file(&self, store: PasswordStoreType) -> Result<()> {
         let res = Ok(std::fs::remove_file(&self.filename)?);
 
-        if repo_opt.is_none() {
-            return Ok(());
+        {
+            let store_res = (*store).try_lock();
+            if store_res.is_err() {
+                return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
+            }
+            if store_res.unwrap().repo.is_none() {
+                return Ok(());
+            }
         }
 
         let message = format!("Removed password file for {} using ripasso", &self.name);
 
-        remove_and_commit(repo_opt, &vec![format!("{}.gpg", &self.name)], &message)?;
+        remove_and_commit(store, &vec![format!("{}.gpg", &self.name)], &message)?;
 
         return res;
     }
 
     /// Returns a list of all password entries in the store.
-    pub fn all_password_entries(repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<Vec<PasswordEntry>> {
-        let dir = password_dir(password_store_dir)?;
+    pub fn all_password_entries(store: PasswordStoreType) -> Result<Vec<PasswordEntry>> {
+        let dir = {
+            let store_res = (*store).try_lock();
+            if store_res.is_err() {
+                return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
+            }
+            let store = store_res.unwrap();
+
+            store.root.clone()
+        };
 
         // Existing files iterator
         let password_path_glob = dir.join("**/*.gpg");
@@ -271,9 +418,16 @@ impl PasswordEntry {
 
         let mut passwords = Vec::<PasswordEntry>::new();
         for path in paths {
-            match PasswordEntry::load_from_git(&dir, &path?, repo_opt.clone()) {
-                Ok(password) => passwords.push(password),
-                Err(e) => return Err(e),
+            if (*store).lock().unwrap().repo.is_some() {
+                match PasswordEntry::load_from_git(&dir, &path?, (*store).lock().unwrap().repo.as_ref().unwrap()) {
+                    Ok(password) => passwords.push(password),
+                    Err(e) => return Err(e),
+                }
+            } else {
+                match PasswordEntry::load_from_filesystem(&dir, &path?) {
+                    Ok(password) => passwords.push(password),
+                    Err(e) => return Err(e),
+                }
             }
         }
 
@@ -282,22 +436,22 @@ impl PasswordEntry {
 
     /// Reencrypt all the entries in the store, for example when a new collaborator is added
     /// to the team.
-    pub fn reencrypt_all_password_entries(repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<()> {
+    pub fn reencrypt_all_password_entries(store: PasswordStoreType) -> Result<()> {
         let mut names: Vec<String> = Vec::new();
-        for entry in PasswordEntry::all_password_entries(repo_opt.clone(), password_store_dir.clone())? {
-            entry.update_internal(entry.secret()?, password_store_dir.clone())?;
+        for entry in PasswordEntry::all_password_entries(store.clone())? {
+            entry.update_internal(entry.secret()?, store.clone())?;
             names.push(format!("{}.gpg", &entry.name));
         }
         names.push(".gpg-id".to_string());
 
-        if repo_opt.is_none() {
+        if (*store).lock().unwrap().repo.is_none() {
             return Ok(());
         }
 
-        let keys = Recipient::all_recipients(password_store_dir)?.into_iter().map(|s| format!("0x{}, ", s.key_id)).collect::<String>();
+        let keys = Recipient::all_recipients(store.clone())?.into_iter().map(|s| format!("0x{}, ", s.key_id)).collect::<String>();
         let message = format!("Reencrypt password store with new GPG ids {}", keys);
 
-        add_and_commit(repo_opt, &names, &message)?;
+        add_and_commit(store, &names, &message)?;
 
         return Ok(());
     }
@@ -376,12 +530,16 @@ fn commit(repo: &git2::Repository, signature: &git2::Signature, message: &String
 }
 
 /// Add a file to the store, and commit it to the supplied git repository.
-pub fn add_and_commit(repo_opt: GitRepo, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
-    let repo_res = (*repo_opt).as_ref().unwrap().try_lock();
-    if repo_res.is_err() {
-        return Err(Error::GenericDyn(format!("{:?}", repo_res.err())))
+pub fn add_and_commit(store: PasswordStoreType, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
+    let store_res = (*store).try_lock();
+    if store_res.is_err() {
+        return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
     }
-    let repo = repo_res.unwrap();
+    let s = store_res.unwrap();
+    if s.repo.is_none() {
+        return Err(Error::Generic("must have a repository"));
+    }
+    let repo = s.repo.as_ref().unwrap();
 
     let mut index = repo.index()?;
     for path in paths {
@@ -405,13 +563,41 @@ pub fn add_and_commit(repo_opt: GitRepo, paths: &Vec<String>, message: &str) -> 
     return Ok(oid);
 }
 
-/// Remove a file from the store, and commit the deletion to the supplied git repository.
-fn remove_and_commit(repo_opt: GitRepo, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
-    let repo_res = (*repo_opt).as_ref().unwrap().try_lock();
-    if repo_res.is_err() {
-        return Err(Error::GenericDyn(format!("{:?}", repo_res.err())))
+/// Add a file to the store, and commit it to the supplied git repository.
+fn add_and_commit_internal(repo: &git2::Repository, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
+    let mut index = repo.index()?;
+    for path in paths {
+        index.add_path(path::Path::new(path))?;
     }
-    let repo = repo_res.unwrap();
+    let oid = index.write_tree()?;
+    let signature = repo.signature()?;
+    let parent_commit_res = find_last_commit(&repo);
+    let mut parents = vec![];
+    let parent_commit;
+    if !parent_commit_res.is_err() {
+        parent_commit = parent_commit_res?;
+        parents.push(&parent_commit);
+    }
+    let tree = repo.find_tree(oid)?;
+
+    let oid = commit(&repo, &signature, &message.to_string(), &tree, &parents)?;
+    let obj = repo.find_object(oid, None)?;
+    repo.reset(&obj, git2::ResetType::Hard, None)?;
+
+    return Ok(oid);
+}
+
+/// Remove a file from the store, and commit the deletion to the supplied git repository.
+fn remove_and_commit(store: PasswordStoreType, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
+    let store_res = (*store).try_lock();
+    if store_res.is_err() {
+        return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
+    }
+    let s = store_res.unwrap();
+    if s.repo.is_none() {
+        return Err(Error::Generic("must have a repository"));
+    }
+    let repo = s.repo.as_ref().unwrap();
 
     let mut index = repo.index()?;
     for path in paths {
@@ -436,16 +622,16 @@ fn remove_and_commit(repo_opt: GitRepo, paths: &Vec<String>, message: &str) -> R
 }
 
 /// Push your changes to the remote git repository.
-pub fn push(repo_opt: GitRepo) -> Result<()> {
-    if repo_opt.is_none() {
+pub fn push(store: PasswordStoreType) -> Result<()> {
+    let store_res = (*store).try_lock();
+    if store_res.is_err() {
+        return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
+    }
+    let s = store_res.unwrap();
+    if s.repo.is_none() {
         return Ok(());
     }
-
-    let repo_res = (*repo_opt).as_ref().unwrap().try_lock();
-    if repo_res.is_err() {
-        return Err(Error::GenericDyn(format!("{:?}", repo_res.err())))
-    }
-    let repo = repo_res.unwrap();
+    let repo = s.repo.as_ref().unwrap();
 
     let mut ref_status = None;
     let mut origin = repo.find_remote("origin")?;
@@ -481,16 +667,16 @@ pub fn push(repo_opt: GitRepo) -> Result<()> {
 }
 
 /// Pull new changes from the remote git repository.
-pub fn pull(repo_opt: GitRepo) -> Result<()> {
-    if repo_opt.is_none() {
+pub fn pull(store: PasswordStoreType) -> Result<()> {
+    let store_res = (*store).try_lock();
+    if store_res.is_err() {
+        return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
+    }
+    let s = store_res.unwrap();
+    if s.repo.is_none() {
         return Ok(());
     }
-
-    let repo_res = (*repo_opt).as_ref().unwrap().try_lock();
-    if repo_res.is_err() {
-        return Err(Error::GenericDyn(format!("{:?}", repo_res.err())))
-    }
-    let repo = repo_res.unwrap();
+    let repo = s.repo.as_ref().unwrap();
 
     let mut remote = repo.find_remote("origin")?;
 
@@ -583,9 +769,17 @@ impl Recipient {
     }
 
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
-    pub fn all_recipients(password_store_dir: Arc<Option<String>>) -> Result<Vec<Recipient>> {
+    pub fn all_recipients(store: PasswordStoreType) -> Result<Vec<Recipient>> {
+        let store_res = (*store).try_lock();
+        if store_res.is_err() {
+            return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
+        }
+        return Recipient::all_recipients_internal(&store_res.unwrap().root);
+    }
 
-        let mut recipient_file = password_dir(password_store_dir)?;
+    /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
+    fn all_recipients_internal(recipient_file_in: &path::PathBuf) -> Result<Vec<Recipient>> {
+        let mut recipient_file = recipient_file_in.clone();
         recipient_file.push(".gpg-id");
         let contents = fs::read_to_string(recipient_file)
             .expect("Something went wrong reading the file");
@@ -618,8 +812,12 @@ impl Recipient {
         return Ok(recipients);
     }
 
-    fn write_recipients_file(recipients: &Vec<Recipient>, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<()> {
-        let mut recipient_file = password_dir(password_store_dir.clone())?;
+    fn write_recipients_file(recipients: &Vec<Recipient>, store: PasswordStoreType) -> Result<()> {
+        let store_res = (*store).try_lock();
+        if store_res.is_err() {
+            return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
+        }
+        let mut recipient_file = store_res.unwrap().root.clone();
         recipient_file.push(".gpg-id");
 
         let mut file = std::fs::OpenOptions::new()
@@ -636,14 +834,14 @@ impl Recipient {
             file.write_all(b"\n")?;
         }
 
-        PasswordEntry::reencrypt_all_password_entries(repo_opt, password_store_dir)?;
+        PasswordEntry::reencrypt_all_password_entries(store)?;
 
         return Ok(());
     }
 
     /// Delete one of the persons from the list of team members to encrypt the passwords for.
-    pub fn remove_recipient_from_file(s: &Recipient, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<()> {
-        let mut recipients: Vec<Recipient> = Recipient::all_recipients(password_store_dir.clone())?;
+    pub fn remove_recipient_from_file(s: &Recipient, store: PasswordStoreType) -> Result<()> {
+        let mut recipients: Vec<Recipient> = Recipient::all_recipients(store.clone())?;
 
         recipients.retain(|ref vs| vs.key_id != s.key_id);
 
@@ -651,12 +849,12 @@ impl Recipient {
             return Err(Error::Generic("Can't delete the last encryption key"));
         }
 
-        return Recipient::write_recipients_file(&recipients, repo_opt, password_store_dir);
+        return Recipient::write_recipients_file(&recipients, store);
     }
 
     /// Add a new person to the list of team members to encrypt the passwords for.
-    pub fn add_recipient_to_file(s: &Recipient, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<()> {
-        let mut recipients: Vec<Recipient> = Recipient::all_recipients(password_store_dir.clone())?;
+    pub fn add_recipient_to_file(s: &Recipient, store: PasswordStoreType) -> Result<()> {
+        let mut recipients: Vec<Recipient> = Recipient::all_recipients(store.clone())?;
 
         for recipient in &recipients {
             if recipient.key_id == s.key_id {
@@ -666,26 +864,11 @@ impl Recipient {
 
         recipients.push(build_recipient(s.name.clone(), s.key_id.clone()));
 
-        return Recipient::write_recipients_file(&recipients, repo_opt, password_store_dir);
+        return Recipient::write_recipients_file(&recipients, store);
     }
 }
 
-fn read_git_meta_data(base: &path::PathBuf, path: &path::PathBuf, repo_opt: GitRepo) -> (Result<DateTime<Local>>, Result<String>, Result<SignatureStatus>) {
-    if repo_opt.is_none() {
-        return (Err(Error::Generic("need repository to have meta information")),
-                Err(Error::Generic("need repository to have meta information")),
-                Err(Error::Generic("need repository to have meta information")));
-    }
-
-    let repo_res = (*repo_opt).as_ref().unwrap().try_lock();
-    if repo_res.is_err() {
-        let e = repo_res.err().unwrap();
-        return (Err(Error::GenericDyn(format!("{:?}", e))),
-                Err(Error::GenericDyn(format!("{:?}", e))),
-                Err(Error::GenericDyn(format!("{:?}", e))));
-    }
-    let repo = repo_res.unwrap();
-
+fn read_git_meta_data(base: &path::PathBuf, path: &path::PathBuf, repo: &git2::Repository) -> (Result<DateTime<Local>>, Result<String>, Result<SignatureStatus>) {
     let path_res = path.strip_prefix(base);
     if path_res.is_err() {
         let e = path_res.err().unwrap();
@@ -731,12 +914,12 @@ fn read_git_meta_data(base: &path::PathBuf, path: &path::PathBuf, repo_opt: GitR
         None => Err(Error::Generic("missing committer name"))
     };
 
-    let signature_return = verify_git_signature(&repo, &id);
+    let signature_return = verify_git_signature(repo, &id);
 
     return (time_return, name_return, signature_return);
 }
 
-fn verify_git_signature(repo: &std::sync::MutexGuard<Repository>, id: &Oid) -> Result<SignatureStatus> {
+fn verify_git_signature(repo: &Repository, id: &Oid) -> Result<SignatureStatus> {
     let (signature, signed_data) = repo.extract_signature(&id, Some("gpgsig"))?;
 
     let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
@@ -771,67 +954,6 @@ fn verify_git_signature(repo: &std::sync::MutexGuard<Repository>, id: &Oid) -> R
 
 }
 
-/// Creates a new password file in the store.
-pub fn new_password_file(path_end: std::rc::Rc<String>, content: std::rc::Rc<String>, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<()> {
-    let mut path = password_dir(password_store_dir.clone())?;
-    let c_path = std::fs::canonicalize(path.as_path())?;
-
-    let path_deref = (*path_end).clone();
-    let path_iter = &mut path_deref.split("/").peekable();
-
-    while let Some(p) = path_iter.next() {
-        if path_iter.peek().is_some() {
-            path.push(p);
-            let c_file = std::fs::canonicalize(path.as_path())?;
-            if !c_file.starts_with(c_path.as_path()) {
-                return Err(Error::Generic("trying to write outside of password store directory"));
-            }
-            if !path.exists() {
-                std::fs::create_dir(&path)?;
-            }
-        } else {
-            path.push(format!("{}.gpg", p));
-        }
-    }
-
-    if path.exists() {
-        return Err(Error::Generic("file already exist"));
-    }
-
-    let mut file = match File::create(path) {
-        Err(why) => return Err(Error::from(why)),
-        Ok(file) => file,
-    };
-
-
-    let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-    ctx.set_armor(false);
-
-    let mut keys = Vec::new();
-
-    for recipient in Recipient::all_recipients(password_store_dir)? {
-        keys.push(ctx.get_key(recipient.key_id)?);
-    }
-
-    let mut output = Vec::new();
-    ctx.encrypt(&keys, (*content).clone(), &mut output)?;
-
-    match file.write_all(&output) {
-        Err(why) => return Err(Error::from(why)),
-        Ok(_) => (),
-    }
-
-    if repo_opt.is_none() {
-        return Ok(());
-    }
-
-    let message = format!("Add password for {} using ripasso", path_end);
-
-    add_and_commit(repo_opt, &vec![format!("{}.gpg", (*path_end).clone())], &message)?;
-
-    return Ok(());
-}
-
 /// Initialize a git repository for the store.
 pub fn init_git_repo(base: &path::PathBuf) -> Result<()> {
     git2::Repository::init(base)?;
@@ -864,22 +986,29 @@ pub fn search(l: &PasswordList, query: &str) -> Result<Vec<PasswordEntry>> {
 }
 
 /// Read the password store directory and populate the password list supplied.
-pub fn populate_password_list(passwords: &PasswordList, repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<()> {
-    if (*repo_opt).as_ref().is_none() {
-        let dir = password_dir(password_store_dir)?;
+pub fn populate_password_list(passwords: &PasswordList, store: PasswordStoreType) -> Result<()> {
+    let (dir, is_repo_none) = {
+        let store_res = (*store).try_lock();
+        if store_res.is_err() {
+            return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
+        }
+        let s = store_res.unwrap();
+
+        (s.root.clone(), s.repo.is_none())
+    };
+
+    if is_repo_none {
         let password_path_glob = dir.join("**/*.gpg");
         let existing_iter = glob::glob(&password_path_glob.to_string_lossy())?;
 
         (passwords.lock().unwrap()).clear();
         for existing_file in existing_iter {
             let pbuf = existing_file?;
-            (passwords.lock().unwrap()).push(PasswordEntry::load_from_git(&dir, &pbuf, repo_opt.clone())?);
+            (passwords.lock().unwrap()).push(PasswordEntry::load_from_filesystem(&dir, &pbuf)?);
         }
 
         return Ok(());
     }
-
-    let dir = password_dir(password_store_dir)?;
 
     let password_path_glob = dir.join("**/*.gpg");
     let existing_iter = glob::glob(&password_path_glob.to_string_lossy())?;
@@ -891,11 +1020,8 @@ pub fn populate_password_list(passwords: &PasswordList, repo_opt: GitRepo, passw
         files_to_consider.push(filename.trim_start_matches("/").to_string());
     }
 
-    let repo_res = (*repo_opt).as_ref().unwrap().try_lock();
-    if repo_res.is_err() {
-        return Err(Error::GenericDyn(format!("{:?}", repo_res.err())))
-    }
-    let repo = repo_res.unwrap();
+    let locked_store = (*store).lock().unwrap();
+    let repo = locked_store.repo.as_ref().unwrap();
 
     let mut walk = repo.revwalk()?;
     walk.push(repo.head()?.target().unwrap())?;
@@ -939,9 +1065,89 @@ pub fn populate_password_list(passwords: &PasswordList, repo_opt: GitRepo, passw
     Ok(())
 }
 
+/// Read the password store directory and populate the password list supplied.
+pub fn create_password_list(repo_opt: &Option<git2::Repository>, root_dir: &path::PathBuf) -> Result<Vec<PasswordEntry>> {
+    let mut passwords = vec![];
+
+    let dir = root_dir.clone();
+
+    if repo_opt.is_none() {
+        let password_path_glob = dir.join("**/*.gpg");
+        let existing_iter = glob::glob(&password_path_glob.to_string_lossy())?;
+
+        for existing_file in existing_iter {
+            let pbuf = existing_file?;
+            passwords.push(PasswordEntry::load_from_filesystem(&dir, &pbuf)?);
+        }
+
+        return Ok(passwords);
+    }
+
+    let password_path_glob = dir.join("**/*.gpg");
+    let existing_iter = glob::glob(&password_path_glob.to_string_lossy())?;
+
+    let mut files_to_consider: Vec<String> = vec![];
+    for existing_file in existing_iter {
+        let pbuf = format!("{}", existing_file?.display());
+        let filename = pbuf.trim_start_matches(format!("{}", dir.display()).as_str()).to_string();
+        files_to_consider.push(filename.trim_start_matches("/").to_string());
+    }
+
+    if files_to_consider.len() == 0 {
+        return Ok(vec![]);
+    }
+
+    let repo = (*repo_opt).as_ref().unwrap();
+
+    let mut walk = repo.revwalk()?;
+    walk.push(repo.head()?.target().unwrap())?;
+    let mut last_tree = repo.find_commit(repo.head()?.target().unwrap())?.tree()?;
+    for rev in walk {
+        let oid = rev?;
+
+        let commit = repo.find_commit(oid)?;
+        let tree = commit.tree()?;
+
+        let diff = repo.diff_tree_to_tree(Some(&last_tree), Some(&tree), None)?;
+
+        diff.foreach(&mut |delta: git2::DiffDelta, _f: f32| {
+            let entry_name = format!("{}", delta.new_file().path().unwrap().display());
+            &files_to_consider.retain(|filename| {
+                if *filename == entry_name {
+                    let time = commit.time();
+                    let time_return = Ok(Local.timestamp(time.seconds(), 0));
+
+                    let name_return: Result<String> = match commit.committer().name() {
+                        Some(s) => Ok(s.to_string()),
+                        None => Err(Error::Generic("missing committer name"))
+                    };
+
+                    let signature_return = verify_git_signature(&repo, &oid);
+
+                    let mut pbuf = dir.clone();
+                    pbuf.push(filename);
+
+                    passwords.push(PasswordEntry::new(&dir, &pbuf, time_return, name_return, signature_return));
+                    return false;
+                }
+                true
+            });
+            true
+        }, None, None, None)?;
+
+        last_tree = tree;
+    }
+
+    Ok(passwords)
+}
+
 /// Subscribe to events, that happen when password files are added or removed
-pub fn watch(repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Result<(Receiver<PasswordEvent>, PasswordList)> {
-    let dir = password_dir(password_store_dir.clone())?;
+pub fn watch(store: PasswordStoreType) -> Result<(Receiver<PasswordEvent>, PasswordList)> {
+    let store_res = (*store).try_lock();
+    if store_res.is_err() {
+        return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
+    }
+    let dir = store_res.unwrap().root.clone();
 
     let (watcher_tx, watcher_rx) = channel();
 
@@ -954,7 +1160,7 @@ pub fn watch(repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Resu
     let passwords = Arc::new(Mutex::new(Vec::<PasswordEntry>::new()));
     let passwords_out = passwords.clone();
 
-    populate_password_list(&passwords_out, repo_opt, password_store_dir)?;
+    populate_password_list(&passwords_out, store.clone())?;
 
     thread::spawn(move || {
         info!("Starting thread");
@@ -976,17 +1182,14 @@ pub fn watch(repo_opt: GitRepo, password_store_dir: Arc<Option<String>>) -> Resu
                             if ext == None || ext.unwrap() != "gpg" {
                                 continue;
                             }
-                            let password_store_dir = Arc::new(match std::env::var("PASSWORD_STORE_DIR") {
-                                Ok(p) => Some(p),
-                                Err(_) => None
-                            });
 
-                            let repo_res = git2::Repository::open(password_dir(password_store_dir.clone()).unwrap());
-                            let mut repo_opt: GitRepo = Arc::new(None::<Mutex<git2::Repository>>);
-                            if repo_res.is_ok() {
-                                repo_opt = Arc::new(Some(Mutex::new(repo_res.unwrap())));
-                            }
-                            let p_e = PasswordEntry::load_from_git(&password_dir(password_store_dir).unwrap(), &p.clone(), repo_opt).unwrap();
+                            let p_e = {
+                                if (*store).lock().unwrap().repo.is_none() {
+                                    PasswordEntry::load_from_filesystem(&store.lock().as_ref().unwrap().root, &p.clone()).unwrap()
+                                } else {
+                                    PasswordEntry::load_from_git(&store.lock().as_ref().unwrap().root, &p.clone(), (*store).lock().unwrap().repo.as_ref().unwrap()).unwrap()
+                                }
+                            };
                             if !(passwords.lock().unwrap()).iter().any(|p| p.path == p_e.path) {
                                 (passwords.lock().unwrap()).push(p_e.clone());
                             }

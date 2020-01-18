@@ -63,19 +63,18 @@ fn populate_password_list_small_repo() {
 
     unpack_tar_gz(base_path.clone(), "populate_password_list_small_repo.tar.gz").unwrap();
 
-    let password_store_dir = Arc::new(Some(format!("{}", password_dir.as_path().display())));
+    let password_store_dir = path::PathBuf::from(format!("{}", password_dir.as_path().display()));
 
-    let results = Arc::new(Mutex::new(Vec::<PasswordEntry>::new()));
-    let repo_opt = Arc::new(Some(Mutex::new(git2::Repository::open(password_dir).unwrap())));
+    let repo_opt = Some(git2::Repository::open(password_dir).unwrap());
 
-    populate_password_list(&results, repo_opt, password_store_dir).unwrap();
+    let results = create_password_list(&repo_opt, &password_store_dir).unwrap();
 
     cleanup(base_path, "populate_password_list_small_repo").unwrap();
 
-    assert_eq!((*(*results).lock().unwrap()).len(), 1);
-    assert_eq!((*(*results).lock().unwrap())[0].name, "test");
-    assert_eq!((*(*results).lock().unwrap())[0].committed_by, Some("Alexander Kjäll".to_string()));
-    assert_eq!((*(*results).lock().unwrap())[0].signature_status.is_none(), true);
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].name, "test");
+    assert_eq!(results[0].committed_by, Some("Alexander Kjäll".to_string()));
+    assert_eq!(results[0].signature_status.is_none(), true);
 }
 
 #[test]
@@ -92,19 +91,18 @@ fn populate_password_list_repo_with_deleted_files() {
 
     unpack_tar_gz(base_path.clone(), "populate_password_list_repo_with_deleted_files.tar.gz").unwrap();
 
-    let password_store_dir = Arc::new(Some(format!("{}", password_dir.as_path().display())));
+    let password_store_dir = path::PathBuf::from(format!("{}", password_dir.as_path().display()));
 
-    let results = Arc::new(Mutex::new(Vec::<PasswordEntry>::new()));
-    let repo_opt = Arc::new(Some(Mutex::new(git2::Repository::open(password_dir).unwrap())));
+    let repo_opt = Some(git2::Repository::open(password_dir).unwrap());
 
-    populate_password_list(&results, repo_opt, password_store_dir).unwrap();
+    let results = create_password_list(&repo_opt, &password_store_dir).unwrap();
 
     cleanup(base_path, "populate_password_list_repo_with_deleted_files").unwrap();
 
-    assert_eq!((*(*results).lock().unwrap()).len(), 1);
-    assert_eq!((*(*results).lock().unwrap())[0].name, "10");
-    assert_eq!((*(*results).lock().unwrap())[0].committed_by, Some("Alexander Kjäll".to_string()));
-    assert_eq!((*(*results).lock().unwrap())[0].signature_status.is_none(), true);
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].name, "10");
+    assert_eq!(results[0].committed_by, Some("Alexander Kjäll".to_string()));
+    assert_eq!(results[0].signature_status.is_none(), true);
 }
 
 #[test]
@@ -121,28 +119,27 @@ fn populate_password_list_directory_without_git() {
 
     unpack_tar_gz(base_path.clone(), "populate_password_list_directory_without_git.tar.gz").unwrap();
 
-    let password_store_dir = Arc::new(Some(format!("{}", password_dir.as_path().display())));
+    let password_store_dir = path::PathBuf::from(format!("{}", password_dir.as_path().display()));
 
-    let results = Arc::new(Mutex::new(Vec::<PasswordEntry>::new()));
-    let repo_opt: GitRepo = Arc::new(None::<Mutex<git2::Repository>>);
+    let repo_opt = None;
 
-    populate_password_list(&results, repo_opt, password_store_dir).unwrap();
+    let results = create_password_list(&repo_opt, &password_store_dir).unwrap();
 
     cleanup(base_path, "populate_password_list_directory_without_git").unwrap();
 
-    assert_eq!((*(*results).lock().unwrap()).len(), 3);
-    assert_eq!((*(*results).lock().unwrap())[0].name, "first");
-    assert_eq!((*(*results).lock().unwrap())[0].committed_by.is_none(), true);
-    assert_eq!((*(*results).lock().unwrap())[0].updated.is_none(), true);
-    assert_eq!((*(*results).lock().unwrap())[0].signature_status.is_none(), true);
+    assert_eq!(results.len(), 3);
+    assert_eq!(results[0].name, "first");
+    assert_eq!(results[0].committed_by.is_none(), true);
+    assert_eq!(results[0].updated.is_none(), true);
+    assert_eq!(results[0].signature_status.is_none(), true);
 
-    assert_eq!((*(*results).lock().unwrap())[1].name, "second");
-    assert_eq!((*(*results).lock().unwrap())[1].committed_by.is_none(), true);
-    assert_eq!((*(*results).lock().unwrap())[1].updated.is_none(), true);
-    assert_eq!((*(*results).lock().unwrap())[1].signature_status.is_none(), true);
+    assert_eq!(results[1].name, "second");
+    assert_eq!(results[1].committed_by.is_none(), true);
+    assert_eq!(results[1].updated.is_none(), true);
+    assert_eq!(results[1].signature_status.is_none(), true);
 
-    assert_eq!((*(*results).lock().unwrap())[2].name, "third");
-    assert_eq!((*(*results).lock().unwrap())[2].committed_by.is_none(), true);
-    assert_eq!((*(*results).lock().unwrap())[2].updated.is_none(), true);
-    assert_eq!((*(*results).lock().unwrap())[2].signature_status.is_none(), true);
+    assert_eq!(results[2].name, "third");
+    assert_eq!(results[2].committed_by.is_none(), true);
+    assert_eq!(results[2].updated.is_none(), true);
+    assert_eq!(results[2].signature_status.is_none(), true);
 }
