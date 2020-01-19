@@ -40,7 +40,7 @@ fn create_git_repo(ui: &mut Cursive, password_store_dir: Arc<Option<String>>) {
         helpers::errorbox(ui, &init_res.err().unwrap());
     } else {
         let message = super::CATALOG.gettext("Initialized password repo with Ripasso");
-        let store_res = pass::PasswordStore::new(password_store_dir);
+        let store_res = pass::PasswordStore::new(password_store_dir, &None);
         if store_res.is_err() {
             helpers::errorbox(ui, &store_res.err().unwrap());
         } else {

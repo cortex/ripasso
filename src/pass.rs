@@ -137,7 +137,7 @@ pub struct PasswordStore {
 
 impl PasswordStore {
     /// Determine password directory
-    pub fn new(password_store_dir: Arc<Option<String>>) -> Result<PasswordStore> {
+    pub fn new(password_store_dir: Arc<Option<String>>, password_store_signing_key: &Option<String>) -> Result<PasswordStore> {
         let pass_home = password_dir_raw(password_store_dir);
         if !pass_home.exists() {
             return Err(Error::Generic("failed to locate password directory"));
@@ -153,10 +153,36 @@ impl PasswordStore {
 
         return Ok(PasswordStore {
             root: pass_home.to_path_buf(),
-            valid_gpg_signing_keys: vec![],
+            valid_gpg_signing_keys: PasswordStore::parse_signing_keys(password_store_signing_key)?,
             passwords: all_passwords,
             repo: repo_opt
         })
+    }
+
+    fn parse_signing_keys(password_store_signing_key: &Option<String>) -> Result<Vec<String>> {
+        if password_store_signing_key.is_none() {
+            return Ok(vec![]);
+        }
+
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+
+        let mut signing_keys = vec![];
+        for key in password_store_signing_key.as_ref().unwrap().split(",") {
+            let trimmed = key.trim().to_string();
+
+            if trimmed.len() != 40 || (trimmed.len() != 42 && trimmed.starts_with("0x")) {
+                return Err(Error::Generic("signing key isn't in full 40 character id format"));
+            }
+
+            let key_res = ctx.get_key(&trimmed);
+            if key_res.is_err() {
+                return Err(Error::GenericDyn(format!("signing key not found in keyring, error: {:?}", key_res.err())));
+            }
+
+            signing_keys.push(trimmed);
+        }
+
+        return Ok(signing_keys);
     }
 
     /// Creates a new password file in the store.
@@ -252,12 +278,8 @@ impl PasswordStore {
 pub struct PasswordEntry {
     /// Name of the entry
     pub name: String,
-    /// Metadata
-    pub meta: String,
     /// Path, relative to the store
     path: path::PathBuf,
-    /// Base path of password entry
-    base: path::PathBuf,
     /// if we have a git repo, then commit time
     pub updated: Option<DateTime<Local>>,
     /// if we have a git repo, then the name of the committer
@@ -268,12 +290,10 @@ pub struct PasswordEntry {
 }
 
 impl PasswordEntry {
-    /// constructs a a `PasswordEntry` from the suplied parts
+    /// constructs a a `PasswordEntry` from the supplied parts
     pub fn new(base: &path::PathBuf, path: &path::PathBuf, update_time: Result<DateTime<Local>>, committed_by: Result<String>, signature_status: Result<SignatureStatus>) -> PasswordEntry {
         PasswordEntry {
             name: to_name(base, path),
-            meta: "".to_string(),
-            base: base.to_path_buf(),
             path: path.to_path_buf(),
             updated: match update_time {
                 Ok(p) => Some(p),
@@ -297,8 +317,6 @@ impl PasswordEntry {
 
         Ok(PasswordEntry {
             name: to_name(base, path),
-            meta: "".to_string(),
-            base: base.to_path_buf(),
             path: path.to_path_buf(),
             updated: match update_time {
                 Ok(p) => Some(p),
@@ -320,8 +338,6 @@ impl PasswordEntry {
     pub fn load_from_filesystem(base: &path::PathBuf, path: &path::PathBuf) -> Result<PasswordEntry> {
         Ok(PasswordEntry {
             name: to_name(base, path),
-            meta: "".to_string(),
-            base: base.to_path_buf(),
             path: path.to_path_buf(),
             updated: None,
             committed_by: None,

@@ -143,3 +143,10 @@ fn populate_password_list_directory_without_git() {
     assert_eq!(results[2].updated.is_none(), true);
     assert_eq!(results[2].signature_status.is_none(), true);
 }
+
+#[test]
+fn parse_signing_keys_empty() {
+    let result = PasswordStore::parse_signing_keys(&None).unwrap();
+
+    assert_eq!(result.len(), 0);
+}

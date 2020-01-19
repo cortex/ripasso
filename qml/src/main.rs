@@ -53,7 +53,7 @@ impl UI {
             self.current_passwords
                 .clone()
                 .into_iter()
-                .map(|p| (p.name.clone(), p.meta.clone()))
+                .map(|p| (p.name.clone(), "".to_string()))
                 .collect(),
         );
         None
@@ -88,7 +88,7 @@ impl UI {
         if !self.current_passwords.is_empty() { // Select notihng if passwords list is empty
             let pass = self.get_password(i);
             self.password.set_name(pass.name);
-            self.password.set_meta(pass.meta);
+            self.password.set_meta("".to_string());
         }
         None
     }
@@ -172,8 +172,13 @@ fn main() {
         Ok(p) => Some(p),
         Err(_) => None
     });
+    let password_store_signing_key = match std::env::var("PASSWORD_STORE_SIGNING_KEY") {
+        Ok(p) => Some(p),
+        Err(_) => None
+    };
 
-    let store = Arc::new(Mutex::new(pass::PasswordStore::new(password_store_dir.clone()).unwrap()));
+
+    let store = Arc::new(Mutex::new(pass::PasswordStore::new(password_store_dir.clone(), &password_store_signing_key).unwrap()));
 
     // Load and watch all the passwords in the background
     let _ = pass::watch(store.clone()).expect("error");

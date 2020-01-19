@@ -33,8 +33,12 @@ fn main() {
         Ok(p) => Some(p),
         Err(_) => None
     });
+    let password_store_signing_key = match std::env::var("PASSWORD_STORE_SIGNING_KEY") {
+        Ok(p) => Some(p),
+        Err(_) => None
+    };
 
-    let store = Arc::new(Mutex::new(pass::PasswordStore::new(password_store_dir.clone()).unwrap()));
+    let store = Arc::new(Mutex::new(pass::PasswordStore::new(password_store_dir.clone(), &password_store_signing_key).unwrap()));
 
     // Load and watch all the passwords in the background
     let password_rx = match pass::watch(store.clone()) {

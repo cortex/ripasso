@@ -607,7 +607,17 @@ fn main() {
         process::exit(1);
     }
 
-    let store = Arc::new(Mutex::new(PasswordStore::new(password_store_dir.clone()).unwrap()));
+    let password_store_signing_key = match std::env::var("PASSWORD_STORE_SIGNING_KEY") {
+        Ok(p) => Some(p),
+        Err(_) => None
+    };
+
+    let store_res = PasswordStore::new(password_store_dir.clone(), &password_store_signing_key);
+    if store_res.is_err() {
+        eprintln!("Error {:?}", store_res.err().unwrap());
+        process::exit(1);
+    }
+    let store = Arc::new(Mutex::new(store_res.unwrap()));
 
     // verify that the git config is correct
     if !(*store).lock().unwrap().has_configured_username() {
