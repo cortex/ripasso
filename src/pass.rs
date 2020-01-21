@@ -151,12 +151,61 @@ impl PasswordStore {
 
         let all_passwords = create_password_list(&repo_opt, &pass_home)?;
 
+        let signing_keys = PasswordStore::parse_signing_keys(password_store_signing_key)?;
+
+        if signing_keys.len() != 0 {
+            PasswordStore::verify_gpg_id_file(&pass_home, &signing_keys)?;
+        }
+
         return Ok(PasswordStore {
             root: pass_home.to_path_buf(),
-            valid_gpg_signing_keys: PasswordStore::parse_signing_keys(password_store_signing_key)?,
+            valid_gpg_signing_keys: signing_keys,
             passwords: all_passwords,
             repo: repo_opt
         })
+    }
+
+    fn verify_gpg_id_file(pass_home: &path::PathBuf, signing_keys: &Vec<String>) -> Result<SignatureStatus> {
+        let mut gpg_id_file = pass_home.clone();
+        gpg_id_file.push(".gpg-id");
+        let mut gpg_id_sig_file = pass_home.clone();
+        gpg_id_sig_file.push(".gpg-id.sig");
+
+        let gpg_id = fs::read(gpg_id_file)?;
+        let gpg_id_sig = fs::read(gpg_id_sig_file)?;
+
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+
+        let result = ctx.verify_detached(gpg_id_sig, gpg_id)?;
+
+        let mut sig_sum = None;
+
+        for (i, sig) in result.signatures().enumerate() {
+            let fpr = sig.fingerprint().unwrap();
+
+            if !signing_keys.contains(&fpr.to_string()) {
+                return Err(Error::Generic("the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY"));
+            }
+            if i == 0 {
+                sig_sum = Some(sig.summary());
+            } else {
+                return Err(Error::Generic("Signature for .gpg-id file contained more than one signature, something is fishy"));
+            }
+        }
+
+        if sig_sum.is_none() {
+            return Err(Error::Generic("Missing signature for .gpg-id file, and PASSWORD_STORE_SIGNING_KEY specified"));
+        }
+
+        let sig_sum = sig_sum.unwrap();
+
+        if sig_sum.contains(gpgme::SignatureSummary::GREEN) {
+            return Ok(SignatureStatus::GoodSignature);
+        } else if sig_sum.contains(gpgme::SignatureSummary::VALID) {
+            return Ok(SignatureStatus::AlmostGoodSignature);
+        } else {
+            return Err(Error::Generic("Bad signature for .gpg-id file"));
+        }
     }
 
     fn parse_signing_keys(password_store_signing_key: &Option<String>) -> Result<Vec<String>> {
@@ -223,6 +272,10 @@ impl PasswordStore {
         ctx.set_armor(false);
 
         let mut keys = Vec::new();
+
+        if self.valid_gpg_signing_keys.len() != 0 {
+            PasswordStore::verify_gpg_id_file(&self.root, &self.valid_gpg_signing_keys)?;
+        }
 
         for recipient in Recipient::all_recipients_internal(&self.root)? {
             keys.push(ctx.get_key(recipient.key_id)?);
@@ -794,7 +847,13 @@ impl Recipient {
         if store_res.is_err() {
             return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
         }
-        return Recipient::all_recipients_internal(&store_res.unwrap().root);
+        let store = store_res.unwrap();
+
+        if store.valid_gpg_signing_keys.len() != 0 {
+            PasswordStore::verify_gpg_id_file(&store.root, &store.valid_gpg_signing_keys)?;
+        }
+
+        return Recipient::all_recipients_internal(&store.root);
     }
 
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.

@@ -74,7 +74,6 @@ fn page_down(ui: &mut Cursive) -> () {
     let mut l = ui.find_name::<SelectView<pass::PasswordEntry>>("results").unwrap();
     l.select_down(ui.screen_size().y);
     ui.call_on_name("scroll_results", |l: &mut ScrollView<ResizedView<NamedView<SelectView<pass::PasswordEntry>>>>| {
-        eprintln!("scrolling");
         l.scroll_to_important_area();
     });
 }
