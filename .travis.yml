@@ -25,5 +25,6 @@ matrix:
       before_install:
         - brew update
         - brew install qt5
+        - brew unlink python@2
         - brew install gtk+3
         - brew install gpgme
