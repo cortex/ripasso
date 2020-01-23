@@ -38,6 +38,7 @@ use std::io;
 use std::string;
 use std::collections::HashSet;
 use git2::{Oid, Repository};
+use gpgme::Key;
 
 /// Convenience type for Results
 type Result<T> = std::result::Result<T, Error>;
@@ -892,25 +893,64 @@ impl Recipient {
     }
 
     fn write_recipients_file(recipients: &Vec<Recipient>, store: PasswordStoreType) -> Result<()> {
-        let store_res = (*store).try_lock();
-        if store_res.is_err() {
-            return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
-        }
-        let mut recipient_file = store_res.unwrap().root.clone();
-        recipient_file.push(".gpg-id");
-
-        let mut file = std::fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(recipient_file)?;
-
-        for recipient in recipients {
-            if !recipient.key_id.starts_with("0x") {
-                file.write_all(b"0x")?;
+        let store2 = store.clone();
+        {
+            let store_res = (*store2).try_lock();
+            if store_res.is_err() {
+                return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
             }
-            file.write_all(recipient.key_id.as_bytes())?;
-            file.write_all(b"\n")?;
+            let s = store_res.unwrap();
+            let mut recipient_file = s.root.clone();
+            recipient_file.push(".gpg-id");
+
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(recipient_file)?;
+
+            let mut file_content = "".to_string();
+            for recipient in recipients {
+                if !recipient.key_id.starts_with("0x") {
+                    file_content.push_str("0x");
+                }
+                file_content.push_str(recipient.key_id.as_str());
+                file_content.push_str("\n");
+            }
+            file.write(file_content.as_bytes())?;
+
+            if s.valid_gpg_signing_keys.len() != 0 {
+                let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+                let mut key_opt: Option<Key> = None;
+
+                for key_id in &s.valid_gpg_signing_keys {
+                    let key_res = ctx.get_key(key_id);
+
+                    if key_res.is_ok() {
+                        key_opt = Some(key_res.unwrap());
+                    }
+                }
+
+                if key_opt.is_some() {
+                    let key = key_opt.unwrap();
+
+                    ctx.add_signer(&key)?;
+
+                    let mut output = Vec::new();
+                    ctx.sign_detached(file_content.clone(), &mut output)?;
+
+                    let mut recipient_sig_filename = s.root.clone();
+                    recipient_sig_filename.push(".gpg-id.sig");
+
+                    let mut recipient_sig_file = std::fs::OpenOptions::new()
+                        .write(true)
+                        .create(true)
+                        .truncate(true)
+                        .open(recipient_sig_filename)?;
+
+                    recipient_sig_file.write(&output)?;
+                }
+            }
         }
 
         PasswordEntry::reencrypt_all_password_entries(store)?;
