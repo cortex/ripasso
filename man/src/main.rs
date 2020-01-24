@@ -29,6 +29,9 @@ in the file .gpg-id, one gpg key id per line.")
         .custom(man::prelude::Section::new("usage note")
                 .paragraph("ripasso-cursive reads $HOME/.password-store/ by default, override this by setting
 the PASSWORD_STORE_DIR environmental variable.")
+                .paragraph("If you specify the PASSWORD_STORE_SIGNING_KEY environmental variable, then
+ripasso will verify that the .gpg-id file is correctly signed. Valid values are one or more 40 character gpg key ids,
+separated by commas.")
         )
         .render();
 
