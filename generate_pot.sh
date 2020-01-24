@@ -6,3 +6,4 @@ msgmerge --update cursive/res/sv.po cursive/res/ripasso-cursive.pot
 msgmerge --update cursive/res/nb.po cursive/res/ripasso-cursive.pot
 msgmerge --update cursive/res/nn.po cursive/res/ripasso-cursive.pot
 msgmerge --update cursive/res/fr.po cursive/res/ripasso-cursive.pot
+msgmerge --update cursive/res/it.po cursive/res/ripasso-cursive.pot

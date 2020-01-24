@@ -52,6 +52,7 @@ The build produces a number of artifacts:
  * `./target/release/ripasso-qt` - the QT application, still in an experimental phase and not really usable
  * `./target/release/ripasso-man` - the manual page (sort of, more about this below)
  * `./target/translations/cursive/fr.mo` - french translation
+ * `./target/translations/cursive/it.mo` - italian translation
  * `./target/translations/cursive/nb.mo` - norwegian bokmål translation
  * `./target/translations/cursive/nn.mo` - norwegian nynorsk translation
  * `./target/translations/cursive/sv.mo` - swedish translation
