@@ -62,32 +62,7 @@ Build
 cargo build -p ripasso-gtk
 ```
 
-
-## Build dependencies
-
-### Mac OS X
-
-```
-$ brew update
-$ brew install automake cmake gettext qt5 gtk+3
-$ export PATH="/usr/local/opt/qt/bin:$PATH"
-$ git clone https://github.com/cortex/ripasso.git
-$ cd ripasso
-$ cargo run
-```
-
-### Ubuntu
-```
-$ apt install cargo libgtk-3-dev qtdeclarative5-dev libqt5svg5-dev cmake libncurses-dev libssl-dev
-$ cargo build
-```
-
-### Arch
-```
-$ pacman -S qt5-base qt5-svg qt5-declarative
-```
-
-## Packaging status
+## Install instructions
 
 ### Arch
 
@@ -118,9 +93,21 @@ Qt version (unstable)
 sudo dnf install ripasso-qt
 ```
 
-#### Nix
+### Nix
 
 TUI version
 ```
 nix-env -iA nixpkgs.ripasso-cursive
 ```
+
+### Mac OS X
+
+The best way to install ripasso on pre-catalina mac right now is the nix package system, first [install that](https://nixos.org/nix/download.html) and then
+
+```
+nix-env -iA nixpkgs.ripasso-cursive
+```
+
+## Build instructions
+
+[See here](BUILD_INSTRUCTIONS.md)
