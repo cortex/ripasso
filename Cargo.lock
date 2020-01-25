@@ -1595,7 +1595,7 @@ dependencies = [
 
 [[package]]
 name = "ripasso"
-version = "0.4.0-alpha"
+version = "0.4.0"
 dependencies = [
  "chrono 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "criterion 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1615,7 +1615,7 @@ dependencies = [
 
 [[package]]
 name = "ripasso-cursive"
-version = "0.4.0-alpha"
+version = "0.4.0"
 dependencies = [
  "clipboard 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cursive 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1624,33 +1624,33 @@ dependencies = [
  "glob 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "locale_config 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ripasso 0.4.0-alpha",
+ "ripasso 0.4.0",
  "unic-langid 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "ripasso-gtk"
-version = "0.4.0-alpha"
+version = "0.4.0"
 dependencies = [
  "glib 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "gtk 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ripasso 0.4.0-alpha",
+ "ripasso 0.4.0",
 ]
 
 [[package]]
 name = "ripasso-man"
-version = "0.4.0-alpha"
+version = "0.4.0"
 dependencies = [
  "man 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "ripasso-qt"
-version = "0.4.0-alpha"
+version = "0.4.0"
 dependencies = [
  "clipboard 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "qml 0.0.9 (git+https://github.com/White-Oak/qml-rust)",
- "ripasso 0.4.0-alpha",
+ "ripasso 0.4.0",
 ]
 
 [[package]]

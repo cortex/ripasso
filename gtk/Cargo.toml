@@ -1,6 +1,6 @@
 [package]
 name = "ripasso-gtk"
-version = "0.4.0-alpha"
+version = "0.4.0"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>"]
 edition = '2018'
 
