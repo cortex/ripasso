@@ -25,7 +25,7 @@ msgid ""
 "default, override this by setting the PASSWORD_STORE_DIR environmental "
 "variable."
 msgstr ""
-"En lösenordshanterare som använder samma filformat som a lösenordshanteraren "
+"En lösenordshanterare som använder samma filformat som lösenordshanteraren "
 "'pass', implementerad i Rust. Ripasso läser och sparar lösenord i $HOME/."
 "password-store/ som standard, ändra det genom att sätta miljövariabeln "
 "PASSWORD_STORE_DIR till ett nytt värde."
@@ -36,7 +36,7 @@ msgstr "Lägg till nytt lösenord"
 
 #: cursive/src/main.rs:345
 msgid "Added team member to password store"
-msgstr "Lade till mottagare till lösenordslistan"
+msgstr "Lade till gruppmedlemmen till lösenordslistan"
 
 #: cursive/src/wizard.rs:71
 msgid "Also create a git repository for the encrypted files?"
@@ -48,7 +48,7 @@ msgstr "Är du säker på att du vill ta bort lösenordet?"
 
 #: cursive/src/main.rs:324
 msgid "Are you sure you want to remove this person?"
-msgstr "Är du säker på att vi vill ta bort den här personen?"
+msgstr "Är du säker på att du vill ta bort den här personen?"
 
 #: cursive/src/main.rs:156 cursive/src/main.rs:287 cursive/src/main.rs:328
 #: cursive/src/main.rs:374 cursive/src/wizard.rs:134
@@ -164,7 +164,7 @@ msgid ""
 "Ripasso uses GPG in order to encrypt the stored passwords.\n"
 "Please enter your GPG key ID"
 msgstr ""
-"Ripasso använder gpg för att kryptera de sparade lösenorden.\n"
+"Ripasso använder GPG för att kryptera de sparade lösenorden.\n"
 "Vänligen skriv in din GPG nyckel identifierare"
 
 #: cursive/src/main.rs:181 cursive/src/main.rs:284
