@@ -128,7 +128,7 @@ pub enum SignatureStatus {
     BadSignature
 }
 
-///
+/// Represents a complete password store directory
 pub struct PasswordStore {
     root: path::PathBuf,
     valid_gpg_signing_keys: Vec<String>,
