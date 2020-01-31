@@ -130,14 +130,19 @@ pub enum SignatureStatus {
 
 /// Represents a complete password store directory
 pub struct PasswordStore {
+    /// The path to the root directory of the password store
     root: path::PathBuf,
+    /// A list of keys that are allowed to sign the .gpg-id file, obtained from the environmental
+    /// variable `PASSWORD_STORE_SIGNING_KEY`
     valid_gpg_signing_keys: Vec<String>,
+    /// a list of password files with meta data
     pub passwords: Vec<PasswordEntry>,
+    /// If the repository is backed by a git repository, this is filled
     repo: Option<git2::Repository>
 }
 
 impl PasswordStore {
-    /// Determine password directory
+    /// Creates a `PasswordStore`
     pub fn new(password_store_dir: &Option<String>, password_store_signing_key: &Option<String>) -> Result<PasswordStore> {
         let pass_home = password_dir_raw(password_store_dir);
         if !pass_home.exists() {
