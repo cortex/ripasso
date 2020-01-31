@@ -138,7 +138,7 @@ pub struct PasswordStore {
 
 impl PasswordStore {
     /// Determine password directory
-    pub fn new(password_store_dir: Arc<Option<String>>, password_store_signing_key: &Option<String>) -> Result<PasswordStore> {
+    pub fn new(password_store_dir: &Option<String>, password_store_signing_key: &Option<String>) -> Result<PasswordStore> {
         let pass_home = password_dir_raw(password_store_dir);
         if !pass_home.exists() {
             return Err(Error::Generic("failed to locate password directory"));
@@ -1267,7 +1267,7 @@ fn to_name(base: &path::PathBuf, path: &path::PathBuf) -> String {
 }
 
 /// Determine password directory
-pub fn password_dir(password_store_dir: Arc<Option<String>>) -> Result<path::PathBuf> {
+pub fn password_dir(password_store_dir: &Option<String>) -> Result<path::PathBuf> {
     let pass_home = password_dir_raw(password_store_dir);
     if !pass_home.exists() {
         return Err(Error::Generic("failed to locate password directory"));
@@ -1276,7 +1276,7 @@ pub fn password_dir(password_store_dir: Arc<Option<String>>) -> Result<path::Pat
 }
 
 /// Determine password directory
-pub fn password_dir_raw(password_store_dir: Arc<Option<String>>) -> path::PathBuf {
+pub fn password_dir_raw(password_store_dir: &Option<String>) -> path::PathBuf {
     // If a directory is provided via env var, use it
     let pass_home = match password_store_dir.as_ref() {
         Some(p) => p.clone(),

@@ -34,8 +34,8 @@ use std::sync::{Arc, Mutex};
 use ripasso::pass;
 use crate::helpers;
 
-fn create_git_repo(ui: &mut Cursive, password_store_dir: Arc<Option<String>>) {
-    let init_res = pass::init_git_repo(&pass::password_dir(password_store_dir.clone()).unwrap());
+fn create_git_repo(ui: &mut Cursive, password_store_dir: &Option<String>) {
+    let init_res = pass::init_git_repo(&pass::password_dir(password_store_dir).unwrap());
     if init_res.is_err() {
         helpers::errorbox(ui, &init_res.err().unwrap());
     } else {
@@ -56,10 +56,10 @@ fn create_git_repo(ui: &mut Cursive, password_store_dir: Arc<Option<String>>) {
     }
 }
 
-fn do_create(ui: &mut Cursive, password_store_dir: Arc<Option<String>>) {
+fn do_create(ui: &mut Cursive, password_store_dir: &Option<String>) {
     let l = ui.find_name::<EditView>("initial_key_id").unwrap();
     let key_id = (*l.get_content()).clone();
-    let mut pass_home = pass::password_dir_raw(password_store_dir.clone());
+    let mut pass_home = pass::password_dir_raw(password_store_dir);
     let create_res = std::fs::create_dir_all(&pass_home);
     if create_res.is_err() {
         helpers::errorbox(ui, &pass::Error::IO(create_res.unwrap_err()));
@@ -68,9 +68,10 @@ fn do_create(ui: &mut Cursive, password_store_dir: Arc<Option<String>>) {
         pass_home.push(".gpg-id");
         std::fs::write(pass_home, key_id).expect(super::CATALOG.gettext("Unable to write file"));
 
+        let password_store_dir2 = password_store_dir.clone();
         let d = Dialog::around(TextView::new(super::CATALOG.gettext("Also create a git repository for the encrypted files?")))
             .button(super::CATALOG.gettext("Create"), move |ui: &mut Cursive| {
-                create_git_repo(ui, password_store_dir.clone());
+                create_git_repo(ui, &password_store_dir2);
             })
             .button(super::CATALOG.gettext("No"), |s| {
                 s.quit();
@@ -81,26 +82,26 @@ fn do_create(ui: &mut Cursive, password_store_dir: Arc<Option<String>>) {
     }
 }
 
-fn create_store(ui: &mut Cursive, password_store_dir: Arc<Option<String>>) {
+fn create_store(ui: &mut Cursive, password_store_dir: &Option<String>) {
     let password_store_dir2 = password_store_dir.clone();
-
     let d2 = Dialog::around(LinearLayout::new(Orientation::Vertical)
         .child(TextView::new(super::CATALOG.gettext("Ripasso uses GPG in order to encrypt the stored passwords.\nPlease enter your GPG key ID")))
         .child(EditView::new().with_name("initial_key_id"))
     )
         .button(super::CATALOG.gettext("Create"), move |ui: &mut Cursive| {
-            do_create(ui, password_store_dir.clone());
+            do_create(ui, &password_store_dir2);
         });
 
+    let password_store_dir3 = password_store_dir.clone();
     let recipients_event = OnEventView::new(d2)
         .on_event(Key::Enter, move |ui: &mut Cursive| {
-            do_create(ui, password_store_dir2.clone());
+            do_create(ui, &password_store_dir3);
         });
 
     ui.add_layer(recipients_event);
 }
 
-pub fn show_init_menu(password_store_dir: Arc<Option<String>>) {
+pub fn show_init_menu(password_store_dir: &Option<String>) {
     let mut ui = Cursive::default();
 
     ui.load_toml(include_str!("../res/style.toml")).unwrap();
@@ -127,9 +128,10 @@ pub fn show_init_menu(password_store_dir: Arc<Option<String>>) {
         ),
     );
 
+    let password_store_dir2 = password_store_dir.clone();
     let d = Dialog::around(TextView::new(super::CATALOG.gettext("Welcome to Ripasso, it seems like you don't have a password store directory yet would you like to create it?\nIt's created in $HOME/.password-store or where the PASSWORD_STORE_DIR environmental variable points.")))
         .button(super::CATALOG.gettext("Create"), move |ui: &mut Cursive| {
-            create_store(ui, password_store_dir.clone());
+            create_store(ui, &password_store_dir2);
         })
         .button(super::CATALOG.gettext("Cancel"), |s| {
             s.quit();

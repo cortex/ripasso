@@ -168,17 +168,17 @@ fn main() {
         );
     }));
 
-    let password_store_dir = Arc::new(match std::env::var("PASSWORD_STORE_DIR") {
+    let password_store_dir = match std::env::var("PASSWORD_STORE_DIR") {
         Ok(p) => Some(p),
         Err(_) => None
-    });
+    };
     let password_store_signing_key = match std::env::var("PASSWORD_STORE_SIGNING_KEY") {
         Ok(p) => Some(p),
         Err(_) => None
     };
 
 
-    let store = Arc::new(Mutex::new(pass::PasswordStore::new(password_store_dir.clone(), &password_store_signing_key).unwrap()));
+    let store = Arc::new(Mutex::new(pass::PasswordStore::new(&password_store_dir, &password_store_signing_key).unwrap()));
 
     // Load and watch all the passwords in the background
     let _ = pass::watch(store.clone()).expect("error");

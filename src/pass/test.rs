@@ -44,7 +44,7 @@ fn get_password_dir_no_env() {
     env::set_var("HOME", dir.path());
     env::remove_var("PASSWORD_STORE_DIR");
 
-    let path = password_dir(Arc::new(None));
+    let path = password_dir(&None);
 
     assert_eq!(path.unwrap_err(), Error::Generic("failed to locate password directory"));
 }

@@ -565,10 +565,10 @@ fn get_translation_catalog() -> gettext::Catalog {
 fn main() {
     env_logger::init();
 
-    let password_store_dir = Arc::new(match std::env::var("PASSWORD_STORE_DIR") {
+    let password_store_dir = match std::env::var("PASSWORD_STORE_DIR") {
         Ok(p) => Some(p),
         Err(_) => None
-    });
+    };
     let args: Vec<String> = std::env::args().collect();
 
     match args.len() {
@@ -588,19 +588,19 @@ fn main() {
         }
     }
 
-    if pass::password_dir(password_store_dir.clone()).is_err() {
-        wizard::show_init_menu(password_store_dir.clone());
+    if pass::password_dir(&password_store_dir).is_err() {
+        wizard::show_init_menu(&password_store_dir);
     }
 
-    if pass::password_dir(password_store_dir.clone()).is_ok() {
-        let mut gpg_id_file = pass::password_dir(password_store_dir.clone()).unwrap();
+    if pass::password_dir(&password_store_dir).is_ok() {
+        let mut gpg_id_file = pass::password_dir(&password_store_dir).unwrap();
         gpg_id_file.push(".gpg-id");
         if !gpg_id_file.exists() {
             eprintln!("{}", CATALOG.gettext("You have pointed ripasso towards an existing directory without an .gpg-id file, this doesn't seem like a password store directory, quiting."));
             process::exit(1);
         }
     }
-    let pdir_res = pass::password_dir(password_store_dir.clone());
+    let pdir_res = pass::password_dir(&password_store_dir);
     if pdir_res.is_err() {
         eprintln!("Error {:?}", pdir_res.err().unwrap());
         process::exit(1);
@@ -611,7 +611,7 @@ fn main() {
         Err(_) => None
     };
 
-    let store_res = PasswordStore::new(password_store_dir.clone(), &password_store_signing_key);
+    let store_res = PasswordStore::new(&password_store_dir, &password_store_signing_key);
     if store_res.is_err() {
         eprintln!("Error {:?}", store_res.err().unwrap());
         process::exit(1);
