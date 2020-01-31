@@ -1185,15 +1185,14 @@ pub fn create_password_list(repo_opt: &Option<git2::Repository>, root_dir: &path
 
 /// Subscribe to events, that happen when password files are added or removed
 pub fn watch(store: PasswordStoreType) -> Result<Receiver<PasswordEvent>> {
-    let (dir, passwords_out) = {
+    let dir = {
         let store_res = (*store).try_lock();
         if store_res.is_err() {
             return Err(Error::GenericDyn(format!("{:?}", store_res.err())))
         }
         let s = store_res.unwrap();
 
-        let passwords_out = Arc::new(Mutex::new(create_password_list(&s.repo, &s.root)?));
-        (s.root.clone(), passwords_out)
+        s.root.clone()
     };
 
     let (watcher_tx, watcher_rx) = channel();
@@ -1203,8 +1202,6 @@ pub fn watch(store: PasswordStoreType) -> Result<Receiver<PasswordEvent>> {
         Sender<PasswordEvent>,
         Receiver<PasswordEvent>,
     ) = channel();
-
-    let passwords = passwords_out.clone();
 
     thread::spawn(move || {
         info!("Starting thread");
@@ -1235,14 +1232,9 @@ pub fn watch(store: PasswordStoreType) -> Result<Receiver<PasswordEvent>> {
                                     PasswordEntry::load_from_git(&s.root, &p.clone(), s.repo.as_ref().unwrap()).unwrap()
                                 }
                             };
-                            if !(passwords.lock().unwrap()).iter().any(|p| p.path == p_e.path) {
-                                (passwords.lock().unwrap()).push(p_e.clone());
-                            }
                             PasswordEvent::NewPassword(p_e)
                         },
                         notify::DebouncedEvent::Remove(p) => {
-                            let index = (passwords.lock().unwrap()).iter().position(|x| *x.path == p).unwrap();
-                            (passwords.lock().unwrap()).remove(index);
                             PasswordEvent::RemovedPassword(p)
                         },
                         notify::DebouncedEvent::Error(e, _) => {
