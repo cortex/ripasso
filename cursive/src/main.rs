@@ -231,7 +231,7 @@ fn create_save(s: &mut Cursive, store: PasswordStoreType) -> () {
         return;
     }
 
-    let res = (*store).lock().unwrap().new_password_file(path.clone(), password);
+    let res = (*store).lock().unwrap().new_password_file(path.as_ref(), password.as_ref());
 
     let col = s.screen_size().x;
     if res.is_err() {

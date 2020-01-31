@@ -236,7 +236,7 @@ impl PasswordStore {
     }
 
     /// Creates a new password file in the store.
-    pub fn new_password_file(&mut self, path_end: std::rc::Rc<String>, content: std::rc::Rc<String>) -> Result<PasswordEntry> {
+    pub fn new_password_file(&mut self, path_end: &String, content: &String) -> Result<PasswordEntry> {
         let mut path = self.root.clone();
 
         let c_path = std::fs::canonicalize(path.as_path())?;
