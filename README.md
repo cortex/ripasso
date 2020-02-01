@@ -18,8 +18,6 @@ cargo build --all
 
 PR's are very welcome!
 
-If you want to talk to the developers, please join our matrix room [here](https://riot.im/app/#/room/#ripasso:matrix.org).
-
 ## History
 This is a reimplementation of https://github.com/cortex/gopass in Rust. I started it mainly because https://github.com/go-qml/qml
 is unmaintained. Also, using a safe language for your passwords seems like a good idea.
