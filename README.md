@@ -27,7 +27,7 @@ is unmaintained. Also, using a safe language for your passwords seems like a goo
 ## UI's
 
 ### Cursive - Terminal interface
-![Screenshot of ripasso-cursive](doc/ripasso-cursive.png)
+![Screenshot of ripasso-cursive](doc/ripasso-cursive-0.4.0.png)
 
 TUI interface based on [cursive](https://github.com/gyscos/Cursive)
 Supports password age display and password editing.
