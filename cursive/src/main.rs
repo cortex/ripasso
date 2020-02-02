@@ -394,8 +394,18 @@ fn view_recipients(ui: &mut Cursive, store: PasswordStoreType) -> () {
         .h_align(cursive::align::HAlign::Left)
         .with_name("recipients");
 
+    let mut max_width = 0;
+    for recipient in &recipients {
+        if recipient.key_id.len() > max_width {
+            max_width = recipient.key_id.len();
+        }
+    }
     for recipient in recipients {
-        recipients_view.get_mut().add_item(format!("{} {}", recipient.key_id.clone(), recipient.name.clone()), recipient);
+        let symbol = match &recipient.key_ring_status {
+            pass::KeyRingStatus::NotInKeyRing => "⚠️ ",
+            pass::KeyRingStatus::InKeyRing => "  ️",
+        };
+        recipients_view.get_mut().add_item(format!("{} {:width$} {}", symbol, &recipient.key_id, &recipient.name, width=max_width), recipient);
     }
 
     let d = Dialog::around(recipients_view)

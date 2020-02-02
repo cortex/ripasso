@@ -60,6 +60,7 @@ pub enum Error {
     PatternError(glob::PatternError),
     GlobError(glob::GlobError),
     Utf8Error(std::str::Utf8Error),
+    RecipientNotInKeyRing(String)
 }
 
 impl From<io::Error> for Error {
@@ -287,6 +288,9 @@ impl PasswordStore {
         }
 
         for recipient in Recipient::all_recipients_internal(&self.root)? {
+            if recipient.key_ring_status == KeyRingStatus::NotInKeyRing {
+                return Err(Error::RecipientNotInKeyRing(recipient.key_id));
+            }
             keys.push(ctx.get_key(recipient.key_id)?);
         }
 
@@ -428,6 +432,9 @@ impl PasswordEntry {
         let mut keys = Vec::new();
 
         for recipient in Recipient::all_recipients(store)? {
+            if recipient.key_ring_status == KeyRingStatus::NotInKeyRing {
+                return Err(Error::RecipientNotInKeyRing(recipient.key_id));
+            }
             keys.push(ctx.get_key(recipient.key_id)?);
         }
 
@@ -813,20 +820,30 @@ pub fn pull(store: PasswordStoreType) -> Result<()> {
     return Ok(());
 }
 
+#[derive(Clone, PartialEq)]
+pub enum KeyRingStatus {
+    InKeyRing,
+    NotInKeyRing
+}
+
 /// Represents one person on the team.
 ///
 /// All secrets are encrypted with the key_id of the recipients.
+#[derive(Clone)]
 pub struct Recipient {
     /// Human readable name of the person.
     pub name: String,
     /// Machine readable identity, in the form of a gpg key id.
     pub key_id: String,
+    /// The status of the key in GPG's keyring
+    pub key_ring_status: KeyRingStatus,
 }
 
-fn build_recipient(name: String, key_id: String) -> Recipient {
+fn build_recipient(name: String, key_id: String, key_ring_status: KeyRingStatus) -> Recipient {
     Recipient {
         name,
         key_id,
+        key_ring_status,
     }
 }
 
@@ -837,7 +854,7 @@ impl Recipient {
 
         let key_option = ctx.get_key(key_id.clone());
         if key_option.is_err() {
-            return Err(Error::Generic("Can't find key in keyring, please import it first"));
+            return Ok(build_recipient("key id not in keyring".to_string(), key_id, KeyRingStatus::NotInKeyRing));
         }
 
         let real_key = key_option?;
@@ -847,7 +864,7 @@ impl Recipient {
             name = user_id.name().unwrap_or("?");
         }
 
-        return Ok(build_recipient(name.to_string(), key_id));
+        return Ok(build_recipient(name.to_string(), key_id, KeyRingStatus::InKeyRing));
     }
 
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
@@ -885,7 +902,7 @@ impl Recipient {
         for key in unique_recipients_keys {
             let key_option = ctx.get_key(key.clone());
             if key_option.is_err() {
-                recipients.push(build_recipient("key id not in keyring".to_string(), key.clone()));
+                recipients.push(build_recipient("key id not in keyring".to_string(), key.clone(), KeyRingStatus::NotInKeyRing));
                 continue;
             }
 
@@ -895,7 +912,7 @@ impl Recipient {
             for user_id in real_key.user_ids() {
                 name = user_id.name().unwrap_or("?");
             }
-            recipients.push(build_recipient(name.to_string(), real_key.id().unwrap_or("?").to_string()));
+            recipients.push(build_recipient(name.to_string(), real_key.id().unwrap_or("?").to_string(), KeyRingStatus::InKeyRing));
         }
 
         return Ok(recipients);
@@ -990,7 +1007,7 @@ impl Recipient {
             }
         }
 
-        recipients.push(build_recipient(s.name.clone(), s.key_id.clone()));
+        recipients.push((*s).clone());
 
         return Recipient::write_recipients_file(&recipients, store);
     }
