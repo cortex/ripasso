@@ -110,16 +110,16 @@ pub fn show_init_menu(password_store_dir: &Option<String>) {
         .with_name("results")
         .full_height();
 
-    let searchbox = EditView::new().fixed_width(72);
+    let search_box = EditView::new().full_width();
 
     ui.add_layer(
         LinearLayout::new(Orientation::Vertical)
             .child(
                 Dialog::around(
                     LinearLayout::new(Orientation::Vertical)
-                        .child(searchbox)
+                        .child(search_box)
                         .child(results)
-                        .fixed_width(72),
+                        .full_width(),
                 ).title("Ripasso"),
             ).child(
             LinearLayout::new(Orientation::Horizontal)

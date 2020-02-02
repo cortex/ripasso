@@ -513,7 +513,7 @@ fn git_pull(ui: &mut Cursive, store: PasswordStoreType) {
 }
 
 fn do_delete_last_word(ui: &mut Cursive, store: PasswordStoreType) -> () {
-    ui.call_on_name("searchbox", |e: &mut EditView| {
+    ui.call_on_name("search_box", |e: &mut EditView| {
         let s = e.get_content();
         let last_space = s.trim().rfind(" ");
         match last_space {
@@ -526,7 +526,7 @@ fn do_delete_last_word(ui: &mut Cursive, store: PasswordStoreType) -> () {
             }
         };
     });
-    let search_text = ui.find_name::<EditView>("searchbox").unwrap().get_content();
+    let search_text = ui.find_name::<EditView>("search_box").unwrap().get_content();
     search(&store, ui, &search_text);
 }
 
@@ -704,14 +704,14 @@ fn main() {
     ui.add_global_callback(Event::Key(cursive::event::Key::Esc), |s| s.quit());
 
     ui.load_toml(include_str!("../res/style.toml")).unwrap();
-    let searchbox = EditView::new()
+    let search_box = EditView::new()
         .on_edit(move |ui: &mut cursive::Cursive, query, _| {
             search(&store15, ui, query)
-        }).with_name("searchbox")
+        }).with_name("search_box")
         .full_width();
 
     // Override shortcuts on search box
-    let searchbox = OnEventView::new(searchbox)
+    let search_box = OnEventView::new(search_box)
         .on_event(Key::Up, up)
         .on_event(Key::Down, down);
 
@@ -727,7 +727,7 @@ fn main() {
             .child(
                 Dialog::around(
                     LinearLayout::new(Orientation::Vertical)
-                        .child(searchbox)
+                        .child(search_box)
                         .child(scroll_results)
                         .full_width(),
                 ).title("Ripasso"),
