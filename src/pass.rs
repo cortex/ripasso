@@ -885,6 +885,7 @@ impl Recipient {
         for key in unique_recipients_keys {
             let key_option = ctx.get_key(key.clone());
             if key_option.is_err() {
+                recipients.push(build_recipient("key id not in keyring".to_string(), key.clone()));
                 continue;
             }
 
