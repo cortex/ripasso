@@ -34,88 +34,16 @@ use std::sync::{Arc, Mutex};
 extern crate dirs;
 
 use std;
-use std::io;
-use std::string;
+
 use std::collections::HashSet;
 use git2::{Oid, Repository};
 use gpgme::Key;
 
-/// Convenience type for Results
-type Result<T> = std::result::Result<T, Error>;
+pub use crate::error::{Error, Result};
 
 /// The global state of all passwords are an instance of this type.
 pub type PasswordStoreType = Arc<Mutex<PasswordStore>>;
 
-/// A enum that contains the different types of errors that the library returns as part of Result's.
-#[derive(Debug)]
-pub enum Error {
-    IO(io::Error),
-    Git(git2::Error),
-    GPG(gpgme::Error),
-    UTF8(string::FromUtf8Error),
-    Notify(notify::Error),
-    Generic(&'static str),
-    GenericDyn(String),
-    PathError(path::StripPrefixError),
-    PatternError(glob::PatternError),
-    GlobError(glob::GlobError),
-    Utf8Error(std::str::Utf8Error),
-    RecipientNotInKeyRing(String)
-}
-
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Error {
-        Error::IO(err)
-    }
-}
-
-impl From<gpgme::Error> for Error {
-    fn from(err: gpgme::Error) -> Error {
-        Error::GPG(err)
-    }
-}
-
-impl From<git2::Error> for Error {
-    fn from(err: git2::Error) -> Error {
-        Error::Git(err)
-    }
-}
-
-impl From<string::FromUtf8Error> for Error {
-    fn from(err: string::FromUtf8Error) -> Error {
-        Error::UTF8(err)
-    }
-}
-
-impl From<notify::Error> for Error {
-    fn from(err: notify::Error) -> Error {
-        Error::Notify(err)
-    }
-}
-
-impl From<path::StripPrefixError> for Error {
-    fn from(err: path::StripPrefixError) -> Error {
-        Error::PathError(err)
-    }
-}
-
-impl From<glob::PatternError> for Error {
-    fn from(err: glob::PatternError) -> Error {
-        Error::PatternError(err)
-    }
-}
-
-impl From<glob::GlobError> for Error {
-    fn from(err: glob::GlobError) -> Error {
-        Error::GlobError(err)
-    }
-}
-
-impl From<std::str::Utf8Error> for Error {
-    fn from(err: std::str::Utf8Error) -> Error {
-        Error::Utf8Error(err)
-    }
-}
 
 /// A git commit for a password might be signed by a gpg key, and this signature's verification
 /// state is one of these values.
