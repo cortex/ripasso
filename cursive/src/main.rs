@@ -131,7 +131,7 @@ fn do_delete(ui: &mut Cursive, store: PasswordStoreType) -> () {
 
         let sel = sel.unwrap();
 
-        let r = sel.delete_file(store);
+        let r = sel.delete_file(&(*store.lock().unwrap()));
 
         if r.is_err() {
             return;
@@ -183,7 +183,8 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) -> () {
                     .call_on_name("editbox", |e: &mut TextArea| {
                         e.get_content().to_string()
                     }).unwrap();
-                let r = password_entry.update(new_password, store.clone());
+                let store = store.lock().unwrap();
+                let r = password_entry.update(new_password, &(*store));
                 if r.is_err() {
                     helpers::errorbox(s, &r.unwrap_err())
                 }
@@ -305,7 +306,7 @@ fn delete_recipient(ui: &mut Cursive, store: PasswordStoreType) -> () {
         return;
     }
 
-    let r = ripasso::pass::Recipient::remove_recipient_from_file(&sel.unwrap(), store);
+    let r = ripasso::pass::Recipient::remove_recipient_from_file(&sel.unwrap(), &(*store.lock().unwrap()));
 
     if r.is_err() {
         helpers::errorbox(ui, &r.unwrap_err());
@@ -336,7 +337,7 @@ fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) -> () {
     if recipient_result.is_err() {
         helpers::errorbox(ui, &recipient_result.err().unwrap());
     } else {
-        let res = pass::Recipient::add_recipient_to_file(&recipient_result.unwrap(), store.clone());
+        let res = pass::Recipient::add_recipient_to_file(&recipient_result.unwrap(), &(*store.lock().unwrap()));
         if res.is_err() {
             helpers::errorbox(ui, &res.unwrap_err());
         } else {
@@ -382,7 +383,7 @@ fn add_recipient_dialog(ui: &mut Cursive, store: PasswordStoreType) -> () {
 }
 
 fn view_recipients(ui: &mut Cursive, store: PasswordStoreType) -> () {
-    let recipients_res : Result<Vec<ripasso::pass::Recipient>, pass::Error> = ripasso::pass::Recipient::all_recipients(store.clone());
+    let recipients_res : Result<Vec<ripasso::pass::Recipient>, pass::Error> = ripasso::pass::Recipient::all_recipients(&(*store.lock().unwrap()));
 
     if recipients_res.is_err() {
         helpers::errorbox(ui, &recipients_res.err().unwrap());
@@ -486,7 +487,7 @@ fn help() {
 }
 
 fn git_push(ui: &mut Cursive, store: PasswordStoreType) {
-    let res = pass::push(store);
+    let res = pass::push(&(*store.lock().unwrap()));
 
     if res.is_err() {
         helpers::errorbox(ui, &res.unwrap_err());
@@ -498,7 +499,7 @@ fn git_push(ui: &mut Cursive, store: PasswordStoreType) {
 }
 
 fn git_pull(ui: &mut Cursive, store: PasswordStoreType) {
-    let pull_res = pass::pull(store.clone());
+    let pull_res = pass::pull(&(*store.lock().unwrap()));
 
     if pull_res.is_err() {
         helpers::errorbox(ui, &pull_res.unwrap_err());
@@ -626,7 +627,9 @@ fn main() {
         eprintln!("Error {:?}", store_res.err().unwrap());
         process::exit(1);
     }
-    let store = Arc::new(Mutex::new(store_res.unwrap()));
+    let mut store = store_res.unwrap();
+    store.reload_password_list().unwrap();
+    let store = Arc::new(Mutex::new(store));
 
     // verify that the git config is correct
     if !(*store).lock().unwrap().has_configured_username() {

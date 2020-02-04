@@ -5,7 +5,6 @@ use std::fs::File;
 use flate2::read::GzDecoder;
 use tar::Archive;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
 
 use ripasso::pass;
 
@@ -33,15 +32,12 @@ fn cleanup(mut base_path: PathBuf, path_name: &str) -> Result<(), std::io::Error
     Ok(())
 }
 
-fn pop_list(password_dir: PathBuf) -> () {
-    let password_store_dir = Arc::new(Some(format!("{}", password_dir.as_path().display())));
-
-    let password_store_dir = path::PathBuf::from(format!("{}", password_dir.as_path().display()));
-    let repo_opt = Some(git2::Repository::open(password_dir).unwrap());
-
-    let results = pass::create_password_list(&repo_opt, &password_store_dir).unwrap();
-
+fn pop_list(password_dir: PathBuf) -> pass::Result<()> {
+    let store = pass::PasswordStore::new(&Some(String::from(password_dir.to_str().unwrap())), &None)?;
+    let results = store.all_passwords().unwrap();
+    
     assert_eq!(results.len(), 4);
+    Ok(())
 }
 
 fn criterion_benchmark_load_4_passwords(c: &mut Criterion) {
