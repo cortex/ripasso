@@ -1218,9 +1218,9 @@ fn verify_git_signature(
 
     let sig_sum = sig_sum.unwrap();
 
-    if sig_sum.contains(gpgme::SignatureSummary::GREEN) {
+    if sig_sum.contains(gpgme::SignatureSummary::VALID) {
         return Ok(SignatureStatus::GoodSignature);
-    } else if sig_sum.contains(gpgme::SignatureSummary::VALID) {
+    } else if sig_sum.contains(gpgme::SignatureSummary::GREEN) {
         return Ok(SignatureStatus::AlmostGoodSignature);
     } else {
         return Ok(SignatureStatus::BadSignature);
