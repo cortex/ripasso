@@ -38,6 +38,7 @@ use std;
 use git2::{Oid, Repository};
 use gpgme::Key;
 use std::collections::HashSet;
+use std::collections::HashMap;
 
 pub use crate::error::{Error, Result};
 
@@ -906,6 +907,47 @@ pub enum KeyRingStatus {
     NotInKeyRing,
 }
 
+/// the GPG trust level for a key
+#[derive(Clone, PartialEq)]
+pub enum OwnerTrustLevel {
+    /// is only used for your own keys. You trust this key 'per se'. Any message signed with that key,
+    /// will be trusted. This is also the reason why any key from a friend, that is signed by you, will
+    /// also show as valid (green), even though you did not change the ownertrust of the signed key.
+    /// The signed key will be valid due to the ultimate ownertrust of your own key.
+    Ultimate,
+    /// is used for keys, which you trust to sign other keys. That means, if Alice's key is signed by
+    /// your Buddy Bob, whose key you set the ownertrust to Full, Alice's key will be trusted. You
+    /// should only be using Full ownertrust after verifying and signing Bob's key.
+    Full,
+    /// will make a key show as valid, if it has been signed by at least three keys which you set to
+    /// 'Marginal' trust-level. Example: If you set Alice's, Bob's and Peter's key to 'Marginal' and
+    /// they all sign Ed's key, Ed's key will be valid. Due to the complexity of this status, we
+    /// do not recommend using it.
+    Marginal,
+    /// Trust-level is identical to 'Unknown / Undefined' i.e. the key is not trusted. But in this case,
+    /// you actively state, to never trust the key in question. That means, you know that the key
+    /// owner is not accurately verifying other keys before signing them.
+    Never,
+    /// has the same meaning as 'Unknown' but differs, since it has actually been set by the user.
+    /// That could mean, that this is a key you want to process at a later point in time.
+    Undefined,
+    /// is the default state. It means, no ownertrust has been set yet. The key is not trusted.
+    Unknown
+}
+
+impl From<&gpgme::Validity> for OwnerTrustLevel {
+    fn from(level: &gpgme::Validity) -> OwnerTrustLevel {
+        return match level {
+            gpgme::Validity::Unknown => OwnerTrustLevel::Unknown,
+            gpgme::Validity::Undefined => OwnerTrustLevel::Undefined,
+            gpgme::Validity::Never => OwnerTrustLevel::Never,
+            gpgme::Validity::Marginal => OwnerTrustLevel::Marginal,
+            gpgme::Validity::Full => OwnerTrustLevel::Full,
+            gpgme::Validity::Ultimate => OwnerTrustLevel::Ultimate,
+        };
+    }
+}
+
 /// Represents one person on the team.
 ///
 /// All secrets are encrypted with the key_id of the recipients.
@@ -917,17 +959,21 @@ pub struct Recipient {
     pub key_id: String,
     /// The status of the key in GPG's keyring
     pub key_ring_status: KeyRingStatus,
+    /// The trust level the owner of the key ring has placed in this person
+    pub trust_level: OwnerTrustLevel,
 }
 
 fn build_recipient(
     name: String,
     key_id: String,
     key_ring_status: KeyRingStatus,
+    trust_level: OwnerTrustLevel,
 ) -> Recipient {
     Recipient {
         name,
         key_id,
         key_ring_status,
+        trust_level
     }
 }
 
@@ -942,6 +988,7 @@ impl Recipient {
                 "key id not in keyring".to_string(),
                 key_id,
                 KeyRingStatus::NotInKeyRing,
+                OwnerTrustLevel::Unknown,
             ));
         }
 
@@ -952,10 +999,13 @@ impl Recipient {
             name = user_id.name().unwrap_or("?");
         }
 
+        let trusts: HashMap<String, OwnerTrustLevel> = Recipient::get_all_trust_items()?;
+
         return Ok(build_recipient(
             name.to_string(),
             key_id,
             KeyRingStatus::InKeyRing,
+            (*trusts.get(real_key.fingerprint()?).unwrap_or(&OwnerTrustLevel::Unknown)).clone(),
         ));
     }
 
@@ -969,6 +1019,21 @@ impl Recipient {
         }
 
         return Recipient::all_recipients_internal(&store.root);
+    }
+
+    fn get_all_trust_items() -> Result<HashMap<String, OwnerTrustLevel>> {
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+        ctx.set_key_list_mode(gpgme::KeyListMode::SIGS)?;
+
+        let keys = ctx.find_keys(vec!["".to_string()])?;
+
+        let mut trusts = HashMap::new();
+        for key_res in keys {
+            let key = key_res?;
+            trusts.insert(key.fingerprint()?.clone().to_string(), OwnerTrustLevel::from(&key.owner_trust()));
+        }
+
+        return Ok(trusts);
     }
 
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
@@ -988,8 +1053,9 @@ impl Recipient {
             }
         }
 
-        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+        let trusts: HashMap<String, OwnerTrustLevel> = Recipient::get_all_trust_items()?;
 
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
         for key in unique_recipients_keys {
             let key_option = ctx.get_key(key.clone());
             if key_option.is_err() {
@@ -997,6 +1063,7 @@ impl Recipient {
                     "key id not in keyring".to_string(),
                     key.clone(),
                     KeyRingStatus::NotInKeyRing,
+                    OwnerTrustLevel::Unknown,
                 ));
                 continue;
             }
@@ -1011,6 +1078,7 @@ impl Recipient {
                 name.to_string(),
                 real_key.id().unwrap_or("?").to_string(),
                 KeyRingStatus::InKeyRing,
+                (*trusts.get(real_key.fingerprint()?).unwrap_or(&OwnerTrustLevel::Unknown)).clone(),
             ));
         }
 
