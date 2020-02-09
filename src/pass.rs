@@ -391,6 +391,23 @@ impl PasswordStore {
     }
 }
 
+/// Describes one log line in the history of a file
+pub struct GitLogLine {
+    pub message: String,
+    pub commit_time: DateTime<Local>,
+    pub signature_status: Option<SignatureStatus>
+}
+
+impl GitLogLine {
+    pub fn new(message: String, commit_time: DateTime<Local>, signature_status: Option<SignatureStatus>) -> GitLogLine {
+        GitLogLine {
+            message,
+            commit_time,
+            signature_status
+        }
+    }
+}
+
 /// One password in the password store
 #[derive(Clone, Debug)]
 pub struct PasswordEntry {
@@ -612,6 +629,88 @@ impl PasswordEntry {
         add_and_commit(store, &names, &message)?;
 
         return Ok(());
+    }
+
+    /// Returns a list of log lines for the password, one line for each commit that hade changed
+    /// that password in some way
+    pub fn get_history(&self, store: &PasswordStoreType) -> Result<Vec<GitLogLine>> {
+        let repo = {
+            let repo_res = (*store).lock().unwrap().repo();
+            if repo_res.is_err() {
+                return Ok(vec![]);
+            }
+            repo_res.unwrap()
+        };
+
+        let mut revwalk = repo.revwalk()?;
+
+        revwalk.set_sorting(git2::Sort::REVERSE);
+        revwalk.set_sorting(git2::Sort::TIME);
+
+        revwalk.push_head()?;
+
+        let mut p = self.path.to_str().unwrap().to_string();
+        let root = (*store).lock().unwrap().root.clone();
+        let prefix = root.to_str().unwrap().to_string();
+        strip_prefix(&mut p, prefix.len());
+        let ps = git2::Pathspec::new(vec![&p])?;
+
+        let mut diffopts = git2::DiffOptions::new();
+        diffopts.pathspec(&p);
+
+        let walk_res: Vec<GitLogLine> = revwalk.filter_map(|id| {
+            let commit = repo.find_commit(id.unwrap()).unwrap();
+
+            let tree = commit.tree().unwrap();
+            let flags = git2::PathspecFlags::NO_MATCH_ERROR;
+
+            match commit.parents().len() {
+                0 => {
+                    let tree = commit.tree().unwrap();
+                    let flags = git2::PathspecFlags::NO_MATCH_ERROR;
+                    if ps.match_tree(&tree, flags).is_err() {
+                        return None;
+                    }
+                }
+                _ => {
+                    let m = commit.parents().all(|parent| {
+                        match_with_parent(&repo, &commit, &parent, &mut diffopts)
+                            .unwrap_or(false)
+                    });
+                    if !m {
+                        return None;
+                    }
+                }
+            }
+
+            let time = commit.time();
+            let dt = Local.timestamp(time.seconds(), 0);
+            return Some(GitLogLine::new(commit.message().unwrap().to_string(), dt, None));
+        }).collect();
+
+        return Ok(walk_res);
+    }
+}
+
+/// returns true if the diff between the two commit's contains the path that the `DiffOptions`
+/// have been prepared with
+fn match_with_parent(repo: &git2::Repository, commit: &git2::Commit, parent: &git2::Commit, opts: &mut git2::DiffOptions) -> Result<bool> {
+    let a = parent.tree()?;
+    let b = commit.tree()?;
+    let diff = repo.diff_tree_to_tree(Some(&a), Some(&b), Some(opts))?;
+    Ok(diff.deltas().len() > 0)
+}
+
+/// removes the pos first characters from a string
+/// delete thing function when String.strip_prefix stabilizes
+fn strip_prefix(s: &mut String, pos: usize) {
+    match s.char_indices().nth(pos) {
+        Some((pos, _)) => {
+            s.drain(..pos);
+        }
+        None => {
+            s.clear();
+        }
     }
 }
 

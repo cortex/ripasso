@@ -156,7 +156,7 @@ fn delete(ui: &mut Cursive, store: PasswordStoreType) -> () {
         .dismiss_button(CATALOG.gettext("Cancel"))));
 }
 
-fn open(ui: &mut Cursive, store: PasswordStoreType) -> () {
+fn get_selected_password_entry(ui: &mut Cursive) -> Option<ripasso::pass::PasswordEntry> {
     let password_entry_option: Option<Option<std::rc::Rc<ripasso::pass::PasswordEntry>>> = ui
         .call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
             l.selection()
@@ -166,11 +166,54 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) -> () {
         Some(level_1) => {
             match level_1 {
                 Some(level_2) => level_2,
-                None => return
+                None => return None
             }
         },
-        None => return
+        None => return None
     })).clone();
+
+    return Some(password_entry);
+}
+
+fn show_file_history(ui: &mut Cursive, store: PasswordStoreType) -> () {
+    let password_entry_opt = get_selected_password_entry(ui);
+    if password_entry_opt.is_none() {
+        return
+    }
+    let password_entry = password_entry_opt.unwrap();
+
+    let mut file_history_view = SelectView::<pass::GitLogLine>::new()
+        .h_align(cursive::align::HAlign::Left)
+        .with_name("file_history");
+
+    let history = password_entry.get_history(&store);
+    if history.is_ok() {
+        for history_line in history.unwrap() {
+            file_history_view.get_mut().add_item(format!("{} {}", history_line.commit_time, history_line.message), history_line);
+        }
+
+        let d = Dialog::around(file_history_view)
+            .title(CATALOG.gettext("File History"))
+            .dismiss_button("Ok");
+
+        let file_history_event = OnEventView::new(d)
+            .on_event(Key::Esc, |s| {
+                s.pop_layer();
+            });
+
+        ui.add_layer(file_history_event);
+    } else {
+        helpers::errorbox(ui, &history.err().unwrap())
+    }
+}
+
+fn open(ui: &mut Cursive, store: PasswordStoreType) -> () {
+    let password_entry_opt = get_selected_password_entry(ui);
+    if password_entry_opt.is_none() {
+        return
+    }
+
+    let password_entry = password_entry_opt.unwrap();
 
     let password = match password_entry.secret() {
         Ok(p) => p,
@@ -690,6 +733,8 @@ fn main() {
     let store13 = store.clone();
     let store14 = store.clone();
     let store15 = store.clone();
+    let store16 = store.clone();
+    let store17 = store.clone();
 
     ui.add_global_callback(Event::CtrlChar('y'), copy);
     ui.add_global_callback(Key::Enter, copy);
@@ -706,6 +751,11 @@ fn main() {
     // View list of persons that have access
     ui.add_global_callback(Event::CtrlChar('v'), move |ui: &mut Cursive| {
         view_recipients(ui, store3.clone())
+    });
+
+    // Show git history of a file
+    ui.add_global_callback(Event::CtrlChar('h'), move |ui: &mut Cursive| {
+        show_file_history(ui, store16.clone())
     });
 
     // Query editing
@@ -769,11 +819,14 @@ fn main() {
         .add_subtree(CATALOG.gettext("Operations"),
                      MenuTree::new()
                          .leaf(CATALOG.gettext("Copy (ctrl-y)"), copy)
-                         .leaf(CATALOG.gettext("Create (ins) "), move |ui: &mut Cursive| {
-                             create(ui, store8.clone())
-                         })
                          .leaf(CATALOG.gettext("Open (ctrl-o)"), move |ui: &mut Cursive| {
                              open(ui, store9.clone())
+                         })
+                         .leaf(CATALOG.gettext("File History (ctrl-h)"), move |ui: &mut Cursive| {
+                             show_file_history(ui, store17.clone())
+                         })
+                         .leaf(CATALOG.gettext("Create (ins) "), move |ui: &mut Cursive| {
+                             create(ui, store8.clone())
                          })
                          .leaf(CATALOG.gettext("Delete (del)"), move |ui: &mut Cursive| {
                              delete(ui, store10.clone())
