@@ -661,9 +661,6 @@ impl PasswordEntry {
         let walk_res: Vec<GitLogLine> = revwalk.filter_map(|id| {
             let commit = repo.find_commit(id.unwrap()).unwrap();
 
-            let tree = commit.tree().unwrap();
-            let flags = git2::PathspecFlags::NO_MATCH_ERROR;
-
             match commit.parents().len() {
                 0 => {
                     let tree = commit.tree().unwrap();
@@ -892,6 +889,24 @@ fn remove_and_commit(
     return Ok(oid);
 }
 
+/// find the origin of the git repo, with the following strategy:
+/// first try the name `origin`, if that doesn't exist, list the available remotes and
+/// choose the first one
+fn find_origin(repo: &git2::Repository) -> Result<git2::Remote> {
+    let mut origin_res = repo.find_remote("origin");
+    if origin_res.is_err() {
+        let remotes = repo.remotes()?;
+        if remotes.len() == 0 {
+            return Err(Error::Generic("no remotes configured"));
+        }
+        origin_res = repo.find_remote(remotes.get(0).unwrap());
+        if origin_res.is_err() {
+            return Err(Error::Generic("error finding configured remote"));
+        }
+    }
+    return Ok(origin_res?);
+}
+
 /// Push your changes to the remote git repository.
 pub fn push(store: &PasswordStore) -> Result<()> {
 
@@ -901,7 +916,7 @@ pub fn push(store: &PasswordStore) -> Result<()> {
     let repo = store.repo().unwrap();
 
     let mut ref_status = None;
-    let mut origin = repo.find_remote("origin")?;
+    let mut origin = find_origin(&repo)?;
     let res = {
         let mut callbacks = git2::RemoteCallbacks::new();
         callbacks.credentials(|_url, username, allowed| {
@@ -943,9 +958,9 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
     if repo.is_err() {
         return Ok(());
     }
-    let repo = repo.unwrap(); 
+    let repo = repo.unwrap();
 
-    let mut remote = repo.find_remote("origin")?;
+    let mut origin = find_origin(&repo)?;
 
     let mut cb = git2::RemoteCallbacks::new();
     cb.credentials(|_url, username, allowed| {
@@ -964,7 +979,7 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
 
     let mut opts = git2::FetchOptions::new();
     opts.remote_callbacks(cb);
-    remote.fetch(&["master"], Some(&mut opts), None)?;
+    origin.fetch(&["master"], Some(&mut opts), None)?;
 
     let remote_oid = repo.refname_to_id("refs/remotes/origin/master")?;
     let head_oid = repo.refname_to_id("HEAD")?;
