@@ -1,0 +1,247 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2020-01-04 16:17+0100\n"
+"PO-Revision-Date: 2020-01-14 17:47+0100\n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.2.4\n"
+"Last-Translator: \n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language: de_DE\n"
+
+#: cursive/src/main.rs:482
+msgid ""
+"A password manager that uses the file format of the standard unix password "
+"manager 'pass', implemented in Rust. Ripasso reads $HOME/.password-store/ by "
+"default, override this by setting the PASSWORD_STORE_DIR environmental "
+"variable."
+msgstr ""
+"Ein in Rust implementierter Passwort-Manager, der das Dateiformat des "
+"standardmäßigen Unix-Passwort-Managers 'pass' verwendet. Ripasso liest "
+"standardmäßig $HOME/.password-store/, kann durch das Setzen der "
+"Umgebungsvariable PASSWORD_STORE_DIR geändert werden."
+
+#: cursive/src/main.rs:282
+msgid "Add new password"
+msgstr "Neues Passwort hinzufügen"
+
+#: cursive/src/main.rs:350
+msgid "Added team member to password store"
+msgstr "Teammitglied zum Kennwortspeicher hinzugefügt"
+
+#: cursive/src/wizard.rs:66
+msgid "Also create a git repository for the encrypted files?"
+msgstr ""
+"Soll auch ein Git-Repository für die verschlüsselten Dateien erstellt werden?"
+
+#: cursive/src/main.rs:138
+msgid "Are you sure you want to delete the password?"
+msgstr "Möchten Sie das Kennwort wirklich löschen?"
+
+#: cursive/src/main.rs:329
+msgid "Are you sure you want to remove this person?"
+msgstr "Möchten Sie diese Person wirklich entfernen?"
+
+#: cursive/src/main.rs:145 cursive/src/main.rs:292 cursive/src/main.rs:333
+#: cursive/src/main.rs:380 cursive/src/wizard.rs:129
+msgid "Cancel"
+msgstr "Abbrechen"
+
+#: cursive/src/main.rs:109
+msgid "Copied password to copy buffer for 40 seconds"
+msgstr "Kennwort wurde für 40 Sekunden in die Zwischenablage kopiert"
+
+#: cursive/src/main.rs:750
+msgid "Copy (ctrl-y)"
+msgstr "Kopieren (Strg-y)"
+
+#: cursive/src/wizard.rs:67 cursive/src/wizard.rs:86 cursive/src/wizard.rs:126
+msgid "Create"
+msgstr "Erstellen"
+
+#: cursive/src/main.rs:751
+msgid "Create (ins) "
+msgstr "Create (einfügen) "
+
+#: cursive/src/main.rs:252
+msgid "Created new password"
+msgstr "Neues Kennwort erstellen"
+
+#: cursive/src/main.rs:757
+msgid "Delete (del)"
+msgstr "Löschen (Entf)"
+
+#: cursive/src/main.rs:322
+msgid "Deleted team member from password store"
+msgstr "Teammitglied vom Kennwortspeicher entfernt"
+
+#: cursive/src/helpers.rs:34
+msgid "Error"
+msgstr "Fehler"
+
+#: cursive/src/main.rs:740 cursive/src/wizard.rs:120
+msgid "F1: Menu | "
+msgstr "F1: Menü | "
+
+#: cursive/src/main.rs:359
+msgid "GPG Key ID: "
+msgstr "GPG Schlüssel-ID: "
+
+#: cursive/src/main.rs:180 cursive/src/main.rs:283
+msgid "Generate"
+msgstr "Erzeugen"
+
+#: cursive/src/wizard.rs:73
+msgid "Git Init"
+msgstr "Git Init"
+
+#: cursive/src/main.rs:764
+msgid "Git Pull (ctrl-f)"
+msgstr "Git Pull (Strg-f)"
+
+#: cursive/src/main.rs:767
+msgid "Git Push (ctrl-g)"
+msgstr "Git Push (Strg-g)"
+
+#: cursive/src/wizard.rs:133
+msgid "Init"
+msgstr "Init"
+
+#: cursive/src/wizard.rs:43
+msgid "Initialized password repo with Ripasso"
+msgstr "Kennwort Repo mit Ripasso initialisiert"
+
+#: cursive/src/wizard.rs:70
+msgid "No"
+msgstr "Nein"
+
+#: cursive/src/helpers.rs:33 cursive/src/main.rs:186
+msgid "Ok"
+msgstr "OK"
+
+#: cursive/src/main.rs:754
+msgid "Open (ctrl-o)"
+msgstr "Öffnen (Strg-o)"
+
+#: cursive/src/main.rs:748
+msgid "Operations"
+msgstr "Aktionen"
+
+#: cursive/src/main.rs:142
+msgid "Password deleted"
+msgstr "Kennwort gelöscht"
+
+#: cursive/src/main.rs:267
+msgid "Password: "
+msgstr "Kennwort: "
+
+#: cursive/src/main.rs:261
+msgid "Path: "
+msgstr "Pfad: "
+
+#: cursive/src/main.rs:518
+msgid "Pulled from remote git repository"
+msgstr "Vom entfernten Git Repo gepullt"
+
+#: cursive/src/main.rs:492
+msgid "Pushed to remote git repository"
+msgstr "In das Remote-Git-Repository gepusht"
+
+#: cursive/src/main.rs:771
+msgid "Quit (esc)"
+msgstr "Beenden (Esc)"
+
+#: cursive/src/wizard.rs:83
+msgid ""
+"Ripasso uses GPG in order to encrypt the stored passwords.\n"
+"Please enter your GPG key ID"
+msgstr ""
+"Ripasso nutzt GPG zum verschlüssen der gespeicherten Passwörter.\n"
+"Bitte ID des GPG-Schlüssels eingeben"
+
+#: cursive/src/main.rs:170 cursive/src/main.rs:289
+msgid "Save"
+msgstr "Speichern"
+
+#: cursive/src/main.rs:408
+msgid "Team Members"
+msgstr "Teammitglieder"
+
+#: cursive/src/main.rs:760
+msgid "Team Members (ctrl-v)"
+msgstr "Teammitglieder (Strg-v)"
+
+#: cursive/src/wizard.rs:64
+msgid "Unable to write file"
+msgstr "Kann Datei nicht schreiben"
+
+#: cursive/src/main.rs:588 cursive/src/main.rs:593
+msgid "Unknown argument, usage: ripasso-cursive [-h|--help]"
+msgstr "Unbekannter Parameter, Benutzung: ripasso-cursive [-h|--help]"
+
+#: cursive/src/wizard.rs:125
+msgid ""
+"Welcome to Ripasso, it seems like you don't have a password store directory "
+"yet would you like to create it?\n"
+"It's created in $HOME/.password-store or where the PASSWORD_STORE_DIR "
+"environmental variable points."
+msgstr ""
+"Willkommen bei Ripasso. Sie haben anscheinend noch kein Verzeichnis für den "
+"Passwortspeicher. Möchten Sie eins erstellen?\n"
+"Es wird unter $HOME/.passwort-store oder dem Pfad in der Umgebungsvariable "
+"PASSWORT_STORE_DIR gespeichert."
+
+#: cursive/src/main.rs:139 cursive/src/main.rs:330 cursive/src/main.rs:377
+msgid "Yes"
+msgstr "Ja"
+
+#: cursive/src/main.rs:606
+msgid ""
+"You have pointed ripasso towards an existing directory without an .gpg-id "
+"file, this doesn't seem like a password store directory, quiting."
+msgstr ""
+"Sie haben ripasso auf ein existierendes Veryeichnis ohne .gpg-id-Datei "
+"gerichtet. Dieses sieht nicht nach einem Verzeichnis mit Kennwortspeicher "
+"aus. Ripasso wird beendet."
+
+#: cursive/src/main.rs:628
+msgid ""
+"You haven't configured you name and email in git, doing so will make "
+"cooperation with your team easier, you can do it like this:\n"
+"git config --global user.name \"John Doe\"\n"
+"git config --global user.email \"email@example.com\"\n"
+"\n"
+"Also consider configuring git to sign your commits with GPG:\n"
+"git config --global user.signingkey 3AA5C34371567BD2\n"
+"git config --global commit.gpgsign true"
+msgstr ""
+"Sie haben Ihren Namen und Ihre E-Mail-Adresse nicht in Git konfiguriert, was "
+"die Zusammenarbeit in Ihren Team erleichtert. Sie können es wie folgt "
+"konfigurieren:\n"
+"git config --global user.name \"John Doe\"\n"
+"git config --global user.email \"email@example.com\"\n"
+"\n"
+"Wenn Sie ihre git commits mit GPG signieren möchten:\n"
+"git config --global user.signingkey 3AA5C34371567BD2\n"
+"git config --global commit.gpgsign true"
+
+#: cursive/src/main.rs:415
+msgid "del: Remove"
+msgstr "Entf: Entfernen"
+
+#: cursive/src/main.rs:414
+msgid "ins: Add | "
+msgstr "Einf: Einfügen | "
+
+#: cursive/src/main.rs:443 cursive/src/main.rs:459
+msgid "n/a"
+msgstr "n/a"
