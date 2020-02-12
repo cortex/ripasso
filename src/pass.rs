@@ -358,7 +358,10 @@ impl PasswordStore {
             )?;
         }
 
-        return Recipient::all_recipients(&self.root);
+
+        let mut recipient_file = self.root.clone();
+        recipient_file.push(".gpg-id");
+        return Recipient::all_recipients(&recipient_file);
     }
 
     fn recipient_file(&self)-> path::PathBuf{
@@ -391,7 +394,9 @@ impl PasswordStore {
             return Ok(());
         }
 
-        let keys = Recipient::all_recipients(&self.root)?
+        let mut recipient_file = self.root.clone();
+        recipient_file.push(".gpg-id");
+        let keys = Recipient::all_recipients(&recipient_file)?
             .into_iter()
             .map(|s| format!("0x{}, ", s.key_id))
             .collect::<String>();
