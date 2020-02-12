@@ -16,3 +16,4 @@ pub mod pass;
 pub mod words;
 
 pub (crate) mod error;
+pub (crate) mod signature;

@@ -154,7 +154,7 @@ fn populate_password_list_directory_without_git() -> Result<()>{
 
 #[test]
 fn parse_signing_keys_empty() {
-    let result = PasswordStore::parse_signing_keys(&None).unwrap();
+    let result = parse_signing_keys(&None).unwrap();
 
     assert_eq!(result.len(), 0);
 }

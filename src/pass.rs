@@ -26,7 +26,6 @@ use std::time::Duration;
 use chrono::prelude::*;
 use git2;
 use glob;
-use gpgme;
 use notify;
 use notify::Watcher;
 use std::io::prelude::*;
@@ -36,26 +35,19 @@ extern crate dirs;
 use std;
 
 use git2::{Oid, Repository};
-use gpgme::Key;
-use std::collections::HashSet;
-use std::collections::HashMap;
 
 pub use crate::error::{Error, Result};
+pub use crate::signature::{
+    SignatureStatus,
+    OwnerTrustLevel,
+    parse_signing_keys, 
+    gpg_sign_string, 
+    Recipient,
+    KeyRingStatus, 
+} ;
 
 /// The global state of all passwords are an instance of this type.
 pub type PasswordStoreType = Arc<Mutex<PasswordStore>>;
-
-/// A git commit for a password might be signed by a gpg key, and this signature's verification
-/// state is one of these values.
-#[derive(Clone, Debug)]
-pub enum SignatureStatus {
-    /// Everything is fine with the signature, corresponds to the gpg status of GREEN
-    GoodSignature,
-    /// There was a non-critical failure in the verification, corresponds to the gpg status of VALID
-    AlmostGoodSignature,
-    /// Verification failed, corresponds to the gpg status of RED
-    BadSignature,
-}
 
 /// Represents a complete password store directory
 pub struct PasswordStore {
@@ -81,8 +73,7 @@ impl PasswordStore {
 
         //let all_passwords = create_password_list(&repo_opt, &pass_home)?;
 
-        let signing_keys =
-            PasswordStore::parse_signing_keys(password_store_signing_key)?;
+        let signing_keys = parse_signing_keys(password_store_signing_key)?;
 
         if signing_keys.len() != 0 {
             PasswordStore::verify_gpg_id_file(&pass_home, &signing_keys)?;
@@ -146,40 +137,6 @@ impl PasswordStore {
         }
     }
 
-    fn parse_signing_keys(
-        password_store_signing_key: &Option<String>,
-    ) -> Result<Vec<String>> {
-        if password_store_signing_key.is_none() {
-            return Ok(vec![]);
-        }
-
-        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-
-        let mut signing_keys = vec![];
-        for key in password_store_signing_key.as_ref().unwrap().split(",") {
-            let trimmed = key.trim().to_string();
-
-            if trimmed.len() != 40
-                || (trimmed.len() != 42 && trimmed.starts_with("0x"))
-            {
-                return Err(Error::Generic(
-                    "signing key isn't in full 40 character id format",
-                ));
-            }
-
-            let key_res = ctx.get_key(&trimmed);
-            if key_res.is_err() {
-                return Err(Error::GenericDyn(format!(
-                    "signing key not found in keyring, error: {:?}",
-                    key_res.err()
-                )));
-            }
-
-            signing_keys.push(trimmed);
-        }
-
-        return Ok(signing_keys);
-    }
 
     /// Creates a new password file in the store.
     pub fn new_password_file(
@@ -233,7 +190,7 @@ impl PasswordStore {
             )?;
         }
 
-        for recipient in Recipient::all_recipients_internal(&self.root)? {
+        for recipient in Recipient::all_recipients(&self.root)? {
             if recipient.key_ring_status == KeyRingStatus::NotInKeyRing {
                 return Err(Error::RecipientNotInKeyRing(recipient.key_id));
             }
@@ -389,6 +346,121 @@ impl PasswordStore {
 
         Ok(passwords)
     }
+
+    /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
+    pub fn all_recipients(&self) -> Result<Vec<Recipient>> {
+        if self.valid_gpg_signing_keys.len() != 0 {
+            PasswordStore::verify_gpg_id_file(
+                &self.root,
+                &self.valid_gpg_signing_keys,
+            )?;
+        }
+
+        return Recipient::all_recipients(&self.root);
+    }
+
+    fn recipient_file(&self)-> path::PathBuf{
+        let mut rf = self.root.clone();
+        rf.push(".gpg-id");
+        rf
+    }
+
+    pub fn remove_recipient(&self, r: &Recipient)->Result<()>{
+        Recipient::remove_recipient_from_file(&r, self.recipient_file(), &self.valid_gpg_signing_keys)?;
+        self.reencrypt_all_password_entries()
+    }
+
+    pub fn add_recipient(&self, r: &Recipient)->Result<()>{
+        Recipient::add_recipient_to_file(&r, self.recipient_file(), &self.valid_gpg_signing_keys)?;
+        self.reencrypt_all_password_entries()
+    }
+
+    /// Reencrypt all the entries in the store, for example when a new collaborator is added
+    /// to the team.
+    pub fn reencrypt_all_password_entries(&self) -> Result<()> {
+        let mut names: Vec<String> = Vec::new();
+        for entry in self.all_password_entries()? {
+            entry.update_internal(entry.secret()?, self)?;
+            names.push(format!("{}.gpg", &entry.name));
+        }
+        names.push(".gpg-id".to_string());
+
+        if self.repo().is_err() {
+            return Ok(());
+        }
+
+        let keys = Recipient::all_recipients(&self.root)?
+            .into_iter()
+            .map(|s| format!("0x{}, ", s.key_id))
+            .collect::<String>();
+        let message =
+            format!("Reencrypt password store with new GPG ids {}", keys);
+
+        self.add_and_commit(&names, &message)?;
+
+        return Ok(());
+    }
+
+    /// Returns a list of all password entries in the store.
+    pub fn all_password_entries(&self) -> Result<Vec<PasswordEntry>> {
+        let dir = self.root.clone();
+
+        // Existing files iterator
+        let password_path_glob = dir.join("**/*.gpg");
+        let paths = glob::glob(&password_path_glob.to_string_lossy())?;
+
+        let mut passwords = Vec::<PasswordEntry>::new();
+        for path in paths {
+            if self.repo().is_err() {
+                match PasswordEntry::load_from_git(
+                    &dir,
+                    &path?,
+                    &self.repo().unwrap(),
+                ) {
+                    Ok(password) => passwords.push(password),
+                    Err(e) => return Err(e),
+                }
+            } else {
+                match PasswordEntry::load_from_filesystem(&dir, &path?) {
+                    Ok(password) => passwords.push(password),
+                    Err(e) => return Err(e),
+                }
+            }
+        }
+
+        return Ok(passwords);
+    }
+
+    /// Add a file to the store, and commit it to the supplied git repository.
+    pub fn add_and_commit(&self, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
+        let repo = self.repo();
+        if repo.is_err() {
+            return Err(Error::Generic("must have a repository"));
+        }
+        let repo=repo.unwrap();
+
+        let mut index = repo.index()?;
+        for path in paths {
+            index.add_path(path::Path::new(path))?;
+        }
+        let oid = index.write_tree()?;
+        let signature = repo.signature()?;
+        let parent_commit_res = find_last_commit(&repo);
+        let mut parents = vec![];
+        let parent_commit;
+        if !parent_commit_res.is_err() {
+            parent_commit = parent_commit_res?;
+            parents.push(&parent_commit);
+        }
+        let tree = repo.find_tree(oid)?;
+
+        let oid = commit(&repo, &signature, &message.to_string(), &tree, &parents)?;
+        let obj = repo.find_object(oid, None)?;
+        repo.reset(&obj, git2::ResetType::Hard, None)?;
+
+        return Ok(oid);
+    }
+
 }
 
 /// Describes one log line in the history of a file
@@ -517,8 +589,13 @@ impl PasswordEntry {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
         let mut keys = Vec::new();
+        let recipient_file = {
+            let mut rf = store.root.clone();
+            rf.push(".gpg-id");
+            rf
+        };
 
-        for recipient in Recipient::all_recipients(store)? {
+        for recipient in Recipient::all_recipients(&recipient_file)? {
             if recipient.key_ring_status == KeyRingStatus::NotInKeyRing {
                 return Err(Error::RecipientNotInKeyRing(recipient.key_id));
             }
@@ -548,7 +625,7 @@ impl PasswordEntry {
     
         let message = format!("Edit password for {} using ripasso", &self.name);
 
-        add_and_commit(store, &vec![format!("{}.gpg", &self.name)], &message)?;
+        store.add_and_commit(&vec![format!("{}.gpg", &self.name)], &message)?;
 
         return Ok(());
     }
@@ -569,66 +646,6 @@ impl PasswordEntry {
             &message,
         )?;
         Ok(())
-    }
-
-    /// Returns a list of all password entries in the store.
-    pub fn all_password_entries(
-        store: &PasswordStore,
-    ) -> Result<Vec<PasswordEntry>> {
-        let dir = store.root.clone();
-
-        // Existing files iterator
-        let password_path_glob = dir.join("**/*.gpg");
-        let paths = glob::glob(&password_path_glob.to_string_lossy())?;
-
-        let mut passwords = Vec::<PasswordEntry>::new();
-        for path in paths {
-            if store.repo().is_err() {
-                match PasswordEntry::load_from_git(
-                    &dir,
-                    &path?,
-                    &store.repo().unwrap(),
-                ) {
-                    Ok(password) => passwords.push(password),
-                    Err(e) => return Err(e),
-                }
-            } else {
-                match PasswordEntry::load_from_filesystem(&dir, &path?) {
-                    Ok(password) => passwords.push(password),
-                    Err(e) => return Err(e),
-                }
-            }
-        }
-
-        return Ok(passwords);
-    }
-
-    /// Reencrypt all the entries in the store, for example when a new collaborator is added
-    /// to the team.
-    pub fn reencrypt_all_password_entries(
-        store: &PasswordStore,
-    ) -> Result<()> {
-        let mut names: Vec<String> = Vec::new();
-        for entry in PasswordEntry::all_password_entries(&store)? {
-            entry.update_internal(entry.secret()?, &store)?;
-            names.push(format!("{}.gpg", &entry.name));
-        }
-        names.push(".gpg-id".to_string());
-
-        if store.repo().is_err() {
-            return Ok(());
-        }
-
-        let keys = Recipient::all_recipients(&store)?
-            .into_iter()
-            .map(|s| format!("0x{}, ", s.key_id))
-            .collect::<String>();
-        let message =
-            format!("Reencrypt password store with new GPG ids {}", keys);
-
-        add_and_commit(store, &names, &message)?;
-
-        return Ok(());
     }
 
     /// Returns a list of log lines for the password, one line for each commit that hade changed
@@ -734,27 +751,6 @@ fn should_sign() -> bool {
     return true;
 }
 
-/// Returns a gpg signature for the supplied string. Suitable to add to a gpg commit.
-fn gpg_sign_string(commit: &String) -> Result<String> {
-    let config = git2::Config::open_default()?;
-
-    let signing_key = config.get_string("user.signingkey")?;
-
-    let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-    ctx.set_armor(true);
-    let key = ctx.get_secret_key(signing_key)?;
-
-    ctx.add_signer(&key)?;
-    let mut output = Vec::new();
-    let signature = ctx.sign_detached(commit.clone(), &mut output);
-
-    if signature.is_err() {
-        return Err(Error::GPG(signature.unwrap_err()));
-    }
-
-    return Ok(String::from_utf8(output)?);
-}
-
 /// Apply the changes to the git repository.
 fn commit(
     repo: &git2::Repository,
@@ -793,40 +789,7 @@ fn commit(
     }
 }
 
-/// Add a file to the store, and commit it to the supplied git repository.
-pub fn add_and_commit(
-    store: &PasswordStore,
-    paths: &Vec<String>,
-    message: &str,
-) -> Result<git2::Oid> {
 
-    let repo = store.repo();
-    if repo.is_err() {
-        return Err(Error::Generic("must have a repository"));
-    }
-    let repo=repo.unwrap();
-
-    let mut index = repo.index()?;
-    for path in paths {
-        index.add_path(path::Path::new(path))?;
-    }
-    let oid = index.write_tree()?;
-    let signature = repo.signature()?;
-    let parent_commit_res = find_last_commit(&repo);
-    let mut parents = vec![];
-    let parent_commit;
-    if !parent_commit_res.is_err() {
-        parent_commit = parent_commit_res?;
-        parents.push(&parent_commit);
-    }
-    let tree = repo.find_tree(oid)?;
-
-    let oid = commit(&repo, &signature, &message.to_string(), &tree, &parents)?;
-    let obj = repo.find_object(oid, None)?;
-    repo.reset(&obj, git2::ResetType::Hard, None)?;
-
-    return Ok(oid);
-}
 
 /// Add a file to the store, and commit it to the supplied git repository.
 fn add_and_commit_internal(
@@ -1013,293 +976,6 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
     //cleanup
     repo.cleanup_state()?;
     return Ok(());
-}
-
-#[derive(Clone, PartialEq)]
-pub enum KeyRingStatus {
-    InKeyRing,
-    NotInKeyRing,
-}
-
-/// the GPG trust level for a key
-#[derive(Clone, PartialEq)]
-pub enum OwnerTrustLevel {
-    /// is only used for your own keys. You trust this key 'per se'. Any message signed with that key,
-    /// will be trusted. This is also the reason why any key from a friend, that is signed by you, will
-    /// also show as valid (green), even though you did not change the ownertrust of the signed key.
-    /// The signed key will be valid due to the ultimate ownertrust of your own key.
-    Ultimate,
-    /// is used for keys, which you trust to sign other keys. That means, if Alice's key is signed by
-    /// your Buddy Bob, whose key you set the ownertrust to Full, Alice's key will be trusted. You
-    /// should only be using Full ownertrust after verifying and signing Bob's key.
-    Full,
-    /// will make a key show as valid, if it has been signed by at least three keys which you set to
-    /// 'Marginal' trust-level. Example: If you set Alice's, Bob's and Peter's key to 'Marginal' and
-    /// they all sign Ed's key, Ed's key will be valid. Due to the complexity of this status, we
-    /// do not recommend using it.
-    Marginal,
-    /// Trust-level is identical to 'Unknown / Undefined' i.e. the key is not trusted. But in this case,
-    /// you actively state, to never trust the key in question. That means, you know that the key
-    /// owner is not accurately verifying other keys before signing them.
-    Never,
-    /// has the same meaning as 'Unknown' but differs, since it has actually been set by the user.
-    /// That could mean, that this is a key you want to process at a later point in time.
-    Undefined,
-    /// is the default state. It means, no ownertrust has been set yet. The key is not trusted.
-    Unknown
-}
-
-impl From<&gpgme::Validity> for OwnerTrustLevel {
-    fn from(level: &gpgme::Validity) -> OwnerTrustLevel {
-        return match level {
-            gpgme::Validity::Unknown => OwnerTrustLevel::Unknown,
-            gpgme::Validity::Undefined => OwnerTrustLevel::Undefined,
-            gpgme::Validity::Never => OwnerTrustLevel::Never,
-            gpgme::Validity::Marginal => OwnerTrustLevel::Marginal,
-            gpgme::Validity::Full => OwnerTrustLevel::Full,
-            gpgme::Validity::Ultimate => OwnerTrustLevel::Ultimate,
-        };
-    }
-}
-
-/// Represents one person on the team.
-///
-/// All secrets are encrypted with the key_id of the recipients.
-#[derive(Clone)]
-pub struct Recipient {
-    /// Human readable name of the person.
-    pub name: String,
-    /// Machine readable identity, in the form of a gpg key id.
-    pub key_id: String,
-    /// The status of the key in GPG's keyring
-    pub key_ring_status: KeyRingStatus,
-    /// The trust level the owner of the key ring has placed in this person
-    pub trust_level: OwnerTrustLevel,
-}
-
-fn build_recipient(
-    name: String,
-    key_id: String,
-    key_ring_status: KeyRingStatus,
-    trust_level: OwnerTrustLevel,
-) -> Recipient {
-    Recipient {
-        name,
-        key_id,
-        key_ring_status,
-        trust_level
-    }
-}
-
-impl Recipient {
-    /// Creates a Recipient from a gpg key id string
-    pub fn new(key_id: String) -> Result<Recipient> {
-        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-
-        let key_option = ctx.get_key(key_id.clone());
-        if key_option.is_err() {
-            return Ok(build_recipient(
-                "key id not in keyring".to_string(),
-                key_id,
-                KeyRingStatus::NotInKeyRing,
-                OwnerTrustLevel::Unknown,
-            ));
-        }
-
-        let real_key = key_option?;
-
-        let mut name = "?";
-        for user_id in real_key.user_ids() {
-            name = user_id.name().unwrap_or("?");
-        }
-
-        let trusts: HashMap<String, OwnerTrustLevel> = Recipient::get_all_trust_items()?;
-
-        return Ok(build_recipient(
-            name.to_string(),
-            key_id,
-            KeyRingStatus::InKeyRing,
-            (*trusts.get(real_key.fingerprint()?).unwrap_or(&OwnerTrustLevel::Unknown)).clone(),
-        ));
-    }
-
-    /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
-    pub fn all_recipients(store: &PasswordStore) -> Result<Vec<Recipient>> {
-        if store.valid_gpg_signing_keys.len() != 0 {
-            PasswordStore::verify_gpg_id_file(
-                &store.root,
-                &store.valid_gpg_signing_keys,
-            )?;
-        }
-
-        return Recipient::all_recipients_internal(&store.root);
-    }
-
-    fn get_all_trust_items() -> Result<HashMap<String, OwnerTrustLevel>> {
-        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-        ctx.set_key_list_mode(gpgme::KeyListMode::SIGS)?;
-
-        let keys = ctx.find_keys(vec!["".to_string()])?;
-
-        let mut trusts = HashMap::new();
-        for key_res in keys {
-            let key = key_res?;
-            trusts.insert(key.fingerprint()?.clone().to_string(), OwnerTrustLevel::from(&key.owner_trust()));
-        }
-
-        return Ok(trusts);
-    }
-
-    /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
-    fn all_recipients_internal(
-        recipient_file_in: &path::PathBuf,
-    ) -> Result<Vec<Recipient>> {
-        let mut recipient_file = recipient_file_in.clone();
-        recipient_file.push(".gpg-id");
-        let contents = fs::read_to_string(recipient_file)
-            .expect("Something went wrong reading the file");
-
-        let mut recipients: Vec<Recipient> = Vec::new();
-        let mut unique_recipients_keys: HashSet<String> = HashSet::new();
-        for key in contents.split("\n") {
-            if key.len() > 1 {
-                unique_recipients_keys.insert(key.to_string());
-            }
-        }
-
-        let trusts: HashMap<String, OwnerTrustLevel> = Recipient::get_all_trust_items()?;
-
-        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-        for key in unique_recipients_keys {
-            let key_option = ctx.get_key(key.clone());
-            if key_option.is_err() {
-                recipients.push(build_recipient(
-                    "key id not in keyring".to_string(),
-                    key.clone(),
-                    KeyRingStatus::NotInKeyRing,
-                    OwnerTrustLevel::Unknown,
-                ));
-                continue;
-            }
-
-            let real_key = key_option?;
-
-            let mut name = "?";
-            for user_id in real_key.user_ids() {
-                name = user_id.name().unwrap_or("?");
-            }
-            recipients.push(build_recipient(
-                name.to_string(),
-                real_key.id().unwrap_or("?").to_string(),
-                KeyRingStatus::InKeyRing,
-                (*trusts.get(real_key.fingerprint()?).unwrap_or(&OwnerTrustLevel::Unknown)).clone(),
-            ));
-        }
-
-        return Ok(recipients);
-    }
-
-    fn write_recipients_file(
-        recipients: &Vec<Recipient>,
-        store: &PasswordStore,
-    ) -> Result<()> {
-        {
-            let mut recipient_file = store.root.clone();
-            recipient_file.push(".gpg-id");
-
-            let mut file = std::fs::OpenOptions::new()
-                .write(true)
-                .create(true)
-                .truncate(true)
-                .open(recipient_file)?;
-
-            let mut file_content = "".to_string();
-            for recipient in recipients {
-                if !recipient.key_id.starts_with("0x") {
-                    file_content.push_str("0x");
-                }
-                file_content.push_str(recipient.key_id.as_str());
-                file_content.push_str("\n");
-            }
-            file.write(file_content.as_bytes())?;
-
-            if store.valid_gpg_signing_keys.len() != 0 {
-                let mut ctx =
-                    gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-                let mut key_opt: Option<Key> = None;
-
-                for key_id in &store.valid_gpg_signing_keys {
-                    let key_res = ctx.get_key(key_id);
-
-                    if key_res.is_ok() {
-                        key_opt = Some(key_res.unwrap());
-                    }
-                }
-
-                if key_opt.is_some() {
-                    let key = key_opt.unwrap();
-
-                    ctx.add_signer(&key)?;
-
-                    let mut output = Vec::new();
-                    ctx.sign_detached(file_content.clone(), &mut output)?;
-
-                    let mut recipient_sig_filename = store.root.clone();
-                    recipient_sig_filename.push(".gpg-id.sig");
-
-                    let mut recipient_sig_file = std::fs::OpenOptions::new()
-                        .write(true)
-                        .create(true)
-                        .truncate(true)
-                        .open(recipient_sig_filename)?;
-
-                    recipient_sig_file.write(&output)?;
-                }
-            }
-        }
-
-        PasswordEntry::reencrypt_all_password_entries(store)?;
-
-        return Ok(());
-    }
-
-    /// Delete one of the persons from the list of team members to encrypt the passwords for.
-    pub fn remove_recipient_from_file(
-        s: &Recipient,
-        store: &PasswordStore,
-    ) -> Result<()> {
-        let mut recipients: Vec<Recipient> =
-            Recipient::all_recipients(&store)?;
-
-        recipients.retain(|ref vs| vs.key_id != s.key_id);
-
-        if recipients.len() < 1 {
-            return Err(Error::Generic("Can't delete the last encryption key"));
-        }
-
-        return Recipient::write_recipients_file(&recipients, store);
-    }
-
-    /// Add a new person to the list of team members to encrypt the passwords for.
-    pub fn add_recipient_to_file(
-        s: &Recipient,
-        store: &PasswordStore,
-    ) -> Result<()> {
-        let mut recipients: Vec<Recipient> =
-            Recipient::all_recipients(&store)?;
-
-        for recipient in &recipients {
-            if recipient.key_id == s.key_id {
-                return Err(Error::Generic(
-                    "Team member is already in the list of key ids",
-                ));
-            }
-        }
-
-        recipients.push((*s).clone());
-
-        return Recipient::write_recipients_file(&recipients, store);
-    }
 }
 
 fn read_git_meta_data(

@@ -45,7 +45,7 @@ fn create_git_repo(ui: &mut Cursive, password_store_dir: &Option<String>) {
             helpers::errorbox(ui, &store_res.err().unwrap());
         } else {
             let store = Arc::new(Mutex::new(store_res.unwrap()));
-            let commit_res = pass::add_and_commit(&(*store.lock().unwrap()), &vec![".gpg-id".to_string()], &message);
+            let commit_res = store.lock().unwrap().add_and_commit(&vec![".gpg-id".to_string()], &message);
 
             if commit_res.is_err() {
                 helpers::errorbox(ui, &commit_res.err().unwrap());

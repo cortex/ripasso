@@ -34,8 +34,7 @@ extern crate clipboard;
 use self::clipboard::{ClipboardContext, ClipboardProvider};
 
 use ripasso::pass;
-use ripasso::pass::{SignatureStatus, PasswordStore, PasswordStoreType, OwnerTrustLevel};
-
+use ripasso::pass::{PasswordStore, PasswordStoreType, OwnerTrustLevel, SignatureStatus};
 use std::process;
 use std::{thread, time};
 use std::sync::{Arc, Mutex};
@@ -349,7 +348,7 @@ fn delete_recipient(ui: &mut Cursive, store: PasswordStoreType) -> () {
         return;
     }
 
-    let r = ripasso::pass::Recipient::remove_recipient_from_file(&sel.unwrap(), &(*store.lock().unwrap()));
+    let r = store.lock().unwrap().remove_recipient(&sel.unwrap());
 
     if r.is_err() {
         helpers::errorbox(ui, &r.unwrap_err());
@@ -380,7 +379,7 @@ fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) -> () {
     if recipient_result.is_err() {
         helpers::errorbox(ui, &recipient_result.err().unwrap());
     } else {
-        let res = pass::Recipient::add_recipient_to_file(&recipient_result.unwrap(), &(*store.lock().unwrap()));
+        let res = store.lock().unwrap().add_recipient(&recipient_result.unwrap());
         if res.is_err() {
             helpers::errorbox(ui, &res.unwrap_err());
         } else {
@@ -426,7 +425,7 @@ fn add_recipient_dialog(ui: &mut Cursive, store: PasswordStoreType) -> () {
 }
 
 fn view_recipients(ui: &mut Cursive, store: PasswordStoreType) -> () {
-    let recipients_res : Result<Vec<ripasso::pass::Recipient>, pass::Error> = ripasso::pass::Recipient::all_recipients(&(*store.lock().unwrap()));
+    let recipients_res = store.lock().unwrap().all_recipients();
 
     if recipients_res.is_err() {
         helpers::errorbox(ui, &recipients_res.err().unwrap());
