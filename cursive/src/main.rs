@@ -366,7 +366,8 @@ fn delete_recipient_verification(ui: &mut Cursive, store: PasswordStoreType) -> 
     ui.add_layer(CircularFocus::wrap_tab(
         Dialog::around(TextView::new(CATALOG.gettext("Are you sure you want to remove this person?")))
             .button(CATALOG.gettext("Yes"), move |ui: &mut Cursive| {
-                delete_recipient(ui, store.clone())
+                delete_recipient(ui, store.clone());
+                ui.pop_layer();
             })
             .dismiss_button(CATALOG.gettext("Cancel"))));
 }
@@ -379,10 +380,33 @@ fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) -> () {
     if recipient_result.is_err() {
         helpers::errorbox(ui, &recipient_result.err().unwrap());
     } else {
-        let res = store.lock().unwrap().add_recipient(&recipient_result.unwrap());
+        let recipient = recipient_result.unwrap();
+        let res = store.lock().unwrap().add_recipient(&recipient);
         if res.is_err() {
             helpers::errorbox(ui, &res.unwrap_err());
         } else {
+            let recipients_res = store.lock().unwrap().all_recipients();
+
+            if recipients_res.is_err() {
+                helpers::errorbox(ui, &recipients_res.err().unwrap());
+                return ();
+            }
+            let recipients = recipients_res.unwrap();
+
+            let mut max_width_key = 0;
+            let mut max_width_name = 0;
+            for recipient in &recipients {
+                if recipient.key_id.len() > max_width_key {
+                    max_width_key = recipient.key_id.len();
+                }
+                if recipient.name.len() > max_width_name {
+                    max_width_name = recipient.name.len();
+                }
+            }
+
+            let mut recipients_view = ui.find_name::<SelectView<pass::Recipient>>("recipients").unwrap();
+            recipients_view.add_item(render_recipient_label(&recipient, &max_width_key, &max_width_name), recipient);
+
             ui.pop_layer();
             ui.call_on_name("status_bar", |l: &mut TextView| {
                 l.set_content(CATALOG.gettext("Added team member to password store"));
@@ -424,6 +448,23 @@ fn add_recipient_dialog(ui: &mut Cursive, store: PasswordStoreType) -> () {
     ui.add_layer(ev);
 }
 
+fn render_recipient_label(recipient: &pass::Recipient, max_width_key: &usize, max_width_name: &usize) -> String {
+    let symbol = match &recipient.key_ring_status {
+        pass::KeyRingStatus::NotInKeyRing => "⚠️ ",
+        pass::KeyRingStatus::InKeyRing => "  ️",
+    };
+
+    let trust = match &recipient.trust_level {
+        OwnerTrustLevel::Ultimate => CATALOG.gettext("Ultimate"),
+        OwnerTrustLevel::Full => CATALOG.gettext("Full"),
+        OwnerTrustLevel::Marginal => CATALOG.gettext("Marginal"),
+        OwnerTrustLevel::Never => CATALOG.gettext("Never"),
+        OwnerTrustLevel::Undefined => CATALOG.gettext("Undefined"),
+        OwnerTrustLevel::Unknown => CATALOG.gettext("Unknown"),
+    };
+    return format!("{} {:width_key$} {:width_name$} {}   ", symbol, &recipient.key_id, &recipient.name, trust, width_key=max_width_key, width_name=max_width_name);
+}
+
 fn view_recipients(ui: &mut Cursive, store: PasswordStoreType) -> () {
     let recipients_res = store.lock().unwrap().all_recipients();
 
@@ -448,20 +489,7 @@ fn view_recipients(ui: &mut Cursive, store: PasswordStoreType) -> () {
         }
     }
     for recipient in recipients {
-        let symbol = match &recipient.key_ring_status {
-            pass::KeyRingStatus::NotInKeyRing => "⚠️ ",
-            pass::KeyRingStatus::InKeyRing => "  ️",
-        };
-
-        let trust = match &recipient.trust_level {
-            OwnerTrustLevel::Ultimate => CATALOG.gettext("Ultimate"),
-            OwnerTrustLevel::Full => CATALOG.gettext("Full"),
-            OwnerTrustLevel::Marginal => CATALOG.gettext("Marginal"),
-            OwnerTrustLevel::Never => CATALOG.gettext("Never"),
-            OwnerTrustLevel::Undefined => CATALOG.gettext("Undefined"),
-            OwnerTrustLevel::Unknown => CATALOG.gettext("Unknown"),
-        };
-        recipients_view.get_mut().add_item(format!("{} {:width_key$} {:width_name$} {}   ", symbol, &recipient.key_id, &recipient.name, trust, width_key=max_width_key, width_name=max_width_name), recipient);
+        recipients_view.get_mut().add_item(render_recipient_label(&recipient, &max_width_key, &max_width_name), recipient);
     }
 
     let d = Dialog::around(recipients_view)
