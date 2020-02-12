@@ -44,7 +44,6 @@ impl UI {
         println!("query");
         let matching = pass::search(&self.store, &String::from(query)).unwrap();
 
-
         // Save currently matched passwords
         self.current_passwords = matching.clone();
 
@@ -64,7 +63,8 @@ impl UI {
     }
 
     pub fn copy_to_clipboard(&mut self, i: i32) -> Option<&QVariant> {
-        if self.current_passwords.is_empty() {// Exit fun if we have no passwords to copy
+        if self.current_passwords.is_empty() {
+            // Exit fun if we have no passwords to copy
             return None;
         }
         // Open password file
@@ -85,7 +85,8 @@ impl UI {
     }
     pub fn select(&mut self, i: i32) -> Option<&QVariant> {
         println!("select: {}", i);
-        if !self.current_passwords.is_empty() { // Select notihng if passwords list is empty
+        if !self.current_passwords.is_empty() {
+            // Select notihng if passwords list is empty
             let pass = self.get_password(i);
             self.password.set_name(pass.name);
             self.password.set_meta("".to_string());
@@ -170,15 +171,21 @@ fn main() {
 
     let password_store_dir = match std::env::var("PASSWORD_STORE_DIR") {
         Ok(p) => Some(p),
-        Err(_) => None
+        Err(_) => None,
     };
-    let password_store_signing_key = match std::env::var("PASSWORD_STORE_SIGNING_KEY") {
-        Ok(p) => Some(p),
-        Err(_) => None
-    };
+    let password_store_signing_key =
+        match std::env::var("PASSWORD_STORE_SIGNING_KEY") {
+            Ok(p) => Some(p),
+            Err(_) => None,
+        };
 
-
-    let store = Arc::new(Mutex::new(pass::PasswordStore::new(&password_store_dir, &password_store_signing_key).unwrap()));
+    let store = Arc::new(Mutex::new(
+        pass::PasswordStore::new(
+            &password_store_dir,
+            &password_store_signing_key,
+        )
+        .unwrap(),
+    ));
 
     // Load and watch all the passwords in the background
     let _ = pass::watch(store.clone()).expect("error");

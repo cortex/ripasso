@@ -38,13 +38,9 @@ use git2::{Oid, Repository};
 
 pub use crate::error::{Error, Result};
 pub use crate::signature::{
-    SignatureStatus,
-    OwnerTrustLevel,
-    parse_signing_keys, 
-    gpg_sign_string, 
-    Recipient,
-    KeyRingStatus, 
-} ;
+    gpg_sign_string, parse_signing_keys, KeyRingStatus, OwnerTrustLevel,
+    Recipient, SignatureStatus,
+};
 
 /// The global state of all passwords are an instance of this type.
 pub type PasswordStoreType = Arc<Mutex<PasswordStore>>;
@@ -137,7 +133,6 @@ impl PasswordStore {
         }
     }
 
-
     /// Creates a new password file in the store.
     pub fn new_password_file(
         &mut self,
@@ -210,7 +205,7 @@ impl PasswordStore {
         if repo.is_err() {
             return PasswordEntry::load_from_filesystem(&self.root, &path);
         }
-        let repo=repo.unwrap();
+        let repo = repo.unwrap();
         let message = format!("Add password for {} using ripasso", path_end);
 
         add_and_commit_internal(
@@ -358,25 +353,32 @@ impl PasswordStore {
             )?;
         }
 
-
         let mut recipient_file = self.root.clone();
         recipient_file.push(".gpg-id");
         return Recipient::all_recipients(&recipient_file);
     }
 
-    fn recipient_file(&self)-> path::PathBuf{
+    fn recipient_file(&self) -> path::PathBuf {
         let mut rf = self.root.clone();
         rf.push(".gpg-id");
         rf
     }
 
-    pub fn remove_recipient(&self, r: &Recipient)->Result<()>{
-        Recipient::remove_recipient_from_file(&r, self.recipient_file(), &self.valid_gpg_signing_keys)?;
+    pub fn remove_recipient(&self, r: &Recipient) -> Result<()> {
+        Recipient::remove_recipient_from_file(
+            &r,
+            self.recipient_file(),
+            &self.valid_gpg_signing_keys,
+        )?;
         self.reencrypt_all_password_entries()
     }
 
-    pub fn add_recipient(&self, r: &Recipient)->Result<()>{
-        Recipient::add_recipient_to_file(&r, self.recipient_file(), &self.valid_gpg_signing_keys)?;
+    pub fn add_recipient(&self, r: &Recipient) -> Result<()> {
+        Recipient::add_recipient_to_file(
+            &r,
+            self.recipient_file(),
+            &self.valid_gpg_signing_keys,
+        )?;
         self.reencrypt_all_password_entries()
     }
 
@@ -439,12 +441,16 @@ impl PasswordStore {
     }
 
     /// Add a file to the store, and commit it to the supplied git repository.
-    pub fn add_and_commit(&self, paths: &Vec<String>, message: &str) -> Result<git2::Oid> {
+    pub fn add_and_commit(
+        &self,
+        paths: &Vec<String>,
+        message: &str,
+    ) -> Result<git2::Oid> {
         let repo = self.repo();
         if repo.is_err() {
             return Err(Error::Generic("must have a repository"));
         }
-        let repo=repo.unwrap();
+        let repo = repo.unwrap();
 
         let mut index = repo.index()?;
         for path in paths {
@@ -461,28 +467,32 @@ impl PasswordStore {
         }
         let tree = repo.find_tree(oid)?;
 
-        let oid = commit(&repo, &signature, &message.to_string(), &tree, &parents)?;
+        let oid =
+            commit(&repo, &signature, &message.to_string(), &tree, &parents)?;
         let obj = repo.find_object(oid, None)?;
         repo.reset(&obj, git2::ResetType::Hard, None)?;
 
         return Ok(oid);
     }
-
 }
 
 /// Describes one log line in the history of a file
 pub struct GitLogLine {
     pub message: String,
     pub commit_time: DateTime<Local>,
-    pub signature_status: Option<SignatureStatus>
+    pub signature_status: Option<SignatureStatus>,
 }
 
 impl GitLogLine {
-    pub fn new(message: String, commit_time: DateTime<Local>, signature_status: Option<SignatureStatus>) -> GitLogLine {
+    pub fn new(
+        message: String,
+        commit_time: DateTime<Local>,
+        signature_status: Option<SignatureStatus>,
+    ) -> GitLogLine {
         GitLogLine {
             message,
             commit_time,
-            signature_status
+            signature_status,
         }
     }
 }
@@ -619,17 +629,13 @@ impl PasswordEntry {
 
     /// Updates the password store entry with new content, and commits those to git if a repository
     /// is supplied.
-    pub fn update(
-        &self,
-        secret: String,
-        store: &PasswordStore,
-    ) -> Result<()> {
+    pub fn update(&self, secret: String, store: &PasswordStore) -> Result<()> {
         self.update_internal(secret, &store)?;
-        
+
         if store.repo().is_err() {
             return Ok(());
         }
-    
+
         let message = format!("Edit password for {} using ripasso", &self.name);
 
         store.add_and_commit(&vec![format!("{}.gpg", &self.name)], &message)?;
@@ -640,7 +646,7 @@ impl PasswordEntry {
     /// Removes this entry from the filesystem and commit that to git if a repository is supplied.
     pub fn delete_file(&self, store: &PasswordStore) -> Result<()> {
         std::fs::remove_file(&self.filename)?;
-        
+
         if store.repo().is_err() {
             return Ok(());
         }
@@ -657,7 +663,10 @@ impl PasswordEntry {
 
     /// Returns a list of log lines for the password, one line for each commit that hade changed
     /// that password in some way
-    pub fn get_history(&self, store: &PasswordStoreType) -> Result<Vec<GitLogLine>> {
+    pub fn get_history(
+        &self,
+        store: &PasswordStoreType,
+    ) -> Result<Vec<GitLogLine>> {
         let repo = {
             let repo_res = (*store).lock().unwrap().repo();
             if repo_res.is_err() {
@@ -682,32 +691,43 @@ impl PasswordEntry {
         let mut diffopts = git2::DiffOptions::new();
         diffopts.pathspec(&p);
 
-        let walk_res: Vec<GitLogLine> = revwalk.filter_map(|id| {
-            let commit = repo.find_commit(id.unwrap()).unwrap();
+        let walk_res: Vec<GitLogLine> = revwalk
+            .filter_map(|id| {
+                let commit = repo.find_commit(id.unwrap()).unwrap();
 
-            match commit.parents().len() {
-                0 => {
-                    let tree = commit.tree().unwrap();
-                    let flags = git2::PathspecFlags::NO_MATCH_ERROR;
-                    if ps.match_tree(&tree, flags).is_err() {
-                        return None;
+                match commit.parents().len() {
+                    0 => {
+                        let tree = commit.tree().unwrap();
+                        let flags = git2::PathspecFlags::NO_MATCH_ERROR;
+                        if ps.match_tree(&tree, flags).is_err() {
+                            return None;
+                        }
                     }
-                }
-                _ => {
-                    let m = commit.parents().all(|parent| {
-                        match_with_parent(&repo, &commit, &parent, &mut diffopts)
+                    _ => {
+                        let m = commit.parents().all(|parent| {
+                            match_with_parent(
+                                &repo,
+                                &commit,
+                                &parent,
+                                &mut diffopts,
+                            )
                             .unwrap_or(false)
-                    });
-                    if !m {
-                        return None;
+                        });
+                        if !m {
+                            return None;
+                        }
                     }
                 }
-            }
 
-            let time = commit.time();
-            let dt = Local.timestamp(time.seconds(), 0);
-            return Some(GitLogLine::new(commit.message().unwrap().to_string(), dt, None));
-        }).collect();
+                let time = commit.time();
+                let dt = Local.timestamp(time.seconds(), 0);
+                return Some(GitLogLine::new(
+                    commit.message().unwrap().to_string(),
+                    dt,
+                    None,
+                ));
+            })
+            .collect();
 
         return Ok(walk_res);
     }
@@ -715,7 +735,12 @@ impl PasswordEntry {
 
 /// returns true if the diff between the two commit's contains the path that the `DiffOptions`
 /// have been prepared with
-fn match_with_parent(repo: &git2::Repository, commit: &git2::Commit, parent: &git2::Commit, opts: &mut git2::DiffOptions) -> Result<bool> {
+fn match_with_parent(
+    repo: &git2::Repository,
+    commit: &git2::Commit,
+    parent: &git2::Commit,
+    opts: &mut git2::DiffOptions,
+) -> Result<bool> {
     let a = parent.tree()?;
     let b = commit.tree()?;
     let diff = repo.diff_tree_to_tree(Some(&a), Some(&b), Some(opts))?;
@@ -795,8 +820,6 @@ fn commit(
         return Ok(commit);
     }
 }
-
-
 
 /// Add a file to the store, and commit it to the supplied git repository.
 fn add_and_commit_internal(
@@ -879,7 +902,6 @@ fn find_origin(repo: &git2::Repository) -> Result<git2::Remote> {
 
 /// Push your changes to the remote git repository.
 pub fn push(store: &PasswordStore) -> Result<()> {
-
     if store.repo().is_err() {
         return Ok(());
     }
@@ -923,7 +945,6 @@ pub fn push(store: &PasswordStore) -> Result<()> {
 
 /// Pull new changes from the remote git repository.
 pub fn pull(store: &PasswordStore) -> Result<()> {
-
     let repo = store.repo();
     if repo.is_err() {
         return Ok(());

@@ -19,11 +19,11 @@ extern crate cursive;
 extern crate env_logger;
 extern crate ripasso;
 
+use self::cursive::event::Key;
 use self::cursive::traits::*;
 use self::cursive::views::{
-    Dialog, EditView, LinearLayout, SelectView, TextView, OnEventView,
+    Dialog, EditView, LinearLayout, OnEventView, SelectView, TextView,
 };
-use self::cursive::event::Key;
 
 use cursive::Cursive;
 
@@ -31,21 +31,26 @@ use self::cursive::direction::Orientation;
 
 use std::sync::{Arc, Mutex};
 
-use ripasso::pass;
 use crate::helpers;
+use ripasso::pass;
 
 fn create_git_repo(ui: &mut Cursive, password_store_dir: &Option<String>) {
-    let init_res = pass::init_git_repo(&pass::password_dir(password_store_dir).unwrap());
+    let init_res =
+        pass::init_git_repo(&pass::password_dir(password_store_dir).unwrap());
     if init_res.is_err() {
         helpers::errorbox(ui, &init_res.err().unwrap());
     } else {
-        let message = super::CATALOG.gettext("Initialized password repo with Ripasso");
+        let message =
+            super::CATALOG.gettext("Initialized password repo with Ripasso");
         let store_res = pass::PasswordStore::new(password_store_dir, &None);
         if store_res.is_err() {
             helpers::errorbox(ui, &store_res.err().unwrap());
         } else {
             let store = Arc::new(Mutex::new(store_res.unwrap()));
-            let commit_res = store.lock().unwrap().add_and_commit(&vec![".gpg-id".to_string()], &message);
+            let commit_res = store
+                .lock()
+                .unwrap()
+                .add_and_commit(&vec![".gpg-id".to_string()], &message);
 
             if commit_res.is_err() {
                 helpers::errorbox(ui, &commit_res.err().unwrap());
@@ -66,17 +71,22 @@ fn do_create(ui: &mut Cursive, password_store_dir: &Option<String>) {
         ui.quit();
     } else {
         pass_home.push(".gpg-id");
-        std::fs::write(pass_home, key_id).expect(super::CATALOG.gettext("Unable to write file"));
+        std::fs::write(pass_home, key_id)
+            .expect(super::CATALOG.gettext("Unable to write file"));
 
         let password_store_dir2 = password_store_dir.clone();
-        let d = Dialog::around(TextView::new(super::CATALOG.gettext("Also create a git repository for the encrypted files?")))
-            .button(super::CATALOG.gettext("Create"), move |ui: &mut Cursive| {
-                create_git_repo(ui, &password_store_dir2);
-            })
-            .button(super::CATALOG.gettext("No"), |s| {
-                s.quit();
-            })
-            .title(super::CATALOG.gettext("Git Init"));
+        let d = Dialog::around(TextView::new(
+            super::CATALOG.gettext(
+                "Also create a git repository for the encrypted files?",
+            ),
+        ))
+        .button(super::CATALOG.gettext("Create"), move |ui: &mut Cursive| {
+            create_git_repo(ui, &password_store_dir2);
+        })
+        .button(super::CATALOG.gettext("No"), |s| {
+            s.quit();
+        })
+        .title(super::CATALOG.gettext("Git Init"));
 
         ui.add_layer(d);
     }
@@ -93,8 +103,8 @@ fn create_store(ui: &mut Cursive, password_store_dir: &Option<String>) {
         });
 
     let password_store_dir3 = password_store_dir.clone();
-    let recipients_event = OnEventView::new(d2)
-        .on_event(Key::Enter, move |ui: &mut Cursive| {
+    let recipients_event =
+        OnEventView::new(d2).on_event(Key::Enter, move |ui: &mut Cursive| {
             do_create(ui, &password_store_dir3);
         });
 
@@ -120,12 +130,14 @@ pub fn show_init_menu(password_store_dir: &Option<String>) {
                         .child(search_box)
                         .child(results)
                         .full_width(),
-                ).title("Ripasso"),
-            ).child(
-            LinearLayout::new(Orientation::Horizontal)
-                .child(TextView::new(super::CATALOG.gettext("F1: Menu | ")))
-                .full_width(),
-        ),
+                )
+                .title("Ripasso"),
+            )
+            .child(
+                LinearLayout::new(Orientation::Horizontal)
+                    .child(TextView::new(super::CATALOG.gettext("F1: Menu | ")))
+                    .full_width(),
+            ),
     );
 
     let password_store_dir2 = password_store_dir.clone();
@@ -143,4 +155,3 @@ pub fn show_init_menu(password_store_dir: &Option<String>) {
 
     ui.run();
 }
-

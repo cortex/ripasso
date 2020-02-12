@@ -70,7 +70,10 @@ fn populate_password_list_small_repo() -> Result<()> {
     )
     .unwrap();
 
-    let store = PasswordStore::new(&Some(String::from(password_dir.to_str().unwrap())), &None)?;
+    let store = PasswordStore::new(
+        &Some(String::from(password_dir.to_str().unwrap())),
+        &None,
+    )?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "populate_password_list_small_repo").unwrap();
@@ -98,10 +101,13 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
         base_path.clone(),
         "populate_password_list_repo_with_deleted_files.tar.gz",
     )?;
-    
-    let store = PasswordStore::new(&Some(String::from(password_dir.to_str().unwrap())), &None)?;
+
+    let store = PasswordStore::new(
+        &Some(String::from(password_dir.to_str().unwrap())),
+        &None,
+    )?;
     let results = store.all_passwords().unwrap();
-    
+
     cleanup(base_path, "populate_password_list_repo_with_deleted_files")
         .unwrap();
 
@@ -113,7 +119,7 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
 }
 
 #[test]
-fn populate_password_list_directory_without_git() -> Result<()>{
+fn populate_password_list_directory_without_git() -> Result<()> {
     let mut base_path: PathBuf = std::env::current_exe().unwrap();
     base_path.pop();
     base_path.pop();
@@ -129,7 +135,10 @@ fn populate_password_list_directory_without_git() -> Result<()>{
         "populate_password_list_directory_without_git.tar.gz",
     )?;
 
-    let store = PasswordStore::new(&Some(String::from(password_dir.to_str().unwrap())), &None)?;
+    let store = PasswordStore::new(
+        &Some(String::from(password_dir.to_str().unwrap())),
+        &None,
+    )?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "populate_password_list_directory_without_git").unwrap();

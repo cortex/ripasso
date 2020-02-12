@@ -19,12 +19,10 @@ extern crate cursive;
 extern crate env_logger;
 extern crate ripasso;
 
-use self::cursive::views::{
-    Dialog, OnEventView, TextView,
-};
+use self::cursive::views::{Dialog, OnEventView, TextView};
 
+use self::cursive::event::Key;
 use cursive::Cursive;
-use self::cursive::event::{Key};
 
 use ripasso::pass;
 
@@ -38,10 +36,9 @@ pub fn errorbox(ui: &mut Cursive, err: &pass::Error) -> () {
         .dismiss_button(super::CATALOG.gettext("Ok"))
         .title(super::CATALOG.gettext("Error"));
 
-    let ev = OnEventView::new(d)
-        .on_event(Key::Esc, |s| {
-            s.pop_layer();
-        });
+    let ev = OnEventView::new(d).on_event(Key::Esc, |s| {
+        s.pop_layer();
+    });
 
     ui.add_layer(ev);
 }
