@@ -337,8 +337,8 @@ impl Recipient {
         let mut recipients: Vec<Recipient> =
             Recipient::all_recipients(&recipient_file)?;
 
-        for recipient in &recipients {
-            if recipient.key_id == recipient.key_id {
+        for r in &recipients {
+            if r.key_id == recipient.key_id {
                 return Err(Error::Generic(
                     "Team member is already in the list of key ids",
                 ));
