@@ -190,7 +190,9 @@ impl PasswordStore {
             )?;
         }
 
-        for recipient in Recipient::all_recipients(&self.root)? {
+        let mut recipient_file = self.root.clone();
+        recipient_file.push(".gpg-id");
+        for recipient in Recipient::all_recipients(&recipient_file)? {
             if recipient.key_ring_status == KeyRingStatus::NotInKeyRing {
                 return Err(Error::RecipientNotInKeyRing(recipient.key_id));
             }
