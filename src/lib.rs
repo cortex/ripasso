@@ -15,5 +15,5 @@ pub mod pass;
 /// https://www.eff.org/sv/deeplinks/2016/07/new-wordlists-random-passphrases
 pub mod words;
 
-pub (crate) mod error;
-pub (crate) mod signature;
+pub(crate) mod error;
+pub(crate) mod signature;

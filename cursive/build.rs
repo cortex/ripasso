@@ -1,7 +1,7 @@
 use glob;
 
-use std::process::Command;
 use std::io::prelude::*;
+use std::process::Command;
 
 fn generate_man_page() -> String {
     let page = man::prelude::Manual::new("ripasso-cursive")
@@ -103,16 +103,27 @@ fn generate_translation_files() {
     dir.push("res");
 
     let password_path_glob = dir.join("**/*.po");
-    let existing_iter = glob::glob(&password_path_glob.to_string_lossy()).unwrap();
+    let existing_iter =
+        glob::glob(&password_path_glob.to_string_lossy()).unwrap();
 
     for existing_file in existing_iter {
         let file = existing_file.unwrap();
-        let mut filename = format!("{}", file.file_name().unwrap().to_str().unwrap());
+        let mut filename =
+            format!("{}", file.file_name().unwrap().to_str().unwrap());
         filename.replace_range(3..4, "m");
 
-        print!("generating .mo file for {:?} to {}/{} ", &file, dest_path.display(), &filename);
+        print!(
+            "generating .mo file for {:?} to {}/{} ",
+            &file,
+            dest_path.display(),
+            &filename
+        );
         let res = Command::new("msgfmt")
-            .arg(format!("--output-file={}/{}", dest_path.display(), &filename))
+            .arg(format!(
+                "--output-file={}/{}",
+                dest_path.display(),
+                &filename
+            ))
             .arg(format!("{}", &file.display()))
             .output();
 
@@ -121,7 +132,6 @@ fn generate_translation_files() {
         } else {
             println!("error: {:?}", res.err().unwrap());
         }
-
     }
 }
 

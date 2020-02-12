@@ -1,8 +1,8 @@
 pub use crate::error::{Error, Result};
-use std::path::PathBuf;
+use gpgme::Key;
 use std::fs;
 use std::io::prelude::*;
-use gpgme::Key;
+use std::path::PathBuf;
 
 /// A git commit for a password might be signed by a gpg key, and this signature's verification
 /// state is one of these values.
@@ -71,7 +71,6 @@ pub fn gpg_sign_string(commit: &String) -> Result<String> {
     return Ok(String::from_utf8(output)?);
 }
 
-
 /// the GPG trust level for a key
 #[derive(Clone, PartialEq)]
 pub enum OwnerTrustLevel {
@@ -97,7 +96,7 @@ pub enum OwnerTrustLevel {
     /// That could mean, that this is a key you want to process at a later point in time.
     Undefined,
     /// is the default state. It means, no ownertrust has been set yet. The key is not trusted.
-    Unknown
+    Unknown,
 }
 
 impl From<&gpgme::Validity> for OwnerTrustLevel {
@@ -144,7 +143,7 @@ fn build_recipient(
         name,
         key_id,
         key_ring_status,
-        trust_level
+        trust_level,
     }
 }
 
@@ -172,13 +171,17 @@ impl Recipient {
             name = user_id.name().unwrap_or("?");
         }
 
-        let trusts: HashMap<String, OwnerTrustLevel> = Recipient::get_all_trust_items()?;
+        let trusts: HashMap<String, OwnerTrustLevel> =
+            Recipient::get_all_trust_items()?;
 
         return Ok(build_recipient(
             name.to_string(),
             key_id,
             KeyRingStatus::InKeyRing,
-            (*trusts.get(real_key.fingerprint()?).unwrap_or(&OwnerTrustLevel::Unknown)).clone(),
+            (*trusts
+                .get(real_key.fingerprint()?)
+                .unwrap_or(&OwnerTrustLevel::Unknown))
+            .clone(),
         ));
     }
 
@@ -191,15 +194,16 @@ impl Recipient {
         let mut trusts = HashMap::new();
         for key_res in keys {
             let key = key_res?;
-            trusts.insert(key.fingerprint()?.clone().to_string(), OwnerTrustLevel::from(&key.owner_trust()));
+            trusts.insert(
+                key.fingerprint()?.clone().to_string(),
+                OwnerTrustLevel::from(&key.owner_trust()),
+            );
         }
 
         return Ok(trusts);
     }
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
-    pub fn all_recipients(
-        recipient_file: &PathBuf,
-    ) -> Result<Vec<Recipient>> {
+    pub fn all_recipients(recipient_file: &PathBuf) -> Result<Vec<Recipient>> {
         let contents = fs::read_to_string(recipient_file)
             .expect("Something went wrong reading the file");
 
@@ -211,7 +215,8 @@ impl Recipient {
             }
         }
 
-        let trusts: HashMap<String, OwnerTrustLevel> = Recipient::get_all_trust_items()?;
+        let trusts: HashMap<String, OwnerTrustLevel> =
+            Recipient::get_all_trust_items()?;
 
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
         for key in unique_recipients_keys {
@@ -236,7 +241,10 @@ impl Recipient {
                 name.to_string(),
                 real_key.id().unwrap_or("?").to_string(),
                 KeyRingStatus::InKeyRing,
-                (*trusts.get(real_key.fingerprint()?).unwrap_or(&OwnerTrustLevel::Unknown)).clone(),
+                (*trusts
+                    .get(real_key.fingerprint()?)
+                    .unwrap_or(&OwnerTrustLevel::Unknown))
+                .clone(),
             ));
         }
 
@@ -286,7 +294,7 @@ impl Recipient {
                     let mut output = Vec::new();
                     ctx.sign_detached(file_content.clone(), &mut output)?;
 
-                    let recipient_sig_filename:PathBuf = {
+                    let recipient_sig_filename: PathBuf = {
                         let rf = recipients_file.clone();
                         let mut sig = rf.into_os_string();
                         sig.push(".sig");
@@ -325,7 +333,11 @@ impl Recipient {
             return Err(Error::Generic("Can't delete the last encryption key"));
         }
 
-        return Recipient::write_recipients_file(&recipients, &recipient_file, valid_gpg_signing_keys);
+        return Recipient::write_recipients_file(
+            &recipients,
+            &recipient_file,
+            valid_gpg_signing_keys,
+        );
     }
 
     /// Add a new person to the list of team members to encrypt the passwords for.
@@ -346,6 +358,10 @@ impl Recipient {
         }
         recipients.push((*recipient).clone());
 
-        return Recipient::write_recipients_file(&recipients, &recipient_file, valid_gpg_signing_keys);
+        return Recipient::write_recipients_file(
+            &recipients,
+            &recipient_file,
+            valid_gpg_signing_keys,
+        );
     }
 }

@@ -1,7 +1,6 @@
-
 use std::io;
-use std::string; 
 use std::path;
+use std::string;
 
 /// A enum that contains the different types of errors that the library returns as part of Result's.
 #[derive(Debug)]
@@ -17,7 +16,7 @@ pub enum Error {
     PatternError(glob::PatternError),
     GlobError(glob::GlobError),
     Utf8Error(std::str::Utf8Error),
-    RecipientNotInKeyRing(String)
+    RecipientNotInKeyRing(String),
 }
 
 impl From<io::Error> for Error {
