@@ -13,6 +13,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - name: Dependencies
+        run: sudo apt install libgpgme11-dev libgpg-error-dev -y
       - uses: actions-rs/cargo@v1
         with:
           command: check
