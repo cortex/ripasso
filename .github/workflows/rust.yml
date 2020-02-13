@@ -9,6 +9,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Install rustfmt
+      run: rustup component add rustfmt-preview
+    - name: Rustfmt
+      run: cargo fmt -- --write-mode=diff
     - name: Dependencies
       run: sudo apt install libgpgme11-dev libgpg-error-dev -y
     - name: Build
