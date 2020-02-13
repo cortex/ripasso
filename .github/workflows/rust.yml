@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Dependencies
-      run: apt install libgpgme11-dev libgpg-error-dev -y
+      run: sudo apt install libgpgme11-dev libgpg-error-dev -y
     - name: Build
       run: cargo build --verbose
     - name: Run tests
