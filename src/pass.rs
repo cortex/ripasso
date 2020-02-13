@@ -899,6 +899,7 @@ pub fn push(store: &PasswordStore) -> Result<()> {
     let mut origin = find_origin(&repo)?;
     let res = {
         let mut callbacks = git2::RemoteCallbacks::new();
+        let mut tried_sshkey = false;
         callbacks.credentials(|_url, username, allowed| {
             let sys_username = whoami::username();
             let user = match username {
@@ -906,6 +907,10 @@ pub fn push(store: &PasswordStore) -> Result<()> {
                 None => &sys_username,
             };
 
+            if tried_sshkey {
+                return Err(git2::Error::from_str("no authentication available"));
+            }
+            tried_sshkey = true;
             if allowed.contains(git2::CredentialType::USERNAME) {
                 return git2::Cred::username(user);
             }
@@ -942,6 +947,7 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
     let mut origin = find_origin(&repo)?;
 
     let mut cb = git2::RemoteCallbacks::new();
+    let mut tried_sshkey = false;
     cb.credentials(|_url, username, allowed| {
         let sys_username = whoami::username();
         let user = match username {
@@ -949,6 +955,10 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
             None => &sys_username,
         };
 
+        if tried_sshkey {
+            return Err(git2::Error::from_str("no authentication available"));
+        }
+        tried_sshkey = true;
         if allowed.contains(git2::CredentialType::USERNAME) {
             return git2::Cred::username(user);
         }
