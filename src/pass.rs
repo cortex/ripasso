@@ -542,7 +542,13 @@ impl PasswordEntry {
         let (update_time, committed_by, signature_status) =
             read_git_meta_data(base, path, repo);
 
-        Ok(PasswordEntry::new(base, path, update_time, committed_by, signature_status))
+        Ok(PasswordEntry::new(
+            base,
+            path,
+            update_time,
+            committed_by,
+            signature_status,
+        ))
     }
 
     /// creates a `PasswordEntry` based on data in the filesystem
@@ -892,7 +898,9 @@ pub fn push(store: &PasswordStore) -> Result<()> {
             };
 
             if tried_sshkey {
-                return Err(git2::Error::from_str("no authentication available"));
+                return Err(git2::Error::from_str(
+                    "no authentication available",
+                ));
             }
             tried_sshkey = true;
             if allowed.contains(git2::CredentialType::USERNAME) {
