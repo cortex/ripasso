@@ -542,23 +542,7 @@ impl PasswordEntry {
         let (update_time, committed_by, signature_status) =
             read_git_meta_data(base, path, repo);
 
-        Ok(PasswordEntry {
-            name: to_name(base, path),
-            path: path.to_path_buf(),
-            updated: match update_time {
-                Ok(p) => Some(p),
-                Err(_) => None,
-            },
-            committed_by: match committed_by {
-                Ok(p) => Some(p),
-                Err(_) => None,
-            },
-            signature_status: match signature_status {
-                Ok(ss) => Some(ss),
-                Err(_) => None,
-            },
-            filename: path.to_string_lossy().into_owned(),
-        })
+        Ok(PasswordEntry::new(base, path, update_time, committed_by, signature_status))
     }
 
     /// creates a `PasswordEntry` based on data in the filesystem
