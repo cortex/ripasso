@@ -26,7 +26,7 @@ pub fn parse_signing_keys(
     let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
     let mut signing_keys = vec![];
-    for key in password_store_signing_key.as_ref().unwrap().split(",") {
+    for key in password_store_signing_key.as_ref().unwrap().split(',') {
         let trimmed = key.trim().to_string();
 
         if trimmed.len() != 40
@@ -47,11 +47,10 @@ pub fn parse_signing_keys(
 
         signing_keys.push(trimmed);
     }
-
-    return Ok(signing_keys);
+    Ok(signing_keys)
 }
 /// Returns a gpg signature for the supplied string. Suitable to add to a gpg commit.
-pub fn gpg_sign_string(commit: &String) -> Result<String> {
+pub fn gpg_sign_string(commit: &str) -> Result<String> {
     let config = git2::Config::open_default()?;
 
     let signing_key = config.get_string("user.signingkey")?;
@@ -62,13 +61,13 @@ pub fn gpg_sign_string(commit: &String) -> Result<String> {
 
     ctx.add_signer(&key)?;
     let mut output = Vec::new();
-    let signature = ctx.sign_detached(commit.clone(), &mut output);
+    let signature = ctx.sign_detached(commit, &mut output);
 
     if signature.is_err() {
         return Err(Error::GPG(signature.unwrap_err()));
     }
 
-    return Ok(String::from_utf8(output)?);
+    Ok(String::from_utf8(output)?)
 }
 
 /// the GPG trust level for a key
@@ -101,14 +100,14 @@ pub enum OwnerTrustLevel {
 
 impl From<&gpgme::Validity> for OwnerTrustLevel {
     fn from(level: &gpgme::Validity) -> OwnerTrustLevel {
-        return match level {
+        match level {
             gpgme::Validity::Unknown => OwnerTrustLevel::Unknown,
             gpgme::Validity::Undefined => OwnerTrustLevel::Undefined,
             gpgme::Validity::Never => OwnerTrustLevel::Never,
             gpgme::Validity::Marginal => OwnerTrustLevel::Marginal,
             gpgme::Validity::Full => OwnerTrustLevel::Full,
             gpgme::Validity::Ultimate => OwnerTrustLevel::Ultimate,
-        };
+        }
     }
 }
 
@@ -174,7 +173,7 @@ impl Recipient {
         let trusts: HashMap<String, OwnerTrustLevel> =
             Recipient::get_all_trust_items()?;
 
-        return Ok(build_recipient(
+        Ok(build_recipient(
             name.to_string(),
             key_id,
             KeyRingStatus::InKeyRing,
@@ -182,7 +181,7 @@ impl Recipient {
                 .get(real_key.fingerprint()?)
                 .unwrap_or(&OwnerTrustLevel::Unknown))
             .clone(),
-        ));
+        ))
     }
 
     fn get_all_trust_items() -> Result<HashMap<String, OwnerTrustLevel>> {
@@ -195,12 +194,12 @@ impl Recipient {
         for key_res in keys {
             let key = key_res?;
             trusts.insert(
-                key.fingerprint()?.clone().to_string(),
+                key.fingerprint()?.to_string(),
                 OwnerTrustLevel::from(&key.owner_trust()),
             );
         }
 
-        return Ok(trusts);
+        Ok(trusts)
     }
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
     pub fn all_recipients(recipient_file: &PathBuf) -> Result<Vec<Recipient>> {
@@ -209,7 +208,7 @@ impl Recipient {
 
         let mut recipients: Vec<Recipient> = Vec::new();
         let mut unique_recipients_keys: HashSet<String> = HashSet::new();
-        for key in contents.split("\n") {
+        for key in contents.split('\n') {
             if key.len() > 1 {
                 unique_recipients_keys.insert(key.to_string());
             }
@@ -248,13 +247,13 @@ impl Recipient {
             ));
         }
 
-        return Ok(recipients);
+        Ok(recipients)
     }
 
     fn write_recipients_file(
-        recipients: &Vec<Recipient>,
+        recipients: &[Recipient],
         recipients_file: &PathBuf,
-        valid_gpg_signing_keys: &Vec<String>,
+        valid_gpg_signing_keys: &[String],
     ) -> Result<()> {
         {
             let mut file = std::fs::OpenOptions::new()
@@ -271,9 +270,9 @@ impl Recipient {
                 file_content.push_str(recipient.key_id.as_str());
                 file_content.push_str("\n");
             }
-            file.write(file_content.as_bytes())?;
+            file.write_all(file_content.as_bytes())?;
 
-            if valid_gpg_signing_keys.len() != 0 {
+            if !valid_gpg_signing_keys.is_empty() {
                 let mut ctx =
                     gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
                 let mut key_opt: Option<Key> = None;
@@ -292,7 +291,7 @@ impl Recipient {
                     ctx.add_signer(&key)?;
 
                     let mut output = Vec::new();
-                    ctx.sign_detached(file_content.clone(), &mut output)?;
+                    ctx.sign_detached(file_content, &mut output)?;
 
                     let recipient_sig_filename: PathBuf = {
                         let rf = recipients_file.clone();
@@ -307,44 +306,40 @@ impl Recipient {
                         .truncate(true)
                         .open(recipient_sig_filename)?;
 
-                    recipient_sig_file.write(&output)?;
+                    recipient_sig_file.write_all(&output)?;
                 }
             }
         }
-
-        //TODO: readd this
-        //PasswordEntry::reencrypt_all_password_entries(store)?;
-
-        return Ok(());
+        Ok(())
     }
 
     /// Delete one of the persons from the list of team members to encrypt the passwords for.
     pub fn remove_recipient_from_file(
         s: &Recipient,
         recipient_file: PathBuf,
-        valid_gpg_signing_keys: &Vec<String>,
+        valid_gpg_signing_keys: &[String],
     ) -> Result<()> {
         let mut recipients: Vec<Recipient> =
             Recipient::all_recipients(&recipient_file)?;
 
         recipients.retain(|ref vs| vs.key_id != s.key_id);
 
-        if recipients.len() < 1 {
+        if recipients.is_empty() {
             return Err(Error::Generic("Can't delete the last encryption key"));
         }
 
-        return Recipient::write_recipients_file(
+        Recipient::write_recipients_file(
             &recipients,
             &recipient_file,
             valid_gpg_signing_keys,
-        );
+        )
     }
 
     /// Add a new person to the list of team members to encrypt the passwords for.
     pub fn add_recipient_to_file(
         recipient: &Recipient,
         recipient_file: PathBuf,
-        valid_gpg_signing_keys: &Vec<String>,
+        valid_gpg_signing_keys: &[String],
     ) -> Result<()> {
         let mut recipients: Vec<Recipient> =
             Recipient::all_recipients(&recipient_file)?;
@@ -358,10 +353,10 @@ impl Recipient {
         }
         recipients.push((*recipient).clone());
 
-        return Recipient::write_recipients_file(
+        Recipient::write_recipients_file(
             &recipients,
             &recipient_file,
             valid_gpg_signing_keys,
-        );
+        )
     }
 }

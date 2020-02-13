@@ -11,10 +11,10 @@ pub fn generate_password(number_of_words: isize) -> String {
     for _ in 0..number_of_words {
         rand_words.push(WORDS[die.sample(&mut rng)]);
     }
-    return rand_words.join(" ");
+    rand_words.join(" ")
 }
 
-const WORDS: &'static [&'static str] = &[
+const WORDS: &[&str] = &[
     "abacus",
     "abdomen",
     "abdominal",

@@ -24,15 +24,10 @@ use std::thread;
 use std::time::Duration;
 
 use chrono::prelude::*;
-use git2;
-use glob;
-use notify;
 use notify::Watcher;
 use std::io::prelude::*;
 use std::sync::{Arc, Mutex};
 extern crate dirs;
-
-use std;
 
 use git2::{Oid, Repository};
 
@@ -71,25 +66,24 @@ impl PasswordStore {
 
         let signing_keys = parse_signing_keys(password_store_signing_key)?;
 
-        if signing_keys.len() != 0 {
+        if !signing_keys.is_empty() {
             PasswordStore::verify_gpg_id_file(&pass_home, &signing_keys)?;
         }
 
-        return Ok(PasswordStore {
-            root: pass_home.to_path_buf(),
+        Ok(PasswordStore {
+            root: pass_home,
             valid_gpg_signing_keys: signing_keys,
             passwords: [].to_vec(),
-        });
+        })
     }
 
     fn repo(&self) -> Result<git2::Repository> {
-        git2::Repository::open(self.root.to_path_buf().clone())
-            .map_err(|e| Error::Git(e))
+        git2::Repository::open(self.root.to_path_buf()).map_err(Error::Git)
     }
 
     fn verify_gpg_id_file(
         pass_home: &path::PathBuf,
-        signing_keys: &Vec<String>,
+        signing_keys: &[String],
     ) -> Result<SignatureStatus> {
         let mut gpg_id_file = pass_home.clone();
         gpg_id_file.push(".gpg-id");
@@ -125,26 +119,25 @@ impl PasswordStore {
         let sig_sum = sig_sum.unwrap();
 
         if sig_sum.contains(gpgme::SignatureSummary::GREEN) {
-            return Ok(SignatureStatus::GoodSignature);
+            Ok(SignatureStatus::GoodSignature)
         } else if sig_sum.contains(gpgme::SignatureSummary::VALID) {
-            return Ok(SignatureStatus::AlmostGoodSignature);
+            Ok(SignatureStatus::AlmostGoodSignature)
         } else {
-            return Err(Error::Generic("Bad signature for .gpg-id file"));
+            Err(Error::Generic("Bad signature for .gpg-id file"))
         }
     }
 
     /// Creates a new password file in the store.
     pub fn new_password_file(
         &mut self,
-        path_end: &String,
-        content: &String,
+        path_end: &str,
+        content: &str,
     ) -> Result<PasswordEntry> {
         let mut path = self.root.clone();
 
         let c_path = std::fs::canonicalize(path.as_path())?;
 
-        let path_deref = (*path_end).clone();
-        let path_iter = &mut path_deref.split("/").peekable();
+        let path_iter = &mut path_end.split('/').peekable();
 
         while let Some(p) = path_iter.next() {
             if path_iter.peek().is_some() {
@@ -178,7 +171,7 @@ impl PasswordStore {
 
         let mut keys = Vec::new();
 
-        if self.valid_gpg_signing_keys.len() != 0 {
+        if !self.valid_gpg_signing_keys.is_empty() {
             PasswordStore::verify_gpg_id_file(
                 &self.root,
                 &self.valid_gpg_signing_keys,
@@ -195,11 +188,10 @@ impl PasswordStore {
         }
 
         let mut output = Vec::new();
-        ctx.encrypt(&keys, (*content).clone(), &mut output)?;
+        ctx.encrypt(&keys, content, &mut output)?;
 
-        match file.write_all(&output) {
-            Err(why) => return Err(Error::from(why)),
-            Ok(_) => (),
+        if let Err(why) = file.write_all(&output) {
+            return Err(Error::from(why));
         }
         let repo = self.repo();
         if repo.is_err() {
@@ -210,11 +202,11 @@ impl PasswordStore {
 
         add_and_commit_internal(
             &repo,
-            &vec![format!("{}.gpg", (*path_end).clone())],
+            &[format!("{}.gpg", path_end)],
             &message,
         )?;
 
-        return PasswordEntry::load_from_git(&self.root, &path, &repo);
+        PasswordEntry::load_from_git(&self.root, &path, &repo)
     }
 
     pub fn reload_password_list(&mut self) -> Result<()> {
@@ -239,7 +231,7 @@ impl PasswordStore {
         if user_name.is_err() {
             return false;
         }
-        return true;
+        true
     }
 
     /// Read the password store directory and return a list of all the password files.
@@ -272,10 +264,10 @@ impl PasswordStore {
                 .trim_start_matches(format!("{}", dir.display()).as_str())
                 .to_string();
             files_to_consider
-                .push(filename.trim_start_matches("/").to_string());
+                .push(filename.trim_start_matches('/').to_string());
         }
 
-        if files_to_consider.len() == 0 {
+        if files_to_consider.is_empty() {
             return Ok(vec![]);
         }
 
@@ -300,7 +292,7 @@ impl PasswordStore {
                         "{}",
                         delta.new_file().path().unwrap().display()
                     );
-                    &files_to_consider.retain(|filename| {
+                    files_to_consider.retain(|filename| {
                         if *filename == entry_name {
                             let time = commit.time();
                             let time_return =
@@ -346,7 +338,7 @@ impl PasswordStore {
 
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
     pub fn all_recipients(&self) -> Result<Vec<Recipient>> {
-        if self.valid_gpg_signing_keys.len() != 0 {
+        if !self.valid_gpg_signing_keys.is_empty() {
             PasswordStore::verify_gpg_id_file(
                 &self.root,
                 &self.valid_gpg_signing_keys,
@@ -355,7 +347,7 @@ impl PasswordStore {
 
         let mut recipient_file = self.root.clone();
         recipient_file.push(".gpg-id");
-        return Recipient::all_recipients(&recipient_file);
+        Recipient::all_recipients(&recipient_file)
     }
 
     fn recipient_file(&self) -> path::PathBuf {
@@ -407,7 +399,7 @@ impl PasswordStore {
 
         self.add_and_commit(&names, &message)?;
 
-        return Ok(());
+        Ok(())
     }
 
     /// Returns a list of all password entries in the store.
@@ -437,13 +429,13 @@ impl PasswordStore {
             }
         }
 
-        return Ok(passwords);
+        Ok(passwords)
     }
 
     /// Add a file to the store, and commit it to the supplied git repository.
     pub fn add_and_commit(
         &self,
-        paths: &Vec<String>,
+        paths: &[String],
         message: &str,
     ) -> Result<git2::Oid> {
         let repo = self.repo();
@@ -461,7 +453,7 @@ impl PasswordStore {
         let parent_commit_res = find_last_commit(&repo);
         let mut parents = vec![];
         let parent_commit;
-        if !parent_commit_res.is_err() {
+        if parent_commit_res.is_ok() {
             parent_commit = parent_commit_res?;
             parents.push(&parent_commit);
         }
@@ -472,7 +464,7 @@ impl PasswordStore {
         let obj = repo.find_object(oid, None)?;
         repo.reset(&obj, git2::ResetType::Hard, None)?;
 
-        return Ok(oid);
+        Ok(oid)
     }
 }
 
@@ -537,7 +529,7 @@ impl PasswordEntry {
                 Ok(ss) => Some(ss),
                 Err(_) => None,
             },
-            filename: path.to_string_lossy().into_owned().clone(),
+            filename: path.to_string_lossy().into_owned(),
         }
     }
 
@@ -565,7 +557,7 @@ impl PasswordEntry {
                 Ok(ss) => Some(ss),
                 Err(_) => None,
             },
-            filename: path.to_string_lossy().into_owned().clone(),
+            filename: path.to_string_lossy().into_owned(),
         })
     }
 
@@ -580,7 +572,7 @@ impl PasswordEntry {
             updated: None,
             committed_by: None,
             signature_status: None,
-            filename: path.to_string_lossy().into_owned().clone(),
+            filename: path.to_string_lossy().into_owned(),
         })
     }
 
@@ -638,9 +630,9 @@ impl PasswordEntry {
 
         let message = format!("Edit password for {} using ripasso", &self.name);
 
-        store.add_and_commit(&vec![format!("{}.gpg", &self.name)], &message)?;
+        store.add_and_commit(&[format!("{}.gpg", &self.name)], &message)?;
 
-        return Ok(());
+        Ok(())
     }
 
     /// Removes this entry from the filesystem and commit that to git if a repository is supplied.
@@ -653,11 +645,7 @@ impl PasswordEntry {
         let message =
             format!("Removed password file for {} using ripasso", &self.name);
 
-        remove_and_commit(
-            store,
-            &vec![format!("{}.gpg", &self.name)],
-            &message,
-        )?;
+        remove_and_commit(store, &[format!("{}.gpg", &self.name)], &message)?;
         Ok(())
     }
 
@@ -721,15 +709,15 @@ impl PasswordEntry {
 
                 let time = commit.time();
                 let dt = Local.timestamp(time.seconds(), 0);
-                return Some(GitLogLine::new(
+                Some(GitLogLine::new(
                     commit.message().unwrap().to_string(),
                     dt,
                     None,
-                ));
+                ))
             })
             .collect();
 
-        return Ok(walk_res);
+        Ok(walk_res)
     }
 }
 
@@ -780,16 +768,16 @@ fn should_sign() -> bool {
         return false;
     }
 
-    return true;
+    true
 }
 
 /// Apply the changes to the git repository.
 fn commit(
     repo: &git2::Repository,
     signature: &git2::Signature,
-    message: &String,
+    message: &str,
     tree: &git2::Tree,
-    parents: &Vec<&git2::Commit>,
+    parents: &[&git2::Commit],
 ) -> Result<git2::Oid> {
     if should_sign() {
         let commit_buf = repo.commit_create_buffer(
@@ -806,7 +794,7 @@ fn commit(
 
         let commit =
             repo.commit_signed(&commit_as_str, &sig, Some("gpgsig"))?;
-        return Ok(commit);
+        Ok(commit)
     } else {
         let commit = repo.commit(
             Some("HEAD"), //  point HEAD to our new commit
@@ -817,14 +805,14 @@ fn commit(
             parents,
         )?; // parents
 
-        return Ok(commit);
+        Ok(commit)
     }
 }
 
 /// Add a file to the store, and commit it to the supplied git repository.
 fn add_and_commit_internal(
     repo: &git2::Repository,
-    paths: &Vec<String>,
+    paths: &[String],
     message: &str,
 ) -> Result<git2::Oid> {
     let mut index = repo.index()?;
@@ -836,7 +824,7 @@ fn add_and_commit_internal(
     let parent_commit_res = find_last_commit(&repo);
     let mut parents = vec![];
     let parent_commit;
-    if !parent_commit_res.is_err() {
+    if parent_commit_res.is_ok() {
         parent_commit = parent_commit_res?;
         parents.push(&parent_commit);
     }
@@ -846,13 +834,13 @@ fn add_and_commit_internal(
     let obj = repo.find_object(oid, None)?;
     repo.reset(&obj, git2::ResetType::Hard, None)?;
 
-    return Ok(oid);
+    Ok(oid)
 }
 
 /// Remove a file from the store, and commit the deletion to the supplied git repository.
 fn remove_and_commit(
     store: &PasswordStore,
-    paths: &Vec<String>,
+    paths: &[String],
     message: &str,
 ) -> Result<git2::Oid> {
     if store.repo().is_err() {
@@ -869,7 +857,7 @@ fn remove_and_commit(
     let parent_commit_res = find_last_commit(&repo);
     let mut parents = vec![];
     let parent_commit;
-    if !parent_commit_res.is_err() {
+    if parent_commit_res.is_ok() {
         parent_commit = parent_commit_res?;
         parents.push(&parent_commit);
     }
@@ -879,7 +867,7 @@ fn remove_and_commit(
     let obj = repo.find_object(oid, None)?;
     repo.reset(&obj, git2::ResetType::Hard, None)?;
 
-    return Ok(oid);
+    Ok(oid)
 }
 
 /// find the origin of the git repo, with the following strategy:
@@ -889,7 +877,7 @@ fn find_origin(repo: &git2::Repository) -> Result<git2::Remote> {
     let mut origin_res = repo.find_remote("origin");
     if origin_res.is_err() {
         let remotes = repo.remotes()?;
-        if remotes.len() == 0 {
+        if remotes.is_empty() {
             return Err(Error::Generic("no remotes configured"));
         }
         origin_res = repo.find_remote(remotes.get(0).unwrap());
@@ -897,7 +885,7 @@ fn find_origin(repo: &git2::Repository) -> Result<git2::Remote> {
             return Err(Error::Generic("error finding configured remote"));
         }
     }
-    return Ok(origin_res?);
+    Ok(origin_res?)
 }
 
 /// Push your changes to the remote git repository.
@@ -933,14 +921,14 @@ pub fn push(store: &PasswordStore) -> Result<()> {
         opts.remote_callbacks(callbacks);
         origin.push(&["refs/heads/master"], Some(&mut opts))
     };
-    return match res {
+    match res {
         Ok(()) if ref_status.is_none() => Ok(()),
         Ok(()) => Err(Error::GenericDyn(format!(
             "failed to push a ref: {:?}",
             ref_status
         ))),
         Err(e) => Err(Error::GenericDyn(format!("failure to push: {}", e))),
-    };
+    }
 }
 
 /// Pull new changes from the remote git repository.
@@ -983,7 +971,7 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
 
     let remote_annotated_commit = repo.find_annotated_commit(remote_oid)?;
     let remote_commit = repo.find_commit(remote_oid)?;
-    repo.merge(&vec![&remote_annotated_commit], None, None)?;
+    repo.merge(&[&remote_annotated_commit], None, None)?;
 
     //commit it
     let mut index = repo.index()?;
@@ -1003,7 +991,7 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
 
     //cleanup
     repo.cleanup_state()?;
-    return Ok(());
+    Ok(())
 }
 
 fn read_git_meta_data(
@@ -1070,7 +1058,7 @@ fn read_git_meta_data(
 
     let signature_return = verify_git_signature(repo, &id);
 
-    return (time_return, name_return, signature_return);
+    (time_return, name_return, signature_return)
 }
 
 fn verify_git_signature(
@@ -1105,11 +1093,11 @@ fn verify_git_signature(
     let sig_sum = sig_sum.unwrap();
 
     if sig_sum.contains(gpgme::SignatureSummary::VALID) {
-        return Ok(SignatureStatus::GoodSignature);
+        Ok(SignatureStatus::GoodSignature)
     } else if sig_sum.contains(gpgme::SignatureSummary::GREEN) {
-        return Ok(SignatureStatus::AlmostGoodSignature);
+        Ok(SignatureStatus::AlmostGoodSignature)
     } else {
-        return Ok(SignatureStatus::BadSignature);
+        Ok(SignatureStatus::BadSignature)
     }
 }
 
@@ -1117,7 +1105,7 @@ fn verify_git_signature(
 pub fn init_git_repo(base: &path::PathBuf) -> Result<()> {
     git2::Repository::init(base)?;
 
-    return Ok(());
+    Ok(())
 }
 
 /// When setting up a `watch` for the password store directory, events of these types will be sent.
@@ -1247,7 +1235,7 @@ pub fn password_dir(
     if !pass_home.exists() {
         return Err(Error::Generic("failed to locate password directory"));
     }
-    Ok(pass_home.to_path_buf())
+    Ok(pass_home)
 }
 
 /// Determine password directory
@@ -1261,7 +1249,7 @@ pub fn password_dir_raw(password_store_dir: &Option<String>) -> path::PathBuf {
             .to_string_lossy()
             .into(),
     };
-    return path::PathBuf::from(&pass_home);
+    path::PathBuf::from(&pass_home)
 }
 
 #[cfg(test)]
