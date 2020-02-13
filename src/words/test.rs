@@ -4,7 +4,7 @@ use super::*;
 fn do_not_generate_passwords_that_ends_in_space() {
     let pass = generate_password(3);
 
-    assert!(!pass.ends_with(" "));
+    assert!(!pass.ends_with(' '));
 }
 
 #[test]
