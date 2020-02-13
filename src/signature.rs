@@ -63,8 +63,8 @@ pub fn gpg_sign_string(commit: &str) -> Result<String> {
     let mut output = Vec::new();
     let signature = ctx.sign_detached(commit, &mut output);
 
-    if signature.is_err() {
-        return Err(Error::GPG(signature.unwrap_err()));
+    if let Err(e) = signature {
+        return Err(Error::GPG(e));
     }
 
     Ok(String::from_utf8(output)?)
@@ -280,14 +280,12 @@ impl Recipient {
                 for key_id in valid_gpg_signing_keys {
                     let key_res = ctx.get_key(key_id);
 
-                    if key_res.is_ok() {
-                        key_opt = Some(key_res.unwrap());
+                    if let Ok(r) = key_res {
+                        key_opt = Some(r);
                     }
                 }
 
-                if key_opt.is_some() {
-                    let key = key_opt.unwrap();
-
+                if let Some(key) = key_opt {
                     ctx.add_signer(&key)?;
 
                     let mut output = Vec::new();
