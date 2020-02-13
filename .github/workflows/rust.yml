@@ -46,6 +46,8 @@ jobs:
           toolchain: stable
           override: true
       - run: rustup component add rustfmt
+      - name: Dependencies
+        run: sudo apt install libgpgme11-dev libgpg-error-dev -y
       - uses: actions-rs/cargo@v1
         with:
           command: fmt
@@ -62,6 +64,8 @@ jobs:
           toolchain: stable
           override: true
       - run: rustup component add clippy
+      - name: Dependencies
+        run: sudo apt install libgpgme11-dev libgpg-error-dev -y
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
