@@ -54,7 +54,7 @@ lazy_static! {
     static ref CATALOG: gettext::Catalog = get_translation_catalog();
 }
 
-fn down(ui: &mut Cursive) -> () {
+fn down(ui: &mut Cursive)  {
     ui.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
         l.select_down(1);
     });
@@ -68,7 +68,7 @@ fn down(ui: &mut Cursive) -> () {
     );
 }
 
-fn up(ui: &mut Cursive) -> () {
+fn up(ui: &mut Cursive)  {
     ui.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
         l.select_up(1);
     });
@@ -82,7 +82,7 @@ fn up(ui: &mut Cursive) -> () {
     );
 }
 
-fn page_down(ui: &mut Cursive) -> () {
+fn page_down(ui: &mut Cursive)  {
     let mut l = ui
         .find_name::<SelectView<pass::PasswordEntry>>("results")
         .unwrap();
@@ -97,7 +97,7 @@ fn page_down(ui: &mut Cursive) -> () {
     );
 }
 
-fn page_up(ui: &mut Cursive) -> () {
+fn page_up(ui: &mut Cursive)  {
     let mut l = ui
         .find_name::<SelectView<pass::PasswordEntry>>("results")
         .unwrap();
@@ -112,7 +112,7 @@ fn page_up(ui: &mut Cursive) -> () {
     );
 }
 
-fn copy(ui: &mut Cursive) -> () {
+fn copy(ui: &mut Cursive)  {
     let l = ui
         .find_name::<SelectView<pass::PasswordEntry>>("results")
         .unwrap();
@@ -139,7 +139,7 @@ fn copy(ui: &mut Cursive) -> () {
         return;
     }
     let mut ctx: ClipboardContext = ctx_res.unwrap();
-    ctx.set_contents(password.unwrap().to_owned()).unwrap();
+    ctx.set_contents(password.unwrap()).unwrap();
 
     thread::spawn(|| {
         thread::sleep(time::Duration::from_secs(40));
@@ -154,7 +154,7 @@ fn copy(ui: &mut Cursive) -> () {
     });
 }
 
-fn do_delete(ui: &mut Cursive, store: PasswordStoreType) -> () {
+fn do_delete(ui: &mut Cursive, store: PasswordStoreType)  {
     ui.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
         let sel = l.selection();
 
@@ -177,7 +177,7 @@ fn do_delete(ui: &mut Cursive, store: PasswordStoreType) -> () {
     ui.pop_layer();
 }
 
-fn delete(ui: &mut Cursive, store: PasswordStoreType) -> () {
+fn delete(ui: &mut Cursive, store: PasswordStoreType)  {
     ui.add_layer(CircularFocus::wrap_tab(
         Dialog::around(TextView::new(
             CATALOG.gettext("Are you sure you want to delete the password?"),
@@ -211,10 +211,10 @@ fn get_selected_password_entry(
     }))
     .clone();
 
-    return Some(password_entry);
+    Some(password_entry)
 }
 
-fn show_file_history(ui: &mut Cursive, store: PasswordStoreType) -> () {
+fn show_file_history(ui: &mut Cursive, store: PasswordStoreType)  {
     let password_entry_opt = get_selected_password_entry(ui);
     if password_entry_opt.is_none() {
         return;
@@ -251,7 +251,7 @@ fn show_file_history(ui: &mut Cursive, store: PasswordStoreType) -> () {
     }
 }
 
-fn open(ui: &mut Cursive, store: PasswordStoreType) -> () {
+fn open(ui: &mut Cursive, store: PasswordStoreType)  {
     let password_entry_opt = get_selected_password_entry(ui);
     if password_entry_opt.is_none() {
         return;
@@ -300,10 +300,10 @@ fn get_value_from_input(
     s.call_on_name(input_name, |e: &mut EditView| {
         password = Some(e.get_content());
     });
-    return password;
+    password
 }
 
-fn create_save(s: &mut Cursive, store: PasswordStoreType) -> () {
+fn create_save(s: &mut Cursive, store: PasswordStoreType)  {
     let password = get_value_from_input(s, "new_password_input");
     if password.is_none() {
         return;
@@ -344,7 +344,7 @@ fn create_save(s: &mut Cursive, store: PasswordStoreType) -> () {
     }
 }
 
-fn create(ui: &mut Cursive, store: PasswordStoreType) -> () {
+fn create(ui: &mut Cursive, store: PasswordStoreType)  {
     let mut fields = LinearLayout::vertical();
     let mut path_fields = LinearLayout::horizontal();
     let mut password_fields = LinearLayout::horizontal();
@@ -398,7 +398,7 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) -> () {
     ui.add_layer(ev);
 }
 
-fn delete_recipient(ui: &mut Cursive, store: PasswordStoreType) -> () {
+fn delete_recipient(ui: &mut Cursive, store: PasswordStoreType)  {
     let mut l = ui
         .find_name::<SelectView<pass::Recipient>>("recipients")
         .unwrap();
@@ -427,7 +427,7 @@ fn delete_recipient(ui: &mut Cursive, store: PasswordStoreType) -> () {
 fn delete_recipient_verification(
     ui: &mut Cursive,
     store: PasswordStoreType,
-) -> () {
+)  {
     ui.add_layer(CircularFocus::wrap_tab(
         Dialog::around(TextView::new(
             CATALOG.gettext("Are you sure you want to remove this person?"),
@@ -440,7 +440,7 @@ fn delete_recipient_verification(
     ));
 }
 
-fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) -> () {
+fn add_recipient(ui: &mut Cursive, store: PasswordStoreType)  {
     let l = &*get_value_from_input(ui, "key_id_input").unwrap();
 
     let recipient_result = pass::Recipient::new(l.clone());
@@ -457,7 +457,7 @@ fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) -> () {
 
             if recipients_res.is_err() {
                 helpers::errorbox(ui, &recipients_res.err().unwrap());
-                return ();
+                return ;
             }
             let recipients = recipients_res.unwrap();
 
@@ -494,7 +494,7 @@ fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) -> () {
     }
 }
 
-fn add_recipient_dialog(ui: &mut Cursive, store: PasswordStoreType) -> () {
+fn add_recipient_dialog(ui: &mut Cursive, store: PasswordStoreType)  {
     let mut recipient_fields = LinearLayout::horizontal();
 
     recipient_fields.add_child(
@@ -560,12 +560,12 @@ fn render_recipient_label(
     );
 }
 
-fn view_recipients(ui: &mut Cursive, store: PasswordStoreType) -> () {
+fn view_recipients(ui: &mut Cursive, store: PasswordStoreType)  {
     let recipients_res = store.lock().unwrap().all_recipients();
 
     if recipients_res.is_err() {
         helpers::errorbox(ui, &recipients_res.err().unwrap());
-        return ();
+        return ;
     }
     let recipients = recipients_res.unwrap();
 
@@ -617,7 +617,7 @@ fn view_recipients(ui: &mut Cursive, store: PasswordStoreType) -> () {
 }
 
 fn substr(str: &String, start: usize, len: usize) -> String {
-    return str.chars().skip(start).take(len).collect();
+    str.chars().skip(start).take(len).collect()
 }
 
 fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
@@ -651,7 +651,7 @@ fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
     );
 }
 
-fn search(store: &PasswordStoreType, ui: &mut Cursive, query: &str) -> () {
+fn search(store: &PasswordStoreType, ui: &mut Cursive, query: &str)  {
     let col = ui.screen_size().x;
     let mut l = ui
         .find_name::<SelectView<pass::PasswordEntry>>("results")
@@ -660,7 +660,7 @@ fn search(store: &PasswordStoreType, ui: &mut Cursive, query: &str) -> () {
     let r_res = pass::search(&store, &String::from(query));
     if r_res.is_err() {
         helpers::errorbox(ui, &r_res.err().unwrap());
-        return ();
+        return ;
     }
     let r = r_res.unwrap();
     l.clear();
@@ -710,17 +710,17 @@ fn git_pull(ui: &mut Cursive, store: PasswordStoreType) {
     });
 }
 
-fn do_delete_last_word(ui: &mut Cursive, store: PasswordStoreType) -> () {
+fn do_delete_last_word(ui: &mut Cursive, store: PasswordStoreType)  {
     ui.call_on_name("search_box", |e: &mut EditView| {
         let s = e.get_content();
-        let last_space = s.trim().rfind(" ");
+        let last_space = s.trim().rfind(' ');
         match last_space {
             Some(pos) => {
                 e.set_content(s[0..pos + 1].to_string());
             }
             None => {
                 e.set_content("");
-                ()
+                
             }
         };
     });
@@ -765,7 +765,7 @@ fn get_translation_catalog() -> gettext::Catalog {
         }
     }
 
-    return gettext::Catalog::empty();
+    gettext::Catalog::empty()
 }
 
 fn main() {

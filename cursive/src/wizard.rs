@@ -50,7 +50,7 @@ fn create_git_repo(ui: &mut Cursive, password_store_dir: &Option<String>) {
             let commit_res = store
                 .lock()
                 .unwrap()
-                .add_and_commit(&vec![".gpg-id".to_string()], &message);
+                .add_and_commit(&[".gpg-id".to_string()], &message);
 
             if commit_res.is_err() {
                 helpers::errorbox(ui, &commit_res.err().unwrap());
@@ -72,7 +72,7 @@ fn do_create(ui: &mut Cursive, password_store_dir: &Option<String>) {
     } else {
         pass_home.push(".gpg-id");
         std::fs::write(pass_home, key_id)
-            .expect(super::CATALOG.gettext("Unable to write file"));
+            .unwrap_or_else(|_| { panic!(super::CATALOG.gettext("Unable to write file").to_string()) });
 
         let password_store_dir2 = password_store_dir.clone();
         let d = Dialog::around(TextView::new(
