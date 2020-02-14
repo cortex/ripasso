@@ -634,9 +634,9 @@ fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
     let mut verification_status = "  ";
     if p.signature_status.is_some() {
         verification_status = match p.signature_status.as_ref().unwrap() {
-            SignatureStatus::GoodSignature => "🔒",
-            SignatureStatus::AlmostGoodSignature => "🔓",
-            SignatureStatus::BadSignature => "⛔",
+            SignatureStatus::Good => "🔒",
+            SignatureStatus::AlmostGood => "🔓",
+            SignatureStatus::Bad => "⛔",
         }
     }
     return format!("{:4$} {} {} {}",
