@@ -202,7 +202,7 @@ impl PasswordStore {
             &message,
         )?;
 
-        PasswordEntry::load_from_git(&self.root, &path, &repo)
+        Ok(PasswordEntry::load_from_git(&self.root, &path, &repo))
     }
 
     pub fn reload_password_list(&mut self) -> Result<()> {
@@ -409,19 +409,16 @@ impl PasswordStore {
         let mut passwords = Vec::<PasswordEntry>::new();
         for path in paths {
             if self.repo().is_err() {
-                match PasswordEntry::load_from_git(
-                    &dir,
-                    &path?,
-                    &self.repo().unwrap(),
-                ) {
-                    Ok(password) => passwords.push(password),
-                    Err(e) => return Err(e),
-                }
-            } else {
                 match PasswordEntry::load_from_filesystem(&dir, &path?) {
                     Ok(password) => passwords.push(password),
                     Err(e) => return Err(e),
                 }
+            } else {
+                passwords.push(PasswordEntry::load_from_git(
+                    &dir,
+                    &path?,
+                    &self.repo().unwrap(),
+                ));
             }
         }
 
@@ -534,17 +531,17 @@ impl PasswordEntry {
         base: &path::PathBuf,
         path: &path::PathBuf,
         repo: &git2::Repository,
-    ) -> Result<PasswordEntry> {
+    ) -> PasswordEntry {
         let (update_time, committed_by, signature_status) =
             read_git_meta_data(base, path, repo);
 
-        Ok(PasswordEntry::new(
+        PasswordEntry::new(
             base,
             path,
             update_time,
             committed_by,
             signature_status,
-        ))
+        )
     }
 
     /// creates a `PasswordEntry` based on data in the filesystem
@@ -1179,7 +1176,6 @@ pub fn watch(store: PasswordStoreType) -> Result<Receiver<PasswordEvent>> {
                                         &p.clone(),
                                         &s.repo().unwrap(),
                                     )
-                                    .unwrap()
                                 }
                             };
                             PasswordEvent::NewPassword(p_e)
