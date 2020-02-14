@@ -8,9 +8,9 @@ use std::path::PathBuf;
 /// state is one of these values.
 #[derive(Clone, Debug)]
 pub enum SignatureStatus {
-    /// Everything is fine with the signature, corresponds to the gpg status of GREEN
+    /// Everything is fine with the signature, corresponds to the gpg status of VALID
     Good,
-    /// There was a non-critical failure in the verification, corresponds to the gpg status of VALID
+    /// There was a non-critical failure in the verification, corresponds to the gpg status of GREEN
     AlmostGood,
     /// Verification failed, corresponds to the gpg status of RED
     Bad,
