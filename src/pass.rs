@@ -112,18 +112,15 @@ impl PasswordStore {
             }
         }
 
-        if sig_sum.is_none() {
-            return Err(Error::Generic("Missing signature for .gpg-id file, and PASSWORD_STORE_SIGNING_KEY specified"));
-        }
-
-        let sig_sum = sig_sum.unwrap();
-
-        if sig_sum.contains(gpgme::SignatureSummary::GREEN) {
-            Ok(SignatureStatus::GoodSignature)
-        } else if sig_sum.contains(gpgme::SignatureSummary::VALID) {
-            Ok(SignatureStatus::AlmostGoodSignature)
-        } else {
-            Err(Error::Generic("Bad signature for .gpg-id file"))
+        match sig_sum {
+            None => Err(Error::Generic("Missing signature for .gpg-id file, and PASSWORD_STORE_SIGNING_KEY specified")),
+            Some(sig_sum) => {
+                let sig_status: SignatureStatus = sig_sum.into();
+                match sig_status{
+                    SignatureStatus::Bad =>Err(Error::Generic("Bad signature for .gpg-id file")),
+                    _ => Ok(sig_status),
+                }
+            }
         }
     }
 
@@ -1087,18 +1084,9 @@ fn verify_git_signature(
         }
     }
 
-    if sig_sum.is_none() {
-        return Err(Error::Generic("Missing signature"));
-    }
-
-    let sig_sum = sig_sum.unwrap();
-
-    if sig_sum.contains(gpgme::SignatureSummary::VALID) {
-        Ok(SignatureStatus::GoodSignature)
-    } else if sig_sum.contains(gpgme::SignatureSummary::GREEN) {
-        Ok(SignatureStatus::AlmostGoodSignature)
-    } else {
-        Ok(SignatureStatus::BadSignature)
+    match sig_sum {
+        None => Err(Error::Generic("Missing signature")),
+        Some(s) => Ok(s.into()),
     }
 }
 

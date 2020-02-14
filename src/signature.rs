@@ -9,11 +9,23 @@ use std::path::PathBuf;
 #[derive(Clone, Debug)]
 pub enum SignatureStatus {
     /// Everything is fine with the signature, corresponds to the gpg status of GREEN
-    GoodSignature,
+    Good,
     /// There was a non-critical failure in the verification, corresponds to the gpg status of VALID
-    AlmostGoodSignature,
+    AlmostGood,
     /// Verification failed, corresponds to the gpg status of RED
-    BadSignature,
+    Bad,
+}
+
+impl From<gpgme::SignatureSummary> for SignatureStatus {
+    fn from(s: gpgme::SignatureSummary) -> SignatureStatus {
+        if s.contains(gpgme::SignatureSummary::VALID) {
+            SignatureStatus::Good
+        } else if s.contains(gpgme::SignatureSummary::GREEN) {
+            SignatureStatus::AlmostGood
+        } else {
+            SignatureStatus::Bad
+        }
+    }
 }
 
 pub fn parse_signing_keys(
