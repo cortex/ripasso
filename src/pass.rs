@@ -871,6 +871,26 @@ fn find_origin(repo: &git2::Repository) -> Result<git2::Remote> {
     Ok(origin_res?)
 }
 
+fn cred(tried_sshkey: &mut bool, _url: &str, username: Option<&str>, allowed: git2::CredentialType) -> std::result::Result<git2::Cred, git2::Error> {
+    let sys_username = whoami::username();
+    let user = match username {
+        Some(name) => name,
+        None => &sys_username,
+    };
+
+    if *tried_sshkey {
+        return Err(git2::Error::from_str(
+            "no authentication available",
+        ));
+    }
+    *tried_sshkey = true;
+    if allowed.contains(git2::CredentialType::USERNAME) {
+        return git2::Cred::username(user);
+    }
+
+    git2::Cred::ssh_key_from_agent(user)
+}
+
 /// Push your changes to the remote git repository.
 pub fn push(store: &PasswordStore) -> Result<()> {
     if store.repo().is_err() {
@@ -882,25 +902,9 @@ pub fn push(store: &PasswordStore) -> Result<()> {
     let mut origin = find_origin(&repo)?;
     let res = {
         let mut callbacks = git2::RemoteCallbacks::new();
-        let mut tried_sshkey = false;
+        let mut tried_ssh_key = false;
         callbacks.credentials(|_url, username, allowed| {
-            let sys_username = whoami::username();
-            let user = match username {
-                Some(name) => name,
-                None => &sys_username,
-            };
-
-            if tried_sshkey {
-                return Err(git2::Error::from_str(
-                    "no authentication available",
-                ));
-            }
-            tried_sshkey = true;
-            if allowed.contains(git2::CredentialType::USERNAME) {
-                return git2::Cred::username(user);
-            }
-
-            git2::Cred::ssh_key_from_agent(user)
+            cred(&mut tried_ssh_key, _url, username, allowed)
         });
         callbacks.push_update_reference(|refname, status| {
             assert_eq!(refname, "refs/heads/master");
@@ -932,23 +936,9 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
     let mut origin = find_origin(&repo)?;
 
     let mut cb = git2::RemoteCallbacks::new();
-    let mut tried_sshkey = false;
+    let mut tried_ssh_key = false;
     cb.credentials(|_url, username, allowed| {
-        let sys_username = whoami::username();
-        let user = match username {
-            Some(name) => name,
-            None => &sys_username,
-        };
-
-        if tried_sshkey {
-            return Err(git2::Error::from_str("no authentication available"));
-        }
-        tried_sshkey = true;
-        if allowed.contains(git2::CredentialType::USERNAME) {
-            return git2::Cred::username(user);
-        }
-
-        git2::Cred::ssh_key_from_agent(user)
+        cred(&mut tried_ssh_key, _url, username, allowed)
     });
 
     let mut opts = git2::FetchOptions::new();
