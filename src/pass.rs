@@ -857,18 +857,17 @@ fn remove_and_commit(
 /// first try the name `origin`, if that doesn't exist, list the available remotes and
 /// choose the first one
 fn find_origin(repo: &git2::Repository) -> Result<git2::Remote> {
-    let mut origin_res = repo.find_remote("origin");
-    if origin_res.is_err() {
-        let remotes = repo.remotes()?;
-        if remotes.is_empty() {
-            return Err(Error::Generic("no remotes configured"));
-        }
-        origin_res = repo.find_remote(remotes.get(0).unwrap());
-        if origin_res.is_err() {
-            return Err(Error::Generic("error finding configured remote"));
+    for branch in repo.branches(Some(git2::BranchType::Local))? {
+        let b = branch?.0;
+        if b.is_head() {
+            let upstream_name_buf = repo.branch_upstream_remote(&format!("refs/heads/{}", &b.name()?.unwrap()))?;
+            let upstream_name = upstream_name_buf.as_str().unwrap();
+            let origin = repo.find_remote(&upstream_name)?;
+            return Ok(origin)
         }
     }
-    Ok(origin_res?)
+
+    return Err(Error::Generic("no remotes configured"));
 }
 
 fn cred(tried_sshkey: &mut bool, _url: &str, username: Option<&str>, allowed: git2::CredentialType) -> std::result::Result<git2::Cred, git2::Error> {
