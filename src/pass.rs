@@ -870,7 +870,7 @@ fn find_origin(repo: &git2::Repository) -> Result<git2::Remote> {
         }
     }
 
-    return Err(Error::Generic("no remotes configured"));
+    Err(Error::Generic("no remotes configured"))
 }
 
 fn cred(
