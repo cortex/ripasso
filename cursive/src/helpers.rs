@@ -26,7 +26,7 @@ use cursive::Cursive;
 
 use ripasso::pass;
 
-pub fn errorbox(ui: &mut Cursive, err: &pass::Error)  {
+pub fn errorbox(ui: &mut Cursive, err: &pass::Error) {
     let text = match err {
         pass::Error::RecipientNotInKeyRing(key_id) => super::CATALOG.gettext("Team member with key id {} isn't in your GPG keyring, fetch it first").to_string().replace("{}", key_id),
         _ => format!("{:?}", err)

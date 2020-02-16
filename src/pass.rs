@@ -860,17 +860,25 @@ fn find_origin(repo: &git2::Repository) -> Result<git2::Remote> {
     for branch in repo.branches(Some(git2::BranchType::Local))? {
         let b = branch?.0;
         if b.is_head() {
-            let upstream_name_buf = repo.branch_upstream_remote(&format!("refs/heads/{}", &b.name()?.unwrap()))?;
+            let upstream_name_buf = repo.branch_upstream_remote(&format!(
+                "refs/heads/{}",
+                &b.name()?.unwrap()
+            ))?;
             let upstream_name = upstream_name_buf.as_str().unwrap();
             let origin = repo.find_remote(&upstream_name)?;
-            return Ok(origin)
+            return Ok(origin);
         }
     }
 
     return Err(Error::Generic("no remotes configured"));
 }
 
-fn cred(tried_sshkey: &mut bool, _url: &str, username: Option<&str>, allowed: git2::CredentialType) -> std::result::Result<git2::Cred, git2::Error> {
+fn cred(
+    tried_sshkey: &mut bool,
+    _url: &str,
+    username: Option<&str>,
+    allowed: git2::CredentialType,
+) -> std::result::Result<git2::Cred, git2::Error> {
     let sys_username = whoami::username();
     let user = match username {
         Some(name) => name,
@@ -878,9 +886,7 @@ fn cred(tried_sshkey: &mut bool, _url: &str, username: Option<&str>, allowed: gi
     };
 
     if *tried_sshkey {
-        return Err(git2::Error::from_str(
-            "no authentication available",
-        ));
+        return Err(git2::Error::from_str("no authentication available"));
     }
     *tried_sshkey = true;
     if allowed.contains(git2::CredentialType::USERNAME) {
