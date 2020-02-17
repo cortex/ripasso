@@ -951,7 +951,7 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
     opts.remote_callbacks(cb);
     origin.fetch(&["master"], Some(&mut opts), None)?;
 
-    let remote_oid = repo.refname_to_id("refs/remotes/origin/master")?;
+    let remote_oid = repo.refname_to_id("FETCH_HEAD")?;
     let head_oid = repo.refname_to_id("HEAD")?;
 
     let (_, behind) = repo.graph_ahead_behind(head_oid, remote_oid)?;
