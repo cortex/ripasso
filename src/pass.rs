@@ -885,13 +885,14 @@ fn cred(
         None => &sys_username,
     };
 
+    if allowed.contains(git2::CredentialType::USERNAME) {
+        return git2::Cred::username(user);
+    }
+
     if *tried_sshkey {
         return Err(git2::Error::from_str("no authentication available"));
     }
     *tried_sshkey = true;
-    if allowed.contains(git2::CredentialType::USERNAME) {
-        return git2::Cred::username(user);
-    }
 
     git2::Cred::ssh_key_from_agent(user)
 }
