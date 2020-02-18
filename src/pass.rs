@@ -632,7 +632,7 @@ impl PasswordEntry {
         Ok(())
     }
 
-    /// Returns a list of log lines for the password, one line for each commit that hade changed
+    /// Returns a list of log lines for the password, one line for each commit that have changed
     /// that password in some way
     pub fn get_history(
         &self,
@@ -664,7 +664,8 @@ impl PasswordEntry {
 
         let walk_res: Vec<GitLogLine> = revwalk
             .filter_map(|id| {
-                let commit = repo.find_commit(id.unwrap()).unwrap();
+                let oid = id.unwrap();
+                let commit = repo.find_commit(oid.clone()).unwrap();
 
                 match commit.parents().len() {
                     0 => {
@@ -692,10 +693,12 @@ impl PasswordEntry {
 
                 let time = commit.time();
                 let dt = Local.timestamp(time.seconds(), 0);
+
+                let signature_status = verify_git_signature(&repo, &oid);
                 Some(GitLogLine::new(
                     commit.message().unwrap().to_string(),
                     dt,
-                    None,
+                    signature_status.ok(),
                 ))
             })
             .collect();
@@ -873,6 +876,7 @@ fn find_origin(repo: &git2::Repository) -> Result<(git2::Remote, String)> {
     Err(Error::Generic("no remotes configured"))
 }
 
+/// function that can be used for callback handling of the ssh interaction in git2
 fn cred(
     tried_sshkey: &mut bool,
     _url: &str,

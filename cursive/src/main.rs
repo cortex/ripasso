@@ -228,10 +228,19 @@ fn show_file_history(ui: &mut Cursive, store: PasswordStoreType) {
     let history = password_entry.get_history(&store);
     if history.is_ok() {
         for history_line in history.unwrap() {
+            let mut verification_status = "  ";
+            if history_line.signature_status.is_some() {
+                verification_status = match history_line.signature_status.as_ref().unwrap() {
+                    SignatureStatus::Good => "🔒",
+                    SignatureStatus::AlmostGood => "🔓",
+                    SignatureStatus::Bad => "⛔",
+                }
+            }
+
             file_history_view.get_mut().add_item(
                 format!(
-                    "{} {}",
-                    history_line.commit_time, history_line.message
+                    "{} {} {}",
+                    verification_status, history_line.commit_time, history_line.message
                 ),
                 history_line,
             );
