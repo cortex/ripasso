@@ -854,9 +854,9 @@ fn remove_and_commit(
 }
 
 /// find the origin of the git repo, with the following strategy:
-/// first try the name `origin`, if that doesn't exist, list the available remotes and
-/// choose the first one
-fn find_origin(repo: &git2::Repository) -> Result<git2::Remote> {
+/// find the branch that HEAD points to, and read the remote configured for that branch
+/// returns the remote and the name of the local branch
+fn find_origin(repo: &git2::Repository) -> Result<(git2::Remote, String)> {
     for branch in repo.branches(Some(git2::BranchType::Local))? {
         let b = branch?.0;
         if b.is_head() {
@@ -866,7 +866,7 @@ fn find_origin(repo: &git2::Repository) -> Result<git2::Remote> {
             ))?;
             let upstream_name = upstream_name_buf.as_str().unwrap();
             let origin = repo.find_remote(&upstream_name)?;
-            return Ok(origin);
+            return Ok((origin, b.name()?.unwrap().to_string()));
         }
     }
 
@@ -905,7 +905,7 @@ pub fn push(store: &PasswordStore) -> Result<()> {
     let repo = store.repo().unwrap();
 
     let mut ref_status = None;
-    let mut origin = find_origin(&repo)?;
+    let (mut origin, branch_name) = find_origin(&repo)?;
     let res = {
         let mut callbacks = git2::RemoteCallbacks::new();
         let mut tried_ssh_key = false;
@@ -913,13 +913,13 @@ pub fn push(store: &PasswordStore) -> Result<()> {
             cred(&mut tried_ssh_key, _url, username, allowed)
         });
         callbacks.push_update_reference(|refname, status| {
-            assert_eq!(refname, "refs/heads/master");
+            assert_eq!(refname, format!("refs/heads/{}", branch_name));
             ref_status = status.map(|s| s.to_string());
             Ok(())
         });
         let mut opts = git2::PushOptions::new();
         opts.remote_callbacks(callbacks);
-        origin.push(&["refs/heads/master"], Some(&mut opts))
+        origin.push(&[format!("refs/heads/{}", branch_name)], Some(&mut opts))
     };
     match res {
         Ok(()) if ref_status.is_none() => Ok(()),
@@ -939,7 +939,7 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
     }
     let repo = repo.unwrap();
 
-    let mut origin = find_origin(&repo)?;
+    let (mut origin, branch_name) = find_origin(&repo)?;
 
     let mut cb = git2::RemoteCallbacks::new();
     let mut tried_ssh_key = false;
@@ -949,7 +949,7 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
 
     let mut opts = git2::FetchOptions::new();
     opts.remote_callbacks(cb);
-    origin.fetch(&["master"], Some(&mut opts), None)?;
+    origin.fetch(&[branch_name], Some(&mut opts), None)?;
 
     let remote_oid = repo.refname_to_id("FETCH_HEAD")?;
     let head_oid = repo.refname_to_id("HEAD")?;
