@@ -849,7 +849,14 @@ fn main() {
         process::exit(1);
     }
 
-    // Load and watch all the passwords in the background
+    for password in &(*store.clone()).lock().unwrap().passwords {
+        if password.is_in_git == pass::RepositoryStatus::NotInRepo {
+            eprintln!("{}", CATALOG.gettext("The password store is backed by a git repository, but there is passwords there that's not in git. Please add them, otherwise they might get lost."));
+            process::exit(1);
+        }
+    }
+
+    // Watch the passwords in the background
     let password_rx = match pass::watch(store.clone()) {
         Ok(t) => t,
         Err(e) => {

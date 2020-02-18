@@ -314,6 +314,7 @@ impl PasswordStore {
                                 time_return,
                                 name_return,
                                 signature_return,
+                                RepositoryStatus::InRepo,
                             ));
                             return false;
                         }
@@ -327,6 +328,20 @@ impl PasswordStore {
             )?;
 
             last_tree = tree;
+        }
+
+        for file in files_to_consider {
+            let mut pbuf = dir.clone();
+            pbuf.push(file);
+
+            passwords.push(PasswordEntry::new(
+                &dir,
+                &pbuf,
+                Err(Error::Generic("")),
+                Err(Error::Generic("")),
+                Err(Error::Generic("")),
+                RepositoryStatus::NotInRepo,
+            ));
         }
 
         Ok(passwords)
@@ -482,6 +497,13 @@ impl GitLogLine {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum RepositoryStatus {
+    InRepo,
+    NotInRepo,
+    NoRepo
+}
+
 /// One password in the password store
 #[derive(Clone, Debug)]
 pub struct PasswordEntry {
@@ -496,6 +518,8 @@ pub struct PasswordEntry {
     /// if we have a git repo, and the commit was signed
     pub signature_status: Option<SignatureStatus>,
     filename: String,
+    /// describes if the file is in a repository or not
+    pub is_in_git: RepositoryStatus,
 }
 
 impl PasswordEntry {
@@ -506,6 +530,7 @@ impl PasswordEntry {
         update_time: Result<DateTime<Local>>,
         committed_by: Result<String>,
         signature_status: Result<SignatureStatus>,
+        is_in_git: RepositoryStatus,
     ) -> PasswordEntry {
         PasswordEntry {
             name: to_name(base, path),
@@ -523,6 +548,7 @@ impl PasswordEntry {
                 Err(_) => None,
             },
             filename: path.to_string_lossy().into_owned(),
+            is_in_git,
         }
     }
 
@@ -541,6 +567,7 @@ impl PasswordEntry {
             update_time,
             committed_by,
             signature_status,
+            RepositoryStatus::InRepo,
         )
     }
 
@@ -556,6 +583,7 @@ impl PasswordEntry {
             committed_by: None,
             signature_status: None,
             filename: path.to_string_lossy().into_owned(),
+            is_in_git: RepositoryStatus::NoRepo,
         })
     }
 
@@ -1101,7 +1129,7 @@ pub enum PasswordEvent {
     NewPassword(PasswordEntry),
     /// A password file was removed.
     RemovedPassword(path::PathBuf),
-    /// An error occured
+    /// An error occurred
     Error(Error),
 }
 
