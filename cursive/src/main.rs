@@ -840,7 +840,11 @@ fn main() {
         process::exit(1);
     }
     let mut store = store_res.unwrap();
-    store.reload_password_list().unwrap();
+    let reload_res = store.reload_password_list();
+    if reload_res.is_err() {
+        eprintln!("error loading passwords: {:?}", reload_res.err().unwrap());
+        process::exit(1);
+    }
     let store = Arc::new(Mutex::new(store));
 
     // verify that the git config is correct
