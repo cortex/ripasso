@@ -19,6 +19,7 @@ env_logger = "0.7.1"
 dirs = "2.0.2"
 rand = "0.7.3"
 whoami = "0.6.0"
+config = "0.10.1"
 
 [dev-dependencies]
 tempfile = "3.1.0"

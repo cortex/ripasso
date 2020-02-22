@@ -43,6 +43,7 @@ use std::sync::{Arc, Mutex};
 use std::{thread, time};
 
 use unic_langid::LanguageIdentifier;
+use std::collections::HashMap;
 
 mod helpers;
 mod wizard;
@@ -773,6 +774,14 @@ fn get_translation_catalog() -> gettext::Catalog {
     gettext::Catalog::empty()
 }
 
+fn change_store(mut ui: &mut Cursive, valid_signing_keys: &Option<String>, store_path: &String, store: PasswordStoreType) -> pass::Result<()> {
+    store.lock().unwrap().reset(&Some((*store_path).clone()), valid_signing_keys)?;
+
+    search(&store, &mut ui, "");
+
+    Ok(())
+}
+
 fn main() {
     env_logger::init();
 
@@ -808,6 +817,8 @@ fn main() {
             process::exit(1);
         }
     }
+
+    let config = pass::read_config();
 
     if pass::password_dir(&password_store_dir).is_err() {
         wizard::show_init_menu(&password_store_dir);
@@ -902,6 +913,7 @@ fn main() {
     let store15 = store.clone();
     let store16 = store.clone();
     let store17 = store.clone();
+    let store18 = store.clone();
 
     ui.add_global_callback(Event::CtrlChar('y'), copy);
     ui.add_global_callback(Key::Enter, copy);
@@ -1021,6 +1033,48 @@ fn main() {
             .delimiter()
             .leaf(CATALOG.gettext("Quit (esc)"), |s| s.quit()),
     );
+
+    let stores_res = config.get("stores");
+    if stores_res.is_ok() {
+        let stores: HashMap<String, config::Value> = stores_res.unwrap();
+        let mut tree = MenuTree::new();
+        for s in stores.keys() {
+            let sc = s.clone();
+            let vv = stores.get(&sc).unwrap().clone();
+            let store_map: HashMap<String, config::Value> = vv.into_table().unwrap();
+            let store_path_opt = store_map.get("path");
+            if store_path_opt.is_some() {
+                let store_clone = store18.clone();
+                let pp = store_path_opt.unwrap().clone();
+                let store_path = pp.into_str().unwrap();
+                let store_path_opt = store_map.get("path");
+
+                let valid_signing_keys_opt = store_map.get("valid_signing_keys");
+                let valid_signing_keys: Option<String> = match valid_signing_keys_opt {
+                    Some(value) => {
+                        let value_str_res = value.clone().into_str();
+                        if value_str_res.is_err() {
+                            None
+                        } else {
+                            Some(value_str_res.unwrap())
+                        }
+                    },
+                    None => None,
+                };
+
+                tree.add_leaf(s, move |ui: &mut Cursive| {
+                    let change_res = change_store(ui, &valid_signing_keys, &store_path, store_clone.clone());
+                    if change_res.is_err() {
+                        helpers::errorbox(ui, &change_res.err().unwrap());
+                    }
+                    ()
+                });
+            }
+        }
+        ui.menubar().add_subtree(
+            CATALOG.gettext("Stores"),
+            tree);
+    }
 
     ui.add_global_callback(Key::F1, |s| s.select_menubar());
 

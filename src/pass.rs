@@ -28,6 +28,7 @@ use notify::Watcher;
 use std::io::prelude::*;
 use std::sync::{Arc, Mutex};
 extern crate dirs;
+extern crate config;
 
 use git2::{Oid, Repository};
 
@@ -75,6 +76,32 @@ impl PasswordStore {
             valid_gpg_signing_keys: signing_keys,
             passwords: [].to_vec(),
         })
+    }
+
+    pub fn reset(
+        &mut self,
+        password_store_dir: &Option<String>,
+        valid_signing_keys: &Option<String>,
+    ) -> Result<()> {
+        let pass_home = password_dir_raw(password_store_dir);
+        if !pass_home.exists() {
+            return Err(Error::Generic("failed to locate password directory"));
+        }
+
+        let signing_keys = parse_signing_keys(valid_signing_keys)?;
+
+        if !signing_keys.is_empty() {
+            PasswordStore::verify_gpg_id_file(&pass_home, &signing_keys)?;
+        }
+
+        self.root = pass_home;
+        self.valid_gpg_signing_keys = signing_keys;
+
+        let all_passwords = self.all_passwords()?;
+
+        self.passwords = all_passwords;
+
+        Ok(())
     }
 
     fn repo(&self) -> Result<git2::Repository> {
@@ -1263,6 +1290,31 @@ pub fn password_dir_raw(password_store_dir: &Option<String>) -> path::PathBuf {
             .into(),
     };
     path::PathBuf::from(&pass_home)
+}
+
+/// reads ripasso's config file, in `$XDG_CONFIG_HOME/ripasso/settings.toml`
+pub fn read_config() -> config::Config {
+    let xdg_config_home = match std::env::var("XDG_CONFIG_HOME") {
+        Ok(p) => format!("{}/", p),
+        Err(_) => {
+            let home = std::env::var("HOME");
+            if home.is_err() {
+                eprintln!("missing home directory");
+                std::process::exit(1);
+            }
+            format!("{}/.config/", home.unwrap())
+        },
+    };
+
+    let mut settings = config::Config::default();
+    let conf_res = settings
+        .merge(config::File::with_name(&format!("{}ripasso/settings.toml", xdg_config_home)));
+
+    if conf_res.is_err() {
+        eprintln!("trying to read config file without success\n{}", conf_res.err().unwrap());
+    }
+
+    settings
 }
 
 #[cfg(test)]
