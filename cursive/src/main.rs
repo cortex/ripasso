@@ -42,8 +42,8 @@ use std::process;
 use std::sync::{Arc, Mutex};
 use std::{thread, time};
 
-use unic_langid::LanguageIdentifier;
 use std::collections::HashMap;
+use unic_langid::LanguageIdentifier;
 
 mod helpers;
 mod wizard;
@@ -231,17 +231,20 @@ fn show_file_history(ui: &mut Cursive, store: PasswordStoreType) {
         for history_line in history.unwrap() {
             let mut verification_status = "  ";
             if history_line.signature_status.is_some() {
-                verification_status = match history_line.signature_status.as_ref().unwrap() {
-                    SignatureStatus::Good => "🔒",
-                    SignatureStatus::AlmostGood => "🔓",
-                    SignatureStatus::Bad => "⛔",
-                }
+                verification_status =
+                    match history_line.signature_status.as_ref().unwrap() {
+                        SignatureStatus::Good => "🔒",
+                        SignatureStatus::AlmostGood => "🔓",
+                        SignatureStatus::Bad => "⛔",
+                    }
             }
 
             file_history_view.get_mut().add_item(
                 format!(
                     "{} {} {}",
-                    verification_status, history_line.commit_time, history_line.message
+                    verification_status,
+                    history_line.commit_time,
+                    history_line.message
                 ),
                 history_line,
             );
@@ -774,8 +777,16 @@ fn get_translation_catalog() -> gettext::Catalog {
     gettext::Catalog::empty()
 }
 
-fn change_store(mut ui: &mut Cursive, valid_signing_keys: &Option<String>, store_path: &String, store: PasswordStoreType) -> pass::Result<()> {
-    store.lock().unwrap().reset(&Some((*store_path).clone()), valid_signing_keys)?;
+fn change_store(
+    mut ui: &mut Cursive,
+    valid_signing_keys: &Option<String>,
+    store_path: &String,
+    store: PasswordStoreType,
+) -> pass::Result<()> {
+    store
+        .lock()
+        .unwrap()
+        .reset(&Some((*store_path).clone()), valid_signing_keys)?;
 
     search(&store, &mut ui, "");
 
@@ -1041,7 +1052,8 @@ fn main() {
         for s in stores.keys() {
             let sc = s.clone();
             let vv = stores.get(&sc).unwrap().clone();
-            let store_map: HashMap<String, config::Value> = vv.into_table().unwrap();
+            let store_map: HashMap<String, config::Value> =
+                vv.into_table().unwrap();
             let store_path_opt = store_map.get("path");
             if store_path_opt.is_some() {
                 let store_clone = store18.clone();
@@ -1049,21 +1061,28 @@ fn main() {
                 let store_path = pp.into_str().unwrap();
                 let store_path_opt = store_map.get("path");
 
-                let valid_signing_keys_opt = store_map.get("valid_signing_keys");
-                let valid_signing_keys: Option<String> = match valid_signing_keys_opt {
-                    Some(value) => {
-                        let value_str_res = value.clone().into_str();
-                        if value_str_res.is_err() {
-                            None
-                        } else {
-                            Some(value_str_res.unwrap())
+                let valid_signing_keys_opt =
+                    store_map.get("valid_signing_keys");
+                let valid_signing_keys: Option<String> =
+                    match valid_signing_keys_opt {
+                        Some(value) => {
+                            let value_str_res = value.clone().into_str();
+                            if value_str_res.is_err() {
+                                None
+                            } else {
+                                Some(value_str_res.unwrap())
+                            }
                         }
-                    },
-                    None => None,
-                };
+                        None => None,
+                    };
 
                 tree.add_leaf(s, move |ui: &mut Cursive| {
-                    let change_res = change_store(ui, &valid_signing_keys, &store_path, store_clone.clone());
+                    let change_res = change_store(
+                        ui,
+                        &valid_signing_keys,
+                        &store_path,
+                        store_clone.clone(),
+                    );
                     if change_res.is_err() {
                         helpers::errorbox(ui, &change_res.err().unwrap());
                     }
@@ -1071,9 +1090,7 @@ fn main() {
                 });
             }
         }
-        ui.menubar().add_subtree(
-            CATALOG.gettext("Stores"),
-            tree);
+        ui.menubar().add_subtree(CATALOG.gettext("Stores"), tree);
     }
 
     ui.add_global_callback(Key::F1, |s| s.select_menubar());

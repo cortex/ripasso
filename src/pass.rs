@@ -27,8 +27,8 @@ use chrono::prelude::*;
 use notify::Watcher;
 use std::io::prelude::*;
 use std::sync::{Arc, Mutex};
-extern crate dirs;
 extern crate config;
+extern crate dirs;
 
 use git2::{Oid, Repository};
 
@@ -528,7 +528,7 @@ impl GitLogLine {
 pub enum RepositoryStatus {
     InRepo,
     NotInRepo,
-    NoRepo
+    NoRepo,
 }
 
 /// One password in the password store
@@ -1303,15 +1303,20 @@ pub fn read_config() -> config::Config {
                 std::process::exit(1);
             }
             format!("{}/.config/", home.unwrap())
-        },
+        }
     };
 
     let mut settings = config::Config::default();
-    let conf_res = settings
-        .merge(config::File::with_name(&format!("{}ripasso/settings.toml", xdg_config_home)));
+    let conf_res = settings.merge(config::File::with_name(&format!(
+        "{}ripasso/settings.toml",
+        xdg_config_home
+    )));
 
     if conf_res.is_err() {
-        eprintln!("trying to read config file without success\n{}", conf_res.err().unwrap());
+        eprintln!(
+            "trying to read config file without success\n{}",
+            conf_res.err().unwrap()
+        );
     }
 
     settings
