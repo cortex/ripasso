@@ -126,8 +126,8 @@ fn copy(ui: &mut Cursive) {
 
     let password = sel.unwrap().password();
 
-    if password.is_err() {
-        helpers::errorbox(ui, &password.unwrap_err());
+    if let Err(err) = password {
+        helpers::errorbox(ui, &err);
         return;
     }
 
@@ -227,40 +227,43 @@ fn show_file_history(ui: &mut Cursive, store: PasswordStoreType) {
         .with_name("file_history");
 
     let history = password_entry.get_history(&store);
-    if history.is_ok() {
-        for history_line in history.unwrap() {
-            let mut verification_status = "  ";
-            if history_line.signature_status.is_some() {
-                verification_status =
-                    match history_line.signature_status.as_ref().unwrap() {
-                        SignatureStatus::Good => "🔒",
-                        SignatureStatus::AlmostGood => "🔓",
-                        SignatureStatus::Bad => "⛔",
-                    }
+
+    match history {
+        Ok(history) => {
+            for history_line in history {
+                let mut verification_status = "  ";
+                if history_line.signature_status.is_some() {
+                    verification_status =
+                        match history_line.signature_status.as_ref().unwrap() {
+                            SignatureStatus::Good => "🔒",
+                            SignatureStatus::AlmostGood => "🔓",
+                            SignatureStatus::Bad => "⛔",
+                        }
+                }
+
+                file_history_view.get_mut().add_item(
+                    format!(
+                        "{} {} {}",
+                        verification_status,
+                        history_line.commit_time,
+                        history_line.message
+                    ),
+                    history_line,
+                );
             }
 
-            file_history_view.get_mut().add_item(
-                format!(
-                    "{} {} {}",
-                    verification_status,
-                    history_line.commit_time,
-                    history_line.message
-                ),
-                history_line,
-            );
+            let d = Dialog::around(file_history_view)
+                .title(CATALOG.gettext("File History"))
+                .dismiss_button("Ok");
+
+            let file_history_event =
+                OnEventView::new(d).on_event(Key::Esc, |s| {
+                    s.pop_layer();
+                });
+
+            ui.add_layer(file_history_event);
         }
-
-        let d = Dialog::around(file_history_view)
-            .title(CATALOG.gettext("File History"))
-            .dismiss_button("Ok");
-
-        let file_history_event = OnEventView::new(d).on_event(Key::Esc, |s| {
-            s.pop_layer();
-        });
-
-        ui.add_layer(file_history_event);
-    } else {
-        helpers::errorbox(ui, &history.err().unwrap())
+        Err(err) => helpers::errorbox(ui, &err),
     }
 }
 
@@ -286,8 +289,8 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) {
                     .unwrap();
                 let store = store.lock().unwrap();
                 let r = password_entry.update(new_password, &(*store));
-                if r.is_err() {
-                    helpers::errorbox(s, &r.unwrap_err())
+                if let Err(err) = r {
+                    helpers::errorbox(s, &err)
                 }
             })
             .button(CATALOG.gettext("Generate"), move |s| {
@@ -334,26 +337,26 @@ fn create_save(s: &mut Cursive, store: PasswordStoreType) {
     if *path == "" {
         return;
     }
+    let mut store = store.lock().unwrap();
+    let entry = store.new_password_file(path.as_ref(), password.as_ref());
 
-    let res = (*store)
-        .lock()
-        .unwrap()
-        .new_password_file(path.as_ref(), password.as_ref());
+    match entry {
+        Err(err) => helpers::errorbox(s, &err),
+        Ok(entry) => {
+            let col = s.screen_size().x;
+            s.call_on_name(
+                "results",
+                |l: &mut SelectView<pass::PasswordEntry>| {
+                    l.add_item(create_label(&entry, col), entry);
+                },
+            );
 
-    let col = s.screen_size().x;
-    if res.is_err() {
-        helpers::errorbox(s, &res.err().unwrap())
-    } else {
-        s.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
-            let e = res.unwrap();
-            l.add_item(create_label(&e, col), e);
-        });
+            s.pop_layer();
 
-        s.pop_layer();
-
-        s.call_on_name("status_bar", |l: &mut TextView| {
-            l.set_content(CATALOG.gettext("Created new password"));
-        });
+            s.call_on_name("status_bar", |l: &mut TextView| {
+                l.set_content(CATALOG.gettext("Created new password"));
+            });
+        }
     }
 }
 
@@ -421,19 +424,18 @@ fn delete_recipient(ui: &mut Cursive, store: PasswordStoreType) {
         return;
     }
 
-    let r = store.lock().unwrap().remove_recipient(&sel.unwrap());
-
-    if r.is_err() {
-        helpers::errorbox(ui, &r.unwrap_err());
-    } else {
-        let delete_id = l.selected_id().unwrap();
-        l.remove_item(delete_id);
-
-        ui.call_on_name("status_bar", |l: &mut TextView| {
-            l.set_content(
-                CATALOG.gettext("Deleted team member from password store"),
-            );
-        });
+    let store = store.lock().unwrap();
+    match store.remove_recipient(&sel.unwrap()) {
+        Err(err) => helpers::errorbox(ui, &err),
+        Ok(_) => {
+            let delete_id = l.selected_id().unwrap();
+            l.remove_item(delete_id);
+            ui.call_on_name("status_bar", |l: &mut TextView| {
+                l.set_content(
+                    CATALOG.gettext("Deleted team member from password store"),
+                );
+            });
+        }
     }
 }
 
@@ -453,53 +455,49 @@ fn delete_recipient_verification(ui: &mut Cursive, store: PasswordStoreType) {
 fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) {
     let l = &*get_value_from_input(ui, "key_id_input").unwrap();
 
-    let recipient_result = pass::Recipient::new(l.clone());
+    match pass::Recipient::new(l.clone()) {
+        Err(err) => helpers::errorbox(ui, &err),
+        Ok(recipient) => {
+            let res = store.lock().unwrap().add_recipient(&recipient);
+            match res {
+                Err(err) => helpers::errorbox(ui, &err),
+                Ok(_) => match store.lock().unwrap().all_recipients() {
+                    Err(err) => helpers::errorbox(ui, &err),
+                    Ok(recipients) => {
+                        let mut max_width_key = 0;
+                        let mut max_width_name = 0;
+                        for recipient in &recipients {
+                            if recipient.key_id.len() > max_width_key {
+                                max_width_key = recipient.key_id.len();
+                            }
+                            if recipient.name.len() > max_width_name {
+                                max_width_name = recipient.name.len();
+                            }
+                        }
 
-    if recipient_result.is_err() {
-        helpers::errorbox(ui, &recipient_result.err().unwrap());
-    } else {
-        let recipient = recipient_result.unwrap();
-        let res = store.lock().unwrap().add_recipient(&recipient);
-        if res.is_err() {
-            helpers::errorbox(ui, &res.unwrap_err());
-        } else {
-            let recipients_res = store.lock().unwrap().all_recipients();
+                        let mut recipients_view = ui
+                            .find_name::<SelectView<pass::Recipient>>(
+                                "recipients",
+                            )
+                            .unwrap();
+                        recipients_view.add_item(
+                            render_recipient_label(
+                                &recipient,
+                                max_width_key,
+                                max_width_name,
+                            ),
+                            recipient,
+                        );
 
-            if recipients_res.is_err() {
-                helpers::errorbox(ui, &recipients_res.err().unwrap());
-                return;
+                        ui.pop_layer();
+                        ui.call_on_name("status_bar", |l: &mut TextView| {
+                            l.set_content(CATALOG.gettext(
+                                "Added team member to password store",
+                            ));
+                        });
+                    }
+                },
             }
-            let recipients = recipients_res.unwrap();
-
-            let mut max_width_key = 0;
-            let mut max_width_name = 0;
-            for recipient in &recipients {
-                if recipient.key_id.len() > max_width_key {
-                    max_width_key = recipient.key_id.len();
-                }
-                if recipient.name.len() > max_width_name {
-                    max_width_name = recipient.name.len();
-                }
-            }
-
-            let mut recipients_view = ui
-                .find_name::<SelectView<pass::Recipient>>("recipients")
-                .unwrap();
-            recipients_view.add_item(
-                render_recipient_label(
-                    &recipient,
-                    &max_width_key,
-                    &max_width_name,
-                ),
-                recipient,
-            );
-
-            ui.pop_layer();
-            ui.call_on_name("status_bar", |l: &mut TextView| {
-                l.set_content(
-                    CATALOG.gettext("Added team member to password store"),
-                );
-            });
         }
     }
 }
@@ -543,8 +541,8 @@ fn add_recipient_dialog(ui: &mut Cursive, store: PasswordStoreType) {
 
 fn render_recipient_label(
     recipient: &pass::Recipient,
-    max_width_key: &usize,
-    max_width_name: &usize,
+    max_width_key: usize,
+    max_width_name: usize,
 ) -> String {
     let symbol = match &recipient.key_ring_status {
         pass::KeyRingStatus::NotInKeyRing => "⚠️ ",
@@ -595,7 +593,7 @@ fn view_recipients(ui: &mut Cursive, store: PasswordStoreType) {
     }
     for recipient in recipients {
         recipients_view.get_mut().add_item(
-            render_recipient_label(&recipient, &max_width_key, &max_width_name),
+            render_recipient_label(&recipient, max_width_key, max_width_name),
             recipient,
         );
     }
@@ -626,7 +624,7 @@ fn view_recipients(ui: &mut Cursive, store: PasswordStoreType) {
     ui.add_layer(recipients_event);
 }
 
-fn substr(str: &String, start: usize, len: usize) -> String {
+fn substr(str: &str, start: usize, len: usize) -> String {
     str.chars().skip(start).take(len).collect()
 }
 
@@ -684,34 +682,30 @@ fn help() {
 }
 
 fn git_push(ui: &mut Cursive, store: PasswordStoreType) {
-    let res = pass::push(&(*store.lock().unwrap()));
-
-    if res.is_err() {
-        helpers::errorbox(ui, &res.unwrap_err());
-    } else {
-        ui.call_on_name("status_bar", |l: &mut TextView| {
-            l.set_content(CATALOG.gettext("Pushed to remote git repository"));
-        });
+    match pass::push(&(*store.lock().unwrap())) {
+        Err(err) => helpers::errorbox(ui, &err),
+        Ok(_) => {
+            ui.call_on_name("status_bar", |l: &mut TextView| {
+                l.set_content(
+                    CATALOG.gettext("Pushed to remote git repository"),
+                );
+            });
+        }
     }
 }
 
 fn git_pull(ui: &mut Cursive, store: PasswordStoreType) {
-    let pull_res = pass::pull(&(*store.lock().unwrap()));
-
-    if pull_res.is_err() {
-        helpers::errorbox(ui, &pull_res.unwrap_err());
-    }
-
-    let res = (*store).lock().unwrap().reload_password_list();
-    if res.is_err() {
-        helpers::errorbox(ui, &res.unwrap_err());
-    }
+    let mut store = store.lock().unwrap();
+    let _ = pass::pull(&store).map_err(|err| helpers::errorbox(ui, &err));
+    let _ = store
+        .reload_password_list()
+        .map_err(|err| helpers::errorbox(ui, &err));
 
     let col = ui.screen_size().x;
 
     ui.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
         l.clear();
-        for p in (*store).lock().unwrap().passwords.iter() {
+        for p in store.passwords.iter() {
             l.add_item(create_label(&p, col), p.clone());
         }
     });
@@ -744,9 +738,8 @@ fn get_translation_catalog() -> gettext::Catalog {
     let locale = locale_config::Locale::current();
 
     let mut translation_locations = vec!["/usr/share/ripasso"];
-    let translation_input_path = option_env!("TRANSLATION_INPUT_PATH");
-    if translation_input_path.is_some() {
-        translation_locations.insert(0, translation_input_path.unwrap());
+    if let Some(path) = option_env!("TRANSLATION_INPUT_PATH") {
+        translation_locations.insert(0, path);
     }
     if cfg!(debug_assertions) {
         translation_locations.insert(0, "./cursive/res");
@@ -757,17 +750,15 @@ fn get_translation_catalog() -> gettext::Catalog {
             let langid_res: Result<LanguageIdentifier, _> =
                 format!("{}", preferred).parse();
 
-            if langid_res.is_ok() {
+            if let Ok(langid) = langid_res {
                 let file = std::fs::File::open(format!(
                     "{}/{}.mo",
                     loc,
-                    langid_res.unwrap().get_language()
+                    langid.get_language()
                 ));
-                if file.is_ok() {
-                    let catalog_res = gettext::Catalog::parse(file.unwrap());
-
-                    if catalog_res.is_ok() {
-                        return catalog_res.unwrap();
+                if let Ok(file) = file {
+                    if let Ok(catalog) = gettext::Catalog::parse(file) {
+                        return catalog;
                     }
                 }
             }
@@ -780,13 +771,13 @@ fn get_translation_catalog() -> gettext::Catalog {
 fn change_store(
     mut ui: &mut Cursive,
     valid_signing_keys: &Option<String>,
-    store_path: &String,
+    store_path: &str,
     store: PasswordStoreType,
 ) -> pass::Result<()> {
     store
         .lock()
         .unwrap()
-        .reset(&Some((*store_path).clone()), valid_signing_keys)?;
+        .reset(&Some(store_path.to_string()), valid_signing_keys)?;
 
     search(&store, &mut ui, "");
 
@@ -803,7 +794,7 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     match args.len() {
-        1 => {}
+        1 => (),
         2 => {
             if args[1] == "-h" || args[1] == "--help" {
                 help();
@@ -1040,9 +1031,8 @@ fn main() {
             .leaf(CATALOG.gettext("Quit (esc)"), |s| s.quit()),
     );
 
-    let stores_res = config.get("stores");
-    if stores_res.is_ok() {
-        let stores: HashMap<String, config::Value> = stores_res.unwrap();
+    if let Ok(stores) = config.get("stores") {
+        let stores: HashMap<String, config::Value> = stores;
         let mut tree = MenuTree::new();
         for s in stores.keys() {
             let sc = s.clone();
@@ -1050,24 +1040,17 @@ fn main() {
             let store_map: HashMap<String, config::Value> =
                 vv.into_table().unwrap();
             let store_path_opt = store_map.get("path");
-            if store_path_opt.is_some() {
-                let pp = store_path_opt.unwrap().clone();
-                let store_path = pp.into_str().unwrap();
-                let store_path_opt = store_map.get("path");
-
+            if let Some(pp) = store_path_opt {
+                let store_path = pp.clone().into_str().unwrap();
                 let valid_signing_keys_opt =
                     store_map.get("valid_signing_keys");
                 let valid_signing_keys: Option<String> =
                     match valid_signing_keys_opt {
-                        Some(value) => {
-                            let value_str_res = value.clone().into_str();
-                            if value_str_res.is_err() {
-                                None
-                            } else {
-                                Some(value_str_res.unwrap())
-                            }
-                        }
-                        None => None,
+                        Some(value) => match value.clone().into_str() {
+                            Err(_) => None,
+                            Ok(v) => Some(v),
+                        },
+                        _ => None,
                     };
 
                 let store = store.clone();
@@ -1081,7 +1064,6 @@ fn main() {
                     if change_res.is_err() {
                         helpers::errorbox(ui, &change_res.err().unwrap());
                     }
-                    ()
                 });
             }
         }
