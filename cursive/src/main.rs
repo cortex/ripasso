@@ -155,7 +155,7 @@ fn copy(ui: &mut Cursive) {
     });
 }
 
-fn do_delete(ui: &mut Cursive, store: PasswordStoreType) {
+fn do_delete(ui: &mut Cursive, store: &PasswordStoreType) {
     ui.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
         let sel = l.selection();
 
@@ -164,8 +164,8 @@ fn do_delete(ui: &mut Cursive, store: PasswordStoreType) {
         }
 
         let sel = sel.unwrap();
-
-        let r = sel.delete_file(&(*store.lock().unwrap()));
+        let store = store.lock().unwrap();
+        let r = sel.delete_file(&store);
 
         if r.is_err() {
             return;
@@ -184,7 +184,7 @@ fn delete(ui: &mut Cursive, store: PasswordStoreType) {
             CATALOG.gettext("Are you sure you want to delete the password?"),
         ))
         .button(CATALOG.gettext("Yes"), move |ui: &mut Cursive| {
-            do_delete(ui, store.clone());
+            do_delete(ui, &store);
             ui.call_on_name("status_bar", |l: &mut TextView| {
                 l.set_content(CATALOG.gettext("Password deleted"));
             });
@@ -908,28 +908,11 @@ fn main() {
         return;
     }
 
-    let store2 = store.clone();
-    let store3 = store.clone();
-    let store4 = store.clone();
-    let store5 = store.clone();
-    let store6 = store.clone();
-    let store7 = store.clone();
-    let store8 = store.clone();
-    let store9 = store.clone();
-    let store10 = store.clone();
-    let store11 = store.clone();
-    let store12 = store.clone();
-    let store13 = store.clone();
-    let store14 = store.clone();
-    let store15 = store.clone();
-    let store16 = store.clone();
-    let store17 = store.clone();
-    let store18 = store.clone();
-
     ui.add_global_callback(Event::CtrlChar('y'), copy);
     ui.add_global_callback(Key::Enter, copy);
-    ui.add_global_callback(Key::Del, move |ui: &mut Cursive| {
-        delete(ui, store2.clone())
+    ui.add_global_callback(Key::Del, {
+        let store = store.clone();
+        move |ui: &mut Cursive| delete(ui, store.clone())
     });
 
     // Movement
@@ -942,41 +925,50 @@ fn main() {
     ui.add_global_callback(Event::Key(cursive::event::Key::PageUp), page_up);
 
     // View list of persons that have access
-    ui.add_global_callback(Event::CtrlChar('v'), move |ui: &mut Cursive| {
-        view_recipients(ui, store3.clone())
+    ui.add_global_callback(Event::CtrlChar('v'), {
+        let store = store.clone();
+        move |ui: &mut Cursive| view_recipients(ui, store.clone())
     });
 
     // Show git history of a file
-    ui.add_global_callback(Event::CtrlChar('h'), move |ui: &mut Cursive| {
-        show_file_history(ui, store16.clone())
+    ui.add_global_callback(Event::CtrlChar('h'), {
+        let store = store.clone();
+        move |ui: &mut Cursive| show_file_history(ui, store.clone())
     });
 
     // Query editing
-    ui.add_global_callback(Event::CtrlChar('w'), move |ui: &mut Cursive| {
-        do_delete_last_word(ui, store14.clone());
+    ui.add_global_callback(Event::CtrlChar('w'), {
+        let store = store.clone();
+        move |ui: &mut Cursive| {
+            do_delete_last_word(ui, store.clone());
+        }
     });
 
     // Editing
-    ui.add_global_callback(Event::CtrlChar('o'), move |ui: &mut Cursive| {
-        open(ui, store4.clone())
+    ui.add_global_callback(Event::CtrlChar('o'), {
+        let store = store.clone();
+        move |ui: &mut Cursive| open(ui, store.clone())
     });
-    ui.add_global_callback(Event::CtrlChar('f'), move |ui: &mut Cursive| {
-        git_pull(ui, store5.clone())
+    ui.add_global_callback(Event::CtrlChar('f'), {
+        let store = store.clone();
+        move |ui: &mut Cursive| git_pull(ui, store.clone())
     });
-    ui.add_global_callback(Event::CtrlChar('g'), move |ui: &mut Cursive| {
-        git_push(ui, store6.clone())
+    ui.add_global_callback(Event::CtrlChar('g'), {
+        let store = store.clone();
+        move |ui: &mut Cursive| git_push(ui, store.clone())
     });
-    ui.add_global_callback(
-        Event::Key(cursive::event::Key::Ins),
-        move |ui: &mut Cursive| create(ui, store7.clone()),
-    );
+    ui.add_global_callback(Event::Key(cursive::event::Key::Ins), {
+        let store = store.clone();
+        move |ui: &mut Cursive| create(ui, store.clone())
+    });
 
     ui.add_global_callback(Event::Key(cursive::event::Key::Esc), |s| s.quit());
 
     ui.load_toml(include_str!("../res/style.toml")).unwrap();
     let search_box = EditView::new()
-        .on_edit(move |ui: &mut cursive::Cursive, query, _| {
-            search(&store15, ui, query)
+        .on_edit({
+            let store = store.clone();
+            move |ui: &mut cursive::Cursive, query, _| search(&store, ui, query)
         })
         .with_name("search_box")
         .full_width();
@@ -1015,32 +1007,35 @@ fn main() {
         CATALOG.gettext("Operations"),
         MenuTree::new()
             .leaf(CATALOG.gettext("Copy (ctrl-y)"), copy)
-            .leaf(CATALOG.gettext("Open (ctrl-o)"), move |ui: &mut Cursive| {
-                open(ui, store9.clone())
+            .leaf(CATALOG.gettext("Open (ctrl-o)"), {
+                let store = store.clone();
+                move |ui: &mut Cursive| open(ui, store.clone())
             })
-            .leaf(
-                CATALOG.gettext("File History (ctrl-h)"),
-                move |ui: &mut Cursive| show_file_history(ui, store17.clone()),
-            )
-            .leaf(CATALOG.gettext("Create (ins) "), move |ui: &mut Cursive| {
-                create(ui, store8.clone())
+            .leaf(CATALOG.gettext("File History (ctrl-h)"), {
+                let store = store.clone();
+                move |ui: &mut Cursive| show_file_history(ui, store.clone())
             })
-            .leaf(CATALOG.gettext("Delete (del)"), move |ui: &mut Cursive| {
-                delete(ui, store10.clone())
+            .leaf(CATALOG.gettext("Create (ins) "), {
+                let store = store.clone();
+                move |ui: &mut Cursive| create(ui, store.clone())
             })
-            .leaf(
-                CATALOG.gettext("Team Members (ctrl-v)"),
-                move |ui: &mut Cursive| view_recipients(ui, store11.clone()),
-            )
+            .leaf(CATALOG.gettext("Delete (del)"), {
+                let store = store.clone();
+                move |ui: &mut Cursive| delete(ui, store.clone())
+            })
+            .leaf(CATALOG.gettext("Team Members (ctrl-v)"), {
+                let store = store.clone();
+                move |ui: &mut Cursive| view_recipients(ui, store.clone())
+            })
             .delimiter()
-            .leaf(
-                CATALOG.gettext("Git Pull (ctrl-f)"),
-                move |ui: &mut Cursive| git_pull(ui, store12.clone()),
-            )
-            .leaf(
-                CATALOG.gettext("Git Push (ctrl-g)"),
-                move |ui: &mut Cursive| git_push(ui, store13.clone()),
-            )
+            .leaf(CATALOG.gettext("Git Pull (ctrl-f)"), {
+                let store = store.clone();
+                move |ui: &mut Cursive| git_pull(ui, store.clone())
+            })
+            .leaf(CATALOG.gettext("Git Push (ctrl-g)"), {
+                let store = store.clone();
+                move |ui: &mut Cursive| git_push(ui, store.clone())
+            })
             .delimiter()
             .leaf(CATALOG.gettext("Quit (esc)"), |s| s.quit()),
     );
@@ -1056,7 +1051,6 @@ fn main() {
                 vv.into_table().unwrap();
             let store_path_opt = store_map.get("path");
             if store_path_opt.is_some() {
-                let store_clone = store18.clone();
                 let pp = store_path_opt.unwrap().clone();
                 let store_path = pp.into_str().unwrap();
                 let store_path_opt = store_map.get("path");
@@ -1076,12 +1070,13 @@ fn main() {
                         None => None,
                     };
 
+                let store = store.clone();
                 tree.add_leaf(s, move |ui: &mut Cursive| {
                     let change_res = change_store(
                         ui,
                         &valid_signing_keys,
                         &store_path,
-                        store_clone.clone(),
+                        store.clone(),
                     );
                     if change_res.is_err() {
                         helpers::errorbox(ui, &change_res.err().unwrap());
