@@ -29,8 +29,6 @@ use cursive::Cursive;
 
 use self::cursive::direction::Orientation;
 
-use std::sync::{Arc, Mutex};
-
 use crate::helpers;
 use ripasso::pass;
 
@@ -42,20 +40,13 @@ fn create_git_repo(ui: &mut Cursive, password_store_dir: &Option<String>) {
     } else {
         let message =
             super::CATALOG.gettext("Initialized password repo with Ripasso");
-        let store_res = pass::PasswordStore::new(password_store_dir, &None);
-        if store_res.is_err() {
-            helpers::errorbox(ui, &store_res.err().unwrap());
-        } else {
-            let store = Arc::new(Mutex::new(store_res.unwrap()));
-            let commit_res = store
-                .lock()
-                .unwrap()
-                .add_and_commit(&[".gpg-id".to_string()], &message);
-
-            if commit_res.is_err() {
-                helpers::errorbox(ui, &commit_res.err().unwrap());
-            } else {
-                ui.quit();
+        match pass::PasswordStore::new(password_store_dir, &None) {
+            Err(err) => helpers::errorbox(ui, &err),
+            Ok(store) => {
+                match store.add_and_commit(&[".gpg-id".to_string()], &message) {
+                    Err(err) => helpers::errorbox(ui, &err),
+                    Ok(_) => ui.quit(),
+                }
             }
         }
     }
@@ -65,31 +56,36 @@ fn do_create(ui: &mut Cursive, password_store_dir: &Option<String>) {
     let l = ui.find_name::<EditView>("initial_key_id").unwrap();
     let key_id = (*l.get_content()).clone();
     let mut pass_home = pass::password_dir_raw(password_store_dir);
-    let create_res = std::fs::create_dir_all(&pass_home);
-    if create_res.is_err() {
-        helpers::errorbox(ui, &pass::Error::IO(create_res.unwrap_err()));
-        ui.quit();
-    } else {
-        pass_home.push(".gpg-id");
-        std::fs::write(pass_home, key_id).unwrap_or_else(|_| {
-            panic!(super::CATALOG.gettext("Unable to write file").to_string())
-        });
+    match std::fs::create_dir_all(&pass_home) {
+        Err(err) => {
+            helpers::errorbox(ui, &pass::Error::IO(err));
+            ui.quit();
+        }
+        Ok(_) => {
+            pass_home.push(".gpg-id");
+            std::fs::write(pass_home, key_id).unwrap_or_else(|_| {
+                panic!(super::CATALOG
+                    .gettext("Unable to write file")
+                    .to_string())
+            });
 
-        let password_store_dir2 = password_store_dir.clone();
-        let d = Dialog::around(TextView::new(
-            super::CATALOG.gettext(
+            let password_store_dir2 = password_store_dir.clone();
+            let d = Dialog::around(TextView::new(super::CATALOG.gettext(
                 "Also create a git repository for the encrypted files?",
-            ),
-        ))
-        .button(super::CATALOG.gettext("Create"), move |ui: &mut Cursive| {
-            create_git_repo(ui, &password_store_dir2);
-        })
-        .button(super::CATALOG.gettext("No"), |s| {
-            s.quit();
-        })
-        .title(super::CATALOG.gettext("Git Init"));
+            )))
+            .button(
+                super::CATALOG.gettext("Create"),
+                move |ui: &mut Cursive| {
+                    create_git_repo(ui, &password_store_dir2);
+                },
+            )
+            .button(super::CATALOG.gettext("No"), |s| {
+                s.quit();
+            })
+            .title(super::CATALOG.gettext("Git Init"));
 
-        ui.add_layer(d);
+            ui.add_layer(d);
+        }
     }
 }
 
