@@ -291,6 +291,12 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) {
                 let r = password_entry.update(new_password, &(*store));
                 if let Err(err) = r {
                     helpers::errorbox(s, &err)
+                } else {
+                    s.call_on_name("status_bar", |l: &mut TextView| {
+                        l.set_content(CATALOG.gettext("Updated password entry"));
+                    });
+
+                    s.pop_layer();
                 }
             })
             .button(CATALOG.gettext("Generate"), move |s| {
@@ -299,7 +305,7 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) {
                     e.set_content(new_password);
                 });
             })
-            .dismiss_button(CATALOG.gettext("Ok"));
+            .dismiss_button(CATALOG.gettext("Close"));
 
     let ev = OnEventView::new(d).on_event(Key::Esc, |s| {
         s.pop_layer();
