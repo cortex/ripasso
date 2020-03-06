@@ -132,10 +132,10 @@ fn copy(ui: &mut Cursive) {
     }
 
     let ctx_res = clipboard::ClipboardContext::new();
-    if ctx_res.is_err() {
+    if let Err(err) = ctx_res {
         helpers::errorbox(
             ui,
-            &pass::Error::GenericDyn(format!("{}", &ctx_res.err().unwrap())),
+            &pass::Error::GenericDyn(format!("{}", &err)),
         );
         return;
     }
@@ -577,8 +577,8 @@ fn render_recipient_label(
 fn view_recipients(ui: &mut Cursive, store: PasswordStoreType) {
     let recipients_res = store.lock().unwrap().all_recipients();
 
-    if recipients_res.is_err() {
-        helpers::errorbox(ui, &recipients_res.err().unwrap());
+    if let Err(err) = recipients_res {
+        helpers::errorbox(ui, &err);
         return;
     }
     let recipients = recipients_res.unwrap();
@@ -672,8 +672,8 @@ fn search(store: &PasswordStoreType, ui: &mut Cursive, query: &str) {
         .unwrap();
 
     let r_res = pass::search(&store, &String::from(query));
-    if r_res.is_err() {
-        helpers::errorbox(ui, &r_res.err().unwrap());
+    if let Err(err) = r_res {
+        helpers::errorbox(ui, &err);
         return;
     }
     let r = r_res.unwrap();
@@ -841,8 +841,8 @@ fn main() {
         }
     }
     let pdir_res = pass::password_dir(&password_store_dir);
-    if pdir_res.is_err() {
-        eprintln!("Error {:?}", pdir_res.err().unwrap());
+    if let Err(err) = pdir_res {
+        eprintln!("Error {:?}", err);
         process::exit(1);
     }
 
@@ -854,14 +854,14 @@ fn main() {
 
     let store_res =
         PasswordStore::new(&password_store_dir, &password_store_signing_key);
-    if store_res.is_err() {
-        eprintln!("Error {:?}", store_res.err().unwrap());
+    if let Err(err) = store_res {
+        eprintln!("Error {:?}", err);
         process::exit(1);
     }
     let mut store = store_res.unwrap();
     let reload_res = store.reload_password_list();
-    if reload_res.is_err() {
-        eprintln!("error loading passwords: {:?}", reload_res.err().unwrap());
+    if let Err(err) = reload_res {
+        eprintln!("error loading passwords: {:?}", err);
         process::exit(1);
     }
     let store = Arc::new(Mutex::new(store));
@@ -900,8 +900,8 @@ fn main() {
         }
     }));
 
-    if e.is_err() {
-        eprintln!("Application error: {}", e.err().unwrap());
+    if let Err(err) = e {
+        eprintln!("Application error: {}", err);
         return;
     }
 
@@ -1067,8 +1067,8 @@ fn main() {
                         &store_path,
                         store.clone(),
                     );
-                    if change_res.is_err() {
-                        helpers::errorbox(ui, &change_res.err().unwrap());
+                    if let Err(err) = change_res {
+                        helpers::errorbox(ui, &err);
                     }
                 });
             }
