@@ -114,40 +114,28 @@ fn page_up(ui: &mut Cursive) {
 }
 
 fn copy(ui: &mut Cursive) {
-    let l = ui
+    let sel = ui
         .find_name::<SelectView<pass::PasswordEntry>>("results")
-        .unwrap();
-
-    let sel = l.selection();
+        .unwrap()
+        .selection();
 
     if sel.is_none() {
         return;
     }
-
-    let password = sel.unwrap().password();
-
-    if let Err(err) = password {
+    if let Err(err) = || -> pass::Result<()> {
+        let password = sel.unwrap().password()?;
+        let mut ctx = clipboard::ClipboardContext::new()?;
+        ctx.set_contents(password)?;
+        Ok(())
+    }() {
         helpers::errorbox(ui, &err);
         return;
     }
-
-    let ctx_res = clipboard::ClipboardContext::new();
-    if ctx_res.is_err() {
-        helpers::errorbox(
-            ui,
-            &pass::Error::GenericDyn(format!("{}", &ctx_res.err().unwrap())),
-        );
-        return;
-    }
-    let mut ctx: ClipboardContext = ctx_res.unwrap();
-    ctx.set_contents(password.unwrap()).unwrap();
-
     thread::spawn(|| {
         thread::sleep(time::Duration::from_secs(40));
         let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
         ctx.set_contents("".to_string()).unwrap();
     });
-
     ui.call_on_name("status_bar", |l: &mut TextView| {
         l.set_content(
             CATALOG.gettext("Copied password to copy buffer for 40 seconds"),

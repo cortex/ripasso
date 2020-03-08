@@ -17,6 +17,7 @@ pub enum Error {
     GlobError(glob::GlobError),
     Utf8Error(std::str::Utf8Error),
     RecipientNotInKeyRing(String),
+    NoneError,
 }
 
 impl From<io::Error> for Error {
@@ -79,6 +80,11 @@ impl From<Option<std::str::Utf8Error>> for Error {
             None => Error::Generic("gpgme error with None"),
             Some(e) => Error::Utf8Error(e),
         }
+    }
+}
+impl From<std::boxed::Box<dyn std::error::Error>> for Error {
+    fn from(err: std::boxed::Box<dyn std::error::Error>) -> Error {
+        Error::GenericDyn(err.to_string())
     }
 }
 
