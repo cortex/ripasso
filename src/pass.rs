@@ -257,123 +257,6 @@ impl PasswordStore {
         true
     }
 
-    /// Read the password store directory and return a list of all the password files.
-    pub fn all_passwords(&self) -> Result<Vec<PasswordEntry>> {
-        let mut passwords = vec![];
-
-        let dir = self.root.clone();
-
-        let repo = self.repo();
-        if repo.is_err() {
-            let password_path_glob = dir.join("**/*.gpg");
-            let existing_iter =
-                glob::glob(&password_path_glob.to_string_lossy())?;
-
-            for existing_file in existing_iter {
-                let pbuf = existing_file?;
-                passwords
-                    .push(PasswordEntry::load_from_filesystem(&dir, &pbuf)?);
-            }
-
-            return Ok(passwords);
-        }
-        let password_path_glob = dir.join("**/*.gpg");
-        let existing_iter = glob::glob(&password_path_glob.to_string_lossy())?;
-
-        let mut files_to_consider: Vec<String> = vec![];
-        for existing_file in existing_iter {
-            let pbuf = format!("{}", existing_file?.display());
-            let filename = pbuf
-                .trim_start_matches(format!("{}", dir.display()).as_str())
-                .to_string();
-            files_to_consider
-                .push(filename.trim_start_matches('/').to_string());
-        }
-
-        if files_to_consider.is_empty() {
-            return Ok(vec![]);
-        }
-
-        let repo = self.repo().unwrap();
-
-        let mut walk = repo.revwalk()?;
-        walk.push(repo.head()?.target().unwrap())?;
-        let mut last_tree =
-            repo.find_commit(repo.head()?.target().unwrap())?.tree()?;
-        for rev in walk {
-            let oid = rev?;
-
-            let commit = repo.find_commit(oid)?;
-            let tree = commit.tree()?;
-
-            let diff =
-                repo.diff_tree_to_tree(Some(&last_tree), Some(&tree), None)?;
-
-            diff.foreach(
-                &mut |delta: git2::DiffDelta, _f: f32| {
-                    let entry_name = format!(
-                        "{}",
-                        delta.new_file().path().unwrap().display()
-                    );
-                    files_to_consider.retain(|filename| {
-                        if *filename == entry_name {
-                            let time = commit.time();
-                            let time_return =
-                                Ok(Local.timestamp(time.seconds(), 0));
-
-                            let name_return: Result<String> =
-                                match commit.committer().name() {
-                                    Some(s) => Ok(s.to_string()),
-                                    None => Err(Error::Generic(
-                                        "missing committer name",
-                                    )),
-                                };
-
-                            let signature_return =
-                                verify_git_signature(&repo, &oid);
-
-                            let mut pbuf = dir.clone();
-                            pbuf.push(filename);
-
-                            passwords.push(PasswordEntry::new(
-                                &dir,
-                                &pbuf,
-                                time_return,
-                                name_return,
-                                signature_return,
-                                RepositoryStatus::InRepo,
-                            ));
-                            return false;
-                        }
-                        true
-                    });
-                    true
-                },
-                None,
-                None,
-                None,
-            )?;
-
-            last_tree = tree;
-        }
-
-        for file in files_to_consider {
-            let mut pbuf = dir.clone();
-            pbuf.push(file);
-
-            passwords.push(PasswordEntry::new(
-                &dir,
-                &pbuf,
-                Err(Error::Generic("")),
-                Err(Error::Generic("")),
-                Err(Error::Generic("")),
-                RepositoryStatus::NotInRepo,
-            ));
-        }
-
-        Ok(passwords)
-    }
-
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
     pub fn all_recipients(&self) -> Result<Vec<Recipient>> {
         if !self.valid_gpg_signing_keys.is_empty() {
@@ -416,7 +299,7 @@ impl PasswordStore {
     /// to the team.
     pub fn reencrypt_all_password_entries(&self) -> Result<()> {
         let mut names: Vec<String> = Vec::new();
-        for entry in self.all_password_entries()? {
+        for entry in self.all_passwords()? {
             entry.update_internal(entry.secret()?, self)?;
             names.push(format!("{}.gpg", &entry.name));
         }
@@ -441,7 +324,7 @@ impl PasswordStore {
     }
 
     /// Returns a list of all password entries in the store.
-    pub fn all_password_entries(&self) -> Result<Vec<PasswordEntry>> {
+    pub fn all_passwords(&self) -> Result<Vec<PasswordEntry>> {
         let dir = self.root.clone();
 
         // Existing files iterator

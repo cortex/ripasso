@@ -867,8 +867,17 @@ fn main() {
     }
 
     for password in &(*store.clone()).lock().unwrap().passwords {
+        eprintln!("{:?}", password);
         if password.is_in_git == pass::RepositoryStatus::NotInRepo {
-            eprintln!("{}", CATALOG.gettext("The password store is backed by a git repository, but there is passwords there that's not in git. Please add them, otherwise they might get lost."));
+            eprintln!(
+                "{} {:?}",
+                CATALOG.gettext(
+                    "The password store is backed by a git repository, \
+                    but there is passwords there that's not in git. \
+                    Please add them, otherwise they might get lost."
+                ),
+                password,
+            );
             process::exit(1);
         }
     }
