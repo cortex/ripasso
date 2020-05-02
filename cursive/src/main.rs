@@ -39,6 +39,7 @@ use ripasso::pass::{
     OwnerTrustLevel, PasswordStore, PasswordStoreType, SignatureStatus,
 };
 use std::process;
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::{thread, time};
 
@@ -321,7 +322,7 @@ fn create_save(s: &mut Cursive, store: PasswordStoreType) {
     if password.is_none() {
         return;
     }
-    let password = password.unwrap();
+    let mut password = password.unwrap();
     if *password == "" {
         return;
     }
@@ -334,6 +335,14 @@ fn create_save(s: &mut Cursive, store: PasswordStoreType) {
     if *path == "" {
         return;
     }
+
+    let note = s.call_on_name("note_input", |e: &mut TextArea| {
+        e.get_content().to_string()
+    });
+    if let Some(note) = note {
+        password = Rc::from(format!("{}\n{}", password, note));
+    }
+
     let mut store = store.lock().unwrap();
     let entry = store.new_password_file(path.as_ref(), password.as_ref());
 
@@ -361,6 +370,7 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
     let mut fields = LinearLayout::vertical();
     let mut path_fields = LinearLayout::horizontal();
     let mut password_fields = LinearLayout::horizontal();
+    let mut note_fields = LinearLayout::horizontal();
     path_fields.add_child(
         TextView::new(CATALOG.gettext("Path: "))
             .with_name("path_name")
@@ -382,8 +392,16 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
             .with_name("new_password_input")
             .fixed_size((50, 1)),
     );
+    note_fields.add_child(
+        TextView::new(CATALOG.gettext("Note: "))
+            .with_name("note_name")
+            .fixed_size((10, 1)),
+    );
+    note_fields
+        .add_child(TextArea::new().with_name("note_input").min_size((50, 1)));
     fields.add_child(path_fields);
     fields.add_child(password_fields);
+    fields.add_child(note_fields);
 
     let store2 = store.clone();
 
