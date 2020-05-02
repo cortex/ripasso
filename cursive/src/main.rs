@@ -463,6 +463,11 @@ fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) {
     match pass::Recipient::new(l.clone()) {
         Err(err) => helpers::errorbox(ui, &err),
         Ok(recipient) => {
+            if recipient.trust_level != OwnerTrustLevel::Ultimate {
+                helpers::errorbox(ui, &pass::Error::Generic(CATALOG.gettext("Can't import team member due to that the GPG trust relationship level isn't Ultimate")));
+                return;
+            }
+
             let res = store.lock().unwrap().add_recipient(&recipient);
             match res {
                 Err(err) => helpers::errorbox(ui, &err),
