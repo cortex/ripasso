@@ -133,10 +133,7 @@ fn copy(ui: &mut Cursive) {
 
     let ctx_res = clipboard::ClipboardContext::new();
     if let Err(err) = ctx_res {
-        helpers::errorbox(
-            ui,
-            &pass::Error::GenericDyn(format!("{}", &err)),
-        );
+        helpers::errorbox(ui, &pass::Error::GenericDyn(format!("{}", &err)));
         return;
     }
     let mut ctx: ClipboardContext = ctx_res.unwrap();
@@ -293,7 +290,9 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) {
                     helpers::errorbox(s, &err)
                 } else {
                     s.call_on_name("status_bar", |l: &mut TextView| {
-                        l.set_content(CATALOG.gettext("Updated password entry"));
+                        l.set_content(
+                            CATALOG.gettext("Updated password entry"),
+                        );
                     });
 
                     s.pop_layer();
