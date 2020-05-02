@@ -102,9 +102,9 @@ fn generate_translation_files() {
     dir.push("cursive");
     dir.push("res");
 
-    let password_path_glob = dir.join("**/*.po");
+    let translation_path_glob = dir.join("**/*.po");
     let existing_iter =
-        glob::glob(&password_path_glob.to_string_lossy()).unwrap();
+        glob::glob(&translation_path_glob.to_string_lossy()).unwrap();
 
     for existing_file in existing_iter {
         let file = existing_file.unwrap();
