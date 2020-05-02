@@ -115,40 +115,29 @@ fn page_up(ui: &mut Cursive) {
 }
 
 fn copy(ui: &mut Cursive) {
-    let l = ui
+    let sel = ui
         .find_name::<SelectView<pass::PasswordEntry>>("results")
-        .unwrap();
-
-    let sel = l.selection();
+        .unwrap()
+        .selection();
 
     if sel.is_none() {
         return;
     }
-
-    let password = sel.unwrap().password();
-
-    if let Err(err) = password {
+    if let Err(err) = || -> pass::Result<()> {
+        let password = sel.unwrap().password()?;
+        let mut ctx = clipboard::ClipboardContext::new()?;
+        ctx.set_contents(password)?;
+        Ok(())
+    }() {
         helpers::errorbox(ui, &err);
         return;
     }
-
-    let ctx_res = clipboard::ClipboardContext::new();
-    if let Err(err) = ctx_res {
-        helpers::errorbox(
-            ui,
-            &pass::Error::GenericDyn(format!("{}", &err)),
-        );
-        return;
-    }
-    let mut ctx: ClipboardContext = ctx_res.unwrap();
-    ctx.set_contents(password.unwrap()).unwrap();
 
     thread::spawn(|| {
         thread::sleep(time::Duration::from_secs(40));
         let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
         ctx.set_contents("".to_string()).unwrap();
     });
-
     ui.call_on_name("status_bar", |l: &mut TextView| {
         l.set_content(
             CATALOG.gettext("Copied password to copy buffer for 40 seconds"),
@@ -294,7 +283,9 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) {
                     helpers::errorbox(s, &err)
                 } else {
                     s.call_on_name("status_bar", |l: &mut TextView| {
-                        l.set_content(CATALOG.gettext("Updated password entry"));
+                        l.set_content(
+                            CATALOG.gettext("Updated password entry"),
+                        );
                     });
 
                     s.pop_layer();
@@ -482,6 +473,11 @@ fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) {
     match pass::Recipient::new(l.clone()) {
         Err(err) => helpers::errorbox(ui, &err),
         Ok(recipient) => {
+            if recipient.trust_level != OwnerTrustLevel::Ultimate {
+                helpers::errorbox(ui, &pass::Error::Generic(CATALOG.gettext("Can't import team member due to that the GPG trust relationship level isn't Ultimate")));
+                return;
+            }
+
             let res = store.lock().unwrap().add_recipient(&recipient);
             match res {
                 Err(err) => helpers::errorbox(ui, &err),
