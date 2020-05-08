@@ -341,7 +341,7 @@ impl PasswordStore {
 
         last_tree
             .walk(git2::TreeWalkMode::PreOrder, |_, entry| {
-                let entry_name = format!("{}", entry.name().unwrap());
+                let entry_name = entry.name().unwrap().to_string();
 
                 files_to_consider.retain(|filename| {
                     push_password_if_match(
@@ -505,8 +505,8 @@ impl PasswordStore {
 }
 
 fn push_password_if_match(
-    filename: &String,
-    entry_name: &String,
+    filename: &str,
+    entry_name: &str,
     commit: &git2::Commit,
     repo: &git2::Repository,
     dir: &path::PathBuf,
@@ -539,12 +539,10 @@ fn push_password_if_match(
 
 /// Find the name of the commiter, or an error message
 fn name_from_commit(commit: &git2::Commit) -> Result<String> {
-    let name_return: Result<String> = match commit.committer().name() {
+    match commit.committer().name() {
         Some(s) => Ok(s.to_string()),
         None => Err(Error::Generic("missing committer name")),
-    };
-
-    return name_return;
+    }
 }
 
 /// Describes one log line in the history of a file
