@@ -162,6 +162,46 @@ fn populate_password_list_directory_without_git() -> Result<()> {
 }
 
 #[test]
+fn password_store_with_files_in_initial_commit() -> Result<()> {
+    let mut base_path: PathBuf = std::env::current_exe().unwrap();
+    base_path.pop();
+    base_path.pop();
+    base_path.pop();
+    base_path.pop();
+    base_path.push("testres");
+
+    let mut password_dir: PathBuf = base_path.clone();
+    password_dir.push("password_store_with_files_in_initial_commit");
+
+    unpack_tar_gz(
+        base_path.clone(),
+        "password_store_with_files_in_initial_commit.tar.gz",
+    )?;
+
+    let store = PasswordStore::new(
+        &Some(String::from(password_dir.to_str().unwrap())),
+        &None,
+    )?;
+    let results = store.all_passwords().unwrap();
+
+    cleanup(base_path, "password_store_with_files_in_initial_commit").unwrap();
+
+    assert_eq!(results.len(), 3);
+    assert_eq!(results[0].name, "3");
+    assert_eq!(results[0].committed_by.is_none(), false);
+    assert_eq!(results[0].updated.is_none(), false);
+
+    assert_eq!(results[1].name, "2");
+    assert_eq!(results[1].committed_by.is_none(), false);
+    assert_eq!(results[1].updated.is_none(), false);
+
+    assert_eq!(results[2].name, "1");
+    assert_eq!(results[2].committed_by.is_none(), false);
+    assert_eq!(results[2].updated.is_none(), false);
+    Ok(())
+}
+
+#[test]
 fn parse_signing_keys_empty() {
     let result = parse_signing_keys(&None).unwrap();
 

@@ -300,6 +300,7 @@ impl PasswordStore {
         walk.push(repo.head()?.target().unwrap())?;
         let mut last_tree =
             repo.find_commit(repo.head()?.target().unwrap())?.tree()?;
+        let mut last_commit = repo.head()?.peel_to_commit()?;
         for rev in walk {
             let oid = rev?;
 
@@ -311,41 +312,10 @@ impl PasswordStore {
 
             diff.foreach(
                 &mut |delta: git2::DiffDelta, _f: f32| {
-                    let entry_name = format!(
-                        "{}",
-                        delta.new_file().path().unwrap().display()
-                    );
+                    let entry_name = format!("{}", delta.new_file().path().unwrap().display());
+
                     files_to_consider.retain(|filename| {
-                        if *filename == entry_name {
-                            let time = commit.time();
-                            let time_return =
-                                Ok(Local.timestamp(time.seconds(), 0));
-
-                            let name_return: Result<String> =
-                                match commit.committer().name() {
-                                    Some(s) => Ok(s.to_string()),
-                                    None => Err(Error::Generic(
-                                        "missing committer name",
-                                    )),
-                                };
-
-                            let signature_return =
-                                verify_git_signature(&repo, &oid);
-
-                            let mut pbuf = dir.clone();
-                            pbuf.push(filename);
-
-                            passwords.push(PasswordEntry::new(
-                                &dir,
-                                &pbuf,
-                                time_return,
-                                name_return,
-                                signature_return,
-                                RepositoryStatus::InRepo,
-                            ));
-                            return false;
-                        }
-                        true
+                        push_password_if_match(filename, &entry_name, &commit, &repo, &dir, &mut passwords, &oid)
                     });
                     true
                 },
@@ -355,7 +325,17 @@ impl PasswordStore {
             )?;
 
             last_tree = tree;
+            last_commit = commit;
         }
+
+        last_tree.walk(git2::TreeWalkMode::PreOrder, |_, entry| {
+            let entry_name = format!("{}", entry.name().unwrap());
+
+            files_to_consider.retain(|filename| {
+                push_password_if_match(filename, &entry_name, &last_commit, &repo, &dir, &mut passwords, &last_commit.id())
+            });
+            git2::TreeWalkResult::Ok
+        }).unwrap();
 
         for file in files_to_consider {
             let mut pbuf = dir.clone();
@@ -501,6 +481,47 @@ impl PasswordStore {
 
         Ok(oid)
     }
+}
+
+fn push_password_if_match(filename: &String, entry_name: &String, commit: &git2::Commit,
+                          repo: &git2::Repository, dir: &path::PathBuf, passwords: &mut Vec<PasswordEntry>,
+                          oid: &git2::Oid) -> bool {
+    if *filename == *entry_name {
+        let time = commit.time();
+        let time_return = Ok(Local.timestamp(time.seconds(), 0));
+
+        let name_return = name_from_commit(commit);
+
+        let signature_return =
+            verify_git_signature(&repo, &oid);
+
+        let mut pbuf: path::PathBuf = (*dir.clone()).to_owned();
+        pbuf.push(filename);
+
+        passwords.push(PasswordEntry::new(
+            &dir,
+            &pbuf,
+            time_return,
+            name_return,
+            signature_return,
+            RepositoryStatus::InRepo,
+        ));
+        return false;
+    }
+    true
+}
+
+/// Find the name of the commiter, or an error message
+fn name_from_commit(commit: &git2::Commit) -> Result<String> {
+    let name_return: Result<String> =
+        match commit.committer().name() {
+            Some(s) => Ok(s.to_string()),
+            None => Err(Error::Generic(
+                "missing committer name",
+            )),
+        };
+
+    return name_return;
 }
 
 /// Describes one log line in the history of a file
@@ -1101,10 +1122,7 @@ fn read_git_meta_data(
     let time = commit.time();
     let time_return = Ok(Local.timestamp(time.seconds(), 0));
 
-    let name_return: Result<String> = match commit.committer().name() {
-        Some(s) => Ok(s.to_string()),
-        None => Err(Error::Generic("missing committer name")),
-    };
+    let name_return = name_from_commit(&commit);
 
     let signature_return = verify_git_signature(repo, &id);
 
