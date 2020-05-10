@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 /// A git commit for a password might be signed by a gpg key, and this signature's verification
 /// state is one of these values.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum SignatureStatus {
     /// Everything is fine with the signature, corresponds to the gpg status of VALID
     Good,
