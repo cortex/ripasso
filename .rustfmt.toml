@@ -1,1 +1,3 @@
-max_width=80
+max_width=100
+fn_args_layout="Compressed"
+

@@ -10,10 +10,7 @@ use ripasso::pass;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-fn unpack_tar_gz(
-    mut base_path: PathBuf,
-    tar_gz_name: &str,
-) -> Result<(), std::io::Error> {
+fn unpack_tar_gz(mut base_path: PathBuf, tar_gz_name: &str) -> Result<(), std::io::Error> {
     let target = format!("{}", base_path.as_path().display());
     base_path.push(tar_gz_name);
 
@@ -27,10 +24,7 @@ fn unpack_tar_gz(
     Ok(())
 }
 
-fn cleanup(
-    mut base_path: PathBuf,
-    path_name: &str,
-) -> Result<(), std::io::Error> {
+fn cleanup(mut base_path: PathBuf, path_name: &str) -> Result<(), std::io::Error> {
     base_path.push(path_name);
 
     std::fs::remove_dir_all(base_path)?;
@@ -39,10 +33,8 @@ fn cleanup(
 }
 
 fn pop_list(password_dir: PathBuf) -> pass::Result<()> {
-    let store = pass::PasswordStore::new(
-        &Some(String::from(password_dir.to_str().unwrap())),
-        &None,
-    )?;
+    let store =
+        pass::PasswordStore::new(&Some(String::from(password_dir.to_str().unwrap())), &None)?;
     let results = store.all_passwords().unwrap();
 
     assert_eq!(results.len(), 4);
