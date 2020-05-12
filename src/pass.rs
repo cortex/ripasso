@@ -302,6 +302,9 @@ impl PasswordStore {
             repo.find_commit(repo.head()?.target().unwrap())?.tree()?;
         let mut last_commit = repo.head()?.peel_to_commit()?;
         for rev in walk {
+            if rev.is_err() {
+                continue;
+            }
             let oid = rev?;
 
             let commit = repo.find_commit(oid)?;
