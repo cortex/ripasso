@@ -118,7 +118,10 @@ impl PasswordStore {
         gpg_id_sig_file.push(".gpg-id.sig");
 
         let gpg_id = fs::read(gpg_id_file)?;
-        let gpg_id_sig = fs::read(gpg_id_sig_file)?;
+        let gpg_id_sig = match fs::read(gpg_id_sig_file) {
+            Ok(c) => c,
+            Err(_) => return Err(Error::Generic("problem reading .gpg-id.sig, and strict signature checking was asked for"))
+        };
 
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
