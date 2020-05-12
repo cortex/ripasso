@@ -28,9 +28,7 @@ impl From<gpgme::SignatureSummary> for SignatureStatus {
     }
 }
 
-pub fn parse_signing_keys(
-    password_store_signing_key: &Option<String>,
-) -> Result<Vec<String>> {
+pub fn parse_signing_keys(password_store_signing_key: &Option<String>) -> Result<Vec<String>> {
     if password_store_signing_key.is_none() {
         return Ok(vec![]);
     }
@@ -41,9 +39,7 @@ pub fn parse_signing_keys(
     for key in password_store_signing_key.as_ref().unwrap().split(',') {
         let trimmed = key.trim().to_string();
 
-        if trimmed.len() != 40
-            || (trimmed.len() != 42 && trimmed.starts_with("0x"))
-        {
+        if trimmed.len() != 40 || (trimmed.len() != 42 && trimmed.starts_with("0x")) {
             return Err(Error::Generic(
                 "signing key isn't in full 40 character id format",
             ));
@@ -182,8 +178,7 @@ impl Recipient {
             name = user_id.name().unwrap_or("?");
         }
 
-        let trusts: HashMap<String, OwnerTrustLevel> =
-            Recipient::get_all_trust_items()?;
+        let trusts: HashMap<String, OwnerTrustLevel> = Recipient::get_all_trust_items()?;
 
         Ok(build_recipient(
             name.to_string(),
@@ -215,8 +210,8 @@ impl Recipient {
     }
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
     pub fn all_recipients(recipient_file: &PathBuf) -> Result<Vec<Recipient>> {
-        let contents = fs::read_to_string(recipient_file)
-            .expect("Something went wrong reading the file");
+        let contents =
+            fs::read_to_string(recipient_file).expect("Something went wrong reading the file");
 
         let mut recipients: Vec<Recipient> = Vec::new();
         let mut unique_recipients_keys: HashSet<String> = HashSet::new();
@@ -226,8 +221,7 @@ impl Recipient {
             }
         }
 
-        let trusts: HashMap<String, OwnerTrustLevel> =
-            Recipient::get_all_trust_items()?;
+        let trusts: HashMap<String, OwnerTrustLevel> = Recipient::get_all_trust_items()?;
 
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
         for key in unique_recipients_keys {
@@ -285,8 +279,7 @@ impl Recipient {
             file.write_all(file_content.as_bytes())?;
 
             if !valid_gpg_signing_keys.is_empty() {
-                let mut ctx =
-                    gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+                let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
                 let mut key_opt: Option<Key> = None;
 
                 for key_id in valid_gpg_signing_keys {
@@ -329,8 +322,7 @@ impl Recipient {
         recipient_file: PathBuf,
         valid_gpg_signing_keys: &[String],
     ) -> Result<()> {
-        let mut recipients: Vec<Recipient> =
-            Recipient::all_recipients(&recipient_file)?;
+        let mut recipients: Vec<Recipient> = Recipient::all_recipients(&recipient_file)?;
 
         recipients.retain(|ref vs| vs.key_id != s.key_id);
 
@@ -338,11 +330,7 @@ impl Recipient {
             return Err(Error::Generic("Can't delete the last encryption key"));
         }
 
-        Recipient::write_recipients_file(
-            &recipients,
-            &recipient_file,
-            valid_gpg_signing_keys,
-        )
+        Recipient::write_recipients_file(&recipients, &recipient_file, valid_gpg_signing_keys)
     }
 
     /// Add a new person to the list of team members to encrypt the passwords for.
@@ -351,8 +339,7 @@ impl Recipient {
         recipient_file: PathBuf,
         valid_gpg_signing_keys: &[String],
     ) -> Result<()> {
-        let mut recipients: Vec<Recipient> =
-            Recipient::all_recipients(&recipient_file)?;
+        let mut recipients: Vec<Recipient> = Recipient::all_recipients(&recipient_file)?;
 
         for r in &recipients {
             if r.key_id == recipient.key_id {
@@ -363,10 +350,6 @@ impl Recipient {
         }
         recipients.push((*recipient).clone());
 
-        Recipient::write_recipients_file(
-            &recipients,
-            &recipient_file,
-            valid_gpg_signing_keys,
-        )
+        Recipient::write_recipients_file(&recipients, &recipient_file, valid_gpg_signing_keys)
     }
 }

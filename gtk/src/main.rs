@@ -33,18 +33,13 @@ fn main() {
         Ok(p) => Some(p),
         Err(_) => None,
     };
-    let password_store_signing_key =
-        match std::env::var("PASSWORD_STORE_SIGNING_KEY") {
-            Ok(p) => Some(p),
-            Err(_) => None,
-        };
+    let password_store_signing_key = match std::env::var("PASSWORD_STORE_SIGNING_KEY") {
+        Ok(p) => Some(p),
+        Err(_) => None,
+    };
 
     let store = Arc::new(Mutex::new(
-        pass::PasswordStore::new(
-            &password_store_dir,
-            &password_store_signing_key,
-        )
-        .unwrap(),
+        pass::PasswordStore::new(&password_store_dir, &password_store_signing_key).unwrap(),
     ));
 
     // Load and watch all the passwords in the background
@@ -123,9 +118,7 @@ fn results(store: &pass::PasswordStoreType, query: &str) -> ListStore {
 
 fn receive() -> glib::Continue {
     GLOBAL.with(|global| {
-        if let Some((ref password_search, ref password_list, ref store)) =
-            *global.borrow()
-        {
+        if let Some((ref password_search, ref password_list, ref store)) = *global.borrow() {
             let query = password_search.get_text().unwrap();
             password_list.set_model(&results(&store, &query));
         }
