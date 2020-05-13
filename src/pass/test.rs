@@ -189,6 +189,36 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
 }
 
 #[test]
+fn password_store_with_shallow_checkout() -> Result<()> {
+    let mut base_path: PathBuf = std::env::current_exe().unwrap();
+    base_path.pop();
+    base_path.pop();
+    base_path.pop();
+    base_path.pop();
+    base_path.push("testres");
+
+    let mut password_dir: PathBuf = base_path.clone();
+    password_dir.push("password_store_with_shallow_checkout");
+
+    unpack_tar_gz(
+        base_path.clone(),
+        "password_store_with_shallow_checkout.tar.gz",
+    )?;
+
+    let store = PasswordStore::new(&Some(String::from(password_dir.to_str().unwrap())), &None)?;
+    let results = store.all_passwords().unwrap();
+
+    cleanup(base_path, "password_store_with_shallow_checkout").unwrap();
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].name, "1");
+    assert_eq!(results[0].committed_by.is_none(), false);
+    assert_eq!(results[0].updated.is_none(), false);
+
+    Ok(())
+}
+
+#[test]
 fn password_store_with_sparse_checkout() -> Result<()> {
     let mut base_path: PathBuf = std::env::current_exe().unwrap();
     base_path.pop();
