@@ -394,7 +394,7 @@ impl PasswordStore {
     /// to the team.
     pub fn reencrypt_all_password_entries(&self) -> Result<()> {
         let mut names: Vec<String> = Vec::new();
-        for entry in self.all_password_entries()? {
+        for entry in self.all_passwords()? {
             entry.update_internal(entry.secret()?, self)?;
             names.push(format!("{}.gpg", &entry.name));
         }
@@ -415,33 +415,6 @@ impl PasswordStore {
         self.add_and_commit(&names, &message)?;
 
         Ok(())
-    }
-
-    /// Returns a list of all password entries in the store.
-    pub fn all_password_entries(&self) -> Result<Vec<PasswordEntry>> {
-        let dir = self.root.clone();
-
-        // Existing files iterator
-        let password_path_glob = dir.join("**/*.gpg");
-        let paths = glob::glob(&password_path_glob.to_string_lossy())?;
-
-        let mut passwords = Vec::<PasswordEntry>::new();
-        for path in paths {
-            if self.repo().is_err() {
-                match PasswordEntry::load_from_filesystem(&dir, &path?) {
-                    Ok(password) => passwords.push(password),
-                    Err(e) => return Err(e),
-                }
-            } else {
-                passwords.push(PasswordEntry::load_from_git(
-                    &dir,
-                    &path?,
-                    &self.repo().unwrap(),
-                ));
-            }
-        }
-
-        Ok(passwords)
     }
 
     /// Add a file to the store, and commit it to the supplied git repository.
