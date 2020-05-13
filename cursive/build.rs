@@ -103,13 +103,11 @@ fn generate_translation_files() {
     dir.push("res");
 
     let translation_path_glob = dir.join("**/*.po");
-    let existing_iter =
-        glob::glob(&translation_path_glob.to_string_lossy()).unwrap();
+    let existing_iter = glob::glob(&translation_path_glob.to_string_lossy()).unwrap();
 
     for existing_file in existing_iter {
         let file = existing_file.unwrap();
-        let mut filename =
-            format!("{}", file.file_name().unwrap().to_str().unwrap());
+        let mut filename = format!("{}", file.file_name().unwrap().to_str().unwrap());
         filename.replace_range(3..4, "m");
 
         print!(
