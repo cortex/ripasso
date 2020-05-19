@@ -45,7 +45,6 @@ use std::{thread, time};
 
 use std::collections::HashMap;
 use unic_langid::LanguageIdentifier;
-use std::fs::read_to_string;
 
 mod helpers;
 mod wizard;
@@ -789,43 +788,41 @@ fn get_translation_catalog() -> gettext::Catalog {
     gettext::Catalog::empty()
 }
 
-fn change_store(
-    mut ui: &mut Cursive,
-    valid_signing_keys: &Option<String>,
-    store_path: &str,
-    store: PasswordStoreType,
-) -> pass::Result<()> {
-    store
-        .lock()
-        .unwrap()
-        .reset(&Some(store_path.to_string()), valid_signing_keys)?;
-
-    search(&store, &mut ui, "");
-
-    Ok(())
-}
-
-fn get_stores(config: &config::Config) -> pass::Result<Vec<Arc<Mutex<PasswordStore>>>> {
+fn get_stores(
+    config: &config::Config,
+) -> pass::Result<Vec<Arc<Mutex<PasswordStore>>>> {
     let mut final_stores: Vec<Arc<Mutex<PasswordStore>>> = vec![];
     let stores_res = config.get("stores");
     if let Ok(stores) = stores_res {
         let stores: HashMap<String, config::Value> = stores;
 
         for store_name in stores.keys() {
-            let store: HashMap<String, config::Value> = stores.get(store_name).unwrap().clone().into_table().unwrap();
+            let store: HashMap<String, config::Value> = stores
+                .get(store_name)
+                .unwrap()
+                .clone()
+                .into_table()
+                .unwrap();
 
             let password_store_dir_opt = store.get("path");
             let valid_signing_keys_opt = store.get("valid_signing_keys");
 
             if password_store_dir_opt.is_some() {
-                let password_store_dir = Some(password_store_dir_opt.unwrap().clone().into_str()?);
+                let password_store_dir =
+                    Some(password_store_dir_opt.unwrap().clone().into_str()?);
 
                 let mut valid_signing_keys = None;
                 if valid_signing_keys_opt.is_some() {
-                    valid_signing_keys = Some(valid_signing_keys_opt.unwrap().clone().into_str()?);
+                    valid_signing_keys = Some(
+                        valid_signing_keys_opt.unwrap().clone().into_str()?,
+                    );
                 }
 
-                final_stores.push(Arc::new(Mutex::new(PasswordStore::new(&password_store_dir, &valid_signing_keys)?)));
+                final_stores.push(Arc::new(Mutex::new(PasswordStore::new(
+                    store_name,
+                    &password_store_dir,
+                    &valid_signing_keys,
+                )?)));
             }
         }
     }
@@ -835,7 +832,9 @@ fn get_stores(config: &config::Config) -> pass::Result<Vec<Arc<Mutex<PasswordSto
 
 /// validates a vec of password stores.
 /// Returns true if the new user wizard should be shown
-fn validate_stores(stores: &Vec<Arc<Mutex<PasswordStore>>>) -> pass::Result<bool> {
+fn validate_stores(
+    stores: &Vec<Arc<Mutex<PasswordStore>>>,
+) -> pass::Result<bool> {
     if stores.len() == 0 {
         return Ok(true);
     }
@@ -845,7 +844,7 @@ fn validate_stores(stores: &Vec<Arc<Mutex<PasswordStore>>>) -> pass::Result<bool
         let validate_res = store.validate();
         if validate_res.is_err() {
             if stores.len() == 1 && store.is_default() {
-                return Ok(true)
+                return Ok(true);
             }
             return validate_res;
         }
@@ -917,24 +916,34 @@ fn main() {
             if b {
                 wizard::show_init_menu(&None);
                 match validate_stores(&stores) {
-                    Ok(_b) => {},
+                    Ok(_b) => {}
                     Err(err) => {
                         eprintln!("Error {:?}", err);
                         process::exit(1);
                     }
                 }
             }
-        },
+        }
         Err(err) => {
             eprintln!("Error {:?}", err);
             process::exit(1);
         }
     }
 
-    let store = stores[0].clone();
+    let store = Arc::new(Mutex::new(
+        PasswordStore::new(&"".to_string(), &None, &None).unwrap(),
+    ));
     {
-        let reload_res = (*store.clone()).lock().unwrap().reload_password_list();
-        if let Err(err) = reload_res {
+        let ss = stores[0].lock().unwrap();
+        let ss_store_path = ss.get_store_path();
+        let ss_signing_keys = ss.get_valid_gpg_signing_keys().clone();
+
+        let change_res = store
+            .lock()
+            .unwrap()
+            .reset(&ss_store_path, &ss_signing_keys);
+
+        if let Err(err) = change_res {
             eprintln!("error loading passwords: {:?}", err);
             process::exit(1);
         }
@@ -1087,44 +1096,29 @@ fn main() {
             .leaf(CATALOG.gettext("Quit (esc)"), |s| s.quit()),
     );
 
-    if let Ok(stores) = config.get("stores") {
-        let stores: HashMap<String, config::Value> = stores;
-        let mut tree = MenuTree::new();
-        for s in stores.keys() {
-            let sc = s.clone();
-            let vv = stores.get(&sc).unwrap().clone();
-            let store_map: HashMap<String, config::Value> =
-                vv.into_table().unwrap();
-            let store_path_opt = store_map.get("path");
-            if let Some(pp) = store_path_opt {
-                let store_path = pp.clone().into_str().unwrap();
-                let valid_signing_keys_opt =
-                    store_map.get("valid_signing_keys");
-                let valid_signing_keys: Option<String> =
-                    match valid_signing_keys_opt {
-                        Some(value) => match value.clone().into_str() {
-                            Err(_) => None,
-                            Ok(v) => Some(v),
-                        },
-                        _ => None,
-                    };
+    let mut tree = MenuTree::new();
+    for s in stores {
+        let ss = (*s).lock().unwrap();
+        let store_name = ss.get_name().clone();
+        let store = store.clone();
+        let ss_store_path = ss.get_store_path();
+        let ss_signing_keys = ss.get_valid_gpg_signing_keys().clone();
+        tree.add_leaf(store_name, move |ui: &mut Cursive| {
+            let change_res = store
+                .lock()
+                .unwrap()
+                .reset(&ss_store_path, &ss_signing_keys);
 
-                let store = store.clone();
-                tree.add_leaf(s, move |ui: &mut Cursive| {
-                    let change_res = change_store(
-                        ui,
-                        &valid_signing_keys,
-                        &store_path,
-                        store.clone(),
-                    );
-                    if let Err(err) = change_res {
-                        helpers::errorbox(ui, &err);
-                    }
-                });
+            if let Err(err) = change_res {
+                helpers::errorbox(ui, &err);
             }
-        }
-        ui.menubar().add_subtree(CATALOG.gettext("Stores"), tree);
+
+            search(&store, ui, "");
+
+            ()
+        });
     }
+    ui.menubar().add_subtree(CATALOG.gettext("Stores"), tree);
 
     ui.add_global_callback(Key::F1, |s| s.select_menubar());
 

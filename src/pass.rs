@@ -57,6 +57,7 @@ pub struct PasswordStore {
 impl PasswordStore {
     /// Creates a `PasswordStore`
     pub fn new(
+        store_name: &str,
         password_store_dir: &Option<String>,
         password_store_signing_key: &Option<String>,
     ) -> Result<PasswordStore> {
@@ -72,11 +73,23 @@ impl PasswordStore {
         }
 
         Ok(PasswordStore {
-            name: "default".to_string(),
+            name: store_name.to_string(),
             root: pass_home,
             valid_gpg_signing_keys: signing_keys,
             passwords: [].to_vec(),
         })
+    }
+
+    pub fn get_name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn get_valid_gpg_signing_keys(&self) -> &Vec<String> {
+        &self.valid_gpg_signing_keys
+    }
+
+    pub fn get_store_path(&self) -> String {
+        self.root.as_os_str().to_str().unwrap().to_string()
     }
 
     pub fn is_default(&self) -> bool {
@@ -89,46 +102,53 @@ impl PasswordStore {
         let p = self.root.clone();
         let ph = home.join(".password-store");
 
-        return p == ph;
+        p == ph
     }
 
     pub fn validate(&self) -> Result<bool> {
         let password_dir = path::Path::new(&self.root);
         if !password_dir.exists() {
-            return Err(Error::GenericDyn(format!("path {:?} missing", &self.root)));
+            return Err(Error::GenericDyn(format!(
+                "path {:?} missing",
+                &self.root
+            )));
         }
 
-        let mut gpg_id_file = password_dir.clone().to_path_buf();
+        let mut gpg_id_file = password_dir.to_path_buf();
         gpg_id_file.push(".gpg-id");
         if !gpg_id_file.exists() {
-            return Err(Error::GenericDyn(format!("path {:?}/.gpg-id missing", &self.root)));
+            return Err(Error::GenericDyn(format!(
+                "path {:?}/.gpg-id missing",
+                &self.root
+            )));
         }
 
-        if self.valid_gpg_signing_keys.len() > 0 {
-            PasswordStore::verify_gpg_id_file(&self.root, &self.valid_gpg_signing_keys)?;
+        if !self.valid_gpg_signing_keys.is_empty() {
+            PasswordStore::verify_gpg_id_file(
+                &self.root,
+                &self.valid_gpg_signing_keys,
+            )?;
         }
 
-        return Ok(true);
+        Ok(true)
     }
 
     pub fn reset(
         &mut self,
-        password_store_dir: &Option<String>,
-        valid_signing_keys: &Option<String>,
+        password_store_dir: &str,
+        valid_signing_keys: &[String],
     ) -> Result<()> {
-        let pass_home = password_dir_raw(password_store_dir);
+        let pass_home = password_dir_raw(&Some(password_store_dir.to_string()));
         if !pass_home.exists() {
             return Err(Error::Generic("failed to locate password directory"));
         }
 
-        let signing_keys = parse_signing_keys(valid_signing_keys)?;
-
-        if !signing_keys.is_empty() {
-            PasswordStore::verify_gpg_id_file(&pass_home, &signing_keys)?;
+        if !valid_signing_keys.is_empty() {
+            PasswordStore::verify_gpg_id_file(&pass_home, &valid_signing_keys)?;
         }
 
         self.root = pass_home;
-        self.valid_gpg_signing_keys = signing_keys;
+        self.valid_gpg_signing_keys = (*valid_signing_keys).to_vec();
 
         let all_passwords = self.all_passwords()?;
 
@@ -1368,7 +1388,10 @@ pub fn password_dir_raw(password_store_dir: &Option<String>) -> path::PathBuf {
 }
 
 /// reads ripasso's config file, in `$XDG_CONFIG_HOME/ripasso/settings.toml`
-pub fn read_config(store_dir: Option<String>, signing_keys: Option<String>) -> Result<config::Config> {
+pub fn read_config(
+    store_dir: Option<String>,
+    signing_keys: Option<String>,
+) -> Result<config::Config> {
     let xdg_config_home = match std::env::var("XDG_CONFIG_HOME") {
         Ok(p) => format!("{}/", p),
         Err(_) => {
@@ -1383,19 +1406,19 @@ pub fn read_config(store_dir: Option<String>, signing_keys: Option<String>) -> R
 
     let mut settings = config::Config::default();
 
-    if store_dir.is_some() {
+    if let Some(store_dir_str) = store_dir {
         let mut default_store = std::collections::HashMap::new();
 
-        default_store.insert("path".to_string(), store_dir.unwrap());
-        if signing_keys.is_some() {
-            default_store.insert("valid_signing_keys".to_string(), signing_keys.unwrap());
+        default_store.insert("path".to_string(), store_dir_str);
+        if let Some(signing_keys_str) = signing_keys {
+            default_store
+                .insert("valid_signing_keys".to_string(), signing_keys_str);
         }
 
         let mut stores_map = std::collections::HashMap::new();
         stores_map.insert("default".to_string(), default_store);
 
-        settings.set("stores", stores_map);
-
+        settings.set("stores", stores_map)?;
     } else {
         let conf_res = settings.merge(config::File::with_name(&format!(
             "{}ripasso/settings.toml",
@@ -1416,13 +1439,16 @@ pub fn read_config(store_dir: Option<String>, signing_keys: Option<String>) -> R
 
             let mut default_store = std::collections::HashMap::new();
 
-            default_store.insert("path".to_string(), format!("{}/.password-store", home.unwrap()));
+            default_store.insert(
+                "path".to_string(),
+                format!("{}/.password-store", home.unwrap()),
+            );
 
             let mut stores_map = std::collections::HashMap::new();
             stores_map.insert("default".to_string(), default_store);
 
             let mut new_settings = config::Config::default();
-            let set_res = new_settings.set("stores", stores_map);
+            new_settings.set("stores", stores_map)?;
 
             return Ok(new_settings);
         }
