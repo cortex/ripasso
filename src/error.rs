@@ -17,6 +17,7 @@ pub enum Error {
     GlobError(glob::GlobError),
     Utf8Error(std::str::Utf8Error),
     RecipientNotInKeyRing(String),
+    ConfigError(config::ConfigError),
     NoneError,
 }
 
@@ -82,9 +83,16 @@ impl From<Option<std::str::Utf8Error>> for Error {
         }
     }
 }
+
 impl From<std::boxed::Box<dyn std::error::Error>> for Error {
     fn from(err: std::boxed::Box<dyn std::error::Error>) -> Error {
         Error::GenericDyn(err.to_string())
+    }
+}
+
+impl From<config::ConfigError> for Error {
+    fn from(err: config::ConfigError) -> Error {
+        Error::ConfigError(err)
     }
 }
 
