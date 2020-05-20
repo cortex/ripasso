@@ -21,9 +21,7 @@ extern crate ripasso;
 
 use self::cursive::event::Key;
 use self::cursive::traits::*;
-use self::cursive::views::{
-    Dialog, EditView, LinearLayout, OnEventView, SelectView, TextView,
-};
+use self::cursive::views::{Dialog, EditView, LinearLayout, OnEventView, SelectView, TextView};
 
 use cursive::Cursive;
 
@@ -33,25 +31,17 @@ use crate::helpers;
 use ripasso::pass;
 
 fn create_git_repo(ui: &mut Cursive, password_store_dir: &Option<String>) {
-    let init_res =
-        pass::init_git_repo(&pass::password_dir(password_store_dir).unwrap());
+    let init_res = pass::init_git_repo(&pass::password_dir(password_store_dir).unwrap());
     if init_res.is_err() {
         helpers::errorbox(ui, &init_res.err().unwrap());
     } else {
-        let message =
-            super::CATALOG.gettext("Initialized password repo with Ripasso");
-        match pass::PasswordStore::new(
-            &"default".to_string(),
-            password_store_dir,
-            &None,
-        ) {
+        let message = super::CATALOG.gettext("Initialized password repo with Ripasso");
+        match pass::PasswordStore::new(&"default".to_string(), password_store_dir, &None) {
             Err(err) => helpers::errorbox(ui, &err),
-            Ok(store) => {
-                match store.add_and_commit(&[".gpg-id".to_string()], &message) {
-                    Err(err) => helpers::errorbox(ui, &err),
-                    Ok(_) => ui.quit(),
-                }
-            }
+            Ok(store) => match store.add_and_commit(&[".gpg-id".to_string()], &message) {
+                Err(err) => helpers::errorbox(ui, &err),
+                Ok(_) => ui.quit(),
+            },
         }
     }
 }
@@ -68,21 +58,16 @@ fn do_create(ui: &mut Cursive, password_store_dir: &Option<String>) {
         Ok(_) => {
             pass_home.push(".gpg-id");
             std::fs::write(pass_home, key_id).unwrap_or_else(|_| {
-                panic!(super::CATALOG
-                    .gettext("Unable to write file")
-                    .to_string())
+                panic!(super::CATALOG.gettext("Unable to write file").to_string())
             });
 
             let password_store_dir2 = password_store_dir.clone();
-            let d = Dialog::around(TextView::new(super::CATALOG.gettext(
-                "Also create a git repository for the encrypted files?",
-            )))
-            .button(
-                super::CATALOG.gettext("Create"),
-                move |ui: &mut Cursive| {
-                    create_git_repo(ui, &password_store_dir2);
-                },
-            )
+            let d = Dialog::around(TextView::new(
+                super::CATALOG.gettext("Also create a git repository for the encrypted files?"),
+            ))
+            .button(super::CATALOG.gettext("Create"), move |ui: &mut Cursive| {
+                create_git_repo(ui, &password_store_dir2);
+            })
             .button(super::CATALOG.gettext("No"), |s| {
                 s.quit();
             })
@@ -104,10 +89,9 @@ fn create_store(ui: &mut Cursive, password_store_dir: &Option<String>) {
         });
 
     let password_store_dir3 = password_store_dir.clone();
-    let recipients_event =
-        OnEventView::new(d2).on_event(Key::Enter, move |ui: &mut Cursive| {
-            do_create(ui, &password_store_dir3);
-        });
+    let recipients_event = OnEventView::new(d2).on_event(Key::Enter, move |ui: &mut Cursive| {
+        do_create(ui, &password_store_dir3);
+    });
 
     ui.add_layer(recipients_event);
 }

@@ -110,8 +110,7 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
     )?;
     let results = store.all_passwords().unwrap();
 
-    cleanup(base_path, "populate_password_list_repo_with_deleted_files")
-        .unwrap();
+    cleanup(base_path, "populate_password_list_repo_with_deleted_files").unwrap();
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "10");
