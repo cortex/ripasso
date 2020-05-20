@@ -71,6 +71,7 @@ fn populate_password_list_small_repo() -> Result<()> {
     .unwrap();
 
     let store = PasswordStore::new(
+        "default",
         &Some(String::from(password_dir.to_str().unwrap())),
         &None,
     )?;
@@ -103,6 +104,7 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
     )?;
 
     let store = PasswordStore::new(
+        "default",
         &Some(String::from(password_dir.to_str().unwrap())),
         &None,
     )?;
@@ -136,6 +138,7 @@ fn populate_password_list_directory_without_git() -> Result<()> {
     )?;
 
     let store = PasswordStore::new(
+        "default",
         &Some(String::from(password_dir.to_str().unwrap())),
         &None,
     )?;
@@ -179,6 +182,7 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
     )?;
 
     let store = PasswordStore::new(
+        "default",
         &Some(String::from(password_dir.to_str().unwrap())),
         &None,
     )?;
@@ -219,6 +223,7 @@ fn password_store_with_sparse_checkout() -> Result<()> {
     )?;
 
     let store = PasswordStore::new(
+        "default",
         &Some(String::from(password_dir.to_str().unwrap())),
         &None,
     )?;
