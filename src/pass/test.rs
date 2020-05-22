@@ -70,7 +70,11 @@ fn populate_password_list_small_repo() -> Result<()> {
     )
     .unwrap();
 
-    let store = PasswordStore::new(&Some(String::from(password_dir.to_str().unwrap())), &None)?;
+    let store = PasswordStore::new(
+        "default",
+        &Some(String::from(password_dir.to_str().unwrap())),
+        &None,
+    )?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "populate_password_list_small_repo").unwrap();
@@ -99,7 +103,11 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
         "populate_password_list_repo_with_deleted_files.tar.gz",
     )?;
 
-    let store = PasswordStore::new(&Some(String::from(password_dir.to_str().unwrap())), &None)?;
+    let store = PasswordStore::new(
+        "default",
+        &Some(String::from(password_dir.to_str().unwrap())),
+        &None,
+    )?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "populate_password_list_repo_with_deleted_files").unwrap();
@@ -128,7 +136,11 @@ fn populate_password_list_directory_without_git() -> Result<()> {
         "populate_password_list_directory_without_git.tar.gz",
     )?;
 
-    let store = PasswordStore::new(&Some(String::from(password_dir.to_str().unwrap())), &None)?;
+    let store = PasswordStore::new(
+        "default",
+        &Some(String::from(password_dir.to_str().unwrap())),
+        &None,
+    )?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "populate_password_list_directory_without_git").unwrap();
@@ -168,7 +180,11 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
         "password_store_with_files_in_initial_commit.tar.gz",
     )?;
 
-    let store = PasswordStore::new(&Some(String::from(password_dir.to_str().unwrap())), &None)?;
+    let store = PasswordStore::new(
+        "default",
+        &Some(String::from(password_dir.to_str().unwrap())),
+        &None,
+    )?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "password_store_with_files_in_initial_commit").unwrap();
@@ -205,7 +221,11 @@ fn password_store_with_shallow_checkout() -> Result<()> {
         "password_store_with_shallow_checkout.tar.gz",
     )?;
 
-    let store = PasswordStore::new(&Some(String::from(password_dir.to_str().unwrap())), &None)?;
+    let store = PasswordStore::new(
+        &"default",
+        &Some(String::from(password_dir.to_str().unwrap())),
+        &None,
+    )?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "password_store_with_shallow_checkout").unwrap();
@@ -235,7 +255,11 @@ fn password_store_with_sparse_checkout() -> Result<()> {
         "password_store_with_sparse_checkout.tar.gz",
     )?;
 
-    let store = PasswordStore::new(&Some(String::from(password_dir.to_str().unwrap())), &None)?;
+    let store = PasswordStore::new(
+        "default",
+        &Some(String::from(password_dir.to_str().unwrap())),
+        &None,
+    )?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "password_store_with_sparse_checkout").unwrap();

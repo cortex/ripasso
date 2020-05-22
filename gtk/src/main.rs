@@ -39,7 +39,12 @@ fn main() {
     };
 
     let store = Arc::new(Mutex::new(
-        pass::PasswordStore::new(&password_store_dir, &password_store_signing_key).unwrap(),
+        pass::PasswordStore::new(
+            &"default".to_string(),
+            &password_store_dir,
+            &password_store_signing_key,
+        )
+        .unwrap(),
     ));
 
     // Load and watch all the passwords in the background
