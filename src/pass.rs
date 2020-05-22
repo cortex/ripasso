@@ -303,7 +303,7 @@ impl PasswordStore {
     pub fn all_passwords(&self) -> Result<Vec<PasswordEntry>> {
         let mut passwords = vec![];
 
-        let dir = self.root.clone();
+        let dir = std::fs::canonicalize(&self.root)?;
 
         let repo = self.repo();
         if repo.is_err() {
