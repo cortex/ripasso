@@ -221,7 +221,11 @@ fn password_store_with_shallow_checkout() -> Result<()> {
         "password_store_with_shallow_checkout.tar.gz",
     )?;
 
-    let store = PasswordStore::new(&"default", &Some(String::from(password_dir.to_str().unwrap())), &None)?;
+    let store = PasswordStore::new(
+        &"default",
+        &Some(String::from(password_dir.to_str().unwrap())),
+        &None,
+    )?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "password_store_with_shallow_checkout").unwrap();
