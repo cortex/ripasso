@@ -205,6 +205,51 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
 }
 
 #[test]
+fn password_store_with_relative_path() -> Result<()> {
+    let mut base_path: PathBuf = std::env::current_exe().unwrap();
+    base_path.pop();
+    base_path.pop();
+    base_path.pop();
+    base_path.pop();
+    base_path.push("testres");
+
+    let mut password_dir: PathBuf = base_path.clone();
+    password_dir.push("password_store_with_relative_path");
+
+    unpack_tar_gz(
+        base_path.clone(),
+        "password_store_with_relative_path.tar.gz",
+    )?;
+
+    let store = PasswordStore::new(
+        "default",
+        &Some("./testres/password_store_with_relative_path".to_string()),
+        &None,
+    );
+    if store.is_err() {
+        eprintln!("{:?}", store.err().unwrap());
+    } else {
+        let results = store?.all_passwords()?;
+
+        cleanup(base_path, "password_store_with_relative_path").unwrap();
+
+        assert_eq!(results.len(), 3);
+        assert_eq!(results[0].name, "3");
+        assert_eq!(results[0].committed_by.is_none(), false);
+        assert_eq!(results[0].updated.is_none(), false);
+
+        assert_eq!(results[1].name, "2");
+        assert_eq!(results[1].committed_by.is_none(), false);
+        assert_eq!(results[1].updated.is_none(), false);
+
+        assert_eq!(results[2].name, "1");
+        assert_eq!(results[2].committed_by.is_none(), false);
+        assert_eq!(results[2].updated.is_none(), false);
+    }
+    Ok(())
+}
+
+#[test]
 fn password_store_with_shallow_checkout() -> Result<()> {
     let mut base_path: PathBuf = std::env::current_exe().unwrap();
     base_path.pop();
