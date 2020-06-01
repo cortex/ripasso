@@ -79,18 +79,22 @@ impl PasswordStore {
         })
     }
 
+    /// Returns the name of the store, configured to the configuration file
     pub fn get_name(&self) -> &String {
         &self.name
     }
 
+    /// Returns a vec with the keys in the .gog-id file
     pub fn get_valid_gpg_signing_keys(&self) -> &Vec<String> {
         &self.valid_gpg_signing_keys
     }
 
+    /// returns the path to the directory where the store is located.
     pub fn get_store_path(&self) -> String {
         self.root.as_os_str().to_str().unwrap().to_string()
     }
 
+    /// returns true if the store is located in $HOME/.password-store
     pub fn is_default(&self) -> bool {
         let home = dirs::home_dir();
         if home.is_none() {
@@ -104,6 +108,7 @@ impl PasswordStore {
         p == ph
     }
 
+    /// validates the signature file of the .gpg-id file
     pub fn validate(&self) -> Result<bool> {
         let password_dir = path::Path::new(&self.root);
         if !password_dir.exists() {
@@ -126,6 +131,7 @@ impl PasswordStore {
         Ok(true)
     }
 
+    /// resets the store object, so that it points to a different directory.
     pub fn reset(&mut self, password_store_dir: &str, valid_signing_keys: &[String]) -> Result<()> {
         let pass_home = password_dir_raw(&Some(password_store_dir.to_string()));
         if !pass_home.exists() {
@@ -274,6 +280,7 @@ impl PasswordStore {
         Ok(PasswordEntry::load_from_git(&self.root, &path, &repo))
     }
 
+    /// loads the list of passwords from disk again
     pub fn reload_password_list(&mut self) -> Result<()> {
         let mut new_passwords = self.all_passwords()?;
 
@@ -284,6 +291,7 @@ impl PasswordStore {
         Ok(())
     }
 
+    /// checks if there is a user name configured in git
     pub fn has_configured_username(&self) -> bool {
         if self.repo().is_err() {
             return true;
@@ -429,6 +437,7 @@ impl PasswordStore {
         rf
     }
 
+    /// Removes a key from the .gpg-id file and re-encrypts all the passwords
     pub fn remove_recipient(&self, r: &Recipient) -> Result<()> {
         Recipient::remove_recipient_from_file(
             &r,
@@ -438,6 +447,7 @@ impl PasswordStore {
         self.reencrypt_all_password_entries()
     }
 
+    /// Adds a key to the .gpg-id file and re-encrypts all the passwords
     pub fn add_recipient(&self, r: &Recipient) -> Result<()> {
         Recipient::add_recipient_to_file(&r, self.recipient_file(), &self.valid_gpg_signing_keys)?;
         self.reencrypt_all_password_entries()
