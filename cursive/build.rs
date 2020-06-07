@@ -1,10 +1,8 @@
-use glob;
-
 use std::io::prelude::*;
 use std::process::Command;
 
 fn generate_man_page() -> String {
-    let page = man::prelude::Manual::new("ripasso-cursive")
+    man::prelude::Manual::new("ripasso-cursive")
         .about("A password manager that uses the file format of the standard unix password manager 'pass', implemented in rust.")
         .author(man::prelude::Author::new("Joakim Lundborg").email("joakim.lundborg@gmail.com"))
         .author(man::prelude::Author::new("Alexander Kjäll").email("alexander.kjall@gmail.com"))
@@ -36,9 +34,7 @@ the PASSWORD_STORE_DIR environmental variable.")
 ripasso will verify that the .gpg-id file is correctly signed. Valid values are one or more 40 character gpg key ids,
 separated by commas.")
         )
-        .render();
-
-    return format!("{}", page);
+        .render()
 }
 
 fn generate_man_page_file() {
@@ -107,7 +103,7 @@ fn generate_translation_files() {
 
     for existing_file in existing_iter {
         let file = existing_file.unwrap();
-        let mut filename = format!("{}", file.file_name().unwrap().to_str().unwrap());
+        let mut filename = file.file_name().unwrap().to_str().unwrap().to_string();
         filename.replace_range(3..4, "m");
 
         print!(
