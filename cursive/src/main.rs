@@ -757,10 +757,10 @@ fn get_stores(config: &config::Config) -> pass::Result<Vec<Arc<Mutex<PasswordSto
             if password_store_dir_opt.is_some() {
                 let password_store_dir = Some(password_store_dir_opt.unwrap().clone().into_str()?);
 
-                let mut valid_signing_keys = None;
-                if valid_signing_keys_opt.is_some() {
-                    valid_signing_keys = Some(valid_signing_keys_opt.unwrap().clone().into_str()?);
-                }
+                let valid_signing_keys = match valid_signing_keys_opt {
+                    Some(k) => Some(k.clone().into_str()?),
+                    None => None,
+                };
 
                 final_stores.push(Arc::new(Mutex::new(PasswordStore::new(
                     store_name,
@@ -776,8 +776,8 @@ fn get_stores(config: &config::Config) -> pass::Result<Vec<Arc<Mutex<PasswordSto
 
 /// validates a vec of password stores.
 /// Returns true if the new user wizard should be shown
-fn validate_stores(stores: &Vec<Arc<Mutex<PasswordStore>>>) -> pass::Result<bool> {
-    if stores.len() == 0 {
+fn validate_stores(stores: &[Arc<Mutex<PasswordStore>>]) -> pass::Result<bool> {
+    if stores.is_empty() {
         return Ok(true);
     }
 
@@ -892,7 +892,7 @@ fn main() {
         process::exit(1);
     }
 
-    for password in &(*store.clone()).lock().unwrap().passwords {
+    for password in &(*store).lock().unwrap().passwords {
         if password.is_in_git == pass::RepositoryStatus::NotInRepo {
             eprintln!("{}", CATALOG.gettext("The password store is backed by a git repository, but there is passwords there that's not in git. Please add them, otherwise they might get lost."));
             process::exit(1);
@@ -1048,8 +1048,6 @@ fn main() {
             }
 
             search(&store, ui, "");
-
-            ()
         });
     }
     ui.menubar().add_subtree(CATALOG.gettext("Stores"), tree);

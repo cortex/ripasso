@@ -760,7 +760,7 @@ impl PasswordEntry {
         let walk_res: Vec<GitLogLine> = revwalk
             .filter_map(|id| {
                 let oid = id.unwrap();
-                let commit = repo.find_commit(oid.clone()).unwrap();
+                let commit = repo.find_commit(oid).unwrap();
 
                 match commit.parents().len() {
                     0 => {
