@@ -42,24 +42,24 @@ pub struct UI {
 impl UI {
     pub fn query(&mut self, query: String) -> Option<&QVariant> {
         println!("query");
-        let matching = pass::search(&self.store, &String::from(query)).unwrap();
+        let matching = pass::search(&self.store, &query).unwrap();
 
         // Save currently matched passwords
-        self.current_passwords = matching.clone();
+        self.current_passwords = matching;
 
         // Update QML data with currently matched passwords
         self.passwords.set_data(
             self.current_passwords
                 .clone()
                 .into_iter()
-                .map(|p| (p.name.clone(), "".to_string()))
+                .map(|p| (p.name, "".to_string()))
                 .collect(),
         );
         None
     }
 
     fn get_password(&self, i: i32) -> PasswordEntry {
-        return self.current_passwords[i as usize].clone();
+        self.current_passwords[i as usize].clone()
     }
 
     pub fn copy_to_clipboard(&mut self, i: i32) -> Option<&QVariant> {
@@ -72,7 +72,7 @@ impl UI {
 
         // Copy password to clipboard
         let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-        ctx.set_contents(password.to_owned()).unwrap();
+        ctx.set_contents(password).unwrap();
         println!("password copied to clipboard");
 
         thread::spawn(move || {
@@ -195,7 +195,7 @@ fn main() {
 
     let ui = QUI::new(
         UI {
-            store: store.clone(),
+            store,
             current_passwords: Vec::<PasswordEntry>::new(),
             passwords: QPasswordEntry::new(),
             password: QPasswordView::new(
