@@ -1300,70 +1300,125 @@ pub fn password_dir_raw(password_store_dir: &Option<String>) -> path::PathBuf {
     path::PathBuf::from(&pass_home)
 }
 
+fn home_exists() -> bool {
+    let home = std::env::var("HOME");
+    if home.is_err() {
+        return false;
+    }
+
+    let home_dir_str = format!("{}/.password-store/", home.unwrap());
+    let home_dir = path::Path::new(&home_dir_str);
+    if home_dir.exists() {
+        return true;
+    }
+
+    false
+}
+
+fn env_var_exists(store_dir: &Option<String>) -> bool {
+    if store_dir.is_none() {
+        return false;
+    }
+
+    let home_dir_str = store_dir.as_ref().unwrap();
+    let store_dir_dir = path::Path::new(home_dir_str);
+    if store_dir_dir.exists() {
+        return true;
+    }
+
+    false
+}
+
+fn settings_file_exists() -> bool {
+    let home = std::env::var("HOME");
+    if home.is_err() {
+        return false;
+    }
+
+    let xdg_config_file = match std::env::var("XDG_CONFIG_HOME") {
+        Ok(p) => format!("{}/ripasso/settings.toml", p),
+        Err(_) => format!("{}/.config/ripasso/settings.toml", home.unwrap()),
+    };
+
+    let xdg_config_file_dir = path::Path::new(&xdg_config_file);
+    if xdg_config_file_dir.exists() {
+        let config_file = fs::metadata(xdg_config_file_dir);
+        if config_file.is_err() {
+            return false;
+        }
+        let config_file = config_file.unwrap();
+
+        if config_file.len() == 0 {
+            return false;
+        }
+        return true;
+    }
+
+    false
+}
+
+fn home_settings() -> Result<config::Config> {
+    let mut default_store = std::collections::HashMap::new();
+
+    let home = std::env::var("HOME").unwrap();
+
+    default_store.insert("path".to_string(), format!("{}/.password-store/", home));
+
+    let mut stores_map = std::collections::HashMap::new();
+    stores_map.insert("default".to_string(), default_store);
+
+    let mut new_settings = config::Config::default();
+    new_settings.set("stores", stores_map)?;
+
+    Ok(new_settings)
+}
+
+fn var_settings(store_dir: Option<String>, signing_keys: Option<String>) -> Result<config::Config> {
+    let mut default_store = std::collections::HashMap::new();
+
+    default_store.insert("path".to_string(), store_dir.unwrap());
+    if let Some(keys) = signing_keys {
+        default_store.insert("valid_signing_keys".to_string(), keys);
+    }
+
+    let mut stores_map = std::collections::HashMap::new();
+    stores_map.insert("default".to_string(), default_store);
+
+    let mut new_settings = config::Config::default();
+    new_settings.set("stores", stores_map)?;
+
+    Ok(new_settings)
+}
+
+fn file_settings() -> config::File<config::FileSourceFile> {
+    let xdg_config_file = match std::env::var("XDG_CONFIG_HOME") {
+        Ok(p) => format!("{}/ripasso/settings.toml", p),
+        Err(_) => {
+            let home = std::env::var("HOME");
+
+            format!("{}/.config/ripasso/settings.toml", home.unwrap())
+        }
+    };
+
+    config::File::with_name(&xdg_config_file)
+}
+
 /// reads ripasso's config file, in `$XDG_CONFIG_HOME/ripasso/settings.toml`
 pub fn read_config(
     store_dir: Option<String>,
     signing_keys: Option<String>,
 ) -> Result<config::Config> {
-    let xdg_config_home = match std::env::var("XDG_CONFIG_HOME") {
-        Ok(p) => format!("{}/", p),
-        Err(_) => {
-            let home = std::env::var("HOME");
-            if home.is_err() {
-                eprintln!("missing home directory");
-                std::process::exit(1);
-            }
-            format!("{}/.config/", home.unwrap())
-        }
-    };
-
     let mut settings = config::Config::default();
+    if home_exists() {
+        settings.merge(home_settings()?)?;
+    }
 
-    if let Some(store_dir_str) = store_dir {
-        let mut default_store = std::collections::HashMap::new();
+    if env_var_exists(&store_dir) {
+        settings.merge(var_settings(store_dir, signing_keys)?)?;
+    }
 
-        default_store.insert("path".to_string(), store_dir_str);
-        if let Some(signing_keys_str) = signing_keys {
-            default_store.insert("valid_signing_keys".to_string(), signing_keys_str);
-        }
-
-        let mut stores_map = std::collections::HashMap::new();
-        stores_map.insert("default".to_string(), default_store);
-
-        settings.set("stores", stores_map)?;
-    } else {
-        let conf_res = settings.merge(config::File::with_name(&format!(
-            "{}ripasso/settings.toml",
-            xdg_config_home
-        )));
-
-        if conf_res.is_err() {
-            eprintln!(
-                "trying to read config file without success\n{}",
-                conf_res.err().unwrap()
-            );
-
-            let home = std::env::var("HOME");
-            if home.is_err() {
-                eprintln!("missing home directory");
-                std::process::exit(1);
-            }
-
-            let mut default_store = std::collections::HashMap::new();
-
-            default_store.insert(
-                "path".to_string(),
-                format!("{}/.password-store", home.unwrap()),
-            );
-
-            let mut stores_map = std::collections::HashMap::new();
-            stores_map.insert("default".to_string(), default_store);
-
-            let mut new_settings = config::Config::default();
-            new_settings.set("stores", stores_map)?;
-
-            return Ok(new_settings);
-        }
+    if settings_file_exists() {
+        settings.merge(file_settings())?;
     }
 
     Ok(settings)
