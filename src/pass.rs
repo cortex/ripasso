@@ -1397,7 +1397,10 @@ fn var_settings(store_dir: Option<String>, signing_keys: Option<String>) -> Resu
     Ok(new_settings)
 }
 
-fn file_settings(home: &Option<String>, xdg_config_home: &Option<String>) -> Result<config::File<config::FileSourceFile>> {
+fn file_settings(
+    home: &Option<String>,
+    xdg_config_home: &Option<String>,
+) -> Result<config::File<config::FileSourceFile>> {
     let xdg_config_file = match xdg_config_home.as_ref() {
         Some(p) => format!("{}/ripasso/settings.toml", p),
         None => {

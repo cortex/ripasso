@@ -345,7 +345,7 @@ fn home_exists_home_dir_without_config_dir() {
 }
 
 #[test]
-fn home_exists_home_dir_with_file_instead_of_dir() -> Result<()>{
+fn home_exists_home_dir_with_file_instead_of_dir() -> Result<()> {
     let dir = tempfile::tempdir().unwrap();
     File::create(dir.path().join(".password-store"))?;
     let result = home_exists(&Some(dir.path().to_str().unwrap().to_owned()));
@@ -375,19 +375,34 @@ fn env_var_exists_test_none() {
 fn env_var_exists_test_without_dir() {
     let dir = tempfile::tempdir().unwrap();
 
-    assert_eq!(false, env_var_exists(&Some(dir.path().join(".password-store").to_str().unwrap().to_owned())));
+    assert_eq!(
+        false,
+        env_var_exists(&Some(
+            dir.path()
+                .join(".password-store")
+                .to_str()
+                .unwrap()
+                .to_owned()
+        ))
+    );
 }
 
 #[test]
 fn env_var_exists_test_with_dir() {
     let dir = tempfile::tempdir().unwrap();
 
-    assert_eq!(true, env_var_exists(&Some(dir.path().to_str().unwrap().to_owned())));
+    assert_eq!(
+        true,
+        env_var_exists(&Some(dir.path().to_str().unwrap().to_owned()))
+    );
 }
 
 #[test]
 fn home_settings_missing() {
-    assert_eq!(Error::Generic("no home directory set"), home_settings(&None).err().unwrap());
+    assert_eq!(
+        Error::Generic("no home directory set"),
+        home_settings(&None).err().unwrap()
+    );
 }
 
 #[test]
@@ -401,7 +416,14 @@ fn home_settings_dir_exists() -> Result<()> {
     let work = stores["default"].clone().into_table()?;
     let path = work["path"].clone().into_str()?;
 
-    assert_eq!(dir.path().join(".password-store/").to_str().unwrap().to_owned(), path);
+    assert_eq!(
+        dir.path()
+            .join(".password-store/")
+            .to_str()
+            .unwrap()
+            .to_owned(),
+        path
+    );
 
     Ok(())
 }
@@ -417,14 +439,24 @@ fn home_settings_dir_doesnt_exists() -> Result<()> {
     let work = stores["default"].clone().into_table()?;
     let path = work["path"].clone().into_str()?;
 
-    assert_eq!(dir.path().join(".password-store/").to_str().unwrap().to_owned(), path);
+    assert_eq!(
+        dir.path()
+            .join(".password-store/")
+            .to_str()
+            .unwrap()
+            .to_owned(),
+        path
+    );
 
     Ok(())
 }
 
 #[test]
 fn var_settings_test() -> Result<()> {
-    let settings = var_settings(Some("/home/user/.password-store".to_string()), Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_string()))?;
+    let settings = var_settings(
+        Some("/home/user/.password-store".to_string()),
+        Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_string()),
+    )?;
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
@@ -432,7 +464,10 @@ fn var_settings_test() -> Result<()> {
     let valid_signing_keys = work["valid_signing_keys"].clone().into_str()?;
 
     assert_eq!("/home/user/.password-store", path);
-    assert_eq!("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F", valid_signing_keys);
+    assert_eq!(
+        "E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F",
+        valid_signing_keys
+    );
 
     Ok(())
 }
@@ -441,13 +476,22 @@ fn var_settings_test() -> Result<()> {
 fn file_settings_simple_file() -> Result<()> {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join(".config").join("ripasso"))?;
-    let mut file = File::create(dir.path().join(".config").join("ripasso").join("settings.toml"))?;
+    let mut file = File::create(
+        dir.path()
+            .join(".config")
+            .join("ripasso")
+            .join("settings.toml"),
+    )?;
 
-    writeln!(&file, "[stores]\n    [stores.work]\n    path = \"/home/user/.password-store\"\n")?;
+    writeln!(
+        &file,
+        "[stores]\n    [stores.work]\n    path = \"/home/user/.password-store\"\n"
+    )?;
     file.flush()?;
 
     let mut settings: config::Config = config::Config::default();
-    settings.merge(file_settings(&Some(dir.path().to_str().unwrap().to_owned()), &None).unwrap())?;
+    settings
+        .merge(file_settings(&Some(dir.path().to_str().unwrap().to_owned()), &None).unwrap())?;
 
     let stores = settings.get_table("stores")?;
 
@@ -463,13 +507,33 @@ fn file_settings_file_in_xdg_config_home() -> Result<()> {
     let dir = tempfile::tempdir().unwrap();
     let dir2 = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir2.path().join(".random_config").join("ripasso"))?;
-    let mut file = File::create(dir2.path().join(".random_config").join("ripasso").join("settings.toml"))?;
+    let mut file = File::create(
+        dir2.path()
+            .join(".random_config")
+            .join("ripasso")
+            .join("settings.toml"),
+    )?;
 
-    writeln!(&file, "[stores]\n    [stores.work]\n    path = \"/home/user/.password-store\"\n")?;
+    writeln!(
+        &file,
+        "[stores]\n    [stores.work]\n    path = \"/home/user/.password-store\"\n"
+    )?;
     file.flush()?;
 
     let mut settings: config::Config = config::Config::default();
-    settings.merge(file_settings(&Some(dir.path().to_str().unwrap().to_owned()), &Some(dir2.path().join(".random_config").to_str().unwrap().to_owned())).unwrap())?;
+    settings.merge(
+        file_settings(
+            &Some(dir.path().to_str().unwrap().to_owned()),
+            &Some(
+                dir2.path()
+                    .join(".random_config")
+                    .to_str()
+                    .unwrap()
+                    .to_owned(),
+            ),
+        )
+        .unwrap(),
+    )?;
 
     let stores = settings.get_table("stores")?;
 
@@ -485,15 +549,32 @@ fn read_config_empty_config_file() -> Result<()> {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join(".config").join("ripasso"))?;
     std::fs::create_dir_all(dir.path().join(".password-store"))?;
-    File::create(dir.path().join(".config").join("ripasso").join("settings.toml"))?;
+    File::create(
+        dir.path()
+            .join(".config")
+            .join("ripasso")
+            .join("settings.toml"),
+    )?;
 
-    let settings = read_config(None, None, Some(dir.path().to_str().unwrap().to_owned()), None)?;
+    let settings = read_config(
+        None,
+        None,
+        Some(dir.path().to_str().unwrap().to_owned()),
+        None,
+    )?;
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
     let path = work["path"].clone().into_str()?;
 
-    assert_eq!(dir.path().join(".password-store/").to_str().unwrap().to_owned(), path);
+    assert_eq!(
+        dir.path()
+            .join(".password-store/")
+            .to_str()
+            .unwrap()
+            .to_owned(),
+        path
+    );
 
     Ok(())
 }
