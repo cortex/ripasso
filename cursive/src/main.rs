@@ -824,16 +824,12 @@ fn main() {
     }
 
     let config = {
-        let password_store_dir = match std::env::var("PASSWORD_STORE_DIR") {
-            Ok(p) => Some(p),
-            Err(_) => None,
-        };
-        let password_store_signing_key = match std::env::var("PASSWORD_STORE_SIGNING_KEY") {
-            Ok(p) => Some(p),
-            Err(_) => None,
-        };
+        let password_store_dir = std::env::var("PASSWORD_STORE_DIR").ok();
+        let password_store_signing_key = std::env::var("PASSWORD_STORE_SIGNING_KEY").ok();
+        let home = std::env::var("HOME").ok();
+        let xdg_config_home = std::env::var("XDG_CONFIG_HOME").ok();
 
-        pass::read_config(password_store_dir, password_store_signing_key)
+        pass::read_config(password_store_dir, password_store_signing_key, home, xdg_config_home)
     };
     if config.is_err() {
         eprintln!("Error {:?}", config.err().unwrap());
