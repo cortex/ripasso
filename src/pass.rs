@@ -1319,14 +1319,18 @@ fn home_exists(home: &Option<String>) -> bool {
     false
 }
 
-fn env_var_exists(store_dir: &Option<String>) -> bool {
-    if store_dir.is_none() {
+fn env_var_exists(store_dir: &Option<String>, signing_keys: &Option<String>) -> bool {
+    if store_dir.is_none() && signing_keys.is_none() {
         return false;
     }
 
-    let home_dir_str = store_dir.as_ref().unwrap();
-    let store_dir_dir = path::Path::new(home_dir_str);
-    if store_dir_dir.exists() {
+    if store_dir.is_some() {
+        let home_dir_str = store_dir.as_ref().unwrap();
+        let store_dir_dir = path::Path::new(home_dir_str);
+        if store_dir_dir.exists() {
+            return true;
+        }
+    } else if signing_keys.is_some() {
         return true;
     }
 
@@ -1380,12 +1384,17 @@ fn home_settings(home: &Option<String>) -> Result<config::Config> {
     Ok(new_settings)
 }
 
-fn var_settings(store_dir: Option<String>, signing_keys: Option<String>) -> Result<config::Config> {
+fn var_settings(
+    store_dir: &Option<String>,
+    signing_keys: &Option<String>,
+) -> Result<config::Config> {
     let mut default_store = std::collections::HashMap::new();
 
-    default_store.insert("path".to_string(), store_dir.unwrap());
+    if let Some(dir) = store_dir {
+        default_store.insert("path".to_string(), dir.clone());
+    }
     if let Some(keys) = signing_keys {
-        default_store.insert("valid_signing_keys".to_string(), keys);
+        default_store.insert("valid_signing_keys".to_string(), keys.clone());
     }
 
     let mut stores_map = std::collections::HashMap::new();
@@ -1418,17 +1427,17 @@ fn file_settings(
 
 /// reads ripasso's config file, in `$XDG_CONFIG_HOME/ripasso/settings.toml`
 pub fn read_config(
-    store_dir: Option<String>,
-    signing_keys: Option<String>,
-    home: Option<String>,
-    xdg_config_home: Option<String>,
+    store_dir: &Option<String>,
+    signing_keys: &Option<String>,
+    home: &Option<String>,
+    xdg_config_home: &Option<String>,
 ) -> Result<config::Config> {
     let mut settings = config::Config::default();
     if home_exists(&home) {
         settings.merge(home_settings(&home)?)?;
     }
 
-    if env_var_exists(&store_dir) {
+    if env_var_exists(&store_dir, signing_keys) {
         settings.merge(var_settings(store_dir, signing_keys)?)?;
     }
 

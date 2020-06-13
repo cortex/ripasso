@@ -829,10 +829,10 @@ fn main() {
         let xdg_config_home = std::env::var("XDG_CONFIG_HOME").ok();
 
         pass::read_config(
-            password_store_dir,
-            password_store_signing_key,
-            home,
-            xdg_config_home,
+            &password_store_dir,
+            &password_store_signing_key,
+            &home,
+            &xdg_config_home,
         )
     };
     if config.is_err() {

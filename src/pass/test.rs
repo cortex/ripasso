@@ -368,7 +368,7 @@ fn home_exists_home_dir_with_config_dir() -> Result<()> {
 
 #[test]
 fn env_var_exists_test_none() {
-    assert_eq!(false, env_var_exists(&None));
+    assert_eq!(false, env_var_exists(&None, &None));
 }
 
 #[test]
@@ -377,13 +377,16 @@ fn env_var_exists_test_without_dir() {
 
     assert_eq!(
         false,
-        env_var_exists(&Some(
-            dir.path()
-                .join(".password-store")
-                .to_str()
-                .unwrap()
-                .to_owned()
-        ))
+        env_var_exists(
+            &Some(
+                dir.path()
+                    .join(".password-store")
+                    .to_str()
+                    .unwrap()
+                    .to_owned()
+            ),
+            &None
+        )
     );
 }
 
@@ -393,7 +396,7 @@ fn env_var_exists_test_with_dir() {
 
     assert_eq!(
         true,
-        env_var_exists(&Some(dir.path().to_str().unwrap().to_owned()))
+        env_var_exists(&Some(dir.path().to_str().unwrap().to_owned()), &None)
     );
 }
 
@@ -454,8 +457,8 @@ fn home_settings_dir_doesnt_exists() -> Result<()> {
 #[test]
 fn var_settings_test() -> Result<()> {
     let settings = var_settings(
-        Some("/home/user/.password-store".to_string()),
-        Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_string()),
+        &Some("/home/user/.password-store".to_string()),
+        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_string()),
     )?;
 
     let stores = settings.get_table("stores")?;
@@ -557,10 +560,10 @@ fn read_config_empty_config_file() -> Result<()> {
     )?;
 
     let settings = read_config(
-        None,
-        None,
-        Some(dir.path().to_str().unwrap().to_owned()),
-        None,
+        &None,
+        &None,
+        &Some(dir.path().to_str().unwrap().to_owned()),
+        &None,
     )?;
 
     let stores = settings.get_table("stores")?;
@@ -574,6 +577,39 @@ fn read_config_empty_config_file() -> Result<()> {
             .unwrap()
             .to_owned(),
         path
+    );
+
+    Ok(())
+}
+
+#[test]
+fn read_config_empty_config_file_with_keys_env() -> Result<()> {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+
+    let settings = read_config(
+        &None,
+        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_string()),
+        &Some(dir.path().to_str().unwrap().to_owned()),
+        &None,
+    )?;
+
+    let stores = settings.get_table("stores")?;
+    let work = stores["default"].clone().into_table()?;
+    let path = work["path"].clone().into_str()?;
+    let valid_signing_keys = work["valid_signing_keys"].clone().into_str()?;
+
+    assert_eq!(
+        dir.path()
+            .join(".password-store/")
+            .to_str()
+            .unwrap()
+            .to_owned(),
+        path
+    );
+    assert_eq!(
+        "E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F",
+        valid_signing_keys
     );
 
     Ok(())
