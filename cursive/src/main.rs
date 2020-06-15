@@ -737,8 +737,8 @@ fn get_translation_catalog() -> gettext::Catalog {
     gettext::Catalog::empty()
 }
 
-fn get_stores(config: &config::Config) -> pass::Result<Vec<Arc<Mutex<PasswordStore>>>> {
-    let mut final_stores: Vec<Arc<Mutex<PasswordStore>>> = vec![];
+fn get_stores(config: &config::Config) -> pass::Result<Vec<PasswordStore>> {
+    let mut final_stores: Vec<PasswordStore> = vec![];
     let stores_res = config.get("stores");
     if let Ok(stores) = stores_res {
         let stores: HashMap<String, config::Value> = stores;
@@ -762,11 +762,11 @@ fn get_stores(config: &config::Config) -> pass::Result<Vec<Arc<Mutex<PasswordSto
                     None => None,
                 };
 
-                final_stores.push(Arc::new(Mutex::new(PasswordStore::new(
+                final_stores.push(PasswordStore::new(
                     store_name,
                     &password_store_dir,
                     &valid_signing_keys,
-                )?)));
+                )?);
             }
         }
     }
@@ -776,13 +776,12 @@ fn get_stores(config: &config::Config) -> pass::Result<Vec<Arc<Mutex<PasswordSto
 
 /// validates a vec of password stores.
 /// Returns true if the new user wizard should be shown
-fn validate_stores(stores: &[Arc<Mutex<PasswordStore>>]) -> pass::Result<bool> {
+fn validate_stores(stores: &[PasswordStore]) -> pass::Result<bool> {
     if stores.is_empty() {
         return Ok(true);
     }
 
     for store in stores {
-        let store = (*store).lock().unwrap();
         let validate_res = store.validate();
         if validate_res.is_err() {
             if stores.len() == 1 && store.is_default() {
@@ -824,16 +823,17 @@ fn main() {
     }
 
     let config = {
-        let password_store_dir = match std::env::var("PASSWORD_STORE_DIR") {
-            Ok(p) => Some(p),
-            Err(_) => None,
-        };
-        let password_store_signing_key = match std::env::var("PASSWORD_STORE_SIGNING_KEY") {
-            Ok(p) => Some(p),
-            Err(_) => None,
-        };
+        let password_store_dir = std::env::var("PASSWORD_STORE_DIR").ok();
+        let password_store_signing_key = std::env::var("PASSWORD_STORE_SIGNING_KEY").ok();
+        let home = std::env::var("HOME").ok();
+        let xdg_config_home = std::env::var("XDG_CONFIG_HOME").ok();
 
-        pass::read_config(password_store_dir, password_store_signing_key)
+        pass::read_config(
+            &password_store_dir,
+            &password_store_signing_key,
+            &home,
+            &xdg_config_home,
+        )
     };
     if config.is_err() {
         eprintln!("Error {:?}", config.err().unwrap());
@@ -846,7 +846,7 @@ fn main() {
         eprintln!("Error {:?}", stores.err().unwrap());
         process::exit(1);
     }
-    let stores: Vec<Arc<Mutex<PasswordStore>>> = stores.unwrap();
+    let stores: Vec<PasswordStore> = stores.unwrap();
 
     match validate_stores(&stores) {
         Ok(b) => {
@@ -871,7 +871,7 @@ fn main() {
         PasswordStore::new(&"".to_string(), &None, &None).unwrap(),
     ));
     {
-        let ss = stores[0].lock().unwrap();
+        let ss = &stores[0];
         let ss_store_path = ss.get_store_path();
         let ss_signing_keys = ss.get_valid_gpg_signing_keys().clone();
 
@@ -1032,7 +1032,7 @@ fn main() {
 
     let mut tree = MenuTree::new();
     for s in stores {
-        let ss = (*s).lock().unwrap();
+        let ss = &s;
         let store_name = ss.get_name().clone();
         let store = store.clone();
         let ss_store_path = ss.get_store_path();
