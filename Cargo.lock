@@ -1578,6 +1578,7 @@ dependencies = [
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar 0.4.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "whoami 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1595,6 +1596,7 @@ dependencies = [
  "locale_config 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "man 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ripasso 0.5.0-alpha",
+ "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "unic-langid 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

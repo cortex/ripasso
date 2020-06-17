@@ -1406,22 +1406,25 @@ fn var_settings(
     Ok(new_settings)
 }
 
-fn file_settings(
+fn xdg_config_file_location(
     home: &Option<String>,
     xdg_config_home: &Option<String>,
-) -> Result<config::File<config::FileSourceFile>> {
-    let xdg_config_file = match xdg_config_home.as_ref() {
-        Some(p) => format!("{}/ripasso/settings.toml", p),
+) -> Result<String> {
+    match xdg_config_home.as_ref() {
+        Some(p) => Ok(format!("{}/ripasso/settings.toml", p)),
         None => {
             if home.is_none() {
-                return Err(Error::Generic("no home directory"));
+                Err(Error::Generic("no home directory"))
+            } else {
+                let home = home.as_ref().unwrap();
+
+                Ok(format!("{}/.config/ripasso/settings.toml", home))
             }
-            let home = home.as_ref().unwrap();
-
-            format!("{}/.config/ripasso/settings.toml", home)
         }
-    };
+    }
+}
 
+fn file_settings(xdg_config_file: &str) -> Result<config::File<config::FileSourceFile>> {
     Ok(config::File::with_name(&xdg_config_file))
 }
 
@@ -1431,8 +1434,9 @@ pub fn read_config(
     signing_keys: &Option<String>,
     home: &Option<String>,
     xdg_config_home: &Option<String>,
-) -> Result<config::Config> {
+) -> Result<(config::Config, std::path::PathBuf)> {
     let mut settings = config::Config::default();
+    let config_file_location = xdg_config_file_location(home, xdg_config_home)?;
     if home_exists(&home) {
         settings.merge(home_settings(&home)?)?;
     }
@@ -1442,10 +1446,38 @@ pub fn read_config(
     }
 
     if settings_file_exists(&home, &xdg_config_home) {
-        settings.merge(file_settings(&home, &xdg_config_home)?)?;
+        settings.merge(file_settings(&config_file_location)?)?;
     }
 
-    Ok(settings)
+    Ok((settings, std::path::PathBuf::from(config_file_location)))
+}
+
+pub fn save_config(
+    stores: Arc<Mutex<Vec<PasswordStore>>>,
+    config_file_location: std::path::PathBuf,
+) -> Result<()> {
+    let mut stores_map = std::collections::HashMap::new();
+    let stores_borrowed = (*stores).lock().unwrap();
+    for store in stores_borrowed.iter() {
+        let mut store_map = std::collections::HashMap::new();
+        store_map.insert("path", store.get_store_path());
+        if !store.get_valid_gpg_signing_keys().is_empty() {
+            store_map.insert(
+                "valid_signing_keys",
+                store.get_valid_gpg_signing_keys().join(","),
+            );
+        }
+        stores_map.insert(store.get_name(), store_map);
+    }
+
+    let mut settings = std::collections::HashMap::new();
+    settings.insert("stores", stores_map);
+
+    let f = std::fs::File::create(config_file_location)?;
+    let mut f = std::io::BufWriter::new(f);
+    f.write_all(toml::ser::to_string_pretty(&settings)?.as_bytes())?;
+
+    Ok(())
 }
 
 #[cfg(test)]

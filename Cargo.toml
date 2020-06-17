@@ -20,6 +20,7 @@ dirs = "2.0.2"
 rand = "0.7.3"
 whoami = "0.6.0"
 config = "0.10.1"
+toml = "0.5.6"
 
 [dev-dependencies]
 tempfile = "3.1.0"

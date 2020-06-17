@@ -493,8 +493,9 @@ fn file_settings_simple_file() -> Result<()> {
     file.flush()?;
 
     let mut settings: config::Config = config::Config::default();
-    settings
-        .merge(file_settings(&Some(dir.path().to_str().unwrap().to_owned()), &None).unwrap())?;
+    settings.merge(file_settings(
+        &xdg_config_file_location(&Some(dir.path().to_str().unwrap().to_owned()), &None).unwrap(),
+    )?)?;
 
     let stores = settings.get_table("stores")?;
 
@@ -525,7 +526,7 @@ fn file_settings_file_in_xdg_config_home() -> Result<()> {
 
     let mut settings: config::Config = config::Config::default();
     settings.merge(
-        file_settings(
+        file_settings(&xdg_config_file_location(
             &Some(dir.path().to_str().unwrap().to_owned()),
             &Some(
                 dir2.path()
@@ -534,7 +535,7 @@ fn file_settings_file_in_xdg_config_home() -> Result<()> {
                     .unwrap()
                     .to_owned(),
             ),
-        )
+        )?)
         .unwrap(),
     )?;
 
@@ -559,7 +560,7 @@ fn read_config_empty_config_file() -> Result<()> {
             .join("settings.toml"),
     )?;
 
-    let settings = read_config(
+    let (settings, _) = read_config(
         &None,
         &None,
         &Some(dir.path().to_str().unwrap().to_owned()),
@@ -587,7 +588,7 @@ fn read_config_empty_config_file_with_keys_env() -> Result<()> {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join(".password-store"))?;
 
-    let settings = read_config(
+    let (settings, _) = read_config(
         &None,
         &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_string()),
         &Some(dir.path().to_str().unwrap().to_owned()),
