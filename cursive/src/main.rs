@@ -836,6 +836,10 @@ fn save_edit_config(
     if let Err(err) = save_res {
         helpers::errorbox(ui, &err);
     }
+
+    ui.call_on_name("status_bar", |l: &mut TextView| {
+        l.set_content(CATALOG.gettext("Updated config file"));
+    });
 }
 
 fn save_new_config(
@@ -867,7 +871,16 @@ fn save_new_config(
     let save_res = pass::save_config(stores, config_file_location);
     if let Err(err) = save_res {
         helpers::errorbox(ui, &err);
+        return;
     }
+
+    let mut l = ui.find_name::<SelectView<String>>("stores").unwrap();
+
+    l.add_item(e_n, e_n.clone());
+
+    ui.call_on_name("status_bar", |l: &mut TextView| {
+        l.set_content(CATALOG.gettext("Updated config file"));
+    });
 }
 
 fn edit_store_in_config(
@@ -970,7 +983,7 @@ fn delete_store_from_config(
     stores: Arc<Mutex<Vec<PasswordStore>>>,
     config_file_location: std::path::PathBuf,
 ) {
-    let l = ui.find_name::<SelectView<String>>("stores").unwrap();
+    let mut l = ui.find_name::<SelectView<String>>("stores").unwrap();
 
     let sel = l.selection();
 
@@ -988,7 +1001,15 @@ fn delete_store_from_config(
     let save_res = pass::save_config(stores, config_file_location);
     if let Err(err) = save_res {
         helpers::errorbox(ui, &err);
+        return;
     }
+
+    let delete_id = l.selected_id().unwrap();
+    l.remove_item(delete_id);
+
+    ui.call_on_name("status_bar", |l: &mut TextView| {
+        l.set_content(CATALOG.gettext("Updated config file"));
+    });
 }
 
 fn add_store_to_config(
