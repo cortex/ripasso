@@ -133,6 +133,32 @@ fn copy(ui: &mut Cursive) {
     });
 }
 
+fn copy_name(ui: &mut Cursive) {
+    let sel = ui
+        .find_name::<SelectView<pass::PasswordEntry>>("results")
+        .unwrap()
+        .selection();
+
+    if sel.is_none() {
+        return;
+    }
+    let sel = sel.unwrap();
+
+    if let Err(err) = || -> pass::Result<()> {
+        let name = sel.name.split('/').next_back();
+        let mut ctx = clipboard::ClipboardContext::new()?;
+        ctx.set_contents(name.unwrap_or("").to_string())?;
+        Ok(())
+    }() {
+        helpers::errorbox(ui, &err);
+        return;
+    }
+
+    ui.call_on_name("status_bar", |l: &mut TextView| {
+        l.set_content(CATALOG.gettext("Copied file name to copy buffer"));
+    });
+}
+
 fn do_delete(ui: &mut Cursive, store: &PasswordStoreType) {
     ui.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
         let sel = l.selection();
@@ -902,6 +928,7 @@ fn main() {
     let mut ui = Cursive::default();
 
     ui.add_global_callback(Event::CtrlChar('y'), copy);
+    ui.add_global_callback(Event::CtrlChar('u'), copy_name);
     ui.add_global_callback(Key::Enter, copy);
     ui.add_global_callback(Key::Del, {
         let store = store.clone();
@@ -997,6 +1024,7 @@ fn main() {
         CATALOG.gettext("Operations"),
         MenuTree::new()
             .leaf(CATALOG.gettext("Copy (ctrl-y)"), copy)
+            .leaf(CATALOG.gettext("Copy Name (ctrl-u)"), copy_name)
             .leaf(CATALOG.gettext("Open (ctrl-o)"), {
                 let store = store.clone();
                 move |ui: &mut Cursive| open(ui, store.clone())
