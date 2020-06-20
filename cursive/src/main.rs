@@ -1206,7 +1206,12 @@ fn main() {
     ));
     {
         let stores = (*stores).lock().unwrap();
-        let ss = &stores[0];
+        let mut ss = &stores[0];
+        for (i, store) in stores.iter().enumerate() {
+            if store.get_name() == "default" {
+                ss = &stores[i];
+            }
+        }
         let ss_store_path = ss.get_store_path();
         let ss_signing_keys = ss.get_valid_gpg_signing_keys().clone();
 
