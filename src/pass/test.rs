@@ -333,13 +333,13 @@ fn parse_signing_keys_empty() {
 
 #[test]
 fn home_exists_missing_home_env() {
-    assert_eq!(false, home_exists(&None));
+    assert_eq!(false, home_exists(&None, &config::Config::default()));
 }
 
 #[test]
 fn home_exists_home_dir_without_config_dir() {
     let dir = tempfile::tempdir().unwrap();
-    let result = home_exists(&Some(dir.path().to_str().unwrap().to_owned()));
+    let result = home_exists(&Some(dir.path().to_str().unwrap().to_owned()), &config::Config::default());
 
     assert_eq!(false, result);
 }
@@ -348,7 +348,7 @@ fn home_exists_home_dir_without_config_dir() {
 fn home_exists_home_dir_with_file_instead_of_dir() -> Result<()> {
     let dir = tempfile::tempdir().unwrap();
     File::create(dir.path().join(".password-store"))?;
-    let result = home_exists(&Some(dir.path().to_str().unwrap().to_owned()));
+    let result = home_exists(&Some(dir.path().to_str().unwrap().to_owned()), &config::Config::default());
 
     assert_eq!(false, result);
 
@@ -359,7 +359,7 @@ fn home_exists_home_dir_with_file_instead_of_dir() -> Result<()> {
 fn home_exists_home_dir_with_config_dir() -> Result<()> {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir(dir.path().join(".password-store"))?;
-    let result = home_exists(&Some(dir.path().to_str().unwrap().to_owned()));
+    let result = home_exists(&Some(dir.path().to_str().unwrap().to_owned()), &config::Config::default());
 
     assert_eq!(true, result);
 
@@ -466,7 +466,7 @@ fn var_settings_test() -> Result<()> {
     let path = work["path"].clone().into_str()?;
     let valid_signing_keys = work["valid_signing_keys"].clone().into_str()?;
 
-    assert_eq!("/home/user/.password-store", path);
+    assert_eq!("/home/user/.password-store/", path);
     assert_eq!(
         "E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F",
         valid_signing_keys
@@ -613,5 +613,120 @@ fn read_config_empty_config_file_with_keys_env() -> Result<()> {
         valid_signing_keys
     );
 
+    Ok(())
+}
+
+#[test]
+fn read_config_env_vars() -> Result<()> {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join("env_var").join(".password-store"))?;
+
+    let (settings, _) = read_config(
+        &Some(dir.path().join("env_var").join(".password-store").to_str().unwrap().to_owned()),
+        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_string()),
+        &Some(dir.path().to_str().unwrap().to_owned()),
+        &None,
+    )?;
+
+    let stores = settings.get_table("stores")?;
+    let work = stores["default"].clone().into_table()?;
+    let path = work["path"].clone().into_str()?;
+    let valid_signing_keys = work["valid_signing_keys"].clone().into_str()?;
+
+    assert_eq!(
+        dir.path()
+            .join("env_var")
+            .join(".password-store/")
+            .to_str()
+            .unwrap()
+            .to_owned(),
+        path
+    );
+    assert_eq!(
+        "E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F",
+        valid_signing_keys
+    );
+
+    Ok(())
+}
+
+#[test]
+fn read_config_home_and_env_vars() -> Result<()> {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    std::fs::create_dir_all(dir.path().join("env_var").join(".password-store"))?;
+
+    let (settings, _) = read_config(
+        &Some(dir.path().join("env_var").join(".password-store").to_str().unwrap().to_owned()),
+        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_string()),
+        &Some(dir.path().to_str().unwrap().to_owned()),
+        &None,
+    )?;
+
+    let stores = settings.get_table("stores")?;
+    let work = stores["default"].clone().into_table()?;
+    let path = work["path"].clone().into_str()?;
+    let valid_signing_keys = work["valid_signing_keys"].clone().into_str()?;
+
+    assert_eq!(
+        dir.path()
+            .join("env_var")
+            .join(".password-store/")
+            .to_str()
+            .unwrap()
+            .to_owned(),
+        path
+    );
+    assert_eq!(
+        "E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F",
+        valid_signing_keys
+    );
+
+    Ok(())
+}
+
+#[test]
+fn read_config_default_path_in_config_file() -> Result<()> {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let mut gpg_file = File::create(
+        dir.path()
+            .join(".password-store")
+            .join(".gpg-id"),
+    )?;
+    writeln!(
+        &gpg_file,
+        "0xDF0C3D316B7312D5\n"
+    )?;
+    gpg_file.flush()?;
+
+    std::fs::create_dir_all(dir.path().join(".config").join("ripasso"))?;
+    let mut file = File::create(
+        dir.path()
+            .join(".config")
+            .join("ripasso")
+            .join("settings.toml"),
+    )?;
+
+    writeln!(
+        &file,
+        "[stores]\n    [stores.work]\n    path = \"{}\"\n", dir.path().join(".password-store").to_str().unwrap()
+    )?;
+    file.flush()?;
+
+    let (settings, _) = read_config(
+        &None,
+        &None,
+        &Some(dir.path().to_str().unwrap().to_owned()),
+        &None
+    )?;
+
+    let stores = settings.get_table("stores")?;
+
+    let work = stores["work"].clone().into_table()?;
+    let path = work["path"].clone().into_str()?;
+    assert_eq!(dir.path().join(".password-store").to_str().unwrap(), path);
+
+    assert_eq!(false, stores.contains_key("default"));
     Ok(())
 }
