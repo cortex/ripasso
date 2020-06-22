@@ -1349,7 +1349,7 @@ fn home_exists(home: &Option<String>, settings: &config::Config) -> bool {
 }
 
 fn env_var_exists(store_dir: &Option<String>, signing_keys: &Option<String>) -> bool {
-    return store_dir.is_some() || signing_keys.is_some()
+    store_dir.is_some() || signing_keys.is_some()
 }
 
 fn settings_file_exists(home: &Option<String>, xdg_config_home: &Option<String>) -> bool {
