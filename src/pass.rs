@@ -1349,21 +1349,7 @@ fn home_exists(home: &Option<String>, settings: &config::Config) -> bool {
 }
 
 fn env_var_exists(store_dir: &Option<String>, signing_keys: &Option<String>) -> bool {
-    if store_dir.is_none() && signing_keys.is_none() {
-        return false;
-    }
-
-    if store_dir.is_some() {
-        let home_dir_str = store_dir.as_ref().unwrap();
-        let store_dir_dir = path::Path::new(home_dir_str);
-        if store_dir_dir.exists() {
-            return true;
-        }
-    } else if signing_keys.is_some() {
-        return true;
-    }
-
-    false
+    return store_dir.is_some() || signing_keys.is_some()
 }
 
 fn settings_file_exists(home: &Option<String>, xdg_config_home: &Option<String>) -> bool {

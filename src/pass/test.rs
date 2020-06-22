@@ -385,7 +385,7 @@ fn env_var_exists_test_without_dir() {
     let dir = tempfile::tempdir().unwrap();
 
     assert_eq!(
-        false,
+        true,
         env_var_exists(
             &Some(
                 dir.path()
