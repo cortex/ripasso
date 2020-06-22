@@ -18,6 +18,7 @@ pub enum Error {
     Utf8Error(std::str::Utf8Error),
     RecipientNotInKeyRing(String),
     ConfigError(config::ConfigError),
+    SerError(toml::ser::Error),
     NoneError,
 }
 
@@ -93,6 +94,12 @@ impl From<std::boxed::Box<dyn std::error::Error>> for Error {
 impl From<config::ConfigError> for Error {
     fn from(err: config::ConfigError) -> Error {
         Error::ConfigError(err)
+    }
+}
+
+impl From<toml::ser::Error> for Error {
+    fn from(err: toml::ser::Error) -> Error {
+        Error::SerError(err)
     }
 }
 

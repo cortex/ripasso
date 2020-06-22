@@ -19,6 +19,7 @@ unic-langid = "0.7.1"
 gettext = "0.4.0"
 lazy_static = "1.4.0"
 config = "0.10.1"
+toml = "0.5.6"
 
 [build-dependencies]
 glob = "0.3.0"

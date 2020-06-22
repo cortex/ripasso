@@ -36,6 +36,7 @@ pub use crate::error::{Error, Result};
 pub use crate::signature::{
     gpg_sign_string, parse_signing_keys, KeyRingStatus, OwnerTrustLevel, Recipient, SignatureStatus,
 };
+use std::collections::HashMap;
 
 /// The global state of all passwords are an instance of this type.
 pub type PasswordStoreType = Arc<Mutex<PasswordStore>>;
@@ -96,6 +97,9 @@ impl PasswordStore {
 
     /// returns true if the store is located in $HOME/.password-store
     pub fn is_default(&self) -> bool {
+        if self.name == "default" {
+            return true;
+        }
         let home = dirs::home_dir();
         if home.is_none() {
             return false;
@@ -119,8 +123,8 @@ impl PasswordStore {
         gpg_id_file.push(".gpg-id");
         if !gpg_id_file.exists() {
             return Err(Error::GenericDyn(format!(
-                "path {:?}/.gpg-id missing",
-                &self.root
+                "path {:?}/.gpg-id missing for store {}",
+                &self.root, &self.name
             )));
         }
 
@@ -1300,17 +1304,42 @@ pub fn password_dir_raw(password_store_dir: &Option<String>) -> path::PathBuf {
     path::PathBuf::from(&pass_home)
 }
 
-fn home_exists(home: &Option<String>) -> bool {
+fn home_exists(home: &Option<String>, settings: &config::Config) -> bool {
     if home.is_none() {
         return false;
     }
     let home = home.as_ref().unwrap();
+    let home_path = path::PathBuf::from(home).join(".password-store");
 
     let home_dir_str = format!("{}/.password-store", home);
     let home_dir = path::Path::new(&home_dir_str);
     if home_dir.exists() {
         if !home_dir.is_dir() {
             return false;
+        }
+
+        let stores_res = settings.get("stores");
+        if let Ok(stores) = stores_res {
+            let stores: HashMap<String, config::Value> = stores;
+
+            for store_name in stores.keys() {
+                let store: HashMap<String, config::Value> = stores
+                    .get(store_name)
+                    .unwrap()
+                    .clone()
+                    .into_table()
+                    .unwrap();
+
+                let password_store_dir_opt = store.get("path");
+                if let Some(p) = password_store_dir_opt {
+                    let p_path = path::PathBuf::from(p.clone().into_str().unwrap());
+                    let c1 = std::fs::canonicalize(home_path.clone());
+                    let c2 = std::fs::canonicalize(p_path);
+                    if c1.is_ok() && c2.is_ok() && c1.unwrap() == c2.unwrap() {
+                        return false;
+                    }
+                }
+            }
         }
 
         return true;
@@ -1320,21 +1349,7 @@ fn home_exists(home: &Option<String>) -> bool {
 }
 
 fn env_var_exists(store_dir: &Option<String>, signing_keys: &Option<String>) -> bool {
-    if store_dir.is_none() && signing_keys.is_none() {
-        return false;
-    }
-
-    if store_dir.is_some() {
-        let home_dir_str = store_dir.as_ref().unwrap();
-        let store_dir_dir = path::Path::new(home_dir_str);
-        if store_dir_dir.exists() {
-            return true;
-        }
-    } else if signing_keys.is_some() {
-        return true;
-    }
-
-    false
+    store_dir.is_some() || signing_keys.is_some()
 }
 
 fn settings_file_exists(home: &Option<String>, xdg_config_home: &Option<String>) -> bool {
@@ -1391,10 +1406,16 @@ fn var_settings(
     let mut default_store = std::collections::HashMap::new();
 
     if let Some(dir) = store_dir {
-        default_store.insert("path".to_string(), dir.clone());
+        if dir.ends_with('/') {
+            default_store.insert("path".to_string(), dir.clone());
+        } else {
+            default_store.insert("path".to_string(), dir.clone() + "/");
+        }
     }
     if let Some(keys) = signing_keys {
         default_store.insert("valid_signing_keys".to_string(), keys.clone());
+    } else {
+        default_store.insert("valid_signing_keys".to_string(), "-1".to_owned());
     }
 
     let mut stores_map = std::collections::HashMap::new();
@@ -1406,22 +1427,25 @@ fn var_settings(
     Ok(new_settings)
 }
 
-fn file_settings(
+fn xdg_config_file_location(
     home: &Option<String>,
     xdg_config_home: &Option<String>,
-) -> Result<config::File<config::FileSourceFile>> {
-    let xdg_config_file = match xdg_config_home.as_ref() {
-        Some(p) => format!("{}/ripasso/settings.toml", p),
+) -> Result<String> {
+    match xdg_config_home.as_ref() {
+        Some(p) => Ok(format!("{}/ripasso/settings.toml", p)),
         None => {
             if home.is_none() {
-                return Err(Error::Generic("no home directory"));
+                Err(Error::Generic("no home directory"))
+            } else {
+                let home = home.as_ref().unwrap();
+
+                Ok(format!("{}/.config/ripasso/settings.toml", home))
             }
-            let home = home.as_ref().unwrap();
-
-            format!("{}/.config/ripasso/settings.toml", home)
         }
-    };
+    }
+}
 
+fn file_settings(xdg_config_file: &str) -> Result<config::File<config::FileSourceFile>> {
     Ok(config::File::with_name(&xdg_config_file))
 }
 
@@ -1431,9 +1455,15 @@ pub fn read_config(
     signing_keys: &Option<String>,
     home: &Option<String>,
     xdg_config_home: &Option<String>,
-) -> Result<config::Config> {
+) -> Result<(config::Config, std::path::PathBuf)> {
     let mut settings = config::Config::default();
-    if home_exists(&home) {
+    let config_file_location = xdg_config_file_location(home, xdg_config_home)?;
+
+    if settings_file_exists(&home, &xdg_config_home) {
+        settings.merge(file_settings(&config_file_location)?)?;
+    }
+
+    if home_exists(&home, &settings) {
         settings.merge(home_settings(&home)?)?;
     }
 
@@ -1441,11 +1471,35 @@ pub fn read_config(
         settings.merge(var_settings(store_dir, signing_keys)?)?;
     }
 
-    if settings_file_exists(&home, &xdg_config_home) {
-        settings.merge(file_settings(&home, &xdg_config_home)?)?;
+    Ok((settings, std::path::PathBuf::from(config_file_location)))
+}
+
+pub fn save_config(
+    stores: Arc<Mutex<Vec<PasswordStore>>>,
+    config_file_location: std::path::PathBuf,
+) -> Result<()> {
+    let mut stores_map = std::collections::HashMap::new();
+    let stores_borrowed = (*stores).lock().unwrap();
+    for store in stores_borrowed.iter() {
+        let mut store_map = std::collections::HashMap::new();
+        store_map.insert("path", store.get_store_path());
+        if !store.get_valid_gpg_signing_keys().is_empty() {
+            store_map.insert(
+                "valid_signing_keys",
+                store.get_valid_gpg_signing_keys().join(","),
+            );
+        }
+        stores_map.insert(store.get_name(), store_map);
     }
 
-    Ok(settings)
+    let mut settings = std::collections::HashMap::new();
+    settings.insert("stores", stores_map);
+
+    let f = std::fs::File::create(config_file_location)?;
+    let mut f = std::io::BufWriter::new(f);
+    f.write_all(toml::ser::to_string_pretty(&settings)?.as_bytes())?;
+
+    Ok(())
 }
 
 #[cfg(test)]
