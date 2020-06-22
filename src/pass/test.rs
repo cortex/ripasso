@@ -747,3 +747,45 @@ fn read_config_default_path_in_config_file() -> Result<()> {
     assert_eq!(false, stores.contains_key("default"));
     Ok(())
 }
+
+#[test]
+fn read_config_default_path_in_env_var() -> Result<()> {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
+    writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
+    gpg_file.flush()?;
+
+    std::fs::create_dir_all(dir.path().join(".config").join("ripasso"))?;
+    let mut file = File::create(
+        dir.path()
+            .join(".config")
+            .join("ripasso")
+            .join("settings.toml"),
+    )?;
+
+    writeln!(
+        &file,
+        "[stores]\n    [stores.default]\n    path = \"{}\"\n    valid_signing_keys = \"7E068070D5EF794B00C8A9D91D108E6C07CBC406\"\n",
+        dir.path().join(".password-store").to_str().unwrap()
+    )?;
+    file.flush()?;
+
+    let (settings, _) = read_config(
+        &Some("/tmp/t2".to_owned()),
+        &None,
+        &Some(dir.path().to_str().unwrap().to_owned()),
+        &None,
+    )?;
+
+    let stores = settings.get_table("stores")?;
+
+    let work = stores["default"].clone().into_table()?;
+    let path = work["path"].clone().into_str()?;
+    let keys = work["valid_signing_keys"].clone().into_str()?;
+    assert_eq!("/tmp/t2/", path);
+    assert_eq!("-1", keys);
+
+    assert_eq!(false, stores.contains_key("work"));
+    Ok(())
+}

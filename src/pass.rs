@@ -97,6 +97,9 @@ impl PasswordStore {
 
     /// returns true if the store is located in $HOME/.password-store
     pub fn is_default(&self) -> bool {
+        if self.name == "default" {
+            return true;
+        }
         let home = dirs::home_dir();
         if home.is_none() {
             return false;
@@ -1425,6 +1428,8 @@ fn var_settings(
     }
     if let Some(keys) = signing_keys {
         default_store.insert("valid_signing_keys".to_string(), keys.clone());
+    } else {
+        default_store.insert("valid_signing_keys".to_string(), "-1".to_owned());
     }
 
     let mut stores_map = std::collections::HashMap::new();

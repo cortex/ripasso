@@ -759,7 +759,16 @@ fn get_stores(config: &config::Config) -> pass::Result<Vec<PasswordStore>> {
                 let password_store_dir = Some(password_store_dir_opt.unwrap().clone().into_str()?);
 
                 let valid_signing_keys = match valid_signing_keys_opt {
-                    Some(k) => Some(k.clone().into_str()?),
+                    Some(k) => match k.clone().into_str() {
+                        Err(_) => None,
+                        Ok(key) => {
+                            if key == "-1" {
+                                None
+                            } else {
+                                Some(key)
+                            }
+                        }
+                    },
                     None => None,
                 };
 
@@ -775,25 +784,37 @@ fn get_stores(config: &config::Config) -> pass::Result<Vec<PasswordStore>> {
     Ok(final_stores)
 }
 
-/// validates a vec of password stores.
-/// Returns true if the new user wizard should be shown
-fn validate_stores(stores: Arc<Mutex<Vec<PasswordStore>>>) -> pass::Result<bool> {
-    let stores = (*stores).lock().unwrap();
-    if stores.is_empty() {
-        return Ok(true);
-    }
+/// Validates the config for password stores.
+/// Returns a list of names that the new store wizard should be run for
+fn validate_stores_config(settings: &config::Config) -> Vec<String> {
+    let mut incomplete_stores: Vec<String> = vec![];
 
-    for store in stores.iter() {
-        let validate_res = store.validate();
-        if validate_res.is_err() {
-            if stores.len() == 1 && store.is_default() {
-                return Ok(true);
+    let stores_res = settings.get("stores");
+    if let Ok(stores) = stores_res {
+        let stores: HashMap<String, config::Value> = stores;
+
+        for store_name in stores.keys() {
+            let store: HashMap<String, config::Value> = stores
+                .get(store_name)
+                .unwrap()
+                .clone()
+                .into_table()
+                .unwrap();
+
+            let password_store_dir_opt = store.get("path");
+
+            if let Some(p) = password_store_dir_opt {
+                let p_path = std::path::PathBuf::from(p.clone().into_str().unwrap());
+                let gpg_id = p_path.clone().join(".gpg-id");
+
+                if !p_path.exists() || !gpg_id.exists() {
+                    incomplete_stores.push(p.clone().into_str().unwrap());
+                }
             }
-            return validate_res;
         }
     }
 
-    Ok(false)
+    incomplete_stores
 }
 
 fn save_edit_config(
@@ -1175,31 +1196,16 @@ fn main() {
     }
     let (config, config_file_location) = config_res.unwrap();
 
+    for path in validate_stores_config(&config) {
+        wizard::show_init_menu(&Some(path));
+    }
+
     let stores = get_stores(&config);
     if stores.is_err() {
         eprintln!("Error {:?}", stores.err().unwrap());
         process::exit(1);
     }
     let stores: Arc<Mutex<Vec<PasswordStore>>> = Arc::new(Mutex::new(stores.unwrap()));
-
-    match validate_stores(stores.clone()) {
-        Ok(b) => {
-            if b {
-                wizard::show_init_menu(&None);
-                match validate_stores(stores.clone()) {
-                    Ok(_b) => {}
-                    Err(err) => {
-                        eprintln!("Error {:?}", err);
-                        process::exit(1);
-                    }
-                }
-            }
-        }
-        Err(err) => {
-            eprintln!("Error {:?}", err);
-            process::exit(1);
-        }
-    }
 
     let store = Arc::new(Mutex::new(
         PasswordStore::new(&"".to_string(), &None, &None).unwrap(),
