@@ -32,6 +32,7 @@ use self::cursive::direction::Orientation;
 use self::cursive::event::{Event, Key};
 
 extern crate clipboard;
+
 use self::clipboard::{ClipboardContext, ClipboardProvider};
 
 use ripasso::pass;
@@ -225,7 +226,7 @@ fn show_file_history(ui: &mut Cursive, store: PasswordStoreType) {
 
             let d = Dialog::around(file_history_view)
                 .title(CATALOG.gettext("File History"))
-                .dismiss_button("Ok");
+                .dismiss_button(CATALOG.gettext("Ok"));
 
             let file_history_event = OnEventView::new(d).on_event(Key::Esc, |s| {
                 s.pop_layer();
@@ -576,7 +577,7 @@ fn view_recipients(ui: &mut Cursive, store: PasswordStoreType) {
 
     let d = Dialog::around(recipients_view)
         .title(CATALOG.gettext("Team Members"))
-        .dismiss_button("Ok");
+        .dismiss_button(CATALOG.gettext("Ok"));
 
     let ll = LinearLayout::new(Orientation::Vertical).child(d).child(
         LinearLayout::new(Orientation::Horizontal)
@@ -758,7 +759,16 @@ fn get_stores(config: &config::Config) -> pass::Result<Vec<PasswordStore>> {
                 let password_store_dir = Some(password_store_dir_opt.unwrap().clone().into_str()?);
 
                 let valid_signing_keys = match valid_signing_keys_opt {
-                    Some(k) => Some(k.clone().into_str()?),
+                    Some(k) => match k.clone().into_str() {
+                        Err(_) => None,
+                        Ok(key) => {
+                            if key == "-1" {
+                                None
+                            } else {
+                                Some(key)
+                            }
+                        }
+                    },
                     None => None,
                 };
 
@@ -774,24 +784,369 @@ fn get_stores(config: &config::Config) -> pass::Result<Vec<PasswordStore>> {
     Ok(final_stores)
 }
 
-/// validates a vec of password stores.
-/// Returns true if the new user wizard should be shown
-fn validate_stores(stores: &[PasswordStore]) -> pass::Result<bool> {
-    if stores.is_empty() {
-        return Ok(true);
-    }
+/// Validates the config for password stores.
+/// Returns a list of names that the new store wizard should be run for
+fn validate_stores_config(settings: &config::Config) -> Vec<String> {
+    let mut incomplete_stores: Vec<String> = vec![];
 
-    for store in stores {
-        let validate_res = store.validate();
-        if validate_res.is_err() {
-            if stores.len() == 1 && store.is_default() {
-                return Ok(true);
+    let stores_res = settings.get("stores");
+    if let Ok(stores) = stores_res {
+        let stores: HashMap<String, config::Value> = stores;
+
+        for store_name in stores.keys() {
+            let store: HashMap<String, config::Value> = stores
+                .get(store_name)
+                .unwrap()
+                .clone()
+                .into_table()
+                .unwrap();
+
+            let password_store_dir_opt = store.get("path");
+
+            if let Some(p) = password_store_dir_opt {
+                let p_path = std::path::PathBuf::from(p.clone().into_str().unwrap());
+                let gpg_id = p_path.clone().join(".gpg-id");
+
+                if !p_path.exists() || !gpg_id.exists() {
+                    incomplete_stores.push(p.clone().into_str().unwrap());
+                }
             }
-            return validate_res;
         }
     }
 
-    Ok(false)
+    incomplete_stores
+}
+
+fn save_edit_config(
+    ui: &mut Cursive,
+    stores: Arc<Mutex<Vec<PasswordStore>>>,
+    name: &str,
+    config_file_location: std::path::PathBuf,
+) {
+    let e_n = &*get_value_from_input(ui, "edit_name_input").unwrap();
+    let e_d = &*get_value_from_input(ui, "edit_directory_input").unwrap();
+    let e_k_str = &*get_value_from_input(ui, "new_keys_input").unwrap();
+
+    let e_k = match e_k_str.len() {
+        0 => None,
+        _ => Some(e_k_str.clone()),
+    };
+
+    let new_store = PasswordStore::new(e_n, &Some(e_d.clone()), &e_k);
+    if let Err(err) = new_store {
+        helpers::errorbox(ui, &err);
+        return;
+    }
+    let new_store = new_store.unwrap();
+
+    let l = ui.find_name::<SelectView<String>>("stores").unwrap();
+
+    let sel = l.selection();
+
+    if sel.is_some() {
+        let mut stores_borrowed = (*stores).lock().unwrap();
+        for (i, store) in stores_borrowed.iter().enumerate() {
+            if store.get_name() == name {
+                std::mem::replace(&mut stores_borrowed[i], new_store);
+                break;
+            }
+        }
+    }
+
+    let save_res = pass::save_config(stores, config_file_location);
+    if let Err(err) = save_res {
+        helpers::errorbox(ui, &err);
+    }
+
+    ui.call_on_name("status_bar", |l: &mut TextView| {
+        l.set_content(CATALOG.gettext("Updated config file"));
+    });
+}
+
+fn save_new_config(
+    ui: &mut Cursive,
+    stores: Arc<Mutex<Vec<PasswordStore>>>,
+    config_file_location: std::path::PathBuf,
+) {
+    let e_n = &*get_value_from_input(ui, "new_name_input").unwrap();
+    let e_d = &*get_value_from_input(ui, "new_directory_input").unwrap();
+    let e_k_str = &*get_value_from_input(ui, "new_keys_input").unwrap();
+
+    let e_k = match e_k_str.len() {
+        0 => None,
+        _ => Some(e_k_str.clone()),
+    };
+
+    let new_store = PasswordStore::new(e_n, &Some(e_d.clone()), &e_k);
+    if let Err(err) = new_store {
+        helpers::errorbox(ui, &err);
+        return;
+    }
+    let new_store = new_store.unwrap();
+
+    {
+        let mut stores_borrowed = (*stores).lock().unwrap();
+        stores_borrowed.push(new_store);
+    }
+
+    let save_res = pass::save_config(stores, config_file_location);
+    if let Err(err) = save_res {
+        helpers::errorbox(ui, &err);
+        return;
+    }
+
+    let mut l = ui.find_name::<SelectView<String>>("stores").unwrap();
+
+    l.add_item(e_n, e_n.clone());
+
+    ui.call_on_name("status_bar", |l: &mut TextView| {
+        l.set_content(CATALOG.gettext("Updated config file"));
+    });
+}
+
+fn edit_store_in_config(
+    ui: &mut Cursive,
+    stores: Arc<Mutex<Vec<PasswordStore>>>,
+    config_file_location: std::path::PathBuf,
+) {
+    let l = ui.find_name::<SelectView<String>>("stores").unwrap();
+
+    let sel = l.selection();
+
+    if sel.is_none() {
+        return;
+    }
+    let sel = sel.unwrap();
+    let name = sel.as_ref();
+
+    let mut store_opt: Option<&PasswordStore> = None;
+    let stores_borrowed = (*stores).lock().unwrap();
+    for store in stores_borrowed.iter() {
+        if store.get_name() == name {
+            store_opt = Some(store);
+        }
+    }
+
+    if store_opt.is_none() {
+        return;
+    }
+    let store = store_opt.unwrap();
+
+    let mut fields = LinearLayout::vertical();
+    let mut name_fields = LinearLayout::horizontal();
+    let mut directory_fields = LinearLayout::horizontal();
+    let mut keys_fields = LinearLayout::horizontal();
+    name_fields.add_child(
+        TextView::new(CATALOG.gettext("Name: "))
+            .with_name("name_name")
+            .fixed_size((10, 1)),
+    );
+    name_fields.add_child(
+        EditView::new()
+            .content(store.get_name())
+            .with_name("edit_name_input")
+            .fixed_size((50, 1)),
+    );
+    directory_fields.add_child(
+        TextView::new(CATALOG.gettext("Directory: "))
+            .with_name("directory_name")
+            .fixed_size((10, 1)),
+    );
+    directory_fields.add_child(
+        EditView::new()
+            .content(store.get_store_path())
+            .with_name("edit_directory_input")
+            .fixed_size((50, 1)),
+    );
+    keys_fields.add_child(
+        TextView::new(CATALOG.gettext("Valid Signing Keys: "))
+            .with_name("keys_name")
+            .fixed_size((10, 1)),
+    );
+    keys_fields.add_child(
+        EditView::new()
+            .content(store.get_valid_gpg_signing_keys().join(","))
+            .with_name("edit_keys_input")
+            .min_size((50, 1)),
+    );
+    fields.add_child(name_fields);
+    fields.add_child(directory_fields);
+    fields.add_child(keys_fields);
+
+    let stores2 = stores.clone();
+    let stores3 = stores.clone();
+    let name2 = store.get_name().clone();
+    let name3 = store.get_name().clone();
+    let config_file_location2 = config_file_location.clone();
+
+    let d = Dialog::around(fields)
+        .title(CATALOG.gettext("Edit store config"))
+        .button(CATALOG.gettext("Save"), move |ui: &mut Cursive| {
+            save_edit_config(ui, stores2.clone(), &name2, config_file_location.clone());
+            ui.pop_layer();
+        })
+        .dismiss_button(CATALOG.gettext("Cancel"));
+
+    let ev = OnEventView::new(d)
+        .on_event(Key::Esc, |s| {
+            s.pop_layer();
+        })
+        .on_event(Key::Enter, move |ui: &mut Cursive| {
+            save_edit_config(ui, stores3.clone(), &name3, config_file_location2.clone());
+            ui.pop_layer();
+        });
+
+    ui.add_layer(ev);
+}
+
+fn delete_store_from_config(
+    ui: &mut Cursive,
+    stores: Arc<Mutex<Vec<PasswordStore>>>,
+    config_file_location: std::path::PathBuf,
+) {
+    let mut l = ui.find_name::<SelectView<String>>("stores").unwrap();
+
+    let sel = l.selection();
+
+    if sel.is_none() {
+        return;
+    }
+    let sel = sel.unwrap();
+    let name = sel.as_ref();
+
+    {
+        let mut stores_borrowed = (*stores).lock().unwrap();
+        stores_borrowed.retain(|store| store.get_name() != name);
+    }
+
+    let save_res = pass::save_config(stores, config_file_location);
+    if let Err(err) = save_res {
+        helpers::errorbox(ui, &err);
+        return;
+    }
+
+    let delete_id = l.selected_id().unwrap();
+    l.remove_item(delete_id);
+
+    ui.call_on_name("status_bar", |l: &mut TextView| {
+        l.set_content(CATALOG.gettext("Updated config file"));
+    });
+}
+
+fn add_store_to_config(
+    ui: &mut Cursive,
+    stores: Arc<Mutex<Vec<PasswordStore>>>,
+    config_file_location: std::path::PathBuf,
+) {
+    let mut fields = LinearLayout::vertical();
+    let mut name_fields = LinearLayout::horizontal();
+    let mut directory_fields = LinearLayout::horizontal();
+    let mut keys_fields = LinearLayout::horizontal();
+    name_fields.add_child(
+        TextView::new(CATALOG.gettext("Name: "))
+            .with_name("new_name_name")
+            .fixed_size((10, 1)),
+    );
+    name_fields.add_child(
+        EditView::new()
+            .with_name("new_name_input")
+            .fixed_size((50, 1)),
+    );
+    directory_fields.add_child(
+        TextView::new(CATALOG.gettext("Directory: "))
+            .with_name("new_directory_name")
+            .fixed_size((10, 1)),
+    );
+    directory_fields.add_child(
+        EditView::new()
+            .with_name("new_directory_input")
+            .fixed_size((50, 1)),
+    );
+    keys_fields.add_child(
+        TextView::new(CATALOG.gettext("Valid Signing Keys: "))
+            .with_name("new_keys_name")
+            .fixed_size((10, 1)),
+    );
+    keys_fields.add_child(
+        EditView::new()
+            .with_name("new_keys_input")
+            .min_size((50, 1)),
+    );
+    fields.add_child(name_fields);
+    fields.add_child(directory_fields);
+    fields.add_child(keys_fields);
+
+    let stores2 = stores.clone();
+
+    let config_file_location2 = config_file_location.clone();
+
+    let d = Dialog::around(fields)
+        .title(CATALOG.gettext("New store config"))
+        .button(CATALOG.gettext("Save"), move |ui: &mut Cursive| {
+            save_new_config(ui, stores.clone(), config_file_location.clone());
+            ui.pop_layer();
+        })
+        .dismiss_button(CATALOG.gettext("Cancel"));
+
+    let ev = OnEventView::new(d)
+        .on_event(Key::Esc, |s| {
+            s.pop_layer();
+        })
+        .on_event(Key::Enter, move |ui: &mut Cursive| {
+            save_new_config(ui, stores2.clone(), config_file_location2.clone());
+            ui.pop_layer();
+        });
+
+    ui.add_layer(ev);
+}
+
+fn show_manage_config_dialog(
+    ui: &mut Cursive,
+    stores: Arc<Mutex<Vec<PasswordStore>>>,
+    config_file_location: std::path::PathBuf,
+) {
+    let mut stores_view = SelectView::<String>::new()
+        .h_align(cursive::align::HAlign::Left)
+        .with_name("stores");
+
+    for store in (*stores).lock().unwrap().iter() {
+        stores_view
+            .get_mut()
+            .add_item(store.get_name(), store.get_name().clone());
+    }
+
+    let d = Dialog::around(stores_view)
+        .title(CATALOG.gettext("Edit password stores"))
+        .dismiss_button(CATALOG.gettext("Ok"));
+
+    let ll = LinearLayout::new(Orientation::Vertical).child(d).child(
+        LinearLayout::new(Orientation::Horizontal)
+            .child(TextView::new(CATALOG.gettext("ctrl-e: Edit | ")))
+            .child(TextView::new(CATALOG.gettext("ins: Add | ")))
+            .child(TextView::new(CATALOG.gettext("del: Remove"))),
+    );
+
+    let stores2 = stores.clone();
+    let stores3 = stores.clone();
+
+    let config_file_location2 = config_file_location.clone();
+    let config_file_location3 = config_file_location.clone();
+
+    let recipients_event = OnEventView::new(ll)
+        .on_event(Event::CtrlChar('e'), move |ui: &mut Cursive| {
+            edit_store_in_config(ui, stores.clone(), config_file_location.clone())
+        })
+        .on_event(Key::Del, move |ui: &mut Cursive| {
+            delete_store_from_config(ui, stores2.clone(), config_file_location2.clone())
+        })
+        .on_event(Key::Ins, move |ui: &mut Cursive| {
+            add_store_to_config(ui, stores3.clone(), config_file_location3.clone())
+        })
+        .on_event(Key::Esc, |s| {
+            s.pop_layer();
+        });
+
+    ui.add_layer(recipients_event);
 }
 
 fn main() {
@@ -822,7 +1177,7 @@ fn main() {
         }
     }
 
-    let config = {
+    let config_res = {
         let password_store_dir = std::env::var("PASSWORD_STORE_DIR").ok();
         let password_store_signing_key = std::env::var("PASSWORD_STORE_SIGNING_KEY").ok();
         let home = std::env::var("HOME").ok();
@@ -835,43 +1190,34 @@ fn main() {
             &xdg_config_home,
         )
     };
-    if config.is_err() {
-        eprintln!("Error {:?}", config.err().unwrap());
+    if config_res.is_err() {
+        eprintln!("Error {:?}", config_res.err().unwrap());
         process::exit(1);
     }
-    let config = config.unwrap();
+    let (config, config_file_location) = config_res.unwrap();
+
+    for path in validate_stores_config(&config) {
+        wizard::show_init_menu(&Some(path));
+    }
 
     let stores = get_stores(&config);
     if stores.is_err() {
         eprintln!("Error {:?}", stores.err().unwrap());
         process::exit(1);
     }
-    let stores: Vec<PasswordStore> = stores.unwrap();
-
-    match validate_stores(&stores) {
-        Ok(b) => {
-            if b {
-                wizard::show_init_menu(&None);
-                match validate_stores(&stores) {
-                    Ok(_b) => {}
-                    Err(err) => {
-                        eprintln!("Error {:?}", err);
-                        process::exit(1);
-                    }
-                }
-            }
-        }
-        Err(err) => {
-            eprintln!("Error {:?}", err);
-            process::exit(1);
-        }
-    }
+    let stores: Arc<Mutex<Vec<PasswordStore>>> = Arc::new(Mutex::new(stores.unwrap()));
 
     let store = Arc::new(Mutex::new(
         PasswordStore::new(&"".to_string(), &None, &None).unwrap(),
     ));
     {
-        let ss = &stores[0];
+        let stores = (*stores).lock().unwrap();
+        let mut ss = &stores[0];
+        for (i, store) in stores.iter().enumerate() {
+            if store.get_name() == "default" {
+                ss = &stores[i];
+            }
+        }
         let ss_store_path = ss.get_store_path();
         let ss_signing_keys = ss.get_valid_gpg_signing_keys().clone();
 
@@ -1031,7 +1377,7 @@ fn main() {
     );
 
     let mut tree = MenuTree::new();
-    for s in stores {
+    for s in (*stores).lock().unwrap().iter() {
         let ss = &s;
         let store_name = ss.get_name().clone();
         let store = store.clone();
@@ -1050,6 +1396,10 @@ fn main() {
             search(&store, ui, "");
         });
     }
+    tree.add_delimiter();
+    tree.add_leaf(CATALOG.gettext("Manage"), move |ui: &mut Cursive| {
+        show_manage_config_dialog(ui, stores.clone(), config_file_location.clone());
+    });
     ui.menubar().add_subtree(CATALOG.gettext("Stores"), tree);
 
     ui.add_global_callback(Key::F1, |s| s.select_menubar());
