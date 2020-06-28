@@ -1,5 +1,4 @@
 extern crate chrono;
-extern crate env_logger;
 extern crate git2;
 extern crate glob;
 extern crate gpgme;
