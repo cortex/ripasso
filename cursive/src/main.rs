@@ -16,7 +16,6 @@
 */
 
 extern crate cursive;
-extern crate env_logger;
 extern crate ripasso;
 
 use self::cursive::traits::*;
@@ -1191,8 +1190,6 @@ fn show_manage_config_dialog(
 }
 
 fn main() {
-    env_logger::init();
-
     let args: Vec<String> = std::env::args().collect();
 
     match args.len() {

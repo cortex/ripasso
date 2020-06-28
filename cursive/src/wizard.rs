@@ -16,7 +16,6 @@
 */
 
 extern crate cursive;
-extern crate env_logger;
 extern crate ripasso;
 
 use self::cursive::event::Key;
