@@ -24,9 +24,9 @@ use self::cursive::views::{
     SelectView, TextArea, TextView,
 };
 
+use crate::cursive::CursiveExt;
 use cursive::menu::MenuTree;
 use cursive::Cursive;
-use crate::cursive::CursiveExt;
 
 use self::cursive::direction::Orientation;
 use self::cursive::event::{Event, Key};
@@ -764,7 +764,10 @@ fn get_translation_catalog() -> gettext::Catalog {
     gettext::Catalog::empty()
 }
 
-fn get_stores(config: &config::Config, home: &Option<std::path::PathBuf>) -> pass::Result<Vec<PasswordStore>> {
+fn get_stores(
+    config: &config::Config,
+    home: &Option<std::path::PathBuf>,
+) -> pass::Result<Vec<PasswordStore>> {
     let mut final_stores: Vec<PasswordStore> = vec![];
     let stores_res = config.get("stores");
     if let Ok(stores) = stores_res {
@@ -802,7 +805,7 @@ fn get_stores(config: &config::Config, home: &Option<std::path::PathBuf>) -> pas
                     store_name,
                     &password_store_dir,
                     &valid_signing_keys,
-                    home
+                    home,
                 )?);
             }
         }
@@ -895,7 +898,7 @@ fn save_new_config(
     ui: &mut Cursive,
     stores: Arc<Mutex<Vec<PasswordStore>>>,
     config_file_location: &std::path::PathBuf,
-    home: &Option<std::path::PathBuf>
+    home: &Option<std::path::PathBuf>,
 ) {
     let e_n = &*get_value_from_input(ui, "new_name_input").unwrap();
     let e_d = &*get_value_from_input(ui, "new_directory_input").unwrap();
@@ -1166,7 +1169,6 @@ fn show_manage_config_dialog(
     let stores2 = stores.clone();
     let stores3 = stores.clone();
 
-    let config_file_location = config_file_location.clone();
     let config_file_location2 = config_file_location.clone();
     let config_file_location3 = config_file_location.clone();
     let home = home.clone();

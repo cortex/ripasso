@@ -190,7 +190,7 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
         "default",
         &Some(String::from(password_dir.to_str().unwrap())),
         &None,
-        &Some(home)
+        &Some(home),
     )?;
     let results = store.all_passwords().unwrap();
 
@@ -352,10 +352,7 @@ fn home_exists_missing_home_env() {
 #[test]
 fn home_exists_home_dir_without_config_dir() {
     let dir = tempfile::tempdir().unwrap();
-    let result = home_exists(
-        &Some(dir.into_path()),
-        &config::Config::default(),
-    );
+    let result = home_exists(&Some(dir.into_path()), &config::Config::default());
 
     assert_eq!(false, result);
 }
@@ -364,10 +361,7 @@ fn home_exists_home_dir_without_config_dir() {
 fn home_exists_home_dir_with_file_instead_of_dir() -> Result<()> {
     let dir = tempfile::tempdir().unwrap();
     File::create(dir.path().join(".password-store"))?;
-    let result = home_exists(
-        &Some(dir.into_path()),
-        &config::Config::default(),
-    );
+    let result = home_exists(&Some(dir.into_path()), &config::Config::default());
 
     assert_eq!(false, result);
 
@@ -378,10 +372,7 @@ fn home_exists_home_dir_with_file_instead_of_dir() -> Result<()> {
 fn home_exists_home_dir_with_config_dir() -> Result<()> {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir(dir.path().join(".password-store"))?;
-    let result = home_exists(
-        &Some(dir.into_path()),
-        &config::Config::default(),
-    );
+    let result = home_exists(&Some(dir.into_path()), &config::Config::default());
 
     assert_eq!(true, result);
 
@@ -582,12 +573,7 @@ fn read_config_empty_config_file() -> Result<()> {
             .join("settings.toml"),
     )?;
 
-    let (settings, _) = read_config(
-        &None,
-        &None,
-        &Some(path::PathBuf::from(dir.path())),
-        &None,
-    )?;
+    let (settings, _) = read_config(&None, &None, &Some(path::PathBuf::from(dir.path())), &None)?;
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
@@ -744,12 +730,7 @@ fn read_config_default_path_in_config_file() -> Result<()> {
     )?;
     file.flush()?;
 
-    let (settings, _) = read_config(
-        &None,
-        &None,
-        &Some(path::PathBuf::from(dir.path())),
-        &None,
-    )?;
+    let (settings, _) = read_config(&None, &None, &Some(path::PathBuf::from(dir.path())), &None)?;
 
     let stores = settings.get_table("stores")?;
 

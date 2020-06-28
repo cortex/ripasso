@@ -182,13 +182,12 @@ fn main() {
         Ok(home_path) => Some(std::path::PathBuf::from(home_path)),
     };
 
-
     let store = Arc::new(Mutex::new(
         pass::PasswordStore::new(
             &"default".to_string(),
             &password_store_dir,
             &password_store_signing_key,
-            &home
+            &home,
         )
         .unwrap(),
     ));

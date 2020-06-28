@@ -136,7 +136,12 @@ impl PasswordStore {
     }
 
     /// resets the store object, so that it points to a different directory.
-    pub fn reset(&mut self, password_store_dir: &str, valid_signing_keys: &[String], home: &Option<path::PathBuf>) -> Result<()> {
+    pub fn reset(
+        &mut self,
+        password_store_dir: &str,
+        valid_signing_keys: &[String],
+        home: &Option<path::PathBuf>,
+    ) -> Result<()> {
         let pass_home = password_dir_raw(&Some(password_store_dir.to_string()), home);
         if !pass_home.exists() {
             return Err(Error::Generic("failed to locate password directory"));
@@ -1280,7 +1285,10 @@ fn to_name(base: &path::PathBuf, path: &path::PathBuf) -> String {
 }
 
 /// Determine password directory
-pub fn password_dir(password_store_dir: &Option<String>, home: &Option<path::PathBuf>) -> Result<path::PathBuf> {
+pub fn password_dir(
+    password_store_dir: &Option<String>,
+    home: &Option<path::PathBuf>,
+) -> Result<path::PathBuf> {
     let pass_home = password_dir_raw(password_store_dir, home);
     if !pass_home.exists() {
         return Err(Error::Generic("failed to locate password directory"));
@@ -1289,7 +1297,10 @@ pub fn password_dir(password_store_dir: &Option<String>, home: &Option<path::Pat
 }
 
 /// Determine password directory
-pub fn password_dir_raw(password_store_dir: &Option<String>, home: &Option<path::PathBuf>) -> path::PathBuf {
+pub fn password_dir_raw(
+    password_store_dir: &Option<String>,
+    home: &Option<path::PathBuf>,
+) -> path::PathBuf {
     // If a directory is provided via env var, use it
     let pass_home = match password_store_dir.as_ref() {
         Some(p) => p.clone(),
@@ -1386,7 +1397,10 @@ fn home_settings(home: &Option<path::PathBuf>) -> Result<config::Config> {
     }
     let home = home.as_ref().unwrap();
 
-    default_store.insert("path".to_string(), home.join(".password-store/").to_string_lossy().to_string());
+    default_store.insert(
+        "path".to_string(),
+        home.join(".password-store/").to_string_lossy().to_string(),
+    );
 
     let mut stores_map = std::collections::HashMap::new();
     stores_map.insert("default".to_string(), default_store);
