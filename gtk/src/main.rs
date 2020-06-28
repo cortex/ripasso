@@ -1,5 +1,5 @@
 /*  Ripasso - a simple password manager
-    Copyright (C) 2018 Joakim Lundborg
+    Copyright (C) 2018-2020 Joakim Lundborg, Alexander Kjäll
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@ extern crate gtk;
 extern crate ripasso;
 
 use gtk::*;
+use crate::gtk::prelude::BuilderExtManual;
+use crate::gtk::prelude::GtkListStoreExtManual;
 
 use self::glib::StaticType;
 
@@ -51,6 +53,11 @@ fn main() {
         )
         .unwrap(),
     ));
+    let reload_res = (*store).lock().unwrap().reload_password_list();
+    if let Err(e) = reload_res {
+        eprintln!("Error: {:?}", e);
+        process::exit(0x01);
+    }
 
     // Load and watch all the passwords in the background
     let password_rx = match pass::watch(store.clone()) {
@@ -93,6 +100,7 @@ fn main() {
 
     password_list.set_headers_visible(false);
     password_list.append_column(&name_column);
+    password_list.set_model(Some(&results(&store, "")));
 
     password_search.connect_search_changed(move |_| {
         receive();
@@ -114,6 +122,7 @@ fn main() {
         };
         glib::Continue(true)
     });
+
     gtk::main();
 }
 
@@ -130,7 +139,7 @@ fn receive() -> glib::Continue {
     GLOBAL.with(|global| {
         if let Some((ref password_search, ref password_list, ref store)) = *global.borrow() {
             let query = password_search.get_text().unwrap();
-            password_list.set_model(&results(&store, &query));
+            password_list.set_model(Some(&results(&store, &query)));
         }
     });
     glib::Continue(false)
