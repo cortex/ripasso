@@ -16,13 +16,13 @@
 */
 
 extern crate cursive;
-extern crate env_logger;
 extern crate ripasso;
 
 use self::cursive::event::Key;
 use self::cursive::traits::*;
 use self::cursive::views::{Dialog, EditView, LinearLayout, OnEventView, SelectView, TextView};
 
+use crate::cursive::CursiveExt;
 use cursive::Cursive;
 
 use self::cursive::direction::Orientation;
@@ -30,13 +30,17 @@ use self::cursive::direction::Orientation;
 use crate::helpers;
 use ripasso::pass;
 
-fn create_git_repo(ui: &mut Cursive, password_store_dir: &Option<String>) {
-    let init_res = pass::init_git_repo(&pass::password_dir(password_store_dir).unwrap());
+fn create_git_repo(
+    ui: &mut Cursive,
+    password_store_dir: &Option<String>,
+    home: &Option<std::path::PathBuf>,
+) {
+    let init_res = pass::init_git_repo(&pass::password_dir(password_store_dir, home).unwrap());
     if init_res.is_err() {
         helpers::errorbox(ui, &init_res.err().unwrap());
     } else {
         let message = super::CATALOG.gettext("Initialized password repo with Ripasso");
-        match pass::PasswordStore::new(&"default".to_string(), password_store_dir, &None) {
+        match pass::PasswordStore::new(&"default".to_string(), password_store_dir, &None, home) {
             Err(err) => helpers::errorbox(ui, &err),
             Ok(store) => match store.add_and_commit(&[".gpg-id".to_string()], &message) {
                 Err(err) => helpers::errorbox(ui, &err),
@@ -46,10 +50,15 @@ fn create_git_repo(ui: &mut Cursive, password_store_dir: &Option<String>) {
     }
 }
 
-fn do_create(ui: &mut Cursive, password_store_dir: &Option<String>) {
+fn do_create(
+    ui: &mut Cursive,
+    password_store_dir: &Option<String>,
+    home: &Option<std::path::PathBuf>,
+) {
     let l = ui.find_name::<EditView>("initial_key_id").unwrap();
     let key_id = (*l.get_content()).clone();
-    let mut pass_home = pass::password_dir_raw(password_store_dir);
+    let mut pass_home = pass::password_dir_raw(password_store_dir, home);
+    let home = home.clone();
     match std::fs::create_dir_all(&pass_home) {
         Err(err) => {
             helpers::errorbox(ui, &pass::Error::IO(err));
@@ -66,7 +75,7 @@ fn do_create(ui: &mut Cursive, password_store_dir: &Option<String>) {
                 super::CATALOG.gettext("Also create a git repository for the encrypted files?"),
             ))
             .button(super::CATALOG.gettext("Create"), move |ui: &mut Cursive| {
-                create_git_repo(ui, &password_store_dir2);
+                create_git_repo(ui, &password_store_dir2, &home);
             })
             .button(super::CATALOG.gettext("No"), |s| {
                 s.quit();
@@ -78,25 +87,31 @@ fn do_create(ui: &mut Cursive, password_store_dir: &Option<String>) {
     }
 }
 
-fn create_store(ui: &mut Cursive, password_store_dir: &Option<String>) {
+fn create_store(
+    ui: &mut Cursive,
+    password_store_dir: &Option<String>,
+    home: &Option<std::path::PathBuf>,
+) {
     let password_store_dir2 = password_store_dir.clone();
+    let home = home.clone();
+    let home2 = home.clone();
     let d2 = Dialog::around(LinearLayout::new(Orientation::Vertical)
         .child(TextView::new(super::CATALOG.gettext("Ripasso uses GPG in order to encrypt the stored passwords.\nPlease enter your GPG key ID")))
         .child(EditView::new().with_name("initial_key_id"))
     )
         .button(super::CATALOG.gettext("Create"), move |ui: &mut Cursive| {
-            do_create(ui, &password_store_dir2);
+            do_create(ui, &password_store_dir2, &home);
         });
 
     let password_store_dir3 = password_store_dir.clone();
     let recipients_event = OnEventView::new(d2).on_event(Key::Enter, move |ui: &mut Cursive| {
-        do_create(ui, &password_store_dir3);
+        do_create(ui, &password_store_dir3, &home2);
     });
 
     ui.add_layer(recipients_event);
 }
 
-pub fn show_init_menu(password_store_dir: &Option<String>) {
+pub fn show_init_menu(password_store_dir: &Option<String>, home: &Option<std::path::PathBuf>) {
     let mut ui = Cursive::default();
 
     ui.load_toml(include_str!("../res/style.toml")).unwrap();
@@ -126,9 +141,10 @@ pub fn show_init_menu(password_store_dir: &Option<String>) {
     );
 
     let password_store_dir2 = password_store_dir.clone();
+    let home = home.clone();
     let d = Dialog::around(TextView::new(super::CATALOG.gettext("Welcome to Ripasso, it seems like you don't have a password store directory yet would you like to create it?\nIt's created in $HOME/.password-store or where the PASSWORD_STORE_DIR environmental variable points.")))
         .button(super::CATALOG.gettext("Create"), move |ui: &mut Cursive| {
-            create_store(ui, &password_store_dir2);
+            create_store(ui, &password_store_dir2, &home);
         })
         .button(super::CATALOG.gettext("Cancel"), |s| {
             s.quit();
