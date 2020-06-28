@@ -513,6 +513,52 @@ impl PasswordStore {
 
         Ok(oid)
     }
+
+    ///Renames a password file to a new name
+    ///returns the index in the password vec of the renamed PasswordEntry
+    pub fn rename_file(&mut self, old_name: &str, new_name: &str) -> Result<usize> {
+        let mut old_path = self.root.clone();
+        old_path.push(std::path::PathBuf::from(old_name));
+        old_path.set_extension("gpg");
+        let mut new_path = self.root.clone();
+        new_path.push(std::path::PathBuf::from(new_name));
+        new_path.set_extension("gpg");
+
+        if !old_path.exists() {
+            return Err(Error::Generic("source file is missing"));
+        }
+
+        if new_path.exists() {
+            return Err(Error::Generic("can't target file already exists"));
+        }
+
+        let mut new_path_dir = new_path.clone();
+        new_path_dir.pop();
+        fs::create_dir_all(&new_path_dir)?;
+
+        fs::rename(&old_path, &new_path)?;
+
+        if self.repo().is_ok() {
+            let old_file_name = format!("{}.gpg", old_name);
+            let new_file_name = format!("{}.gpg", new_name);
+            move_and_commit(self, &old_file_name, &new_file_name, "moved file")?;
+        }
+
+        let passwords = &mut self.passwords;
+        let mut index = usize::MAX;
+        for (i, entry) in passwords.iter().enumerate() {
+            if entry.name == old_name {
+                index = i;
+            }
+        }
+        if index != usize::MAX {
+            let old_entry = passwords.swap_remove(index);
+            let new_entry = PasswordEntry::with_new_name(old_entry, &self.root, &new_path);
+            passwords.push(new_entry);
+        }
+
+        Ok(passwords.len() - 1)
+    }
 }
 
 fn push_password_if_match(
@@ -548,7 +594,7 @@ fn push_password_if_match(
     true
 }
 
-/// Find the name of the commiter, or an error message
+/// Find the name of the committer, or an error message
 fn name_from_commit(commit: &git2::Commit) -> Result<String> {
     match commit.committer().name() {
         Some(s) => Ok(s.to_string()),
@@ -629,6 +675,23 @@ impl PasswordEntry {
             },
             filename: path.to_string_lossy().into_owned(),
             is_in_git,
+        }
+    }
+
+    /// Consumes an PasswordEntry, and returns a new one with a new name
+    pub fn with_new_name(
+        old: PasswordEntry,
+        base: &path::PathBuf,
+        path: &path::PathBuf,
+    ) -> PasswordEntry {
+        PasswordEntry {
+            name: to_name(base, path),
+            path: path.to_path_buf(),
+            updated: old.updated,
+            committed_by: old.committed_by,
+            signature_status: old.signature_status,
+            filename: path.to_string_lossy().into_owned(),
+            is_in_git: old.is_in_git,
         }
     }
 
@@ -927,6 +990,39 @@ fn remove_and_commit(store: &PasswordStore, paths: &[String], message: &str) -> 
     for path in paths {
         index.remove_path(path::Path::new(path))?;
     }
+    let oid = index.write_tree()?;
+    let signature = repo.signature()?;
+    let parent_commit_res = find_last_commit(&repo);
+    let mut parents = vec![];
+    let parent_commit;
+    if parent_commit_res.is_ok() {
+        parent_commit = parent_commit_res?;
+        parents.push(&parent_commit);
+    }
+    let tree = repo.find_tree(oid)?;
+
+    let oid = commit(&repo, &signature, &message.to_string(), &tree, &parents)?;
+    let obj = repo.find_object(oid, None)?;
+    repo.reset(&obj, git2::ResetType::Hard, None)?;
+
+    Ok(oid)
+}
+
+/// Remove a file from the store, and commit the deletion to the supplied git repository.
+fn move_and_commit(
+    store: &PasswordStore,
+    old_name: &str,
+    new_name: &str,
+    message: &str,
+) -> Result<git2::Oid> {
+    if store.repo().is_err() {
+        return Err(Error::Generic("must have a repository"));
+    }
+    let repo = store.repo().unwrap();
+
+    let mut index = repo.index()?;
+    index.remove_path(path::Path::new(old_name))?;
+    index.add_path(path::Path::new(new_name))?;
     let oid = index.write_tree()?;
     let signature = repo.signature()?;
     let parent_commit_res = find_last_commit(&repo);
