@@ -28,7 +28,6 @@ use notify::Watcher;
 use std::io::prelude::*;
 use std::sync::{Arc, Mutex};
 extern crate config;
-extern crate dirs;
 
 use git2::{Oid, Repository};
 
@@ -60,8 +59,9 @@ impl PasswordStore {
         store_name: &str,
         password_store_dir: &Option<String>,
         password_store_signing_key: &Option<String>,
+        home: &Option<path::PathBuf>,
     ) -> Result<PasswordStore> {
-        let pass_home = password_dir_raw(password_store_dir);
+        let pass_home = password_dir_raw(password_store_dir, home);
         if !pass_home.exists() {
             return Err(Error::Generic("failed to locate password directory"));
         }
@@ -96,11 +96,11 @@ impl PasswordStore {
     }
 
     /// returns true if the store is located in $HOME/.password-store
-    pub fn is_default(&self) -> bool {
+    pub fn is_default(&self, home: Option<path::PathBuf>) -> bool {
         if self.name == "default" {
             return true;
         }
-        let home = dirs::home_dir();
+
         if home.is_none() {
             return false;
         }
@@ -136,8 +136,8 @@ impl PasswordStore {
     }
 
     /// resets the store object, so that it points to a different directory.
-    pub fn reset(&mut self, password_store_dir: &str, valid_signing_keys: &[String]) -> Result<()> {
-        let pass_home = password_dir_raw(&Some(password_store_dir.to_string()));
+    pub fn reset(&mut self, password_store_dir: &str, valid_signing_keys: &[String], home: &Option<path::PathBuf>) -> Result<()> {
+        let pass_home = password_dir_raw(&Some(password_store_dir.to_string()), home);
         if !pass_home.exists() {
             return Err(Error::Generic("failed to locate password directory"));
         }
@@ -1282,8 +1282,8 @@ fn to_name(base: &path::PathBuf, path: &path::PathBuf) -> String {
 }
 
 /// Determine password directory
-pub fn password_dir(password_store_dir: &Option<String>) -> Result<path::PathBuf> {
-    let pass_home = password_dir_raw(password_store_dir);
+pub fn password_dir(password_store_dir: &Option<String>, home: &Option<path::PathBuf>) -> Result<path::PathBuf> {
+    let pass_home = password_dir_raw(password_store_dir, home);
     if !pass_home.exists() {
         return Err(Error::Generic("failed to locate password directory"));
     }
@@ -1291,11 +1291,12 @@ pub fn password_dir(password_store_dir: &Option<String>) -> Result<path::PathBuf
 }
 
 /// Determine password directory
-pub fn password_dir_raw(password_store_dir: &Option<String>) -> path::PathBuf {
+pub fn password_dir_raw(password_store_dir: &Option<String>, home: &Option<path::PathBuf>) -> path::PathBuf {
     // If a directory is provided via env var, use it
     let pass_home = match password_store_dir.as_ref() {
         Some(p) => p.clone(),
-        None => dirs::home_dir()
+        None => home
+            .as_ref()
             .unwrap()
             .join(".password-store")
             .to_string_lossy()
@@ -1304,15 +1305,14 @@ pub fn password_dir_raw(password_store_dir: &Option<String>) -> path::PathBuf {
     path::PathBuf::from(&pass_home)
 }
 
-fn home_exists(home: &Option<String>, settings: &config::Config) -> bool {
+fn home_exists(home: &Option<path::PathBuf>, settings: &config::Config) -> bool {
     if home.is_none() {
         return false;
     }
     let home = home.as_ref().unwrap();
-    let home_path = path::PathBuf::from(home).join(".password-store");
+    let home_path = home.join(".password-store");
 
-    let home_dir_str = format!("{}/.password-store", home);
-    let home_dir = path::Path::new(&home_dir_str);
+    let home_dir = home.join(".password-store");
     if home_dir.exists() {
         if !home_dir.is_dir() {
             return false;
@@ -1352,15 +1352,15 @@ fn env_var_exists(store_dir: &Option<String>, signing_keys: &Option<String>) -> 
     store_dir.is_some() || signing_keys.is_some()
 }
 
-fn settings_file_exists(home: &Option<String>, xdg_config_home: &Option<String>) -> bool {
+fn settings_file_exists(home: &Option<path::PathBuf>, xdg_config_home: &Option<String>) -> bool {
     if home.is_none() {
         return false;
     }
     let home = home.as_ref().unwrap();
 
     let xdg_config_file = match xdg_config_home.as_ref() {
-        Some(p) => format!("{}/ripasso/settings.toml", p),
-        None => format!("{}/.config/ripasso/settings.toml", home),
+        Some(p) => path::PathBuf::from(p).join("ripasso/settings.toml"),
+        None => home.join(".config/ripasso/settings.toml"),
     };
 
     let xdg_config_file_dir = path::Path::new(&xdg_config_file);
@@ -1380,7 +1380,7 @@ fn settings_file_exists(home: &Option<String>, xdg_config_home: &Option<String>)
     false
 }
 
-fn home_settings(home: &Option<String>) -> Result<config::Config> {
+fn home_settings(home: &Option<path::PathBuf>) -> Result<config::Config> {
     let mut default_store = std::collections::HashMap::new();
 
     if home.is_none() {
@@ -1388,7 +1388,7 @@ fn home_settings(home: &Option<String>) -> Result<config::Config> {
     }
     let home = home.as_ref().unwrap();
 
-    default_store.insert("path".to_string(), format!("{}/.password-store/", home));
+    default_store.insert("path".to_string(), home.join(".password-store/").to_string_lossy().to_string());
 
     let mut stores_map = std::collections::HashMap::new();
     stores_map.insert("default".to_string(), default_store);
@@ -1428,32 +1428,32 @@ fn var_settings(
 }
 
 fn xdg_config_file_location(
-    home: &Option<String>,
+    home: &Option<path::PathBuf>,
     xdg_config_home: &Option<String>,
-) -> Result<String> {
+) -> Result<path::PathBuf> {
     match xdg_config_home.as_ref() {
-        Some(p) => Ok(format!("{}/ripasso/settings.toml", p)),
+        Some(p) => Ok(path::PathBuf::from(p).join("ripasso/settings.toml")),
         None => {
             if home.is_none() {
                 Err(Error::Generic("no home directory"))
             } else {
                 let home = home.as_ref().unwrap();
 
-                Ok(format!("{}/.config/ripasso/settings.toml", home))
+                Ok(home.join(".config/ripasso/settings.toml"))
             }
         }
     }
 }
 
-fn file_settings(xdg_config_file: &str) -> Result<config::File<config::FileSourceFile>> {
-    Ok(config::File::with_name(&xdg_config_file))
+fn file_settings(xdg_config_file: &path::PathBuf) -> Result<config::File<config::FileSourceFile>> {
+    Ok(config::File::from((*xdg_config_file).clone()))
 }
 
 /// reads ripasso's config file, in `$XDG_CONFIG_HOME/ripasso/settings.toml`
 pub fn read_config(
     store_dir: &Option<String>,
     signing_keys: &Option<String>,
-    home: &Option<String>,
+    home: &Option<path::PathBuf>,
     xdg_config_home: &Option<String>,
 ) -> Result<(config::Config, std::path::PathBuf)> {
     let mut settings = config::Config::default();
@@ -1476,7 +1476,7 @@ pub fn read_config(
 
 pub fn save_config(
     stores: Arc<Mutex<Vec<PasswordStore>>>,
-    config_file_location: std::path::PathBuf,
+    config_file_location: &std::path::PathBuf,
 ) -> Result<()> {
     let mut stores_map = std::collections::HashMap::new();
     let stores_borrowed = (*stores).lock().unwrap();
