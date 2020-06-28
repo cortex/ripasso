@@ -308,6 +308,101 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) {
     ui.add_layer(ev);
 }
 
+fn do_rename_file(ui: &mut Cursive, store: PasswordStoreType) {
+    let old_name = ui
+        .find_name::<TextView>("old_name_input")
+        .unwrap()
+        .get_content();
+
+    let new_name = ui
+        .find_name::<EditView>("new_name_input")
+        .unwrap()
+        .get_content();
+
+    let res = (*store)
+        .lock()
+        .unwrap()
+        .rename_file(old_name.source(), &*new_name);
+    match res {
+        Err(err) => {
+            helpers::errorbox(ui, &err);
+        }
+        Ok(index) => {
+            let mut l = ui
+                .find_name::<SelectView<pass::PasswordEntry>>("results")
+                .unwrap();
+
+            let delete_id = l.selected_id().unwrap();
+            l.remove_item(delete_id);
+
+            let col = ui.screen_size().x;
+            let entry = &(*store).lock().unwrap().passwords[index];
+            l.add_item(create_label(&entry, col), entry.clone());
+
+            ui.pop_layer();
+        }
+    }
+}
+
+fn rename_file_dialog(ui: &mut Cursive, store: PasswordStoreType) {
+    let sel = ui
+        .find_name::<SelectView<pass::PasswordEntry>>("results")
+        .unwrap()
+        .selection();
+
+    if sel.is_none() {
+        return;
+    }
+    let sel = sel.unwrap();
+    let old_name = sel.name.clone();
+
+    let mut fields = LinearLayout::vertical();
+    let mut old_name_fields = LinearLayout::horizontal();
+    let mut new_name_fields = LinearLayout::horizontal();
+
+    old_name_fields.add_child(
+        TextView::new(CATALOG.gettext("Old file name: "))
+            .with_name("old_name_name")
+            .fixed_size((10, 1)),
+    );
+    old_name_fields.add_child(
+        TextView::new(old_name)
+            .with_name("old_name_input")
+            .fixed_size((50, 1)),
+    );
+    new_name_fields.add_child(
+        TextView::new(CATALOG.gettext("New file name: "))
+            .with_name("new_name_name")
+            .fixed_size((10, 1)),
+    );
+    new_name_fields.add_child(
+        EditView::new()
+            .with_name("new_name_input")
+            .fixed_size((50, 1)),
+    );
+
+    fields.add_child(old_name_fields);
+    fields.add_child(new_name_fields);
+    let store2 = store.clone();
+
+    let d = Dialog::around(fields)
+        .title(CATALOG.gettext("Rename File"))
+        .button(CATALOG.gettext("Rename"), move |ui: &mut Cursive| {
+            do_rename_file(ui, store.clone())
+        })
+        .dismiss_button(CATALOG.gettext("Cancel"));
+
+    let ev = OnEventView::new(d)
+        .on_event(Key::Esc, |s| {
+            s.pop_layer();
+        })
+        .on_event(Key::Enter, move |ui: &mut Cursive| {
+            do_rename_file(ui, store2.clone())
+        });
+
+    ui.add_layer(ev);
+}
+
 fn get_value_from_input(s: &mut Cursive, input_name: &str) -> Option<std::rc::Rc<String>> {
     let mut password = None;
     s.call_on_name(input_name, |e: &mut EditView| {
@@ -1330,6 +1425,10 @@ fn main() {
         let store = store.clone();
         move |ui: &mut Cursive| open(ui, store.clone())
     });
+    ui.add_global_callback(Event::CtrlChar('r'), {
+        let store = store.clone();
+        move |ui: &mut Cursive| rename_file_dialog(ui, store.clone())
+    });
     ui.add_global_callback(Event::CtrlChar('f'), {
         let store = store.clone();
         move |ui: &mut Cursive| git_pull(ui, store.clone())
@@ -1404,6 +1503,10 @@ fn main() {
             .leaf(CATALOG.gettext("Delete (del)"), {
                 let store = store.clone();
                 move |ui: &mut Cursive| delete(ui, store.clone())
+            })
+            .leaf(CATALOG.gettext("Rename file (strl-r)"), {
+                let store = store.clone();
+                move |ui: &mut Cursive| rename_file_dialog(ui, store.clone())
             })
             .leaf(CATALOG.gettext("Team Members (ctrl-v)"), {
                 let store = store.clone();
