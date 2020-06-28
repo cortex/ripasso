@@ -1483,7 +1483,7 @@ pub fn read_config(
         settings.merge(var_settings(store_dir, signing_keys)?)?;
     }
 
-    Ok((settings, std::path::PathBuf::from(config_file_location)))
+    Ok((settings, config_file_location))
 }
 
 pub fn save_config(
