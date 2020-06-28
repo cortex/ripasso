@@ -27,6 +27,7 @@ use self::cursive::views::{
 
 use cursive::menu::MenuTree;
 use cursive::Cursive;
+use crate::cursive::CursiveExt;
 
 use self::cursive::direction::Orientation;
 use self::cursive::event::{Event, Key};

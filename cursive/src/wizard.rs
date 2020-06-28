@@ -24,6 +24,7 @@ use self::cursive::traits::*;
 use self::cursive::views::{Dialog, EditView, LinearLayout, OnEventView, SelectView, TextView};
 
 use cursive::Cursive;
+use crate::cursive::CursiveExt;
 
 use self::cursive::direction::Orientation;
 

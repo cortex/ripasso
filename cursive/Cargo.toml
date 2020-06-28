@@ -10,7 +10,7 @@ edition = '2018'
 build = "build.rs"
 
 [dependencies]
-cursive = { version = "0.14", features = ["toml"]}
+cursive = { version = "0.15", features = ["toml"]}
 clipboard = "0.5"
 ripasso = { path = "../", version = "0.5.0-alpha" }
 env_logger = "0.7.1"
