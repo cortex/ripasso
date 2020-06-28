@@ -338,6 +338,7 @@ fn do_rename_file(ui: &mut Cursive, store: PasswordStoreType) {
             let col = ui.screen_size().x;
             let entry = &(*store).lock().unwrap().passwords[index];
             l.add_item(create_label(&entry, col), entry.clone());
+            l.sort_by_label();
 
             ui.pop_layer();
         }
@@ -444,6 +445,7 @@ fn create_save(s: &mut Cursive, store: PasswordStoreType) {
             let col = s.screen_size().x;
             s.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
                 l.add_item(create_label(&entry, col), entry);
+                l.sort_by_label();
             });
 
             s.pop_layer();
@@ -773,6 +775,7 @@ fn search(store: &PasswordStoreType, ui: &mut Cursive, query: &str) {
     for p in &r {
         l.add_item(create_label(&p, col), p.clone());
     }
+    l.sort_by_label();
 }
 
 fn help() {
@@ -1486,7 +1489,7 @@ fn main() {
                 let store = store.clone();
                 move |ui: &mut Cursive| delete(ui, store.clone())
             })
-            .leaf(CATALOG.gettext("Rename file (strl-r)"), {
+            .leaf(CATALOG.gettext("Rename file (ctrl-r)"), {
                 let store = store.clone();
                 move |ui: &mut Cursive| rename_file_dialog(ui, store.clone())
             })
