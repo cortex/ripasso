@@ -1214,8 +1214,6 @@ pub fn watch(store: PasswordStoreType) -> Result<Receiver<PasswordEvent>> {
     let (event_tx, event_rx): (Sender<PasswordEvent>, Receiver<PasswordEvent>) = channel();
 
     thread::spawn(move || {
-        info!("Starting thread");
-
         // Automatically select the best implementation for your platform.
         let mut watcher: notify::RecommendedWatcher =
             Watcher::new(watcher_tx, Duration::from_secs(1)).unwrap();
