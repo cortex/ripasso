@@ -19,16 +19,25 @@ extern crate glib;
 extern crate gtk;
 extern crate ripasso;
 
-use gtk::*;
 use crate::gtk::prelude::BuilderExtManual;
 use crate::gtk::prelude::GtkListStoreExtManual;
+use gtk::*;
 
 use self::glib::StaticType;
 
+use clipboard::{ClipboardContext, ClipboardProvider};
 use ripasso::pass;
 use std::cell::RefCell;
 use std::process;
 use std::sync::{Arc, Mutex};
+use std::{thread, time};
+
+#[macro_use]
+extern crate lazy_static;
+
+lazy_static! {
+    static ref SHOWN_PASSWORDS: Arc<Mutex<Vec<pass::PasswordEntry>>> = Arc::new(Mutex::new(vec![]));
+}
 
 fn main() {
     let password_store_dir = match std::env::var("PASSWORD_STORE_DIR") {
@@ -77,7 +86,7 @@ fn main() {
         .unwrap()
         .set_property_gtk_application_prefer_dark_theme(true);
 
-    let glade_src = include_str!("../res/ripasso.ui");
+    let glade_src = include_str!("../res/ripasso.ui.xml");
     let builder = Builder::new_from_string(glade_src);
 
     let window: Window = builder
@@ -87,6 +96,24 @@ fn main() {
     let password_list: TreeView = builder
         .get_object("passwordList")
         .expect("Couldn't get list");
+
+    password_list.connect_row_activated(move |_, path, _column| {
+        let passwords = (*SHOWN_PASSWORDS).lock().unwrap();
+
+        let mut ctx = clipboard::ClipboardContext::new().unwrap();
+        ctx.set_contents(
+            passwords[path.get_indices()[0] as usize]
+                .password()
+                .unwrap(),
+        )
+        .unwrap();
+
+        thread::spawn(|| {
+            thread::sleep(time::Duration::from_secs(40));
+            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+            ctx.set_contents("".to_string()).unwrap();
+        });
+    });
 
     let password_search: gtk::SearchEntry = builder
         .get_object("passwordSearchBox")
@@ -129,8 +156,13 @@ fn main() {
 fn results(store: &pass::PasswordStoreType, query: &str) -> ListStore {
     let model = ListStore::new(&[String::static_type()]);
     let filtered = pass::search(store, query).unwrap();
+    let mut passwords = (*SHOWN_PASSWORDS).lock().unwrap();
     for (i, p) in filtered.iter().enumerate() {
         model.insert_with_values(Some(i as u32), &[0], &[&p.name]);
+    }
+    passwords.clear();
+    for p in filtered {
+        passwords.push(p);
     }
     model
 }

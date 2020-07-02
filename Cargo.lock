@@ -1629,8 +1629,10 @@ dependencies = [
 name = "ripasso-gtk"
 version = "0.5.0-alpha"
 dependencies = [
+ "clipboard 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "glib 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "gtk 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ripasso 0.5.0-alpha",
 ]
 
