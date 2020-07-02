@@ -19,8 +19,8 @@ use cursive::event::Key;
 use cursive::traits::*;
 use cursive::views::{Dialog, EditView, LinearLayout, OnEventView, SelectView, TextView};
 
-use cursive::CursiveExt;
 use cursive::Cursive;
+use cursive::CursiveExt;
 
 use cursive::direction::Orientation;
 

@@ -21,9 +21,9 @@ use cursive::views::{
     SelectView, TextArea, TextView,
 };
 
-use cursive::CursiveExt;
 use cursive::menu::MenuTree;
 use cursive::Cursive;
+use cursive::CursiveExt;
 
 use cursive::direction::Orientation;
 use cursive::event::{Event, Key};
