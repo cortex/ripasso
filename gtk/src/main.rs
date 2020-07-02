@@ -15,13 +15,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-extern crate glib;
-extern crate gtk;
-extern crate ripasso;
-
 use gtk::*;
 
-use self::glib::StaticType;
+use glib::StaticType;
 
 use ripasso::pass;
 use std::cell::RefCell;

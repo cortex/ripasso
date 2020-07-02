@@ -15,12 +15,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-extern crate cursive;
-extern crate ripasso;
+use cursive::views::{Dialog, OnEventView, TextView};
 
-use self::cursive::views::{Dialog, OnEventView, TextView};
-
-use self::cursive::event::Key;
+use cursive::event::Key;
 use cursive::Cursive;
 
 use ripasso::pass;

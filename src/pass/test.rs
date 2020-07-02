@@ -1,8 +1,5 @@
 use super::*;
 
-extern crate flate2;
-extern crate tar;
-
 use flate2::read::GzDecoder;
 use std::fs::File;
 use std::path::PathBuf;
