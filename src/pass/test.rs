@@ -540,10 +540,7 @@ fn file_settings_file_in_xdg_config_home() -> Result<()> {
             &Some(dir.into_path()),
             &Some(
                 dir2.path()
-                    .join(".random_config")
-                    .to_str()
-                    .unwrap()
-                    .to_owned(),
+                    .join(".random_config"),
             ),
         )?)
         .unwrap(),

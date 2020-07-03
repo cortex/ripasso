@@ -1318,7 +1318,10 @@ fn main() {
     let config_res = {
         let password_store_dir = std::env::var("PASSWORD_STORE_DIR").ok();
         let password_store_signing_key = std::env::var("PASSWORD_STORE_SIGNING_KEY").ok();
-        let xdg_config_home = std::env::var("XDG_CONFIG_HOME").ok();
+        let xdg_config_home = match std::env::var("XDG_CONFIG_HOME") {
+            Err(_) => None,
+            Ok(home_path) => Some(std::path::PathBuf::from(home_path)),
+        };
 
         pass::read_config(
             &password_store_dir,

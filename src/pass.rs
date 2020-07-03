@@ -283,7 +283,7 @@ impl PasswordStore {
         let repo = repo.unwrap();
         let message = format!("Add password for {} using ripasso", path_end);
 
-        add_and_commit_internal(&repo, &[format!("{}.gpg", path_end)], &message)?;
+        add_and_commit_internal(&repo, &[path::PathBuf::from(path_end).with_extension("gpg")], &message)?;
 
         Ok(PasswordEntry::load_from_git(&self.root, &path, &repo))
     }
@@ -464,12 +464,12 @@ impl PasswordStore {
     /// Reencrypt all the entries in the store, for example when a new collaborator is added
     /// to the team.
     pub fn reencrypt_all_password_entries(&self) -> Result<()> {
-        let mut names: Vec<String> = Vec::new();
+        let mut names: Vec<path::PathBuf> = Vec::new();
         for entry in self.all_passwords()? {
             entry.update_internal(entry.secret()?, self)?;
-            names.push(format!("{}.gpg", &entry.name));
+            names.push(path::PathBuf::from(&entry.name).with_extension("gpg"));
         }
-        names.push(".gpg-id".to_string());
+        names.push(path::PathBuf::from(".gpg-id"));
 
         if self.repo().is_err() {
             return Ok(());
@@ -489,7 +489,7 @@ impl PasswordStore {
     }
 
     /// Add a file to the store, and commit it to the supplied git repository.
-    pub fn add_and_commit(&self, paths: &[String], message: &str) -> Result<git2::Oid> {
+    pub fn add_and_commit(&self, paths: &[path::PathBuf], message: &str) -> Result<git2::Oid> {
         let repo = self.repo();
         if repo.is_err() {
             return Err(Error::Generic("must have a repository"));
@@ -498,7 +498,7 @@ impl PasswordStore {
 
         let mut index = repo.index()?;
         for path in paths {
-            index.add_path(path::Path::new(path))?;
+            index.add_path(path)?;
         }
         let oid = index.write_tree()?;
         let signature = repo.signature()?;
@@ -543,8 +543,8 @@ impl PasswordStore {
         fs::rename(&old_path, &new_path)?;
 
         if self.repo().is_ok() {
-            let old_file_name = format!("{}.gpg", old_name);
-            let new_file_name = format!("{}.gpg", new_name);
+            let old_file_name = path::PathBuf::from(old_name).with_extension("gpg");
+            let new_file_name = path::PathBuf::from(new_name).with_extension("gpg");
             move_and_commit(self, &old_file_name, &new_file_name, "moved file")?;
         }
 
@@ -783,7 +783,7 @@ impl PasswordEntry {
 
         let message = format!("Edit password for {} using ripasso", &self.name);
 
-        store.add_and_commit(&[format!("{}.gpg", &self.name)], &message)?;
+        store.add_and_commit(&[path::PathBuf::from(&self.name).with_extension("gpg")], &message)?;
 
         Ok(())
     }
@@ -797,7 +797,7 @@ impl PasswordEntry {
         }
         let message = format!("Removed password file for {} using ripasso", &self.name);
 
-        remove_and_commit(store, &[format!("{}.gpg", &self.name)], &message)?;
+        remove_and_commit(store, &[path::PathBuf::from(&self.name).with_extension("gpg")], &message)?;
         Ok(())
     }
 
@@ -958,12 +958,12 @@ fn commit(
 /// Add a file to the store, and commit it to the supplied git repository.
 fn add_and_commit_internal(
     repo: &git2::Repository,
-    paths: &[String],
+    paths: &[path::PathBuf],
     message: &str,
 ) -> Result<git2::Oid> {
     let mut index = repo.index()?;
     for path in paths {
-        index.add_path(path::Path::new(path))?;
+        index.add_path(path)?;
     }
     let oid = index.write_tree()?;
     let signature = repo.signature()?;
@@ -984,7 +984,7 @@ fn add_and_commit_internal(
 }
 
 /// Remove a file from the store, and commit the deletion to the supplied git repository.
-fn remove_and_commit(store: &PasswordStore, paths: &[String], message: &str) -> Result<git2::Oid> {
+fn remove_and_commit(store: &PasswordStore, paths: &[path::PathBuf], message: &str) -> Result<git2::Oid> {
     if store.repo().is_err() {
         return Err(Error::Generic("must have a repository"));
     }
@@ -992,7 +992,7 @@ fn remove_and_commit(store: &PasswordStore, paths: &[String], message: &str) -> 
 
     let mut index = repo.index()?;
     for path in paths {
-        index.remove_path(path::Path::new(path))?;
+        index.remove_path(path)?;
     }
     let oid = index.write_tree()?;
     let signature = repo.signature()?;
@@ -1015,8 +1015,8 @@ fn remove_and_commit(store: &PasswordStore, paths: &[String], message: &str) -> 
 /// Remove a file from the store, and commit the deletion to the supplied git repository.
 fn move_and_commit(
     store: &PasswordStore,
-    old_name: &str,
-    new_name: &str,
+    old_name: &path::Path,
+    new_name: &path::Path,
     message: &str,
 ) -> Result<git2::Oid> {
     if store.repo().is_err() {
@@ -1025,8 +1025,8 @@ fn move_and_commit(
     let repo = store.repo().unwrap();
 
     let mut index = repo.index()?;
-    index.remove_path(path::Path::new(old_name))?;
-    index.add_path(path::Path::new(new_name))?;
+    index.remove_path(old_name)?;
+    index.add_path(new_name)?;
     let oid = index.write_tree()?;
     let signature = repo.signature()?;
     let parent_commit_res = find_last_commit(&repo);
@@ -1456,14 +1456,14 @@ fn env_var_exists(store_dir: &Option<String>, signing_keys: &Option<String>) -> 
     store_dir.is_some() || signing_keys.is_some()
 }
 
-fn settings_file_exists(home: &Option<path::PathBuf>, xdg_config_home: &Option<String>) -> bool {
+fn settings_file_exists(home: &Option<path::PathBuf>, xdg_config_home: &Option<path::PathBuf>) -> bool {
     if home.is_none() {
         return false;
     }
     let home = home.as_ref().unwrap();
 
     let xdg_config_file = match xdg_config_home.as_ref() {
-        Some(p) => path::PathBuf::from(p).join("ripasso/settings.toml"),
+        Some(p) => p.join("ripasso/settings.toml"),
         None => home.join(".config/ripasso/settings.toml"),
     };
 
@@ -1536,10 +1536,10 @@ fn var_settings(
 
 fn xdg_config_file_location(
     home: &Option<path::PathBuf>,
-    xdg_config_home: &Option<String>,
+    xdg_config_home: &Option<path::PathBuf>,
 ) -> Result<path::PathBuf> {
     match xdg_config_home.as_ref() {
-        Some(p) => Ok(path::PathBuf::from(p).join("ripasso/settings.toml")),
+        Some(p) => Ok(p.join("ripasso/settings.toml")),
         None => {
             if home.is_none() {
                 Err(Error::Generic("no home directory"))
@@ -1561,7 +1561,7 @@ pub fn read_config(
     store_dir: &Option<String>,
     signing_keys: &Option<String>,
     home: &Option<path::PathBuf>,
-    xdg_config_home: &Option<String>,
+    xdg_config_home: &Option<path::PathBuf>,
 ) -> Result<(config::Config, std::path::PathBuf)> {
     let mut settings = config::Config::default();
     let config_file_location = xdg_config_file_location(home, xdg_config_home)?;
