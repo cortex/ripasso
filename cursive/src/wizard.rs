@@ -39,10 +39,12 @@ fn create_git_repo(
         let message = super::CATALOG.gettext("Initialized password repo with Ripasso");
         match pass::PasswordStore::new(&"default".to_string(), password_store_dir, &None, home) {
             Err(err) => helpers::errorbox(ui, &err),
-            Ok(store) => match store.add_and_commit(&[std::path::PathBuf::from(".gpg-id")], &message) {
-                Err(err) => helpers::errorbox(ui, &err),
-                Ok(_) => ui.quit(),
-            },
+            Ok(store) => {
+                match store.add_and_commit(&[std::path::PathBuf::from(".gpg-id")], &message) {
+                    Err(err) => helpers::errorbox(ui, &err),
+                    Ok(_) => ui.quit(),
+                }
+            }
         }
     }
 }

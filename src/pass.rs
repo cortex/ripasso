@@ -283,7 +283,11 @@ impl PasswordStore {
         let repo = repo.unwrap();
         let message = format!("Add password for {} using ripasso", path_end);
 
-        add_and_commit_internal(&repo, &[path::PathBuf::from(path_end).with_extension("gpg")], &message)?;
+        add_and_commit_internal(
+            &repo,
+            &[path::PathBuf::from(path_end).with_extension("gpg")],
+            &message,
+        )?;
 
         Ok(PasswordEntry::load_from_git(&self.root, &path, &repo))
     }
@@ -783,7 +787,10 @@ impl PasswordEntry {
 
         let message = format!("Edit password for {} using ripasso", &self.name);
 
-        store.add_and_commit(&[path::PathBuf::from(&self.name).with_extension("gpg")], &message)?;
+        store.add_and_commit(
+            &[path::PathBuf::from(&self.name).with_extension("gpg")],
+            &message,
+        )?;
 
         Ok(())
     }
@@ -797,7 +804,11 @@ impl PasswordEntry {
         }
         let message = format!("Removed password file for {} using ripasso", &self.name);
 
-        remove_and_commit(store, &[path::PathBuf::from(&self.name).with_extension("gpg")], &message)?;
+        remove_and_commit(
+            store,
+            &[path::PathBuf::from(&self.name).with_extension("gpg")],
+            &message,
+        )?;
         Ok(())
     }
 
@@ -984,7 +995,11 @@ fn add_and_commit_internal(
 }
 
 /// Remove a file from the store, and commit the deletion to the supplied git repository.
-fn remove_and_commit(store: &PasswordStore, paths: &[path::PathBuf], message: &str) -> Result<git2::Oid> {
+fn remove_and_commit(
+    store: &PasswordStore,
+    paths: &[path::PathBuf],
+    message: &str,
+) -> Result<git2::Oid> {
     if store.repo().is_err() {
         return Err(Error::Generic("must have a repository"));
     }
@@ -1456,7 +1471,10 @@ fn env_var_exists(store_dir: &Option<String>, signing_keys: &Option<String>) -> 
     store_dir.is_some() || signing_keys.is_some()
 }
 
-fn settings_file_exists(home: &Option<path::PathBuf>, xdg_config_home: &Option<path::PathBuf>) -> bool {
+fn settings_file_exists(
+    home: &Option<path::PathBuf>,
+    xdg_config_home: &Option<path::PathBuf>,
+) -> bool {
     if home.is_none() {
         return false;
     }

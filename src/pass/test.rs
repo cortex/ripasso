@@ -538,10 +538,7 @@ fn file_settings_file_in_xdg_config_home() -> Result<()> {
     settings.merge(
         file_settings(&xdg_config_file_location(
             &Some(dir.into_path()),
-            &Some(
-                dir2.path()
-                    .join(".random_config"),
-            ),
+            &Some(dir2.path().join(".random_config")),
         )?)
         .unwrap(),
     )?;
