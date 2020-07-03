@@ -15,17 +15,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-extern crate cursive;
-extern crate ripasso;
+use cursive::event::Key;
+use cursive::traits::*;
+use cursive::views::{Dialog, EditView, LinearLayout, OnEventView, SelectView, TextView};
 
-use self::cursive::event::Key;
-use self::cursive::traits::*;
-use self::cursive::views::{Dialog, EditView, LinearLayout, OnEventView, SelectView, TextView};
-
-use crate::cursive::CursiveExt;
 use cursive::Cursive;
+use cursive::CursiveExt;
 
-use self::cursive::direction::Orientation;
+use cursive::direction::Orientation;
 
 use crate::helpers;
 use ripasso::pass;

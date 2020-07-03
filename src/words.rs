@@ -1,5 +1,3 @@
-extern crate rand;
-
 use rand::distributions::{Distribution, Uniform};
 
 /// Generate a random password, consisting of `number_of_words` words.

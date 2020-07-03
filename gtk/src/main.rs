@@ -15,15 +15,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-extern crate glib;
-extern crate gtk;
-extern crate ripasso;
-
-use crate::gtk::prelude::BuilderExtManual;
-use crate::gtk::prelude::GtkListStoreExtManual;
+use gtk::prelude::BuilderExtManual;
+use gtk::prelude::GtkListStoreExtManual;
 use gtk::*;
 
-use self::glib::StaticType;
+use glib::StaticType;
 
 use clipboard::{ClipboardContext, ClipboardProvider};
 use ripasso::pass;

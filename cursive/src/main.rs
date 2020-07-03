@@ -15,25 +15,20 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-extern crate cursive;
-extern crate ripasso;
-
-use self::cursive::traits::*;
-use self::cursive::views::{
+use cursive::traits::*;
+use cursive::views::{
     CircularFocus, Dialog, EditView, LinearLayout, NamedView, OnEventView, ResizedView, ScrollView,
     SelectView, TextArea, TextView,
 };
 
-use crate::cursive::CursiveExt;
 use cursive::menu::MenuTree;
 use cursive::Cursive;
+use cursive::CursiveExt;
 
-use self::cursive::direction::Orientation;
-use self::cursive::event::{Event, Key};
+use cursive::direction::Orientation;
+use cursive::event::{Event, Key};
 
-extern crate clipboard;
-
-use self::clipboard::{ClipboardContext, ClipboardProvider};
+use clipboard::{ClipboardContext, ClipboardProvider};
 
 use ripasso::pass;
 use ripasso::pass::{OwnerTrustLevel, PasswordStore, PasswordStoreType, SignatureStatus};

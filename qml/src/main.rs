@@ -15,11 +15,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-extern crate clipboard;
-extern crate qml;
-extern crate ripasso;
-
-use self::qml::*;
+use qml::*;
 
 use pass::PasswordEntry;
 use ripasso::pass;
@@ -27,7 +23,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use self::clipboard::{ClipboardContext, ClipboardProvider};
+use clipboard::{ClipboardContext, ClipboardProvider};
 
 use std::panic;
 

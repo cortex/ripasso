@@ -1,9 +1,3 @@
-extern crate chrono;
-extern crate git2;
-extern crate glob;
-extern crate gpgme;
-extern crate notify;
-
 /// This is the library part of ripasso, it implements the functions needed to manipulate a pass
 /// directory.
 pub mod pass;

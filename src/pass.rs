@@ -27,7 +27,6 @@ use chrono::prelude::*;
 use notify::Watcher;
 use std::io::prelude::*;
 use std::sync::{Arc, Mutex};
-extern crate config;
 
 use git2::{Oid, Repository};
 
