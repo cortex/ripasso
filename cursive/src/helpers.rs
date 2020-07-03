@@ -1,5 +1,5 @@
 /*  Ripasso - a simple password manager
-    Copyright (C) 2019 Joakim Lundborg, Alexander Kjäll
+    Copyright (C) 2019-2020 Joakim Lundborg, Alexander Kjäll
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
