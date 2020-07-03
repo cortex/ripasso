@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-01-24 17:17+0100\n"
+"POT-Creation-Date: 2020-06-29 10:33+0200\n"
 "PO-Revision-Date: 2020-01-25 16:57+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -18,7 +18,7 @@ msgstr ""
 "X-Generator: Poedit 2.2.4\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: cursive/src/main.rs:475
+#: cursive/src/main.rs:782
 msgid ""
 "A password manager that uses the file format of the standard unix password "
 "manager 'pass', implemented in Rust. Ripasso reads $HOME/.password-store/ by "
@@ -30,88 +30,134 @@ msgstr ""
 "password-store/ som standard. For å lese fra en annen mappe, sett "
 "PASSWORD_STORE_DIR miljøvariabelen."
 
-#: cursive/src/main.rs:277
+#: cursive/src/main.rs:499
 msgid "Add new password"
 msgstr "Legg til nytt passord"
 
-#: cursive/src/main.rs:345
+#: cursive/src/main.rs:596
 msgid "Added team member to password store"
 msgstr "La til medlem i passordmappen"
 
-#: cursive/src/wizard.rs:71
+#: cursive/src/wizard.rs:75
 msgid "Also create a git repository for the encrypted files?"
 msgstr "Opprett et git-depot for de krypterte filene?"
 
-#: cursive/src/main.rs:149
+#: cursive/src/main.rs:189
 msgid "Are you sure you want to delete the password?"
 msgstr "Er du sikker på at du vil slette passordet?"
 
-#: cursive/src/main.rs:324
+#: cursive/src/main.rs:548
 msgid "Are you sure you want to remove this person?"
 msgstr "Er du sikker på at du vil fjerne denne personen?"
 
-#: cursive/src/main.rs:156 cursive/src/main.rs:287 cursive/src/main.rs:328
-#: cursive/src/main.rs:374 cursive/src/wizard.rs:134
+#: cursive/src/main.rs:565
+msgid ""
+"Can't import team member due to that the GPG trust relationship level isn't "
+"Ultimate"
+msgstr ""
+
+#: cursive/src/main.rs:197 cursive/src/main.rs:394 cursive/src/main.rs:509
+#: cursive/src/main.rs:554 cursive/src/main.rs:632 cursive/src/main.rs:1122
+#: cursive/src/main.rs:1226 cursive/src/wizard.rs:149
 msgid "Cancel"
 msgstr "Avbryt"
 
-#: cursive/src/main.rs:120
+#: cursive/src/main.rs:302
+msgid "Close"
+msgstr ""
+
+#: cursive/src/main.rs:159
+#, fuzzy
+msgid "Copied file name to copy buffer"
+msgstr "Kopierer passordet til utklippstavlen i 40 sekunder"
+
+#: cursive/src/main.rs:133
 msgid "Copied password to copy buffer for 40 seconds"
 msgstr "Kopierer passordet til utklippstavlen i 40 sekunder"
 
-#: cursive/src/main.rs:745
+#: cursive/src/main.rs:1492
 msgid "Copy (ctrl-y)"
 msgstr "Kopier (ctrl-y)"
 
-#: cursive/src/wizard.rs:72 cursive/src/wizard.rs:91 cursive/src/wizard.rs:131
+#: cursive/src/main.rs:1493
+#, fuzzy
+msgid "Copy Name (ctrl-u)"
+msgstr "Kopier (ctrl-y)"
+
+#: cursive/src/wizard.rs:77 cursive/src/wizard.rs:102 cursive/src/wizard.rs:146
 msgid "Create"
 msgstr "Opprett"
 
-#: cursive/src/main.rs:746
+#: cursive/src/main.rs:1502
 msgid "Create (ins) "
 msgstr "Opprett (ins) "
 
-#: cursive/src/main.rs:248
+#: cursive/src/main.rs:454
 msgid "Created new password"
 msgstr "Opprettet et nytt passord"
 
-#: cursive/src/main.rs:752
+#: cursive/src/main.rs:1506
 msgid "Delete (del)"
 msgstr "Slett (del)"
 
-#: cursive/src/main.rs:317
+#: cursive/src/main.rs:539
 msgid "Deleted team member from password store"
 msgstr "Slettet medlem fra passordmappen"
 
-#: cursive/src/helpers.rs:34
+#: cursive/src/main.rs:1082 cursive/src/main.rs:1191
+msgid "Directory: "
+msgstr ""
+
+#: cursive/src/main.rs:1257
+#, fuzzy
+msgid "Edit password stores"
+msgstr "La til medlem i passordmappen"
+
+#: cursive/src/main.rs:1117
+msgid "Edit store config"
+msgstr ""
+
+#: cursive/src/helpers.rs:39
 msgid "Error"
 msgstr "Feil"
 
-#: cursive/src/main.rs:736 cursive/src/wizard.rs:125
+#: cursive/src/main.rs:1483 cursive/src/wizard.rs:138
 msgid "F1: Menu | "
 msgstr "F1: Meny | "
 
-#: cursive/src/main.rs:354
+#: cursive/src/main.rs:254
+msgid "File History"
+msgstr ""
+
+#: cursive/src/main.rs:1498
+msgid "File History (ctrl-h)"
+msgstr ""
+
+#: cursive/src/main.rs:654
+msgid "Full"
+msgstr ""
+
+#: cursive/src/main.rs:609
 msgid "GPG Key ID: "
 msgstr "GPG-nøkkel ID: "
 
-#: cursive/src/main.rs:191 cursive/src/main.rs:278
+#: cursive/src/main.rs:296 cursive/src/main.rs:500
 msgid "Generate"
 msgstr "Generere"
 
-#: cursive/src/wizard.rs:78
+#: cursive/src/wizard.rs:83
 msgid "Git Init"
 msgstr "Git Init"
 
-#: cursive/src/main.rs:759
+#: cursive/src/main.rs:1519
 msgid "Git Pull (ctrl-f)"
 msgstr "Git Pull (ctrl-f)"
 
-#: cursive/src/main.rs:762
+#: cursive/src/main.rs:1523
 msgid "Git Push (ctrl-g)"
 msgstr "Git Push (ctrl-g)"
 
-#: cursive/src/wizard.rs:138
+#: cursive/src/wizard.rs:153
 msgid "Init"
 msgstr "Initier"
 
@@ -119,47 +165,93 @@ msgstr "Initier"
 msgid "Initialized password repo with Ripasso"
 msgstr "Opprettet en passordmappe med Ripasso"
 
-#: cursive/src/wizard.rs:75
+#: cursive/src/main.rs:1553
+msgid "Manage"
+msgstr ""
+
+#: cursive/src/main.rs:655
+msgid "Marginal"
+msgstr ""
+
+#: cursive/src/main.rs:1071 cursive/src/main.rs:1181
+msgid "Name: "
+msgstr ""
+
+#: cursive/src/main.rs:656
+msgid "Never"
+msgstr ""
+
+#: cursive/src/main.rs:375
+msgid "New file name: "
+msgstr ""
+
+#: cursive/src/main.rs:1221
+msgid "New store config"
+msgstr ""
+
+#: cursive/src/wizard.rs:80
 msgid "No"
 msgstr "Nei"
 
-#: cursive/src/helpers.rs:33 cursive/src/main.rs:197
+#: cursive/src/main.rs:487
+msgid "Note: "
+msgstr ""
+
+#: cursive/src/helpers.rs:38 cursive/src/main.rs:255 cursive/src/main.rs:703
+#: cursive/src/main.rs:1258
 msgid "Ok"
 msgstr "Ok"
 
-#: cursive/src/main.rs:749
+#: cursive/src/main.rs:365
+msgid "Old file name: "
+msgstr ""
+
+#: cursive/src/main.rs:1494
 msgid "Open (ctrl-o)"
 msgstr "Åpne (ctrl-o)"
 
-#: cursive/src/main.rs:743
+#: cursive/src/main.rs:1490
 msgid "Operations"
 msgstr "Handlinger"
 
-#: cursive/src/main.rs:153
+#: cursive/src/main.rs:194
 msgid "Password deleted"
 msgstr "Passord slettet"
 
-#: cursive/src/main.rs:263
+#: cursive/src/main.rs:476
 msgid "Password: "
 msgstr "Passord: "
 
-#: cursive/src/main.rs:257
+#: cursive/src/main.rs:466
 msgid "Path: "
 msgstr "Søkesti: "
 
-#: cursive/src/main.rs:511
+#: cursive/src/main.rs:812
 msgid "Pulled from remote git repository"
 msgstr "Hentet fra eksternt git-depot"
 
-#: cursive/src/main.rs:485
+#: cursive/src/main.rs:790
 msgid "Pushed to remote git repository"
 msgstr "Sendt til eksternt git-depot"
 
-#: cursive/src/main.rs:766
+#: cursive/src/main.rs:1528
 msgid "Quit (esc)"
 msgstr "Avslutt (esc)"
 
-#: cursive/src/wizard.rs:88
+#: cursive/src/main.rs:391
+msgid "Rename"
+msgstr ""
+
+#: cursive/src/main.rs:390
+msgid "Rename File"
+msgstr ""
+
+#: cursive/src/main.rs:1510
+#, fuzzy
+msgid "Rename file (ctrl-r)"
+msgstr "Medlemmer (ctrl-v)"
+
+#: cursive/src/wizard.rs:99
 msgid ""
 "Ripasso uses GPG in order to encrypt the stored passwords.\n"
 "Please enter your GPG key ID"
@@ -167,27 +259,67 @@ msgstr ""
 "Ripasso bruker GPG for å kryptere de lagrede passordene.\n"
 "Vennligst oppgi din GPG-nøkkel ID"
 
-#: cursive/src/main.rs:181 cursive/src/main.rs:284
+#: cursive/src/main.rs:280 cursive/src/main.rs:506 cursive/src/main.rs:1118
+#: cursive/src/main.rs:1222
 msgid "Save"
 msgstr "Lagre"
 
-#: cursive/src/main.rs:402
+#: cursive/src/main.rs:1556
+msgid "Stores"
+msgstr ""
+
+#: cursive/src/main.rs:702
 msgid "Team Members"
 msgstr "Medlemmer"
 
-#: cursive/src/main.rs:755
+#: cursive/src/main.rs:1514
 msgid "Team Members (ctrl-v)"
 msgstr "Medlemmer (ctrl-v)"
 
-#: cursive/src/wizard.rs:69
+#: cursive/src/helpers.rs:31
+msgid "Team member with key id {} isn't in your GPG keyring, fetch it first"
+msgstr ""
+
+#: cursive/src/main.rs:1385
+msgid ""
+"The password store is backed by a git repository, but there is passwords "
+"there that's not in git. Please add them, otherwise they might get lost."
+msgstr ""
+
+#: cursive/src/main.rs:653
+msgid "Ultimate"
+msgstr ""
+
+#: cursive/src/wizard.rs:70
 msgid "Unable to write file"
 msgstr "Kunne ikke skrive til fil"
 
-#: cursive/src/main.rs:581 cursive/src/main.rs:586
+#: cursive/src/main.rs:657
+msgid "Undefined"
+msgstr ""
+
+#: cursive/src/main.rs:658
+msgid "Unknown"
+msgstr ""
+
+#: cursive/src/main.rs:1304 cursive/src/main.rs:1312
 msgid "Unknown argument, usage: ripasso-cursive [-h|--help]"
 msgstr ""
 
-#: cursive/src/wizard.rs:130
+#: cursive/src/main.rs:991 cursive/src/main.rs:1033 cursive/src/main.rs:1166
+msgid "Updated config file"
+msgstr ""
+
+#: cursive/src/main.rs:290
+#, fuzzy
+msgid "Updated password entry"
+msgstr "Opprettet et nytt passord"
+
+#: cursive/src/main.rs:1093 cursive/src/main.rs:1201
+msgid "Valid Signing Keys: "
+msgstr ""
+
+#: cursive/src/wizard.rs:145
 msgid ""
 "Welcome to Ripasso, it seems like you don't have a password store directory "
 "yet would you like to create it?\n"
@@ -199,17 +331,11 @@ msgstr ""
 "Den blir opprettet i $HOME/.password-store eller hvor miljøvariablen "
 "PASSWORD_STORE_DIR peker til."
 
-#: cursive/src/main.rs:150 cursive/src/main.rs:325 cursive/src/main.rs:371
+#: cursive/src/main.rs:191 cursive/src/main.rs:550 cursive/src/main.rs:629
 msgid "Yes"
 msgstr "Ja"
 
-#: cursive/src/main.rs:599
-msgid ""
-"You have pointed ripasso towards an existing directory without an .gpg-id "
-"file, this doesn't seem like a password store directory, quiting."
-msgstr ""
-
-#: cursive/src/main.rs:623
+#: cursive/src/main.rs:1379
 msgid ""
 "You haven't configured you name and email in git, doing so will make "
 "cooperation with your team easier, you can do it like this:\n"
@@ -221,15 +347,19 @@ msgid ""
 "git config --global commit.gpgsign true"
 msgstr ""
 
-#: cursive/src/main.rs:409
+#: cursive/src/main.rs:1262
+msgid "ctrl-e: Edit | "
+msgstr ""
+
+#: cursive/src/main.rs:708 cursive/src/main.rs:1264
 msgid "del: Remove"
 msgstr "del: Slett"
 
-#: cursive/src/main.rs:408
+#: cursive/src/main.rs:707 cursive/src/main.rs:1263
 msgid "ins: Add | "
 msgstr "ins: Legg til | "
 
-#: cursive/src/main.rs:436 cursive/src/main.rs:452
+#: cursive/src/main.rs:737 cursive/src/main.rs:756
 msgid "n/a"
 msgstr "i/t"
 
