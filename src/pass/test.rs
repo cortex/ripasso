@@ -40,7 +40,7 @@ fn get_password_dir_no_env() {
     let dir = tempfile::tempdir().unwrap();
     env::remove_var("PASSWORD_STORE_DIR");
 
-    let path = password_dir(&None, &Some(path::PathBuf::from(dir.path())));
+    let path = password_dir(&None, &Some(dir.into_path()));
 
     assert_eq!(
         path.unwrap_err(),
@@ -67,12 +67,7 @@ fn populate_password_list_small_repo() -> Result<()> {
     )
     .unwrap();
 
-    let store = PasswordStore::new(
-        "default",
-        &Some(String::from(password_dir.to_str().unwrap())),
-        &None,
-        &Some(home),
-    )?;
+    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "populate_password_list_small_repo").unwrap();
@@ -102,12 +97,7 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
         "populate_password_list_repo_with_deleted_files.tar.gz",
     )?;
 
-    let store = PasswordStore::new(
-        "default",
-        &Some(String::from(password_dir.to_str().unwrap())),
-        &None,
-        &Some(home),
-    )?;
+    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "populate_password_list_repo_with_deleted_files").unwrap();
@@ -137,12 +127,7 @@ fn populate_password_list_directory_without_git() -> Result<()> {
         "populate_password_list_directory_without_git.tar.gz",
     )?;
 
-    let store = PasswordStore::new(
-        "default",
-        &Some(String::from(password_dir.to_str().unwrap())),
-        &None,
-        &Some(home),
-    )?;
+    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "populate_password_list_directory_without_git").unwrap();
@@ -183,12 +168,7 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
         "password_store_with_files_in_initial_commit.tar.gz",
     )?;
 
-    let store = PasswordStore::new(
-        "default",
-        &Some(String::from(password_dir.to_str().unwrap())),
-        &None,
-        &Some(home),
-    )?;
+    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "password_store_with_files_in_initial_commit").unwrap();
@@ -228,7 +208,7 @@ fn password_store_with_relative_path() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some("./testres/password_store_with_relative_path".to_string()),
+        &Some(PathBuf::from("./testres/password_store_with_relative_path")),
         &None,
         &Some(home),
     );
@@ -273,12 +253,7 @@ fn password_store_with_shallow_checkout() -> Result<()> {
         "password_store_with_shallow_checkout.tar.gz",
     )?;
 
-    let store = PasswordStore::new(
-        &"default",
-        &Some(String::from(password_dir.to_str().unwrap())),
-        &None,
-        &Some(home),
-    )?;
+    let store = PasswordStore::new(&"default", &Some(password_dir), &None, &Some(home))?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "password_store_with_shallow_checkout").unwrap();
@@ -309,12 +284,7 @@ fn password_store_with_sparse_checkout() -> Result<()> {
         "password_store_with_sparse_checkout.tar.gz",
     )?;
 
-    let store = PasswordStore::new(
-        "default",
-        &Some(String::from(password_dir.to_str().unwrap())),
-        &None,
-        &Some(home),
-    )?;
+    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "password_store_with_sparse_checkout").unwrap();
@@ -423,7 +393,7 @@ fn home_settings_dir_exists() -> Result<()> {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir(dir.path().join(".password-store"))?;
 
-    let settings = home_settings(&Some(path::PathBuf::from(dir.path()))).unwrap();
+    let settings = home_settings(&Some(PathBuf::from(dir.path()))).unwrap();
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
@@ -446,7 +416,7 @@ fn home_settings_dir_exists() -> Result<()> {
 fn home_settings_dir_doesnt_exists() -> Result<()> {
     let dir = tempfile::tempdir().unwrap();
 
-    let settings = home_settings(&Some(path::PathBuf::from(dir.path()))).unwrap();
+    let settings = home_settings(&Some(PathBuf::from(dir.path()))).unwrap();
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
@@ -538,13 +508,7 @@ fn file_settings_file_in_xdg_config_home() -> Result<()> {
     settings.merge(
         file_settings(&xdg_config_file_location(
             &Some(dir.into_path()),
-            &Some(
-                dir2.path()
-                    .join(".random_config")
-                    .to_str()
-                    .unwrap()
-                    .to_owned(),
-            ),
+            &Some(dir2.path().join(".random_config")),
         )?)
         .unwrap(),
     )?;
@@ -570,7 +534,7 @@ fn read_config_empty_config_file() -> Result<()> {
             .join("settings.toml"),
     )?;
 
-    let (settings, _) = read_config(&None, &None, &Some(path::PathBuf::from(dir.path())), &None)?;
+    let (settings, _) = read_config(&None, &None, &Some(PathBuf::from(dir.path())), &None)?;
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
@@ -596,7 +560,7 @@ fn read_config_empty_config_file_with_keys_env() -> Result<()> {
     let (settings, _) = read_config(
         &None,
         &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_string()),
-        &Some(path::PathBuf::from(dir.path())),
+        &Some(PathBuf::from(dir.path())),
         &None,
     )?;
 
@@ -636,7 +600,7 @@ fn read_config_env_vars() -> Result<()> {
                 .to_owned(),
         ),
         &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_string()),
-        &Some(path::PathBuf::from(dir.path())),
+        &Some(PathBuf::from(dir.path())),
         &None,
     )?;
 
@@ -678,7 +642,7 @@ fn read_config_home_and_env_vars() -> Result<()> {
                 .to_owned(),
         ),
         &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_string()),
-        &Some(path::PathBuf::from(dir.path())),
+        &Some(PathBuf::from(dir.path())),
         &None,
     )?;
 
@@ -727,7 +691,7 @@ fn read_config_default_path_in_config_file() -> Result<()> {
     )?;
     file.flush()?;
 
-    let (settings, _) = read_config(&None, &None, &Some(path::PathBuf::from(dir.path())), &None)?;
+    let (settings, _) = read_config(&None, &None, &Some(PathBuf::from(dir.path())), &None)?;
 
     let stores = settings.get_table("stores")?;
 
