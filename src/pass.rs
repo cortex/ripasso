@@ -1388,11 +1388,10 @@ pub fn password_dir(
 /// Determine password directory
 pub fn password_dir_raw(password_store_dir: &Option<PathBuf>, home: &Option<PathBuf>) -> PathBuf {
     // If a directory is provided via env var, use it
-    let pass_home = match password_store_dir.as_ref() {
+    match password_store_dir.as_ref() {
         Some(p) => p.clone(),
         None => home.as_ref().unwrap().join(".password-store"),
-    };
-    pass_home
+    }
 }
 
 fn home_exists(home: &Option<PathBuf>, settings: &config::Config) -> bool {
