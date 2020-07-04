@@ -24,6 +24,7 @@ use glib::StaticType;
 use clipboard::{ClipboardContext, ClipboardProvider};
 use ripasso::pass;
 use std::cell::RefCell;
+use std::path::PathBuf;
 use std::process;
 use std::sync::{Arc, Mutex};
 use std::{thread, time};
@@ -37,7 +38,7 @@ lazy_static! {
 
 fn main() {
     let password_store_dir = match std::env::var("PASSWORD_STORE_DIR") {
-        Ok(p) => Some(p),
+        Ok(p) => Some(PathBuf::from(p)),
         Err(_) => None,
     };
     let password_store_signing_key = match std::env::var("PASSWORD_STORE_SIGNING_KEY") {
@@ -46,7 +47,7 @@ fn main() {
     };
     let home = match std::env::var("HOME") {
         Err(_) => None,
-        Ok(home_path) => Some(std::path::PathBuf::from(home_path)),
+        Ok(home_path) => Some(PathBuf::from(home_path)),
     };
 
     let store = Arc::new(Mutex::new(

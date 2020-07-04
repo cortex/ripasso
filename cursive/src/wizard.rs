@@ -27,11 +27,9 @@ use cursive::direction::Orientation;
 use crate::helpers;
 use ripasso::pass;
 
-fn create_git_repo(
-    ui: &mut Cursive,
-    password_store_dir: &Option<String>,
-    home: &Option<std::path::PathBuf>,
-) {
+use std::path::PathBuf;
+
+fn create_git_repo(ui: &mut Cursive, password_store_dir: &Option<PathBuf>, home: &Option<PathBuf>) {
     let init_res = pass::init_git_repo(&pass::password_dir(password_store_dir, home).unwrap());
     if init_res.is_err() {
         helpers::errorbox(ui, &init_res.err().unwrap());
@@ -39,21 +37,15 @@ fn create_git_repo(
         let message = super::CATALOG.gettext("Initialized password repo with Ripasso");
         match pass::PasswordStore::new(&"default".to_string(), password_store_dir, &None, home) {
             Err(err) => helpers::errorbox(ui, &err),
-            Ok(store) => {
-                match store.add_and_commit(&[std::path::PathBuf::from(".gpg-id")], &message) {
-                    Err(err) => helpers::errorbox(ui, &err),
-                    Ok(_) => ui.quit(),
-                }
-            }
+            Ok(store) => match store.add_and_commit(&[PathBuf::from(".gpg-id")], &message) {
+                Err(err) => helpers::errorbox(ui, &err),
+                Ok(_) => ui.quit(),
+            },
         }
     }
 }
 
-fn do_create(
-    ui: &mut Cursive,
-    password_store_dir: &Option<String>,
-    home: &Option<std::path::PathBuf>,
-) {
+fn do_create(ui: &mut Cursive, password_store_dir: &Option<PathBuf>, home: &Option<PathBuf>) {
     let l = ui.find_name::<EditView>("initial_key_id").unwrap();
     let key_id = (*l.get_content()).clone();
     let mut pass_home = pass::password_dir_raw(password_store_dir, home);
@@ -86,11 +78,7 @@ fn do_create(
     }
 }
 
-fn create_store(
-    ui: &mut Cursive,
-    password_store_dir: &Option<String>,
-    home: &Option<std::path::PathBuf>,
-) {
+fn create_store(ui: &mut Cursive, password_store_dir: &Option<PathBuf>, home: &Option<PathBuf>) {
     let password_store_dir2 = password_store_dir.clone();
     let home = home.clone();
     let home2 = home.clone();
@@ -110,7 +98,7 @@ fn create_store(
     ui.add_layer(recipients_event);
 }
 
-pub fn show_init_menu(password_store_dir: &Option<String>, home: &Option<std::path::PathBuf>) {
+pub fn show_init_menu(password_store_dir: &Option<PathBuf>, home: &Option<PathBuf>) {
     let mut ui = Cursive::default();
 
     ui.load_toml(include_str!("../res/style.toml")).unwrap();
