@@ -1,56 +1,275 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.20.1 -->
+<!-- Generated with glade 3.22.2 -->
 <interface>
   <requires lib="gtk+" version="3.20"/>
-  <object class="GtkListStore" id="passwords"/>
   <object class="GtkWindow" id="mainWindow">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Ripasso GTK</property>
     <property name="default_width">500</property>
     <property name="default_height">400</property>
     <property name="has_resize_grip">True</property>
+    <child type="titlebar">
+      <object class="GtkMenuBar" id="menuBar">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <child>
+          <object class="GtkMenuItem" id="fileMenu">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="label" translatable="yes">_File</property>
+            <property name="use_underline">True</property>
+            <child type="submenu">
+              <object class="GtkMenu">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <child>
+                  <object class="GtkImageMenuItem">
+                    <property name="label">gtk-copy</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="use_underline">True</property>
+                    <property name="use_stock">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkImageMenuItem">
+                    <property name="label">gtk-copy-name</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="use_underline">True</property>
+                    <property name="use_stock">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkImageMenuItem">
+                    <property name="label">gtk-open</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="use_underline">True</property>
+                    <property name="use_stock">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkImageMenuItem">
+                    <property name="label">gtk-file-history</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="use_underline">True</property>
+                    <property name="use_stock">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkImageMenuItem">
+                    <property name="label">gtk-create</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="use_underline">True</property>
+                    <property name="use_stock">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkImageMenuItem">
+                    <property name="label">gtk-delete</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="use_underline">True</property>
+                    <property name="use_stock">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkImageMenuItem">
+                    <property name="label">gtk-rename</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="use_underline">True</property>
+                    <property name="use_stock">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSeparatorMenuItem">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkImageMenuItem">
+                    <property name="label">gtk-team-members</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="use_underline">True</property>
+                    <property name="use_stock">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSeparatorMenuItem">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkImageMenuItem">
+                    <property name="label">gtk-git-pull</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="use_underline">True</property>
+                    <property name="use_stock">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkImageMenuItem">
+                    <property name="label">gtk-git-push</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="use_underline">True</property>
+                    <property name="use_stock">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSeparatorMenuItem">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkImageMenuItem">
+                    <property name="label">gtk-quit</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="use_underline">True</property>
+                    <property name="use_stock">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkMenuItem" id="storesMenu">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="label" translatable="yes">_Stores</property>
+            <property name="use_underline">True</property>
+            <child type="submenu">
+              <object class="GtkMenu">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <child>
+                  <object class="GtkImageMenuItem">
+                    <property name="label">gtk-manage</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="use_underline">True</property>
+                    <property name="use_stock">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSeparatorMenuItem">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkMenuItem">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="label" translatable="yes">_Help</property>
+            <property name="use_underline">True</property>
+            <child type="submenu">
+              <object class="GtkMenu">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <child>
+                  <object class="GtkImageMenuItem">
+                    <property name="label">gtk-about</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="use_underline">True</property>
+                    <property name="use_stock">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
     <child>
       <object class="GtkBox">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
         <child>
           <object class="GtkBox">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="orientation">vertical</property>
             <child>
-              <object class="GtkSearchEntry" id="passwordSearchBox">
+              <object class="GtkBox">
                 <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="primary_icon_name">edit-find-symbolic</property>
-                <property name="primary_icon_activatable">False</property>
-                <property name="primary_icon_sensitive">False</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkScrolledWindow">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="shadow_type">in</property>
+                <property name="can_focus">False</property>
+                <property name="orientation">vertical</property>
                 <child>
-                  <object class="GtkTreeView" id="passwordList">
+                  <object class="GtkSearchEntry" id="passwordSearchBox">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="model">passwords</property>
-                    <child internal-child="selection">
-                      <object class="GtkTreeSelection"/>
+                    <property name="primary_icon_name">edit-find-symbolic</property>
+                    <property name="primary_icon_activatable">False</property>
+                    <property name="primary_icon_sensitive">False</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkScrolledWindow">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="shadow_type">in</property>
+                    <child>
+                      <object class="GtkTreeView" id="passwordList">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <child internal-child="selection">
+                          <object class="GtkTreeSelection"/>
+                        </child>
+                      </object>
                     </child>
                   </object>
+                  <packing>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
+                    <property name="position">1</property>
+                  </packing>
                 </child>
               </object>
               <packing>
                 <property name="expand">True</property>
                 <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkViewport">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <child>
+                  <object class="GtkImage">
+                    <property name="width_request">100</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="pixbuf">res/logo.svg</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="pack_type">end</property>
                 <property name="position">1</property>
               </packing>
             </child>
@@ -62,29 +281,30 @@
           </packing>
         </child>
         <child>
-          <object class="GtkViewport">
+          <object class="GtkBox">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="orientation">vertical</property>
             <child>
-              <object class="GtkImage">
-                <property name="width_request">100</property>
+              <object class="GtkTextView" id="statusBar">
                 <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="pixbuf">res/logo.svg</property>
+                <property name="can_focus">True</property>
               </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
             </child>
           </object>
           <packing>
             <property name="expand">False</property>
-            <property name="fill">False</property>
+            <property name="fill">True</property>
             <property name="pack_type">end</property>
             <property name="position">1</property>
           </packing>
         </child>
       </object>
-    </child>
-    <child>
-      <placeholder/>
     </child>
   </object>
 </interface>
