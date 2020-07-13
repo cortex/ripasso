@@ -157,15 +157,6 @@ fn main() {
         process::exit(0x01);
     }
 
-    // Load and watch all the passwords in the background
-    let password_rx = match pass::watch(store.clone()) {
-        Ok(t) => t,
-        Err(e) => {
-            eprintln!("Error: {:?}", e);
-            process::exit(0x01);
-        }
-    };
-
     if gtk::init().is_err() {
         panic!("failed to initialize GTK.");
     }
@@ -257,13 +248,6 @@ fn main() {
 
     GLOBAL.with(move |global| {
         *global.borrow_mut() = Some((password_search, password_list, store));
-    });
-
-    gtk::idle_add(move || {
-        if password_rx.try_recv().is_ok() {
-            receive();
-        };
-        glib::Continue(true)
     });
 
     gtk::main();
