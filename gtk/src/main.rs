@@ -17,9 +17,9 @@
 
 use gdk::keys::constants;
 use gdk::ModifierType;
+use glib::ObjectExt;
 use gtk::prelude::BuilderExtManual;
 use gtk::prelude::GtkListStoreExtManual;
-use glib::ObjectExt;
 use gtk::*;
 
 use glib::StaticType;
@@ -38,7 +38,12 @@ lazy_static! {
     static ref SHOWN_PASSWORDS: Arc<Mutex<Vec<pass::PasswordEntry>>> = Arc::new(Mutex::new(vec![]));
 }
 
-fn setup_menu(builder: &Builder, menu_bar: Arc<MenuBar>, window: &Window, password_list: &TreeView) {
+fn setup_menu(
+    builder: &Builder,
+    menu_bar: Arc<MenuBar>,
+    window: &Window,
+    password_list: &TreeView,
+) {
     let file_menu_item: Arc<MenuItem> = Arc::new(
         builder
             .get_object("fileMenu")
@@ -111,11 +116,13 @@ fn setup_menu_quit(builder: &Builder, window: &Window) {
 }
 
 fn error_box(err: pass::Error) {
-    let dialog = MessageDialog::new(None::<&Window>,
-                       DialogFlags::empty(),
-                       MessageType::Info,
-                       ButtonsType::Close,
-                       &format!("{:?}", err));
+    let dialog = MessageDialog::new(
+        None::<&Window>,
+        DialogFlags::empty(),
+        MessageType::Info,
+        ButtonsType::Close,
+        &format!("{:?}", err),
+    );
 
     let c_res = dialog.connect("response", true, move |arg| {
         arg[0].get::<MessageDialog>().unwrap().unwrap().close();
@@ -173,9 +180,11 @@ fn main() {
         .get_object("mainWindow")
         .expect("Couldn't get window1");
 
-    let password_list: Arc<TreeView> = Arc::new(builder
-        .get_object("passwordList")
-        .expect("Couldn't get list"));
+    let password_list: Arc<TreeView> = Arc::new(
+        builder
+            .get_object("passwordList")
+            .expect("Couldn't get list"),
+    );
 
     let status_bar: Arc<TextView> = Arc::new(
         builder
@@ -188,13 +197,12 @@ fn main() {
 
         let mut ctx = clipboard::ClipboardContext::new().unwrap();
 
-        let password_res = passwords[path.get_indices()[0] as usize]
-            .password();
+        let password_res = passwords[path.get_indices()[0] as usize].password();
 
         match password_res {
             Err(err) => {
                 error_box(err);
-            },
+            }
             Ok(password) => {
                 let clipboard_res = ctx.set_contents(password);
                 if let Err(err) = clipboard_res {
