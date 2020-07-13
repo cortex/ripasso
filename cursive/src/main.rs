@@ -32,6 +32,7 @@ use clipboard::{ClipboardContext, ClipboardProvider};
 
 use ripasso::pass;
 use ripasso::pass::{OwnerTrustLevel, PasswordStore, PasswordStoreType, SignatureStatus};
+use std::path::PathBuf;
 use std::process;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
@@ -857,10 +858,7 @@ fn get_translation_catalog() -> gettext::Catalog {
     gettext::Catalog::empty()
 }
 
-fn get_stores(
-    config: &config::Config,
-    home: &Option<std::path::PathBuf>,
-) -> pass::Result<Vec<PasswordStore>> {
+fn get_stores(config: &config::Config, home: &Option<PathBuf>) -> pass::Result<Vec<PasswordStore>> {
     let mut final_stores: Vec<PasswordStore> = vec![];
     let stores_res = config.get("stores");
     if let Ok(stores) = stores_res {
@@ -878,7 +876,9 @@ fn get_stores(
             let valid_signing_keys_opt = store.get("valid_signing_keys");
 
             if password_store_dir_opt.is_some() {
-                let password_store_dir = Some(password_store_dir_opt.unwrap().clone().into_str()?);
+                let password_store_dir = Some(PathBuf::from(
+                    password_store_dir_opt.unwrap().clone().into_str()?,
+                ));
 
                 let valid_signing_keys = match valid_signing_keys_opt {
                     Some(k) => match k.clone().into_str() {
@@ -908,9 +908,9 @@ fn get_stores(
 }
 
 /// Validates the config for password stores.
-/// Returns a list of names that the new store wizard should be run for
-fn validate_stores_config(settings: &config::Config) -> Vec<String> {
-    let mut incomplete_stores: Vec<String> = vec![];
+/// Returns a list of paths that the new store wizard should be run for
+fn validate_stores_config(settings: &config::Config) -> Vec<PathBuf> {
+    let mut incomplete_stores: Vec<PathBuf> = vec![];
 
     let stores_res = settings.get("stores");
     if let Ok(stores) = stores_res {
@@ -927,11 +927,11 @@ fn validate_stores_config(settings: &config::Config) -> Vec<String> {
             let password_store_dir_opt = store.get("path");
 
             if let Some(p) = password_store_dir_opt {
-                let p_path = std::path::PathBuf::from(p.clone().into_str().unwrap());
+                let p_path = PathBuf::from(p.clone().into_str().unwrap());
                 let gpg_id = p_path.clone().join(".gpg-id");
 
                 if !p_path.exists() || !gpg_id.exists() {
-                    incomplete_stores.push(p.clone().into_str().unwrap());
+                    incomplete_stores.push(PathBuf::from(p.clone().into_str().unwrap()));
                 }
             }
         }
@@ -944,8 +944,8 @@ fn save_edit_config(
     ui: &mut Cursive,
     stores: Arc<Mutex<Vec<PasswordStore>>>,
     name: &str,
-    config_file_location: &std::path::PathBuf,
-    home: &Option<std::path::PathBuf>,
+    config_file_location: &PathBuf,
+    home: &Option<PathBuf>,
 ) {
     let e_n = &*get_value_from_input(ui, "edit_name_input").unwrap();
     let e_d = &*get_value_from_input(ui, "edit_directory_input").unwrap();
@@ -956,7 +956,7 @@ fn save_edit_config(
         _ => Some(e_k_str.clone()),
     };
 
-    let new_store = PasswordStore::new(e_n, &Some(e_d.clone()), &e_k, home);
+    let new_store = PasswordStore::new(e_n, &Some(PathBuf::from(e_d.clone())), &e_k, home);
     if let Err(err) = new_store {
         helpers::errorbox(ui, &err);
         return;
@@ -990,8 +990,8 @@ fn save_edit_config(
 fn save_new_config(
     ui: &mut Cursive,
     stores: Arc<Mutex<Vec<PasswordStore>>>,
-    config_file_location: &std::path::PathBuf,
-    home: &Option<std::path::PathBuf>,
+    config_file_location: &PathBuf,
+    home: &Option<PathBuf>,
 ) {
     let e_n = &*get_value_from_input(ui, "new_name_input").unwrap();
     let e_d = &*get_value_from_input(ui, "new_directory_input").unwrap();
@@ -1002,7 +1002,7 @@ fn save_new_config(
         _ => Some(e_k_str.clone()),
     };
 
-    let new_store = PasswordStore::new(e_n, &Some(e_d.clone()), &e_k, home);
+    let new_store = PasswordStore::new(e_n, &Some(PathBuf::from(e_d.clone())), &e_k, home);
     if let Err(err) = new_store {
         helpers::errorbox(ui, &err);
         return;
@@ -1032,8 +1032,8 @@ fn save_new_config(
 fn edit_store_in_config(
     ui: &mut Cursive,
     stores: Arc<Mutex<Vec<PasswordStore>>>,
-    config_file_location: &std::path::PathBuf,
-    home: &Option<std::path::PathBuf>,
+    config_file_location: &PathBuf,
+    home: &Option<PathBuf>,
 ) {
     let l = ui.find_name::<SelectView<String>>("stores").unwrap();
 
@@ -1080,7 +1080,7 @@ fn edit_store_in_config(
     );
     directory_fields.add_child(
         EditView::new()
-            .content(store.get_store_path())
+            .content(store.get_store_path().to_string_lossy().into_owned())
             .with_name("edit_directory_input")
             .fixed_size((50, 1)),
     );
@@ -1131,7 +1131,7 @@ fn edit_store_in_config(
 fn delete_store_from_config(
     ui: &mut Cursive,
     stores: Arc<Mutex<Vec<PasswordStore>>>,
-    config_file_location: &std::path::PathBuf,
+    config_file_location: &PathBuf,
 ) {
     let mut l = ui.find_name::<SelectView<String>>("stores").unwrap();
 
@@ -1165,8 +1165,8 @@ fn delete_store_from_config(
 fn add_store_to_config(
     ui: &mut Cursive,
     stores: Arc<Mutex<Vec<PasswordStore>>>,
-    config_file_location: &std::path::PathBuf,
-    home: &Option<std::path::PathBuf>,
+    config_file_location: &PathBuf,
+    home: &Option<PathBuf>,
 ) {
     let mut fields = LinearLayout::vertical();
     let mut name_fields = LinearLayout::horizontal();
@@ -1235,8 +1235,8 @@ fn add_store_to_config(
 fn show_manage_config_dialog(
     ui: &mut Cursive,
     stores: Arc<Mutex<Vec<PasswordStore>>>,
-    config_file_location: std::path::PathBuf,
-    home: &Option<std::path::PathBuf>,
+    config_file_location: PathBuf,
+    home: &Option<PathBuf>,
 ) {
     let mut stores_view = SelectView::<String>::new()
         .h_align(cursive::align::HAlign::Left)
@@ -1312,13 +1312,16 @@ fn main() {
 
     let home = match std::env::var("HOME") {
         Err(_) => None,
-        Ok(home_path) => Some(std::path::PathBuf::from(home_path)),
+        Ok(home_path) => Some(PathBuf::from(home_path)),
     };
 
     let config_res = {
         let password_store_dir = std::env::var("PASSWORD_STORE_DIR").ok();
         let password_store_signing_key = std::env::var("PASSWORD_STORE_SIGNING_KEY").ok();
-        let xdg_config_home = std::env::var("XDG_CONFIG_HOME").ok();
+        let xdg_config_home = match std::env::var("XDG_CONFIG_HOME") {
+            Err(_) => None,
+            Ok(home_path) => Some(PathBuf::from(home_path)),
+        };
 
         pass::read_config(
             &password_store_dir,
