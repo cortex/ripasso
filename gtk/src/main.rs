@@ -15,6 +15,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use gdk::keys::constants;
+use gdk::ModifierType;
+use glib::ObjectExt;
 use gtk::prelude::BuilderExtManual;
 use gtk::prelude::GtkListStoreExtManual;
 use gtk::*;
@@ -26,7 +29,7 @@ use ripasso::pass;
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::process;
-use std::sync::{Arc, Mutex};
+use std::sync::{atomic::Ordering, Arc, Mutex};
 use std::{thread, time};
 
 #[macro_use]
@@ -34,6 +37,103 @@ extern crate lazy_static;
 
 lazy_static! {
     static ref SHOWN_PASSWORDS: Arc<Mutex<Vec<pass::PasswordEntry>>> = Arc::new(Mutex::new(vec![]));
+}
+
+fn setup_menu(
+    builder: &Builder,
+    menu_bar: Arc<MenuBar>,
+    window: &Window,
+    password_list: &TreeView,
+) {
+    let file_menu_item: Arc<MenuItem> = Arc::new(
+        builder
+            .get_object("fileMenu")
+            .expect("Couldn't get fileMenu"),
+    );
+
+    let stores_menu_item: Arc<MenuItem> = Arc::new(
+        builder
+            .get_object("storesMenu")
+            .expect("Couldn't get storesMenu"),
+    );
+
+    let menu_bar2 = menu_bar.clone();
+    let alt_just_pressed = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let alt_just_pressed2 = alt_just_pressed.clone();
+
+    window.connect_key_press_event(move |_, key| {
+        if key.get_keyval() == constants::Alt_L && menu_bar.is_visible() {
+            menu_bar.hide();
+            alt_just_pressed.store(true, Ordering::Relaxed);
+        }
+        if key.get_keyval() == constants::f && key.get_state().intersects(ModifierType::MOD1_MASK) {
+            menu_bar.show();
+            file_menu_item.activate();
+        }
+        if key.get_keyval() == constants::s && key.get_state().intersects(ModifierType::MOD1_MASK) {
+            menu_bar.show();
+            stores_menu_item.activate();
+        }
+
+        Inhibit(false)
+    });
+
+    window.connect_key_release_event(move |_, key| {
+        if key.get_keyval() == constants::Alt_L {
+            if !menu_bar2.is_visible() && !alt_just_pressed2.load(Ordering::Relaxed) {
+                menu_bar2.show();
+            }
+            alt_just_pressed2.store(false, Ordering::Relaxed);
+        }
+
+        Inhibit(false)
+    });
+
+    setup_menu_copy(builder, password_list);
+    setup_menu_quit(builder, window);
+}
+
+fn setup_menu_copy(builder: &Builder, password_list: &TreeView) {
+    let copy_menu_item: MenuItem = builder
+        .get_object("menuItemCopy")
+        .expect("Couldn't get menuItemCopy");
+
+    let password_list = password_list.clone();
+    copy_menu_item.connect_activate(move |_| {
+        let password_list = password_list.clone();
+        println!("row: {:?}", password_list.get_selection());
+    });
+}
+
+fn setup_menu_quit(builder: &Builder, window: &Window) {
+    let quit_menu_item: MenuItem = builder
+        .get_object("menuItemQuit")
+        .expect("Couldn't get menuItemQuit");
+
+    let window2 = window.clone();
+    quit_menu_item.connect_activate(move |_| {
+        window2.close();
+    });
+}
+
+fn error_box(err: pass::Error) {
+    let dialog = MessageDialog::new(
+        None::<&Window>,
+        DialogFlags::empty(),
+        MessageType::Info,
+        ButtonsType::Close,
+        &format!("{:?}", err),
+    );
+
+    let c_res = dialog.connect("response", true, move |arg| {
+        arg[0].get::<MessageDialog>().unwrap().unwrap().close();
+        None
+    });
+    if let Err(err) = c_res {
+        eprintln!("{:?}", err);
+        process::exit(0x01);
+    }
+    dialog.run();
 }
 
 fn main() {
@@ -65,15 +165,6 @@ fn main() {
         process::exit(0x01);
     }
 
-    // Load and watch all the passwords in the background
-    let password_rx = match pass::watch(store.clone()) {
-        Ok(t) => t,
-        Err(e) => {
-            eprintln!("Error: {:?}", e);
-            process::exit(0x01);
-        }
-    };
-
     if gtk::init().is_err() {
         panic!("failed to initialize GTK.");
     }
@@ -84,33 +175,57 @@ fn main() {
         .set_property_gtk_application_prefer_dark_theme(true);
 
     let glade_src = include_str!("../res/ripasso.ui.xml");
-    let builder = Builder::new_from_string(glade_src);
+    let builder = Builder::from_string(glade_src);
 
     let window: Window = builder
         .get_object("mainWindow")
         .expect("Couldn't get window1");
 
-    let password_list: TreeView = builder
-        .get_object("passwordList")
-        .expect("Couldn't get list");
+    let password_list: Arc<TreeView> = Arc::new(
+        builder
+            .get_object("passwordList")
+            .expect("Couldn't get list"),
+    );
+
+    let status_bar: Arc<TextView> = Arc::new(
+        builder
+            .get_object("statusBar")
+            .expect("Couldn't get statusBar"),
+    );
 
     password_list.connect_row_activated(move |_, path, _column| {
         let passwords = (*SHOWN_PASSWORDS).lock().unwrap();
 
         let mut ctx = clipboard::ClipboardContext::new().unwrap();
-        ctx.set_contents(
-            passwords[path.get_indices()[0] as usize]
-                .password()
-                .unwrap(),
-        )
-        .unwrap();
 
-        thread::spawn(|| {
-            thread::sleep(time::Duration::from_secs(40));
-            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-            ctx.set_contents("".to_string()).unwrap();
-        });
+        let password_res = passwords[path.get_indices()[0] as usize].password();
+
+        match password_res {
+            Err(err) => {
+                error_box(err);
+            }
+            Ok(password) => {
+                let clipboard_res = ctx.set_contents(password);
+                if let Err(err) = clipboard_res {
+                    error_box(pass::Error::from(err));
+                }
+
+                let buf_opt = status_bar.get_buffer();
+                if let Some(buf) = buf_opt {
+                    buf.set_text("Copied password to copy buffer for 40 seconds");
+                }
+
+                thread::spawn(|| {
+                    thread::sleep(time::Duration::from_secs(40));
+                    let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+                    ctx.set_contents("".to_string()).unwrap();
+                });
+            }
+        }
     });
+
+    let menu_bar: Arc<MenuBar> =
+        Arc::new(builder.get_object("menuBar").expect("Couldn't get menuBar"));
 
     let password_search: gtk::SearchEntry = builder
         .get_object("passwordSearchBox")
@@ -135,16 +250,13 @@ fn main() {
         gtk::Inhibit(false)
     });
 
+    window.show_all();
+    menu_bar.hide();
+
+    setup_menu(&builder, menu_bar, &window, &password_list);
+
     GLOBAL.with(move |global| {
         *global.borrow_mut() = Some((password_search, password_list, store));
-    });
-
-    window.show_all();
-    gtk::idle_add(move || {
-        if password_rx.try_recv().is_ok() {
-            receive();
-        };
-        glib::Continue(true)
     });
 
     gtk::main();
@@ -167,7 +279,7 @@ fn results(store: &pass::PasswordStoreType, query: &str) -> ListStore {
 fn receive() -> glib::Continue {
     GLOBAL.with(|global| {
         if let Some((ref password_search, ref password_list, ref store)) = *global.borrow() {
-            let query = password_search.get_text().unwrap();
+            let query = password_search.get_text();
             password_list.set_model(Some(&results(&store, &query)));
         }
     });
@@ -176,7 +288,7 @@ fn receive() -> glib::Continue {
 
 thread_local!(
     static GLOBAL: RefCell<Option<(gtk::SearchEntry,
-        TreeView,
+        Arc<TreeView>,
         pass::PasswordStoreType,
     )>> = RefCell::new(None)
 );
