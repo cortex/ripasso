@@ -6,7 +6,7 @@ edition = '2018'
 
 [dependencies]
 ripasso = { path = "../"}
-gtk = { version = "0.8.1", features = ["v3_24_8"] }
+gtk = { version = "0.8.1", features = ["v3_22"] }
 glib = "0.9.3"
 lazy_static = "1.4.0"
 clipboard = "0.5"
