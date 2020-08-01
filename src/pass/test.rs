@@ -744,3 +744,9 @@ fn read_config_default_path_in_env_var() -> Result<()> {
     assert_eq!(false, stores.contains_key("work"));
     Ok(())
 }
+
+#[test]
+fn append_extension_with_dot() {
+    let result = append_extension(PathBuf::from("foo.txt"), ".gpg");
+    assert_eq!(result, PathBuf::from("foo.txt.gpg"));
+}

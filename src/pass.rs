@@ -282,7 +282,7 @@ impl PasswordStore {
 
         add_and_commit_internal(
             &repo,
-            &[PathBuf::from(path_end).with_extension("gpg")],
+            &[append_extension(PathBuf::from(path_end), ".gpg")],
             &message,
         )?;
 
@@ -468,7 +468,7 @@ impl PasswordStore {
         let mut names: Vec<PathBuf> = Vec::new();
         for entry in self.all_passwords()? {
             entry.update_internal(entry.secret()?, self)?;
-            names.push(PathBuf::from(&entry.name).with_extension("gpg"));
+            names.push(append_extension(PathBuf::from(&entry.name), ".gpg"));
         }
         names.push(PathBuf::from(".gpg-id"));
 
@@ -524,10 +524,10 @@ impl PasswordStore {
     pub fn rename_file(&mut self, old_name: &str, new_name: &str) -> Result<usize> {
         let mut old_path = self.root.clone();
         old_path.push(PathBuf::from(old_name));
-        old_path.set_extension("gpg");
+        let old_path = append_extension(old_path, ".gpg");
         let mut new_path = self.root.clone();
         new_path.push(PathBuf::from(new_name));
-        new_path.set_extension("gpg");
+        let new_path = append_extension(new_path, ".gpg");
 
         if !old_path.exists() {
             return Err(Error::Generic("source file is missing"));
@@ -544,8 +544,8 @@ impl PasswordStore {
         fs::rename(&old_path, &new_path)?;
 
         if self.repo().is_ok() {
-            let old_file_name = PathBuf::from(old_name).with_extension("gpg");
-            let new_file_name = PathBuf::from(new_name).with_extension("gpg");
+            let old_file_name = append_extension(PathBuf::from(old_name), ".gpg");
+            let new_file_name = append_extension(PathBuf::from(new_name), ".gpg");
             move_and_commit(self, &old_file_name, &new_file_name, "moved file")?;
         }
 
@@ -773,7 +773,10 @@ impl PasswordEntry {
 
         let message = format!("Edit password for {} using ripasso", &self.name);
 
-        store.add_and_commit(&[PathBuf::from(&self.name).with_extension("gpg")], &message)?;
+        store.add_and_commit(
+            &[append_extension(PathBuf::from(&self.name), ".gpg")],
+            &message,
+        )?;
 
         Ok(())
     }
@@ -789,7 +792,7 @@ impl PasswordEntry {
 
         remove_and_commit(
             store,
-            &[PathBuf::from(&self.name).with_extension("gpg")],
+            &[append_extension(PathBuf::from(&self.name), ".gpg")],
             &message,
         )?;
         Ok(())
@@ -1539,6 +1542,12 @@ fn xdg_config_file_location(
 
 fn file_settings(xdg_config_file: &PathBuf) -> Result<config::File<config::FileSourceFile>> {
     Ok(config::File::from((*xdg_config_file).clone()))
+}
+
+fn append_extension(path: PathBuf, extension: &str) -> PathBuf {
+    let mut str = path.into_os_string();
+    str.push(extension);
+    PathBuf::from(str)
 }
 
 /// reads ripasso's config file, in `$XDG_CONFIG_HOME/ripasso/settings.toml`
