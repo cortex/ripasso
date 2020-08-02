@@ -22,6 +22,7 @@ use gtk::prelude::BuilderExtManual;
 use gtk::prelude::GtkListStoreExtManual;
 use gtk::*;
 
+use glib::Cast;
 use glib::StaticType;
 
 use clipboard::{ClipboardContext, ClipboardProvider};
@@ -31,6 +32,8 @@ use std::path::PathBuf;
 use std::process;
 use std::sync::{atomic::Ordering, Arc, Mutex};
 use std::{thread, time};
+
+use pass::PasswordStoreType;
 
 #[macro_use]
 extern crate lazy_static;
@@ -45,6 +48,7 @@ fn setup_menu(
     window: &Window,
     password_list: &TreeView,
     status_bar: Arc<TextView>,
+    store: PasswordStoreType,
 ) {
     let file_menu_item: Arc<MenuItem> = Arc::new(
         builder
@@ -90,9 +94,55 @@ fn setup_menu(
         Inhibit(false)
     });
 
-    setup_menu_copy_name(builder, password_list, status_bar.clone());
-    setup_menu_copy(builder, password_list, status_bar);
+    setup_menu_copy(builder, password_list, status_bar.clone());
+    setup_menu_copy_name(builder, password_list, status_bar);
+    setup_menu_open(builder, password_list, store);
     setup_menu_quit(builder, window);
+}
+
+fn setup_menu_copy(builder: &Builder, password_list: &TreeView, status_bar: Arc<TextView>) {
+    let copy_menu_item: MenuItem = builder
+        .get_object("menuItemCopy")
+        .expect("Couldn't get menuItemCopy");
+
+    let password_list = password_list.clone();
+    copy_menu_item.connect_activate(move |_| {
+        let password_list = password_list.clone();
+        let (path, _) = password_list.get_selection().get_selected_rows();
+
+        if path.is_empty() {
+            return;
+        }
+
+        let passwords = (*SHOWN_PASSWORDS).lock().unwrap();
+
+        let mut ctx = clipboard::ClipboardContext::new().unwrap();
+
+        let password_res = passwords[path[0].get_indices()[0] as usize].password();
+
+        match password_res {
+            Err(err) => {
+                error_box(err);
+            }
+            Ok(password) => {
+                let clipboard_res = ctx.set_contents(password);
+                if let Err(err) = clipboard_res {
+                    error_box(pass::Error::from(err));
+                }
+
+                let buf_opt = status_bar.get_buffer();
+                if let Some(buf) = buf_opt {
+                    buf.set_text("Copied password to copy buffer for 40 seconds");
+                }
+
+                thread::spawn(|| {
+                    thread::sleep(time::Duration::from_secs(40));
+                    let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+                    ctx.set_contents("".to_string()).unwrap();
+                });
+            }
+        }
+    });
 }
 
 fn setup_menu_copy_name(builder: &Builder, password_list: &TreeView, status_bar: Arc<TextView>) {
@@ -143,13 +193,13 @@ fn setup_menu_copy_name(builder: &Builder, password_list: &TreeView, status_bar:
     });
 }
 
-fn setup_menu_copy(builder: &Builder, password_list: &TreeView, status_bar: Arc<TextView>) {
-    let copy_menu_item: MenuItem = builder
-        .get_object("menuItemCopy")
-        .expect("Couldn't get menuItemCopy");
+fn setup_menu_open(builder: &Builder, password_list: &TreeView, store: PasswordStoreType) {
+    let open_menu_item: MenuItem = builder
+        .get_object("menuItemOpen")
+        .expect("Couldn't get menuItemCopyName");
 
     let password_list = password_list.clone();
-    copy_menu_item.connect_activate(move |_| {
+    open_menu_item.connect_activate(move |_| {
         let password_list = password_list.clone();
         let (path, _) = password_list.get_selection().get_selected_rows();
 
@@ -159,33 +209,69 @@ fn setup_menu_copy(builder: &Builder, password_list: &TreeView, status_bar: Arc<
 
         let passwords = (*SHOWN_PASSWORDS).lock().unwrap();
 
-        let mut ctx = clipboard::ClipboardContext::new().unwrap();
+        let password = &passwords[path[0].get_indices()[0] as usize];
 
-        let password_res = passwords[path[0].get_indices()[0] as usize].password();
-
-        match password_res {
-            Err(err) => {
-                error_box(err);
-            }
-            Ok(password) => {
-                let clipboard_res = ctx.set_contents(password);
-                if let Err(err) = clipboard_res {
-                    error_box(pass::Error::from(err));
-                }
-
-                let buf_opt = status_bar.get_buffer();
-                if let Some(buf) = buf_opt {
-                    buf.set_text("Copied password to copy buffer for 40 seconds");
-                }
-
-                thread::spawn(|| {
-                    thread::sleep(time::Duration::from_secs(40));
-                    let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-                    ctx.set_contents("".to_string()).unwrap();
-                });
-            }
+        if let Err(err) = open_dialog(password, store.clone()) {
+            error_box(err);
         }
     });
+}
+
+fn open_dialog(password: &pass::PasswordEntry, store: PasswordStoreType) -> pass::Result<()> {
+    let buttons = vec![
+        ("Save", ResponseType::Apply),
+        ("Generate", ResponseType::Other(777)),
+        ("Close", ResponseType::Close),
+    ];
+    let dialog = Dialog::with_buttons(None, None::<&Window>, DialogFlags::empty(), &buttons);
+
+    let text_view = TextView::new();
+    let buf = text_view.get_buffer().unwrap();
+    buf.insert(&mut buf.get_start_iter(), &password.password()?);
+    let content = dialog.get_content_area();
+    content.add(&text_view);
+
+    let password = password.clone();
+    let c_res = dialog.connect("response", true, move |arg| {
+        let dialog = arg[0].get::<Dialog>().unwrap().unwrap();
+        let content = dialog.get_content_area();
+        let t = &content.get_children()[0];
+        let text_view = t.downcast_ref::<TextView>().unwrap();
+        let buf = text_view.get_buffer().unwrap();
+        let signal = arg[1].get::<i32>().unwrap().unwrap();
+
+        match ResponseType::from(signal) {
+            ResponseType::Apply => {
+                let new_password = buf
+                    .get_text(&buf.get_start_iter(), &buf.get_end_iter(), true)
+                    .unwrap();
+                let res = password.update(new_password.to_string(), &store.lock().unwrap());
+
+                if let Err(err) = res {
+                    error_box(err);
+                }
+            }
+            ResponseType::Other(_) => {
+                let new_password = ripasso::words::generate_password(6);
+                buf.delete(&mut buf.get_start_iter(), &mut buf.get_end_iter());
+                buf.insert(&mut buf.get_start_iter(), &new_password);
+            }
+            ResponseType::Close | ResponseType::DeleteEvent => {
+                arg[0].get::<Dialog>().unwrap().unwrap().close();
+            }
+            _ => {
+                eprintln!("unknown signal: {}", signal);
+            }
+        }
+        None
+    });
+    if let Err(err) = c_res {
+        eprintln!("{:?}", err);
+        process::exit(0x01);
+    }
+    dialog.show_all();
+    dialog.run();
+    Ok(())
 }
 
 fn setup_menu_quit(builder: &Builder, window: &Window) {
@@ -337,7 +423,14 @@ fn main() {
     window.show_all();
     menu_bar.hide();
 
-    setup_menu(&builder, menu_bar, &window, &password_list, status_bar);
+    setup_menu(
+        &builder,
+        menu_bar,
+        &window,
+        &password_list,
+        status_bar,
+        store.clone(),
+    );
 
     GLOBAL.with(move |global| {
         *global.borrow_mut() = Some((password_search, password_list, store));
