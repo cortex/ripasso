@@ -49,6 +49,34 @@ fn get_password_dir_no_env() {
 }
 
 #[test]
+fn get_password_dir_raw_none_none() {
+    let result = password_dir_raw(&None, &None);
+
+    assert_eq!(PathBuf::new().join(".password-store"), result);
+}
+
+#[test]
+fn get_password_dir_raw_some_none() {
+    let result = password_dir_raw(&Some(PathBuf::from("/tmp/")), &None);
+
+    assert_eq!(PathBuf::from("/tmp/"), result);
+}
+
+#[test]
+fn get_password_dir_raw_none_some() {
+    let result = password_dir_raw(&None, &Some(PathBuf::from("/tmp/")));
+
+    assert_eq!(PathBuf::from("/tmp/.password-store"), result);
+}
+
+#[test]
+fn get_password_dir_raw_some_some() {
+    let result = password_dir_raw(&Some(PathBuf::from("/tmp/")), &Some(PathBuf::from("/tmp/")));
+
+    assert_eq!(PathBuf::from("/tmp/"), result);
+}
+
+#[test]
 fn populate_password_list_small_repo() -> Result<()> {
     let mut base_path: PathBuf = std::env::current_exe().unwrap();
     base_path.pop();

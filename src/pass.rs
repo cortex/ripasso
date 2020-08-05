@@ -802,7 +802,7 @@ impl PasswordEntry {
     /// that password in some way
     pub fn get_history(&self, store: &PasswordStoreType) -> Result<Vec<GitLogLine>> {
         let repo = {
-            let repo_res = (*store).lock().unwrap().repo();
+            let repo_res = store.lock().unwrap().repo();
             if repo_res.is_err() {
                 return Ok(vec![]);
             }
@@ -817,8 +817,11 @@ impl PasswordEntry {
         revwalk.push_head()?;
 
         let mut p = self.path.to_str().unwrap().to_string();
-        let root = (*store).lock().unwrap().root.clone();
-        let prefix = root.to_str().unwrap().to_string();
+        let root = store.lock().unwrap().root.clone();
+        let mut prefix = root.to_str().unwrap().to_string();
+        if !prefix.ends_with('/') {
+            prefix += "/";
+        }
         strip_prefix(&mut p, prefix.len());
         let ps = git2::Pathspec::new(vec![&p])?;
 
@@ -1282,7 +1285,7 @@ pub enum PasswordEvent {
 
 /// Return a list of all passwords whose name contains `query`.
 pub fn search(store: &PasswordStoreType, query: &str) -> Result<Vec<PasswordEntry>> {
-    let passwords = &(*store).lock().unwrap().passwords;
+    let passwords = &store.lock().unwrap().passwords;
     fn normalized(s: &str) -> String {
         s.to_lowercase()
     };
@@ -1296,7 +1299,7 @@ pub fn search(store: &PasswordStoreType, query: &str) -> Result<Vec<PasswordEntr
 /// Subscribe to events, that happen when password files are added or removed
 pub fn watch(store: PasswordStoreType) -> Result<Receiver<PasswordEvent>> {
     let dir = {
-        let store_res = (*store).try_lock();
+        let store_res = store.try_lock();
         if store_res.is_err() {
             return Err(Error::GenericDyn(format!("{:?}", store_res.err())));
         }
@@ -1332,7 +1335,7 @@ pub fn watch(store: PasswordStoreType) -> Result<Receiver<PasswordEvent>> {
                             }
 
                             let p_e = {
-                                let s = (*store).lock().unwrap();
+                                let s = store.lock().unwrap();
                                 if s.repo().is_err() {
                                     PasswordEntry::load_from_filesystem(&s.root, &p.clone())
                                         .unwrap()
@@ -1393,7 +1396,10 @@ pub fn password_dir_raw(password_store_dir: &Option<PathBuf>, home: &Option<Path
     // If a directory is provided via env var, use it
     match password_store_dir.as_ref() {
         Some(p) => p.clone(),
-        None => home.as_ref().unwrap().join(".password-store"),
+        None => match home {
+            Some(h) => h.join(".password-store"),
+            None => PathBuf::new().join(".password-store"),
+        },
     }
 }
 
@@ -1580,7 +1586,7 @@ pub fn save_config(
     config_file_location: &PathBuf,
 ) -> Result<()> {
     let mut stores_map = std::collections::HashMap::new();
-    let stores_borrowed = (*stores).lock().unwrap();
+    let stores_borrowed = stores.lock().unwrap();
     for store in stores_borrowed.iter() {
         let mut store_map = std::collections::HashMap::new();
         store_map.insert(

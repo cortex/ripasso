@@ -278,7 +278,7 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) {
                 .call_on_name("editbox", |e: &mut TextArea| e.get_content().to_string())
                 .unwrap();
             let store = store.lock().unwrap();
-            let r = password_entry.update(new_password, &(*store));
+            let r = password_entry.update(new_password, &store);
             if let Err(err) = r {
                 helpers::errorbox(s, &err)
             } else {
@@ -315,7 +315,7 @@ fn do_rename_file(ui: &mut Cursive, store: PasswordStoreType) {
         .unwrap()
         .get_content();
 
-    let res = (*store)
+    let res = store
         .lock()
         .unwrap()
         .rename_file(old_name.source(), &*new_name);
@@ -332,7 +332,7 @@ fn do_rename_file(ui: &mut Cursive, store: PasswordStoreType) {
             l.remove_item(delete_id);
 
             let col = ui.screen_size().x;
-            let entry = &(*store).lock().unwrap().passwords[index];
+            let entry = &store.lock().unwrap().passwords[index];
             l.add_item(create_label(&entry, col), entry.clone());
             l.sort_by_label();
 
@@ -779,7 +779,7 @@ fn help() {
 }
 
 fn git_push(ui: &mut Cursive, store: PasswordStoreType) {
-    match pass::push(&(*store.lock().unwrap())) {
+    match pass::push(&(store.lock().unwrap())) {
         Err(err) => helpers::errorbox(ui, &err),
         Ok(_) => {
             ui.call_on_name("status_bar", |l: &mut TextView| {
@@ -968,7 +968,7 @@ fn save_edit_config(
     let sel = l.selection();
 
     if sel.is_some() {
-        let mut stores_borrowed = (*stores).lock().unwrap();
+        let mut stores_borrowed = stores.lock().unwrap();
         for (i, store) in stores_borrowed.iter().enumerate() {
             if store.get_name() == name {
                 std::mem::replace(&mut stores_borrowed[i], new_store);
@@ -1010,7 +1010,7 @@ fn save_new_config(
     let new_store = new_store.unwrap();
 
     {
-        let mut stores_borrowed = (*stores).lock().unwrap();
+        let mut stores_borrowed = stores.lock().unwrap();
         stores_borrowed.push(new_store);
     }
 
@@ -1046,7 +1046,7 @@ fn edit_store_in_config(
     let name = sel.as_ref();
 
     let mut store_opt: Option<&PasswordStore> = None;
-    let stores_borrowed = (*stores).lock().unwrap();
+    let stores_borrowed = stores.lock().unwrap();
     for store in stores_borrowed.iter() {
         if store.get_name() == name {
             store_opt = Some(store);
@@ -1144,7 +1144,7 @@ fn delete_store_from_config(
     let name = sel.as_ref();
 
     {
-        let mut stores_borrowed = (*stores).lock().unwrap();
+        let mut stores_borrowed = stores.lock().unwrap();
         stores_borrowed.retain(|store| store.get_name() != name);
     }
 
@@ -1242,7 +1242,7 @@ fn show_manage_config_dialog(
         .h_align(cursive::align::HAlign::Left)
         .with_name("stores");
 
-    for store in (*stores).lock().unwrap().iter() {
+    for store in stores.lock().unwrap().iter() {
         stores_view
             .get_mut()
             .add_item(store.get_name(), store.get_name().clone());
@@ -1351,7 +1351,7 @@ fn main() {
         PasswordStore::new(&"".to_string(), &None, &None, &home).unwrap(),
     ));
     {
-        let stores = (*stores).lock().unwrap();
+        let stores = stores.lock().unwrap();
         let mut ss = &stores[0];
         for (i, store) in stores.iter().enumerate() {
             if store.get_name() == "default" {
@@ -1373,12 +1373,12 @@ fn main() {
     }
 
     // verify that the git config is correct
-    if !(*store).lock().unwrap().has_configured_username() {
+    if !store.lock().unwrap().has_configured_username() {
         eprintln!("{}", CATALOG.gettext("You haven't configured you name and email in git, doing so will make cooperation with your team easier, you can do it like this:\ngit config --global user.name \"John Doe\"\ngit config --global user.email \"email@example.com\"\n\nAlso consider configuring git to sign your commits with GPG:\ngit config --global user.signingkey 3AA5C34371567BD2\ngit config --global commit.gpgsign true"));
         process::exit(1);
     }
 
-    for password in &(*store).lock().unwrap().passwords {
+    for password in &store.lock().unwrap().passwords {
         if password.is_in_git == pass::RepositoryStatus::NotInRepo {
             eprintln!("{}", CATALOG.gettext("The password store is backed by a git repository, but there is passwords there that's not in git. Please add them, otherwise they might get lost."));
             process::exit(1);
@@ -1527,7 +1527,7 @@ fn main() {
     );
 
     let mut tree = MenuTree::new();
-    for s in (*stores).lock().unwrap().iter() {
+    for s in stores.lock().unwrap().iter() {
         let ss = &s;
         let store_name = ss.get_name().clone();
         let store = store.clone();
