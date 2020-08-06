@@ -50,7 +50,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkImageMenuItem">
+                  <object class="GtkImageMenuItem" id="menuItemFileHistory">
                     <property name="label">gtk-file-history</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>

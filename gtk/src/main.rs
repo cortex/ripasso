@@ -96,7 +96,8 @@ fn setup_menu(
 
     setup_menu_copy(builder, password_list, status_bar.clone());
     setup_menu_copy_name(builder, password_list, status_bar);
-    setup_menu_open(builder, password_list, store);
+    setup_menu_open(builder, password_list, store.clone());
+    setup_menu_file_history(builder, password_list, store);
     setup_menu_quit(builder, window);
 }
 
@@ -114,7 +115,7 @@ fn setup_menu_copy(builder: &Builder, password_list: &TreeView, status_bar: Arc<
             return;
         }
 
-        let passwords = (*SHOWN_PASSWORDS).lock().unwrap();
+        let passwords = SHOWN_PASSWORDS.lock().unwrap();
 
         let mut ctx = clipboard::ClipboardContext::new().unwrap();
 
@@ -159,7 +160,7 @@ fn setup_menu_copy_name(builder: &Builder, password_list: &TreeView, status_bar:
             return;
         }
 
-        let passwords = (*SHOWN_PASSWORDS).lock().unwrap();
+        let passwords = SHOWN_PASSWORDS.lock().unwrap();
 
         let mut ctx = clipboard::ClipboardContext::new().unwrap();
 
@@ -207,7 +208,7 @@ fn setup_menu_open(builder: &Builder, password_list: &TreeView, store: PasswordS
             return;
         }
 
-        let passwords = (*SHOWN_PASSWORDS).lock().unwrap();
+        let passwords = SHOWN_PASSWORDS.lock().unwrap();
 
         let password = &passwords[path[0].get_indices()[0] as usize];
 
@@ -274,6 +275,90 @@ fn open_dialog(password: &pass::PasswordEntry, store: PasswordStoreType) -> pass
     Ok(())
 }
 
+fn setup_menu_file_history(builder: &Builder, password_list: &TreeView, store: PasswordStoreType) {
+    let file_history_menu_item: MenuItem = builder
+        .get_object("menuItemFileHistory")
+        .expect("Couldn't get menuItemCopyName");
+
+    let password_list = password_list.clone();
+    file_history_menu_item.connect_activate(move |_| {
+        let password_list = password_list.clone();
+        let (path, _) = password_list.get_selection().get_selected_rows();
+
+        if path.is_empty() {
+            return;
+        }
+
+        let passwords = SHOWN_PASSWORDS.lock().unwrap();
+
+        let password = &passwords[path[0].get_indices()[0] as usize];
+
+        if let Err(err) = file_history_dialog(password, store.clone()) {
+            error_box(err);
+        }
+    });
+}
+
+fn file_history_dialog(
+    password: &pass::PasswordEntry,
+    store: PasswordStoreType,
+) -> pass::Result<()> {
+    let buttons = vec![("Close", ResponseType::Close)];
+
+    let dialog = Dialog::with_buttons(
+        Some("File History"),
+        None::<&Window>,
+        DialogFlags::empty(),
+        &buttons,
+    );
+
+    let c_res = dialog.connect("response", true, move |arg| {
+        arg[0].get::<Dialog>().unwrap().unwrap().close();
+        None
+    });
+    if let Err(err) = c_res {
+        eprintln!("{:?}", err);
+        process::exit(0x01);
+    }
+
+    let tree_view = TreeView::new();
+
+    let model = ListStore::new(&[String::static_type(), String::static_type()]);
+
+    let commit_msg_col = TreeViewColumn::new();
+    let author_col = TreeViewColumn::new();
+
+    let commit_cell = CellRendererText::new();
+    let author_cell = CellRendererText::new();
+
+    commit_msg_col.pack_start(&commit_cell, true);
+    commit_msg_col.add_attribute(&commit_cell, "text", 0);
+    author_col.pack_start(&author_cell, true);
+    author_col.add_attribute(&author_cell, "text", 1);
+
+    tree_view.append_column(&commit_msg_col);
+    tree_view.append_column(&author_col);
+
+    let history = password.get_history(&store)?;
+
+    for (i, history_line) in history.iter().enumerate() {
+        model.insert_with_values(
+            Some(i as u32),
+            &[0, 1],
+            &[&history_line.message, &history_line.commit_time.to_string()],
+        );
+    }
+
+    tree_view.set_model(Some(&model));
+
+    let content = dialog.get_content_area();
+    content.add(&tree_view);
+
+    dialog.show_all();
+    dialog.run();
+    Ok(())
+}
+
 fn setup_menu_quit(builder: &Builder, window: &Window) {
     let quit_menu_item: MenuItem = builder
         .get_object("menuItemQuit")
@@ -328,7 +413,8 @@ fn main() {
         )
         .unwrap(),
     ));
-    let reload_res = (*store).lock().unwrap().reload_password_list();
+
+    let reload_res = store.lock().unwrap().reload_password_list();
     if let Err(e) = reload_res {
         eprintln!("Error: {:?}", e);
         process::exit(0x01);
@@ -364,7 +450,7 @@ fn main() {
 
     let status_bar_clone = status_bar.clone();
     password_list.connect_row_activated(move |_, path, _column| {
-        let passwords = (*SHOWN_PASSWORDS).lock().unwrap();
+        let passwords = SHOWN_PASSWORDS.lock().unwrap();
 
         let mut ctx = clipboard::ClipboardContext::new().unwrap();
 
@@ -442,7 +528,7 @@ fn main() {
 fn results(store: &pass::PasswordStoreType, query: &str) -> ListStore {
     let model = ListStore::new(&[String::static_type()]);
     let filtered = pass::search(store, query).unwrap();
-    let mut passwords = (*SHOWN_PASSWORDS).lock().unwrap();
+    let mut passwords = SHOWN_PASSWORDS.lock().unwrap();
     for (i, p) in filtered.iter().enumerate() {
         model.insert_with_values(Some(i as u32), &[0], &[&p.name]);
     }
