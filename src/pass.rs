@@ -811,8 +811,8 @@ impl PasswordEntry {
 
         let mut revwalk = repo.revwalk()?;
 
-        revwalk.set_sorting(git2::Sort::REVERSE);
-        revwalk.set_sorting(git2::Sort::TIME);
+        revwalk.set_sorting(git2::Sort::REVERSE)?;
+        revwalk.set_sorting(git2::Sort::TIME)?;
 
         revwalk.push_head()?;
 

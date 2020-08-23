@@ -845,7 +845,7 @@ fn get_translation_catalog() -> gettext::Catalog {
             let langid_res: Result<LanguageIdentifier, _> = format!("{}", preferred).parse();
 
             if let Ok(langid) = langid_res {
-                let file = std::fs::File::open(format!("{}/{}.mo", loc, langid.get_language()));
+                let file = std::fs::File::open(format!("{}/{}.mo", loc, langid.language));
                 if let Ok(file) = file {
                     if let Ok(catalog) = gettext::Catalog::parse(file) {
                         return catalog;
@@ -971,7 +971,7 @@ fn save_edit_config(
         let mut stores_borrowed = stores.lock().unwrap();
         for (i, store) in stores_borrowed.iter().enumerate() {
             if store.get_name() == name {
-                std::mem::replace(&mut stores_borrowed[i], new_store);
+                stores_borrowed[i] = new_store;
                 break;
             }
         }
