@@ -9,7 +9,6 @@ license = "GPL-3.0-only"
 edition = '2018'
 
 [dependencies]
-notify = "4"
 glob = "0.3.0"
 gpgme = "0.9.2"
 chrono = "0.4"

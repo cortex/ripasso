@@ -9,7 +9,6 @@ pub enum Error {
     Git(git2::Error),
     GPG(gpgme::Error),
     UTF8(string::FromUtf8Error),
-    Notify(notify::Error),
     Generic(&'static str),
     GenericDyn(String),
     PathError(path::StripPrefixError),
@@ -43,12 +42,6 @@ impl From<git2::Error> for Error {
 impl From<string::FromUtf8Error> for Error {
     fn from(err: string::FromUtf8Error) -> Error {
         Error::UTF8(err)
-    }
-}
-
-impl From<notify::Error> for Error {
-    fn from(err: notify::Error) -> Error {
-        Error::Notify(err)
     }
 }
 

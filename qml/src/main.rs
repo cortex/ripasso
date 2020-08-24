@@ -189,9 +189,6 @@ fn main() {
         .unwrap(),
     ));
 
-    // Load and watch all the passwords in the background
-    let _ = pass::watch(store.clone()).expect("error");
-
     // Set up all the UI stuff
     let mut engine = QmlEngine::new();
 

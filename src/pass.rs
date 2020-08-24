@@ -19,12 +19,8 @@ use std::fs;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::str;
-use std::sync::mpsc::{channel, Receiver, Sender};
-use std::thread;
-use std::time::Duration;
 
 use chrono::prelude::*;
-use notify::Watcher;
 use std::io::prelude::*;
 use std::sync::{Arc, Mutex};
 
@@ -1294,80 +1290,6 @@ pub fn search(store: &PasswordStoreType, query: &str) -> Result<Vec<PasswordEntr
     };
     let matching = passwords.iter().filter(|p| matches(&p.name, query));
     Ok(matching.cloned().collect())
-}
-
-/// Subscribe to events, that happen when password files are added or removed
-pub fn watch(store: PasswordStoreType) -> Result<Receiver<PasswordEvent>> {
-    let dir = {
-        let store_res = store.try_lock();
-        if store_res.is_err() {
-            return Err(Error::GenericDyn(format!("{:?}", store_res.err())));
-        }
-        let s = store_res.unwrap();
-
-        s.root.clone()
-    };
-
-    let (watcher_tx, watcher_rx) = channel();
-
-    // Watcher iterator
-    let (event_tx, event_rx): (Sender<PasswordEvent>, Receiver<PasswordEvent>) = channel();
-
-    thread::spawn(move || {
-        // Automatically select the best implementation for your platform.
-        let mut watcher: notify::RecommendedWatcher =
-            Watcher::new(watcher_tx, Duration::from_secs(1)).unwrap();
-
-        // Add a path to be watched. All files and directories at that path and
-        // below will be monitored for changes.
-        watcher
-            .watch(&dir, notify::RecursiveMode::Recursive)
-            .unwrap();
-
-        loop {
-            match watcher_rx.recv() {
-                Ok(event) => {
-                    let pass_event = match event {
-                        notify::DebouncedEvent::Create(p) => {
-                            let ext = p.extension();
-                            if ext == None || ext.unwrap() != "gpg" {
-                                continue;
-                            }
-
-                            let p_e = {
-                                let s = store.lock().unwrap();
-                                if s.repo().is_err() {
-                                    PasswordEntry::load_from_filesystem(&s.root, &p.clone())
-                                        .unwrap()
-                                } else {
-                                    PasswordEntry::load_from_git(
-                                        &s.root,
-                                        &p.clone(),
-                                        &s.repo().unwrap(),
-                                    )
-                                }
-                            };
-                            PasswordEvent::NewPassword(p_e)
-                        }
-                        notify::DebouncedEvent::Remove(p) => PasswordEvent::RemovedPassword(p),
-                        notify::DebouncedEvent::Error(e, _) => {
-                            PasswordEvent::Error(Error::Notify(e))
-                        }
-                        _ => PasswordEvent::Error(Error::Generic("None")),
-                    };
-
-                    if let Err(_err) = event_tx.send(pass_event) {
-                        //error!("Error sending event {}", err)
-                    }
-                }
-                Err(e) => {
-                    eprintln!("watch error: {:?}", e);
-                    panic!("error")
-                }
-            }
-        }
-    });
-    Ok(event_rx)
 }
 
 fn to_name(base: &PathBuf, path: &PathBuf) -> String {
