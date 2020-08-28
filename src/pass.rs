@@ -96,15 +96,15 @@ impl PasswordStore {
             return true;
         }
 
-        if home.is_none() {
-            return false;
+        match home {
+            None => false,
+            Some(home) => {
+                let p = self.root.clone();
+                let ph = home.join(".password-store");
+
+                p == ph
+            }
         }
-        let home = home.unwrap();
-
-        let p = self.root.clone();
-        let ph = home.join(".password-store");
-
-        p == ph
     }
 
     /// validates the signature file of the .gpg-id file
@@ -183,7 +183,7 @@ impl PasswordStore {
         let mut sig_sum = None;
 
         for (i, sig) in result.signatures().enumerate() {
-            let fpr = sig.fingerprint().unwrap();
+            let fpr = sig.fingerprint()?;
 
             if !signing_keys.contains(&fpr.to_string()) {
                 return Err(Error::Generic("the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY"));
@@ -269,20 +269,20 @@ impl PasswordStore {
         if let Err(why) = file.write_all(&output) {
             return Err(Error::from(why));
         }
-        let repo = self.repo();
-        if repo.is_err() {
-            return PasswordEntry::load_from_filesystem(&self.root, &path);
+        match self.repo() {
+            Err(_) => PasswordEntry::load_from_filesystem(&self.root, &path),
+            Ok(repo) => {
+                let message = format!("Add password for {} using ripasso", path_end);
+
+                add_and_commit_internal(
+                    &repo,
+                    &[append_extension(PathBuf::from(path_end), ".gpg")],
+                    &message,
+                )?;
+
+                Ok(PasswordEntry::load_from_git(&self.root, &path, &repo))
+            }
         }
-        let repo = repo.unwrap();
-        let message = format!("Add password for {} using ripasso", path_end);
-
-        add_and_commit_internal(
-            &repo,
-            &[append_extension(PathBuf::from(path_end), ".gpg")],
-            &message,
-        )?;
-
-        Ok(PasswordEntry::load_from_git(&self.root, &path, &repo))
     }
 
     /// loads the list of passwords from disk again
@@ -302,14 +302,17 @@ impl PasswordStore {
             return true;
         }
 
-        let config = git2::Config::open_default().unwrap();
+        match git2::Config::open_default() {
+            Err(_) => false,
+            Ok(config) => {
+                let user_name = config.get_string("user.name");
 
-        let user_name = config.get_string("user.name");
-
-        if user_name.is_err() {
-            return false;
+                if user_name.is_err() {
+                    return false;
+                }
+                true
+            }
         }
-        true
     }
 
     /// Read the password store directory and return a list of all the password files.
@@ -330,6 +333,8 @@ impl PasswordStore {
 
             return Ok(passwords);
         }
+        let repo = repo?;
+
         let password_path_glob = dir.join("**/*.gpg");
         let existing_iter = glob::glob(&password_path_glob.to_string_lossy())?;
 
@@ -346,11 +351,11 @@ impl PasswordStore {
             return Ok(vec![]);
         }
 
-        let repo = self.repo().unwrap();
-
         let mut walk = repo.revwalk()?;
-        walk.push(repo.head()?.target().unwrap())?;
-        let mut last_tree = repo.find_commit(repo.head()?.target().unwrap())?.tree()?;
+        walk.push(repo.head()?.target().ok_or("missing Oid on head")?)?;
+        let mut last_tree = repo
+            .find_commit(repo.head()?.target().ok_or("missing Oid on head")?)?
+            .tree()?;
         let mut last_commit = repo.head()?.peel_to_commit()?;
         for rev in walk {
             if rev.is_err() {
@@ -365,19 +370,21 @@ impl PasswordStore {
 
             diff.foreach(
                 &mut |delta: git2::DiffDelta, _f: f32| {
-                    let entry_name = format!("{}", delta.new_file().path().unwrap().display());
+                    if let Some(file) = delta.new_file().path() {
+                        let entry_name = file.to_string_lossy();
 
-                    files_to_consider.retain(|filename| {
-                        push_password_if_match(
-                            filename,
-                            &entry_name,
-                            &commit,
-                            &repo,
-                            &dir,
-                            &mut passwords,
-                            &oid,
-                        )
-                    });
+                        files_to_consider.retain(|filename| {
+                            push_password_if_match(
+                                filename,
+                                &entry_name,
+                                &commit,
+                                &repo,
+                                &dir,
+                                &mut passwords,
+                                &oid,
+                            )
+                        });
+                    }
                     true
                 },
                 None,
@@ -389,10 +396,8 @@ impl PasswordStore {
             last_commit = commit;
         }
 
-        last_tree
-            .walk(git2::TreeWalkMode::PreOrder, |_, entry| {
-                let entry_name = entry.name().unwrap().to_string();
-
+        last_tree.walk(git2::TreeWalkMode::PreOrder, |_, entry| {
+            if let Some(entry_name) = entry.name() {
                 files_to_consider.retain(|filename| {
                     push_password_if_match(
                         filename,
@@ -404,9 +409,9 @@ impl PasswordStore {
                         &last_commit.id(),
                     )
                 });
-                git2::TreeWalkResult::Ok
-            })
-            .unwrap();
+            }
+            git2::TreeWalkResult::Ok
+        })?;
 
         for file in files_to_consider {
             let mut pbuf = dir.clone();
@@ -491,7 +496,7 @@ impl PasswordStore {
         if repo.is_err() {
             return Err(Error::Generic("must have a repository"));
         }
-        let repo = repo.unwrap();
+        let repo = repo?;
 
         let mut index = repo.index()?;
         for path in paths {
@@ -798,11 +803,11 @@ impl PasswordEntry {
     /// that password in some way
     pub fn get_history(&self, store: &PasswordStoreType) -> Result<Vec<GitLogLine>> {
         let repo = {
-            let repo_res = store.lock().unwrap().repo();
+            let repo_res = store.lock()?.repo();
             if repo_res.is_err() {
                 return Ok(vec![]);
             }
-            repo_res.unwrap()
+            repo_res?
         };
 
         let mut revwalk = repo.revwalk()?;
@@ -812,9 +817,9 @@ impl PasswordEntry {
 
         revwalk.push_head()?;
 
-        let mut p = self.path.to_str().unwrap().to_string();
-        let root = store.lock().unwrap().root.clone();
-        let mut prefix = root.to_str().unwrap().to_string();
+        let mut p = self.path.to_str().ok_or("missing path")?.to_string();
+        let root = store.lock()?.root.clone();
+        let mut prefix = root.to_str().ok_or("missing path")?.to_string();
         if !prefix.ends_with('/') {
             prefix += "/";
         }
@@ -826,37 +831,45 @@ impl PasswordEntry {
 
         let walk_res: Vec<GitLogLine> = revwalk
             .filter_map(|id| {
-                let oid = id.unwrap();
-                let commit = repo.find_commit(oid).unwrap();
+                if let Ok(oid) = id {
+                    if let Ok(commit) = repo.find_commit(oid) {
+                        match commit.parents().len() {
+                            0 => {
+                                if let Ok(tree) = commit.tree() {
+                                    let flags = git2::PathspecFlags::NO_MATCH_ERROR;
+                                    if ps.match_tree(&tree, flags).is_err() {
+                                        return None;
+                                    }
+                                } else {
+                                    return None;
+                                }
+                            }
+                            _ => {
+                                let m = commit.parents().all(|parent| {
+                                    match_with_parent(&repo, &commit, &parent, &mut diffopts)
+                                        .unwrap_or(false)
+                                });
+                                if !m {
+                                    return None;
+                                }
+                            }
+                        }
 
-                match commit.parents().len() {
-                    0 => {
-                        let tree = commit.tree().unwrap();
-                        let flags = git2::PathspecFlags::NO_MATCH_ERROR;
-                        if ps.match_tree(&tree, flags).is_err() {
-                            return None;
-                        }
+                        let time = commit.time();
+                        let dt = Local.timestamp(time.seconds(), 0);
+
+                        let signature_status = verify_git_signature(&repo, &oid);
+                        Some(GitLogLine::new(
+                            commit.message().unwrap_or("<no message>").to_string(),
+                            dt,
+                            signature_status.ok(),
+                        ))
+                    } else {
+                        None
                     }
-                    _ => {
-                        let m = commit.parents().all(|parent| {
-                            match_with_parent(&repo, &commit, &parent, &mut diffopts)
-                                .unwrap_or(false)
-                        });
-                        if !m {
-                            return None;
-                        }
-                    }
+                } else {
+                    None
                 }
-
-                let time = commit.time();
-                let dt = Local.timestamp(time.seconds(), 0);
-
-                let signature_status = verify_git_signature(&repo, &oid);
-                Some(GitLogLine::new(
-                    commit.message().unwrap().to_string(),
-                    dt,
-                    signature_status.ok(),
-                ))
             })
             .collect();
 
@@ -899,19 +912,18 @@ fn find_last_commit(repo: &git2::Repository) -> Result<git2::Commit> {
 
 /// Returns if a git commit should be gpg signed or not.
 fn should_sign() -> bool {
-    let config = git2::Config::open_default();
-    if config.is_err() {
-        return false;
+    match git2::Config::open_default() {
+        Err(_) => false,
+        Ok(config) => {
+            let do_sign = config.get_bool("commit.gpgsign");
+
+            if do_sign.is_err() || !do_sign.unwrap() {
+                return false;
+            }
+
+            true
+        }
     }
-    let config = config.unwrap();
-
-    let do_sign = config.get_bool("commit.gpgsign");
-
-    if do_sign.is_err() || !do_sign.unwrap() {
-        return false;
-    }
-
-    true
 }
 
 /// Apply the changes to the git repository.
@@ -981,10 +993,9 @@ fn add_and_commit_internal(
 
 /// Remove a file from the store, and commit the deletion to the supplied git repository.
 fn remove_and_commit(store: &PasswordStore, paths: &[PathBuf], message: &str) -> Result<git2::Oid> {
-    if store.repo().is_err() {
-        return Err(Error::Generic("must have a repository"));
-    }
-    let repo = store.repo().unwrap();
+    let repo = store
+        .repo()
+        .map_err(|_| Error::Generic("must have a repository"))?;
 
     let mut index = repo.index()?;
     for path in paths {
@@ -1015,10 +1026,9 @@ fn move_and_commit(
     new_name: &Path,
     message: &str,
 ) -> Result<git2::Oid> {
-    if store.repo().is_err() {
-        return Err(Error::Generic("must have a repository"));
-    }
-    let repo = store.repo().unwrap();
+    let repo = store
+        .repo()
+        .map_err(|_| Error::Generic("must have a repository"))?;
 
     let mut index = repo.index()?;
     index.remove_path(old_name)?;
@@ -1048,11 +1058,15 @@ fn find_origin(repo: &git2::Repository) -> Result<(git2::Remote, String)> {
     for branch in repo.branches(Some(git2::BranchType::Local))? {
         let b = branch?.0;
         if b.is_head() {
-            let upstream_name_buf =
-                repo.branch_upstream_remote(&format!("refs/heads/{}", &b.name()?.unwrap()))?;
-            let upstream_name = upstream_name_buf.as_str().unwrap();
+            let upstream_name_buf = repo.branch_upstream_remote(&format!(
+                "refs/heads/{}",
+                &b.name()?.ok_or("no branch name")?
+            ))?;
+            let upstream_name = upstream_name_buf
+                .as_str()
+                .ok_or("Can't convert to string")?;
             let origin = repo.find_remote(&upstream_name)?;
-            return Ok((origin, b.name()?.unwrap().to_string()));
+            return Ok((origin, b.name()?.ok_or("no branch name")?.to_string()));
         }
     }
 
@@ -1086,10 +1100,9 @@ fn cred(
 
 /// Push your changes to the remote git repository.
 pub fn push(store: &PasswordStore) -> Result<()> {
-    if store.repo().is_err() {
-        return Ok(());
-    }
-    let repo = store.repo().unwrap();
+    let repo = store
+        .repo()
+        .map_err(|_| Error::Generic("must have a repository"))?;
 
     let mut ref_status = None;
     let (mut origin, branch_name) = find_origin(&repo)?;
@@ -1120,11 +1133,9 @@ pub fn push(store: &PasswordStore) -> Result<()> {
 
 /// Pull new changes from the remote git repository.
 pub fn pull(store: &PasswordStore) -> Result<()> {
-    let repo = store.repo();
-    if repo.is_err() {
-        return Ok(());
-    }
-    let repo = repo.unwrap();
+    let repo = store
+        .repo()
+        .map_err(|_| Error::Generic("must have a repository"))?;
 
     let (mut origin, branch_name) = find_origin(&repo)?;
 
@@ -1180,18 +1191,16 @@ fn read_git_meta_data(
     Result<SignatureStatus>,
 ) {
     let path_res = path.strip_prefix(base);
-    if path_res.is_err() {
-        let e = path_res.err().unwrap();
+    if let Err(e) = path_res {
         return (
-            Err(Error::GenericDyn(format!("{:?}", e))),
-            Err(Error::GenericDyn(format!("{:?}", e))),
-            Err(Error::GenericDyn(format!("{:?}", e))),
+            Err(Error::from(e.clone())),
+            Err(Error::from(e.clone())),
+            Err(Error::from(e)),
         );
     }
 
     let blame_res = repo.blame_file(path_res.unwrap(), None);
-    if blame_res.is_err() {
-        let e = blame_res.err().unwrap();
+    if let Err(e) = blame_res {
         return (
             Err(Error::GenericDyn(format!("{:?}", e))),
             Err(Error::GenericDyn(format!("{:?}", e))),
@@ -1203,8 +1212,7 @@ fn read_git_meta_data(
         .get_line(1)
         .ok_or(Error::Generic("no git history found"));
 
-    if id_res.is_err() {
-        let e = id_res.err().unwrap();
+    if let Err(e) = id_res {
         return (
             Err(Error::GenericDyn(format!("{:?}", e))),
             Err(Error::GenericDyn(format!("{:?}", e))),
@@ -1214,8 +1222,7 @@ fn read_git_meta_data(
     let id = id_res.unwrap().orig_commit_id();
 
     let commit_res = repo.find_commit(id);
-    if commit_res.is_err() {
-        let e = commit_res.err().unwrap();
+    if let Err(e) = commit_res {
         return (
             Err(Error::GenericDyn(format!("{:?}", e))),
             Err(Error::GenericDyn(format!("{:?}", e))),
@@ -1281,7 +1288,7 @@ pub enum PasswordEvent {
 
 /// Return a list of all passwords whose name contains `query`.
 pub fn search(store: &PasswordStoreType, query: &str) -> Result<Vec<PasswordEntry>> {
-    let passwords = &store.lock().unwrap().passwords;
+    let passwords = &store.lock()?.passwords;
     fn normalized(s: &str) -> String {
         s.to_lowercase()
     };
@@ -1294,7 +1301,7 @@ pub fn search(store: &PasswordStoreType, query: &str) -> Result<Vec<PasswordEntr
 
 fn to_name(base: &PathBuf, path: &PathBuf) -> String {
     path.strip_prefix(base)
-        .unwrap()
+        .unwrap_or(path)
         .to_string_lossy()
         .into_owned()
         .trim_end_matches(".gpg")
@@ -1330,7 +1337,6 @@ fn home_exists(home: &Option<PathBuf>, settings: &config::Config) -> bool {
         return false;
     }
     let home = home.as_ref().unwrap();
-    let home_path = home.join(".password-store");
 
     let home_dir = home.join(".password-store");
     if home_dir.exists() {
@@ -1353,7 +1359,7 @@ fn home_exists(home: &Option<PathBuf>, settings: &config::Config) -> bool {
                 let password_store_dir_opt = store.get("path");
                 if let Some(p) = password_store_dir_opt {
                     let p_path = PathBuf::from(p.clone().into_str().unwrap());
-                    let c1 = std::fs::canonicalize(home_path.clone());
+                    let c1 = std::fs::canonicalize(home_dir.clone());
                     let c2 = std::fs::canonicalize(p_path);
                     if c1.is_ok() && c2.is_ok() && c1.unwrap() == c2.unwrap() {
                         return false;
@@ -1385,16 +1391,10 @@ fn settings_file_exists(home: &Option<PathBuf>, xdg_config_home: &Option<PathBuf
 
     let xdg_config_file_dir = Path::new(&xdg_config_file);
     if xdg_config_file_dir.exists() {
-        let config_file = fs::metadata(xdg_config_file_dir);
-        if config_file.is_err() {
-            return false;
-        }
-        let config_file = config_file.unwrap();
-
-        if config_file.len() == 0 {
-            return false;
-        }
-        return true;
+        return match fs::metadata(xdg_config_file_dir) {
+            Err(_) => false,
+            Ok(config_file) => config_file.len() != 0,
+        };
     }
 
     false
@@ -1403,10 +1403,7 @@ fn settings_file_exists(home: &Option<PathBuf>, xdg_config_home: &Option<PathBuf
 fn home_settings(home: &Option<PathBuf>) -> Result<config::Config> {
     let mut default_store = std::collections::HashMap::new();
 
-    if home.is_none() {
-        return Err(Error::Generic("no home directory set"));
-    }
-    let home = home.as_ref().unwrap();
+    let home = home.as_ref().ok_or("no home directory set")?;
 
     default_store.insert(
         "path".to_string(),
@@ -1457,12 +1454,10 @@ fn xdg_config_file_location(
     match xdg_config_home.as_ref() {
         Some(p) => Ok(p.join("ripasso/settings.toml")),
         None => {
-            if home.is_none() {
-                Err(Error::Generic("no home directory"))
+            if let Some(h) = home {
+                Ok(h.join(".config/ripasso/settings.toml"))
             } else {
-                let home = home.as_ref().unwrap();
-
-                Ok(home.join(".config/ripasso/settings.toml"))
+                Err(Error::Generic("no home directory"))
             }
         }
     }
@@ -1508,7 +1503,7 @@ pub fn save_config(
     config_file_location: &PathBuf,
 ) -> Result<()> {
     let mut stores_map = std::collections::HashMap::new();
-    let stores_borrowed = stores.lock().unwrap();
+    let stores_borrowed = stores.lock()?;
     for store in stores_borrowed.iter() {
         let mut store_map = std::collections::HashMap::new();
         store_map.insert(

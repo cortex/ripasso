@@ -96,5 +96,35 @@ impl From<toml::ser::Error> for Error {
     }
 }
 
+impl From<&str> for Error {
+    fn from(err: &str) -> Error {
+        Error::GenericDyn(err.to_string())
+    }
+}
+
+impl From<std::sync::PoisonError<std::sync::MutexGuard<'_, crate::pass::PasswordStore>>> for Error {
+    fn from(
+        _err: std::sync::PoisonError<std::sync::MutexGuard<'_, crate::pass::PasswordStore>>,
+    ) -> Error {
+        Error::Generic("thread error")
+    }
+}
+
+impl
+    From<
+        std::sync::PoisonError<
+            std::sync::MutexGuard<'_, std::vec::Vec<crate::pass::PasswordStore>>,
+        >,
+    > for Error
+{
+    fn from(
+        _err: std::sync::PoisonError<
+            std::sync::MutexGuard<'_, std::vec::Vec<crate::pass::PasswordStore>>,
+        >,
+    ) -> Error {
+        Error::Generic("thread error")
+    }
+}
+
 /// Convenience type for Results
 pub type Result<T> = std::result::Result<T, Error>;
