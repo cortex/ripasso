@@ -41,6 +41,8 @@ use std::{thread, time};
 use std::collections::HashMap;
 use unic_langid::LanguageIdentifier;
 
+use pass::Result;
+
 mod helpers;
 mod wizard;
 
@@ -172,8 +174,9 @@ fn do_delete(ui: &mut Cursive, store: &PasswordStoreType) {
             return;
         }
 
-        let delete_id = l.selected_id().unwrap();
-        l.remove_item(delete_id);
+        if let Some(delete_id) = l.selected_id() {
+            l.remove_item(delete_id);
+        }
     });
 
     ui.pop_layer();
@@ -229,8 +232,8 @@ fn show_file_history(ui: &mut Cursive, store: PasswordStoreType) {
         Ok(history) => {
             for history_line in history {
                 let mut verification_status = "  ";
-                if history_line.signature_status.is_some() {
-                    verification_status = match history_line.signature_status.as_ref().unwrap() {
+                if let Some(h_line) = &history_line.signature_status {
+                    verification_status = match h_line {
                         SignatureStatus::Good => "🔒",
                         SignatureStatus::AlmostGood => "🔓",
                         SignatureStatus::Bad => "⛔",
@@ -304,7 +307,7 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) {
     ui.add_layer(ev);
 }
 
-fn do_rename_file(ui: &mut Cursive, store: PasswordStoreType) {
+fn do_rename_file(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
     let old_name = ui
         .find_name::<TextView>("old_name_input")
         .unwrap()
@@ -328,17 +331,20 @@ fn do_rename_file(ui: &mut Cursive, store: PasswordStoreType) {
                 .find_name::<SelectView<pass::PasswordEntry>>("results")
                 .unwrap();
 
-            let delete_id = l.selected_id().unwrap();
-            l.remove_item(delete_id);
+            if let Some(delete_id) = l.selected_id() {
+                l.remove_item(delete_id);
+            }
 
             let col = ui.screen_size().x;
-            let entry = &store.lock().unwrap().passwords[index];
+            let entry = &store.lock()?.passwords[index];
             l.add_item(create_label(&entry, col), entry.clone());
             l.sort_by_label();
 
             ui.pop_layer();
         }
     }
+
+    Ok(())
 }
 
 fn rename_file_dialog(ui: &mut Cursive, store: PasswordStoreType) {
@@ -385,7 +391,9 @@ fn rename_file_dialog(ui: &mut Cursive, store: PasswordStoreType) {
     let d = Dialog::around(fields)
         .title(CATALOG.gettext("Rename File"))
         .button(CATALOG.gettext("Rename"), move |ui: &mut Cursive| {
-            do_rename_file(ui, store.clone())
+            if let Err(e) = do_rename_file(ui, store.clone()) {
+                helpers::errorbox(ui, &e);
+            }
         })
         .dismiss_button(CATALOG.gettext("Cancel"));
 
@@ -394,7 +402,9 @@ fn rename_file_dialog(ui: &mut Cursive, store: PasswordStoreType) {
             s.pop_layer();
         })
         .on_event(Key::Enter, move |ui: &mut Cursive| {
-            do_rename_file(ui, store2.clone())
+            if let Err(e) = do_rename_file(ui, store2.clone()) {
+                helpers::errorbox(ui, &e);
+            }
         });
 
     ui.add_layer(ev);
@@ -736,8 +746,8 @@ fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
         15,
     );
     let mut verification_status = "  ";
-    if p.signature_status.is_some() {
-        verification_status = match p.signature_status.as_ref().unwrap() {
+    if let Some(s_status) = &p.signature_status {
+        verification_status = match s_status {
             SignatureStatus::Good => "🔒",
             SignatureStatus::AlmostGood => "🔓",
             SignatureStatus::Bad => "⛔",
@@ -761,17 +771,18 @@ fn search(store: &PasswordStoreType, ui: &mut Cursive, query: &str) {
         .find_name::<SelectView<pass::PasswordEntry>>("results")
         .unwrap();
 
-    let r_res = pass::search(&store, &String::from(query));
-    if let Err(err) = r_res {
-        helpers::errorbox(ui, &err);
-        return;
+    match pass::search(&store, &String::from(query)) {
+        Err(err) => {
+            helpers::errorbox(ui, &err);
+        }
+        Ok(r) => {
+            l.clear();
+            for p in &r {
+                l.add_item(create_label(&p, col), p.clone());
+            }
+            l.sort_by_label();
+        }
     }
-    let r = r_res.unwrap();
-    l.clear();
-    for p in &r {
-        l.add_item(create_label(&p, col), p.clone());
-    }
-    l.sort_by_label();
 }
 
 fn help() {
@@ -842,7 +853,8 @@ fn get_translation_catalog() -> gettext::Catalog {
 
     for preferred in locale.tags_for("messages") {
         for loc in &translation_locations {
-            let langid_res: Result<LanguageIdentifier, _> = format!("{}", preferred).parse();
+            let langid_res: std::result::Result<LanguageIdentifier, _> =
+                format!("{}", preferred).parse();
 
             if let Ok(langid) = langid_res {
                 let file = std::fs::File::open(format!("{}/{}.mo", loc, langid.language));
@@ -875,10 +887,8 @@ fn get_stores(config: &config::Config, home: &Option<PathBuf>) -> pass::Result<V
             let password_store_dir_opt = store.get("path");
             let valid_signing_keys_opt = store.get("valid_signing_keys");
 
-            if password_store_dir_opt.is_some() {
-                let password_store_dir = Some(PathBuf::from(
-                    password_store_dir_opt.unwrap().clone().into_str()?,
-                ));
+            if let Some(store_dir) = password_store_dir_opt {
+                let password_store_dir = Some(PathBuf::from(store_dir.clone().into_str()?));
 
                 let valid_signing_keys = match valid_signing_keys_opt {
                     Some(k) => match k.clone().into_str() {
@@ -1330,8 +1340,8 @@ fn main() {
             &xdg_config_home,
         )
     };
-    if config_res.is_err() {
-        eprintln!("Error {:?}", config_res.err().unwrap());
+    if let Err(err) = config_res {
+        eprintln!("Error {:?}", err);
         process::exit(1);
     }
     let (config, config_file_location) = config_res.unwrap();
@@ -1341,8 +1351,8 @@ fn main() {
     }
 
     let stores = get_stores(&config, &home);
-    if stores.is_err() {
-        eprintln!("Error {:?}", stores.err().unwrap());
+    if let Err(err) = stores {
+        eprintln!("Error {:?}", err);
         process::exit(1);
     }
     let stores: Arc<Mutex<Vec<PasswordStore>>> = Arc::new(Mutex::new(stores.unwrap()));
@@ -1445,7 +1455,10 @@ fn main() {
 
     ui.add_global_callback(Event::Key(cursive::event::Key::Esc), |s| s.quit());
 
-    ui.load_toml(include_str!("../res/style.toml")).unwrap();
+    if let Err(err) = ui.load_toml(include_str!("../res/style.toml")) {
+        eprintln!("Error {:?}", err);
+        process::exit(1);
+    }
     let search_box = EditView::new()
         .on_edit({
             let store = store.clone();
