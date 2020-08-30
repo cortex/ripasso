@@ -411,7 +411,7 @@ fn env_var_exists_test_with_dir() {
 #[test]
 fn home_settings_missing() {
     assert_eq!(
-        Error::Generic("no home directory set"),
+        Error::GenericDyn("no home directory set".to_string()),
         home_settings(&None).err().unwrap()
     );
 }
