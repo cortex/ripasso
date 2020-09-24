@@ -31,7 +31,7 @@ fn cleanup(mut base_path: PathBuf, path_name: &str) -> Result<(), std::io::Error
 
 fn pop_list(password_dir: PathBuf) -> pass::Result<()> {
     let store =
-        pass::PasswordStore::new(&Some(String::from(password_dir.to_str().unwrap())), &None)?;
+        pass::PasswordStore::new("", &Some(password_dir), &None, &None)?;
     let results = store.all_passwords().unwrap();
 
     assert_eq!(results.len(), 4);
