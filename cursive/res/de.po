@@ -115,7 +115,7 @@ msgstr "Kennwortspeicher bearbeiten"
 
 #: cursive/src/main.rs:1117
 msgid "Edit store config"
-msgstr "Speicher Einstellungen bearbeiten"
+msgstr "Speichereinstellungen bearbeiten"
 
 #: cursive/src/helpers.rs:39
 msgid "Error"
@@ -127,11 +127,11 @@ msgstr "F1: Menü | "
 
 #: cursive/src/main.rs:254
 msgid "File History"
-msgstr "Datei Geschichte"
+msgstr "Dateiverlauf"
 
 #: cursive/src/main.rs:1498
 msgid "File History (ctrl-h)"
-msgstr "Datei Geschichte (strg+h)"
+msgstr "Dateiverlauf (strg+h)"
 
 #: cursive/src/main.rs:654
 msgid "Full"
@@ -187,7 +187,7 @@ msgstr "Neuer Dateiname: "
 
 #: cursive/src/main.rs:1221
 msgid "New store config"
-msgstr "Neue Speicher Einstellungen"
+msgstr "Neue Speichereinstellungen"
 
 #: cursive/src/wizard.rs:80
 msgid "No"
@@ -244,11 +244,11 @@ msgstr "Umbenennen"
 
 #: cursive/src/main.rs:390
 msgid "Rename File"
-msgstr "Datei Umbenennen"
+msgstr "Datei umbenennen"
 
 #: cursive/src/main.rs:1510
 msgid "Rename file (ctrl-r)"
-msgstr "Datei Umbenennen (Strg-r)"
+msgstr "Datei umbenennen (Strg-r)"
 
 #: cursive/src/wizard.rs:99
 msgid ""
@@ -279,7 +279,7 @@ msgstr "Teammitglieder (Strg-v)"
 msgid "Team member with key id {} isn't in your GPG keyring, fetch it first"
 msgstr ""
 "Das Teammitglied mit der Schlüssel ID {} ist nicht in ihrem GPG-"
-"Schlüsselring, rufen sie diesen erst ab"
+"Schlüsselring, rufen Sie diesen erst ab"
 
 #: cursive/src/main.rs:1385
 msgid ""
@@ -287,7 +287,7 @@ msgid ""
 "there that's not in git. Please add them, otherwise they might get lost."
 msgstr ""
 "Der Kennwort Speicher wird von einer git Repository gestützt, allerdings "
-"sind Kennwörter enthalten die nicht in git sind. Bitte fügen sie diese "
+"sind Kennwörter enthalten, die nicht in git sind. Bitte fügen sie diese "
 "hinzu, ansonsten würden diese verloren gehen."
 
 #: cursive/src/main.rs:653
@@ -316,11 +316,11 @@ msgstr "Config Datei aktuallisiert"
 
 #: cursive/src/main.rs:290
 msgid "Updated password entry"
-msgstr "Kennwort Eintrag aktuallisiert"
+msgstr "Kennworteintrag aktualisiert"
 
 #: cursive/src/main.rs:1093 cursive/src/main.rs:1201
 msgid "Valid Signing Keys: "
-msgstr "Gültige Unterzeichnung Schlüssel: "
+msgstr "Gültige Signaturschlüssel: "
 
 #: cursive/src/wizard.rs:145
 msgid ""
