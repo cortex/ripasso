@@ -112,3 +112,7 @@ nix-env -iA nixpkgs.ripasso-cursive
 ## Build instructions
 
 [See here](https://github.com/cortex/ripasso/blob/master/BUILD_INSTRUCTIONS.md)
+
+## Translation howto
+
+[See here](https://github.com/cortex/ripasso/blob/master/TRANSLATIONS.md)
