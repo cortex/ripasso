@@ -2,20 +2,20 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-# 
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2020-06-29 10:33+0200\n"
-"PO-Revision-Date: 2020-01-14 17:47+0100\n"
+"PO-Revision-Date: 2020-10-01 14:52+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: de_DE\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 2.2.4\n"
+"X-Generator: Poedit 2.4.1\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: cursive/src/main.rs:782
@@ -56,6 +56,8 @@ msgid ""
 "Can't import team member due to that the GPG trust relationship level isn't "
 "Ultimate"
 msgstr ""
+"Das Teammitglied kann nicht importiert werden da das GPG "
+"Vertrauensverhältnis Niveau nicht Ultimativ ist"
 
 #: cursive/src/main.rs:197 cursive/src/main.rs:394 cursive/src/main.rs:509
 #: cursive/src/main.rs:554 cursive/src/main.rs:632 cursive/src/main.rs:1122
@@ -65,12 +67,11 @@ msgstr "Abbrechen"
 
 #: cursive/src/main.rs:302
 msgid "Close"
-msgstr ""
+msgstr "Schließen"
 
 #: cursive/src/main.rs:159
-#, fuzzy
 msgid "Copied file name to copy buffer"
-msgstr "Kennwort wurde für 40 Sekunden in die Zwischenablage kopiert"
+msgstr "Dateiname wurde in die Zwischenablage kopiert"
 
 #: cursive/src/main.rs:133
 msgid "Copied password to copy buffer for 40 seconds"
@@ -81,9 +82,8 @@ msgid "Copy (ctrl-y)"
 msgstr "Kopieren (Strg-y)"
 
 #: cursive/src/main.rs:1493
-#, fuzzy
 msgid "Copy Name (ctrl-u)"
-msgstr "Kopieren (Strg-y)"
+msgstr "Namen kopieren (Strg-u)"
 
 #: cursive/src/wizard.rs:77 cursive/src/wizard.rs:102 cursive/src/wizard.rs:146
 msgid "Create"
@@ -107,16 +107,15 @@ msgstr "Teammitglied vom Kennwortspeicher entfernt"
 
 #: cursive/src/main.rs:1082 cursive/src/main.rs:1191
 msgid "Directory: "
-msgstr ""
+msgstr "Verzeichnis: "
 
 #: cursive/src/main.rs:1257
-#, fuzzy
 msgid "Edit password stores"
-msgstr "Teammitglied zum Kennwortspeicher hinzugefügt"
+msgstr "Kennwortspeicher bearbeiten"
 
 #: cursive/src/main.rs:1117
 msgid "Edit store config"
-msgstr ""
+msgstr "Speichereinstellungen bearbeiten"
 
 #: cursive/src/helpers.rs:39
 msgid "Error"
@@ -128,15 +127,15 @@ msgstr "F1: Menü | "
 
 #: cursive/src/main.rs:254
 msgid "File History"
-msgstr ""
+msgstr "Dateiverlauf"
 
 #: cursive/src/main.rs:1498
 msgid "File History (ctrl-h)"
-msgstr ""
+msgstr "Dateiverlauf (strg+h)"
 
 #: cursive/src/main.rs:654
 msgid "Full"
-msgstr ""
+msgstr "Voll"
 
 #: cursive/src/main.rs:609
 msgid "GPG Key ID: "
@@ -168,27 +167,27 @@ msgstr "Kennwort Repo mit Ripasso initialisiert"
 
 #: cursive/src/main.rs:1553
 msgid "Manage"
-msgstr ""
+msgstr "Administrieren"
 
 #: cursive/src/main.rs:655
 msgid "Marginal"
-msgstr ""
+msgstr "Marginal"
 
 #: cursive/src/main.rs:1071 cursive/src/main.rs:1181
 msgid "Name: "
-msgstr ""
+msgstr "Name: "
 
 #: cursive/src/main.rs:656
 msgid "Never"
-msgstr ""
+msgstr "Nie"
 
 #: cursive/src/main.rs:375
 msgid "New file name: "
-msgstr ""
+msgstr "Neuer Dateiname: "
 
 #: cursive/src/main.rs:1221
 msgid "New store config"
-msgstr ""
+msgstr "Neue Speichereinstellungen"
 
 #: cursive/src/wizard.rs:80
 msgid "No"
@@ -196,7 +195,7 @@ msgstr "Nein"
 
 #: cursive/src/main.rs:487
 msgid "Note: "
-msgstr ""
+msgstr "Notiz: "
 
 #: cursive/src/helpers.rs:38 cursive/src/main.rs:255 cursive/src/main.rs:703
 #: cursive/src/main.rs:1258
@@ -205,7 +204,7 @@ msgstr "OK"
 
 #: cursive/src/main.rs:365
 msgid "Old file name: "
-msgstr ""
+msgstr "Alter Dateiname: "
 
 #: cursive/src/main.rs:1494
 msgid "Open (ctrl-o)"
@@ -241,16 +240,15 @@ msgstr "Beenden (Esc)"
 
 #: cursive/src/main.rs:391
 msgid "Rename"
-msgstr ""
+msgstr "Umbenennen"
 
 #: cursive/src/main.rs:390
 msgid "Rename File"
-msgstr ""
+msgstr "Datei umbenennen"
 
 #: cursive/src/main.rs:1510
-#, fuzzy
 msgid "Rename file (ctrl-r)"
-msgstr "Teammitglieder (Strg-v)"
+msgstr "Datei umbenennen (Strg-r)"
 
 #: cursive/src/wizard.rs:99
 msgid ""
@@ -267,7 +265,7 @@ msgstr "Speichern"
 
 #: cursive/src/main.rs:1556
 msgid "Stores"
-msgstr ""
+msgstr "Speicher"
 
 #: cursive/src/main.rs:702
 msgid "Team Members"
@@ -280,16 +278,21 @@ msgstr "Teammitglieder (Strg-v)"
 #: cursive/src/helpers.rs:31
 msgid "Team member with key id {} isn't in your GPG keyring, fetch it first"
 msgstr ""
+"Das Teammitglied mit der Schlüssel ID {} ist nicht in ihrem GPG-"
+"Schlüsselring, rufen Sie diesen erst ab"
 
 #: cursive/src/main.rs:1385
 msgid ""
 "The password store is backed by a git repository, but there is passwords "
 "there that's not in git. Please add them, otherwise they might get lost."
 msgstr ""
+"Der Kennwort Speicher wird von einer git Repository gestützt, allerdings "
+"sind Kennwörter enthalten, die nicht in git sind. Bitte fügen sie diese "
+"hinzu, ansonsten würden diese verloren gehen."
 
 #: cursive/src/main.rs:653
 msgid "Ultimate"
-msgstr ""
+msgstr "Ultimativ"
 
 #: cursive/src/wizard.rs:70
 msgid "Unable to write file"
@@ -297,11 +300,11 @@ msgstr "Kann Datei nicht schreiben"
 
 #: cursive/src/main.rs:657
 msgid "Undefined"
-msgstr ""
+msgstr "Undefiniert"
 
 #: cursive/src/main.rs:658
 msgid "Unknown"
-msgstr ""
+msgstr "Unbekannt"
 
 #: cursive/src/main.rs:1304 cursive/src/main.rs:1312
 msgid "Unknown argument, usage: ripasso-cursive [-h|--help]"
@@ -309,16 +312,15 @@ msgstr "Unbekannter Parameter, Benutzung: ripasso-cursive [-h|--help]"
 
 #: cursive/src/main.rs:991 cursive/src/main.rs:1033 cursive/src/main.rs:1166
 msgid "Updated config file"
-msgstr ""
+msgstr "Config Datei aktuallisiert"
 
 #: cursive/src/main.rs:290
-#, fuzzy
 msgid "Updated password entry"
-msgstr "Neues Kennwort erstellen"
+msgstr "Kennworteintrag aktualisiert"
 
 #: cursive/src/main.rs:1093 cursive/src/main.rs:1201
 msgid "Valid Signing Keys: "
-msgstr ""
+msgstr "Gültige Signaturschlüssel: "
 
 #: cursive/src/wizard.rs:145
 msgid ""
@@ -359,7 +361,7 @@ msgstr ""
 
 #: cursive/src/main.rs:1262
 msgid "ctrl-e: Edit | "
-msgstr ""
+msgstr "strg-e: Bearbeiten | "
 
 #: cursive/src/main.rs:708 cursive/src/main.rs:1264
 msgid "del: Remove"
