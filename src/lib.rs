@@ -1,3 +1,6 @@
+//! This implements a handling of a pass directory compatible with https://www.passwordstore.org/ .
+//! The encryption is handled by GPGme and the git integration is with libgit2.
+
 /// This is the library part of ripasso, it implements the functions needed to manipulate a pass
 /// directory.
 pub mod pass;
