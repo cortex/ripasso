@@ -8,7 +8,7 @@ cd ripasso
 poedit cursive/res/fr.po
 ```
 
-[poedit](https://poedit.net/) is a stand alone program to edit translation files, there is other
+[poedit](https://poedit.net/) is a stand-alone program to edit translation files. There is other
 alternatives, but poedit is quite easy to use.
 
 After that you just need to submit a [pull request on github](https://docs.github.com/en/free-pro-team@latest/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request)
