@@ -8,14 +8,14 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2020-06-29 10:33+0200\n"
-"PO-Revision-Date: 2020-01-16 14:45-0500\n"
+"PO-Revision-Date: 2020-10-06 13:58-0400\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: fr_FR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 2.2.4\n"
+"X-Generator: Poedit 2.4.1\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 #: cursive/src/main.rs:782
@@ -55,6 +55,8 @@ msgid ""
 "Can't import team member due to that the GPG trust relationship level isn't "
 "Ultimate"
 msgstr ""
+"Impossible d'importe le membre d'équipe car la relation de confiance GPG "
+"n'est pas au niveau Ultime"
 
 #: cursive/src/main.rs:197 cursive/src/main.rs:394 cursive/src/main.rs:509
 #: cursive/src/main.rs:554 cursive/src/main.rs:632 cursive/src/main.rs:1122
@@ -64,12 +66,11 @@ msgstr "Annuler"
 
 #: cursive/src/main.rs:302
 msgid "Close"
-msgstr ""
+msgstr "Fermer"
 
 #: cursive/src/main.rs:159
-#, fuzzy
 msgid "Copied file name to copy buffer"
-msgstr "Mot de passe copié dans le tampon pendant 40 secondes"
+msgstr "Mot de passe copié dans le tampon "
 
 #: cursive/src/main.rs:133
 msgid "Copied password to copy buffer for 40 seconds"
@@ -80,9 +81,8 @@ msgid "Copy (ctrl-y)"
 msgstr "Copier (ctrl-y)"
 
 #: cursive/src/main.rs:1493
-#, fuzzy
 msgid "Copy Name (ctrl-u)"
-msgstr "Copier (ctrl-y)"
+msgstr "Copier le nom (ctrl-y)"
 
 #: cursive/src/wizard.rs:77 cursive/src/wizard.rs:102 cursive/src/wizard.rs:146
 msgid "Create"
@@ -106,16 +106,15 @@ msgstr "Supprimer un membre d'équipe du stockage de mots de passe"
 
 #: cursive/src/main.rs:1082 cursive/src/main.rs:1191
 msgid "Directory: "
-msgstr ""
+msgstr "Répertoire:"
 
 #: cursive/src/main.rs:1257
-#, fuzzy
 msgid "Edit password stores"
-msgstr "Membre de l'équipe ajouté au stockage des mots de passe"
+msgstr "Éditer les stockages de mot de passe"
 
 #: cursive/src/main.rs:1117
 msgid "Edit store config"
-msgstr ""
+msgstr "Éditer la configuration du stockage"
 
 #: cursive/src/helpers.rs:39
 msgid "Error"
@@ -127,15 +126,15 @@ msgstr "F1: Menu |"
 
 #: cursive/src/main.rs:254
 msgid "File History"
-msgstr ""
+msgstr "Historique du fichier"
 
 #: cursive/src/main.rs:1498
 msgid "File History (ctrl-h)"
-msgstr ""
+msgstr "Historique du fichier (ctrl-h)"
 
 #: cursive/src/main.rs:654
 msgid "Full"
-msgstr ""
+msgstr "Entier"
 
 #: cursive/src/main.rs:609
 msgid "GPG Key ID: "
@@ -167,27 +166,27 @@ msgstr "Dépôt de mot de passe initialisé avec Ripasso"
 
 #: cursive/src/main.rs:1553
 msgid "Manage"
-msgstr ""
+msgstr "Gérer"
 
 #: cursive/src/main.rs:655
 msgid "Marginal"
-msgstr ""
+msgstr "Marginal"
 
 #: cursive/src/main.rs:1071 cursive/src/main.rs:1181
 msgid "Name: "
-msgstr ""
+msgstr "Nom:"
 
 #: cursive/src/main.rs:656
 msgid "Never"
-msgstr ""
+msgstr "Jamais"
 
 #: cursive/src/main.rs:375
 msgid "New file name: "
-msgstr ""
+msgstr "Nouveau nom de fichier:"
 
 #: cursive/src/main.rs:1221
 msgid "New store config"
-msgstr ""
+msgstr "Nouvelle configuration de stockage"
 
 #: cursive/src/wizard.rs:80
 msgid "No"
@@ -195,7 +194,7 @@ msgstr "Non"
 
 #: cursive/src/main.rs:487
 msgid "Note: "
-msgstr ""
+msgstr "Note:"
 
 #: cursive/src/helpers.rs:38 cursive/src/main.rs:255 cursive/src/main.rs:703
 #: cursive/src/main.rs:1258
@@ -204,7 +203,7 @@ msgstr "Ok"
 
 #: cursive/src/main.rs:365
 msgid "Old file name: "
-msgstr ""
+msgstr "Ancien nom de fichier"
 
 #: cursive/src/main.rs:1494
 msgid "Open (ctrl-o)"
@@ -240,23 +239,22 @@ msgstr "Quitter (esc)"
 
 #: cursive/src/main.rs:391
 msgid "Rename"
-msgstr ""
+msgstr "Renommer"
 
 #: cursive/src/main.rs:390
 msgid "Rename File"
-msgstr ""
+msgstr "Renommer le fichier"
 
 #: cursive/src/main.rs:1510
-#, fuzzy
 msgid "Rename file (ctrl-r)"
-msgstr "Membres d'équipe (ctrl-v)"
+msgstr "Renommer le fichier (ctrl-v)"
 
 #: cursive/src/wizard.rs:99
 msgid ""
 "Ripasso uses GPG in order to encrypt the stored passwords.\n"
 "Please enter your GPG key ID"
 msgstr ""
-"RIpasso utilise GPG pour chiffrer les mots de passe.\n"
+"Ripasso utilise GPG pour chiffrer les mots de passe.\n"
 "Entrer votre GPG clé ID s'il-vous-plaît"
 
 #: cursive/src/main.rs:280 cursive/src/main.rs:506 cursive/src/main.rs:1118
@@ -266,7 +264,7 @@ msgstr "Sauvegarder"
 
 #: cursive/src/main.rs:1556
 msgid "Stores"
-msgstr ""
+msgstr "Stockages"
 
 #: cursive/src/main.rs:702
 msgid "Team Members"
@@ -279,16 +277,21 @@ msgstr "Membres d'équipe (ctrl-v)"
 #: cursive/src/helpers.rs:31
 msgid "Team member with key id {} isn't in your GPG keyring, fetch it first"
 msgstr ""
+"Le membre d'équipe avec la clé id {} n'est pas dans votre porte-clés GPG, "
+"ajoutez-le d'abord"
 
 #: cursive/src/main.rs:1385
 msgid ""
 "The password store is backed by a git repository, but there is passwords "
 "there that's not in git. Please add them, otherwise they might get lost."
 msgstr ""
+"Le stockage de mots de passe est supporté par une repo git, mais il y a des "
+"mots de passe qui ne sont pas sur git. Ajoutez-les, sinon ils peuvent être "
+"perdus."
 
 #: cursive/src/main.rs:653
 msgid "Ultimate"
-msgstr ""
+msgstr "Ultime"
 
 #: cursive/src/wizard.rs:70
 msgid "Unable to write file"
@@ -296,11 +299,11 @@ msgstr "Fichier impossible à écrire"
 
 #: cursive/src/main.rs:657
 msgid "Undefined"
-msgstr ""
+msgstr "Indéfini"
 
 #: cursive/src/main.rs:658
 msgid "Unknown"
-msgstr ""
+msgstr "Inconnu"
 
 #: cursive/src/main.rs:1304 cursive/src/main.rs:1312
 msgid "Unknown argument, usage: ripasso-cursive [-h|--help]"
@@ -308,16 +311,15 @@ msgstr "Argument invalide, utilisation: ripasso-cursive [-h|--help]"
 
 #: cursive/src/main.rs:991 cursive/src/main.rs:1033 cursive/src/main.rs:1166
 msgid "Updated config file"
-msgstr ""
+msgstr "Configuration du fichier mise à jour"
 
 #: cursive/src/main.rs:290
-#, fuzzy
 msgid "Updated password entry"
-msgstr "Créer un nouveau mot de passe"
+msgstr "Entrée de mot de passe mise à jour"
 
 #: cursive/src/main.rs:1093 cursive/src/main.rs:1201
 msgid "Valid Signing Keys: "
-msgstr ""
+msgstr "Clés de signatures valides:"
 
 #: cursive/src/wizard.rs:145
 msgid ""
@@ -326,10 +328,10 @@ msgid ""
 "It's created in $HOME/.password-store or where the PASSWORD_STORE_DIR "
 "environmental variable points."
 msgstr ""
-"Bienvenue à Ripasso, il semble que vous n'ayez pas encore de dossier de "
+"Bienvenue sur Ripasso, il semble que vous n'ayez pas encore de dossier de "
 "stockage pour vos mots de passe. Voulez-vous le créer?\n"
 "Il est créé dans $HOME/.password-store ou là où la variable d'environnement "
-"PASSWORD_STORE_DIR désigne. "
+"PASSWORD_STORE_DIR désigne."
 
 #: cursive/src/main.rs:191 cursive/src/main.rs:550 cursive/src/main.rs:629
 msgid "Yes"
@@ -358,7 +360,7 @@ msgstr ""
 
 #: cursive/src/main.rs:1262
 msgid "ctrl-e: Edit | "
-msgstr ""
+msgstr "ctrl-e: Éditer | "
 
 #: cursive/src/main.rs:708 cursive/src/main.rs:1264
 msgid "del: Remove"
@@ -370,7 +372,7 @@ msgstr "ins: Ajouter | "
 
 #: cursive/src/main.rs:737 cursive/src/main.rs:756
 msgid "n/a"
-msgstr ""
+msgstr "n/a"
 
 #~ msgid ""
 #~ "You have pointed ripasso towards an existing directory without an .gpg-id "

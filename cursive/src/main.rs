@@ -1557,6 +1557,9 @@ fn main() {
                 helpers::errorbox(ui, &err);
             }
 
+            ui.call_on_name("search_box", |e: &mut EditView| {
+                e.set_content("");
+            });
             search(&store, ui, "");
         });
     }
