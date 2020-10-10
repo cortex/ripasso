@@ -657,8 +657,9 @@ pub struct PasswordEntry {
 impl PasswordEntry {
     /// constructs a a `PasswordEntry` from the supplied parts
     pub fn new(
-        base: &PathBuf,
-        path: &PathBuf,
+        base: &PathBuf, // Root of the password directory
+        path: &PathBuf, // Path to the password. If the path is not relative, 
+                        // it will be canonicalized to relative form.
         update_time: Result<DateTime<Local>>,
         committed_by: Result<String>,
         signature_status: Result<SignatureStatus>,
@@ -666,7 +667,7 @@ impl PasswordEntry {
     ) -> PasswordEntry {
         PasswordEntry {
             name: to_name(base, path),
-            path: path.to_path_buf(),
+            path: path.strip_prefix(base).unwrap().to_path_buf(),
             updated: match update_time {
                 Ok(p) => Some(p),
                 Err(_) => None,
