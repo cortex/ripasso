@@ -201,18 +201,15 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
 
     cleanup(base_path, "password_store_with_files_in_initial_commit").unwrap();
 
-    assert_eq!(results.len(), 3);
-    assert_eq!(results[0].name, "3");
-    assert_eq!(results[0].committed_by.is_none(), false);
-    assert_eq!(results[0].updated.is_none(), false);
+    let expected = vec!["3", "A/1", "B/2"];
 
-    assert_eq!(results[1].name, "2");
-    assert_eq!(results[1].committed_by.is_none(), false);
-    assert_eq!(results[1].updated.is_none(), false);
+    assert_eq!(results.len(), expected.len());
 
-    assert_eq!(results[2].name, "1");
-    assert_eq!(results[2].committed_by.is_none(), false);
-    assert_eq!(results[2].updated.is_none(), false);
+    for (i, e) in expected.iter().enumerate() {
+        assert_eq!(results[i].name, e.to_string());
+        assert_eq!(results[i].committed_by.is_none(), false);
+        assert_eq!(results[i].updated.is_none(), false);
+    }
     Ok(())
 }
 

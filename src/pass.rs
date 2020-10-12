@@ -39,7 +39,7 @@ pub type PasswordStoreType = Arc<Mutex<PasswordStore>>;
 pub struct PasswordStore {
     /// Name given to the store in a config file
     name: String,
-    /// The path to the root directory of the password store
+    /// The absolute path to the root directory of the password store
     root: PathBuf,
     /// A list of keys that are allowed to sign the .gpg-id file, obtained from the environmental
     /// variable `PASSWORD_STORE_SIGNING_KEY`
@@ -69,7 +69,7 @@ impl PasswordStore {
 
         Ok(PasswordStore {
             name: store_name.to_string(),
-            root: pass_home,
+            root: pass_home.canonicalize()?,
             valid_gpg_signing_keys: signing_keys,
             passwords: [].to_vec(),
         })
@@ -318,39 +318,37 @@ impl PasswordStore {
     /// Read the password store directory and return a list of all the password files.
     pub fn all_passwords(&self) -> Result<Vec<PasswordEntry>> {
         let mut passwords = vec![];
-
-        let dir = std::fs::canonicalize(&self.root)?;
-
         let repo = self.repo();
+
+        // Not a git repository
         if repo.is_err() {
-            let password_path_glob = dir.join("**/*.gpg");
+            let password_path_glob = self.root.join("**/*.gpg");
             let existing_iter = glob::glob(&password_path_glob.to_string_lossy())?;
 
             for existing_file in existing_iter {
-                let pbuf = existing_file?;
-                passwords.push(PasswordEntry::load_from_filesystem(&dir, &pbuf)?);
+                let relpath = existing_file?.strip_prefix(&self.root)?.to_path_buf();
+                passwords.push(PasswordEntry::load_from_filesystem(&self.root, &relpath)?);
             }
 
             return Ok(passwords);
         }
+
         let repo = repo?;
 
-        let password_path_glob = dir.join("**/*.gpg");
+        // First, collect all files we need to find the first commit for
+        let password_path_glob = self.root.join("**/*.gpg");
         let existing_iter = glob::glob(&password_path_glob.to_string_lossy())?;
-
-        let mut files_to_consider: Vec<String> = vec![];
+        let mut files_to_find: Vec<PathBuf> = vec![];
         for existing_file in existing_iter {
-            let pbuf = format!("{}", existing_file?.display());
-            let filename = pbuf
-                .trim_start_matches(format!("{}", dir.display()).as_str())
-                .to_string();
-            files_to_consider.push(filename.trim_start_matches('/').to_string());
+            files_to_find.push(existing_file?.strip_prefix(&self.root)?.to_path_buf());
         }
 
-        if files_to_consider.is_empty() {
+        if files_to_find.is_empty() {
             return Ok(vec![]);
         }
 
+        // Walk through all commits in reverse order, if the commit contains
+        // the file, mark it
         let mut walk = repo.revwalk()?;
         walk.push(repo.head()?.target().ok_or("missing Oid on head")?)?;
         let mut last_tree = repo
@@ -370,16 +368,14 @@ impl PasswordStore {
 
             diff.foreach(
                 &mut |delta: git2::DiffDelta, _f: f32| {
-                    if let Some(file) = delta.new_file().path() {
-                        let entry_name = file.to_string_lossy();
-
-                        files_to_consider.retain(|filename| {
+                    if let Some(found) = delta.new_file().path() {
+                        files_to_find.retain(|target| {
                             push_password_if_match(
-                                filename,
-                                &entry_name,
+                                target,
+                                &found,
                                 &commit,
                                 &repo,
-                                &dir,
+                                &self.root,
                                 &mut passwords,
                                 &oid,
                             )
@@ -396,15 +392,18 @@ impl PasswordStore {
             last_commit = commit;
         }
 
-        last_tree.walk(git2::TreeWalkMode::PreOrder, |_, entry| {
+        // When we have checked all the diffs, we also need to consider what
+        // files was checked in to the first commit
+        last_tree.walk(git2::TreeWalkMode::PreOrder, |path, entry| {
             if let Some(entry_name) = entry.name() {
-                files_to_consider.retain(|filename| {
+                let found = Path::new(path).join(entry_name);
+                files_to_find.retain(|target| {
                     push_password_if_match(
-                        filename,
-                        &entry_name,
+                        target,
+                        &found,
                         &last_commit,
                         &repo,
-                        &dir,
+                        &self.root,
                         &mut passwords,
                         &last_commit.id(),
                     )
@@ -413,13 +412,11 @@ impl PasswordStore {
             git2::TreeWalkResult::Ok
         })?;
 
-        for file in files_to_consider {
-            let mut pbuf = dir.clone();
-            pbuf.push(file);
-
+        // If there are any files we couldn't find, add them to the list anyway
+        for not_found in files_to_find {
             passwords.push(PasswordEntry::new(
-                &dir,
-                &pbuf,
+                &self.root,
+                &not_found.to_path_buf(),
                 Err(Error::Generic("")),
                 Err(Error::Generic("")),
                 Err(Error::Generic("")),
@@ -568,15 +565,15 @@ impl PasswordStore {
 }
 
 fn push_password_if_match(
-    filename: &str,
-    entry_name: &str,
+    target: &Path,
+    found: &Path,
     commit: &git2::Commit,
     repo: &git2::Repository,
     dir: &PathBuf,
     passwords: &mut Vec<PasswordEntry>,
     oid: &git2::Oid,
 ) -> bool {
-    if *filename == *entry_name {
+    if *target == *found {
         let time = commit.time();
         let time_return = Ok(Local.timestamp(time.seconds(), 0));
 
@@ -584,12 +581,9 @@ fn push_password_if_match(
 
         let signature_return = verify_git_signature(&repo, &oid);
 
-        let mut pbuf: PathBuf = (*dir.clone()).to_owned();
-        pbuf.push(filename);
-
         passwords.push(PasswordEntry::new(
             &dir,
-            &pbuf,
+            &target.to_path_buf(),
             time_return,
             name_return,
             signature_return,
@@ -639,9 +633,9 @@ pub enum RepositoryStatus {
 /// One password in the password store
 #[derive(Clone, Debug)]
 pub struct PasswordEntry {
-    /// Name of the entry
+    /// Name of the entry, (from relative path to password)
     pub name: String,
-    /// Path, relative to the store
+    /// Absolute path to the password file
     path: PathBuf,
     /// if we have a git repo, then commit time
     pub updated: Option<DateTime<Local>>,
@@ -649,24 +643,34 @@ pub struct PasswordEntry {
     pub committed_by: Option<String>,
     /// if we have a git repo, and the commit was signed
     pub signature_status: Option<SignatureStatus>,
-    filename: String,
     /// describes if the file is in a repository or not
     pub is_in_git: RepositoryStatus,
+}
+
+fn to_name(relpath: &PathBuf) -> String {
+    relpath
+        .to_string_lossy()
+        .strip_suffix(".gpg")
+        .unwrap()
+        .to_string()
 }
 
 impl PasswordEntry {
     /// constructs a a `PasswordEntry` from the supplied parts
     pub fn new(
-        base: &PathBuf,
-        path: &PathBuf,
+        base: &PathBuf,    // Root of the password directory
+        relpath: &PathBuf, // Relative path to the password.
         update_time: Result<DateTime<Local>>,
         committed_by: Result<String>,
         signature_status: Result<SignatureStatus>,
         is_in_git: RepositoryStatus,
     ) -> PasswordEntry {
+        if !relpath.is_relative() {
+            panic!();
+        }
         PasswordEntry {
-            name: to_name(base, path),
-            path: path.to_path_buf(),
+            name: to_name(relpath),
+            path: base.join(relpath),
             updated: match update_time {
                 Ok(p) => Some(p),
                 Err(_) => None,
@@ -679,20 +683,18 @@ impl PasswordEntry {
                 Ok(ss) => Some(ss),
                 Err(_) => None,
             },
-            filename: path.to_string_lossy().into_owned(),
             is_in_git,
         }
     }
 
     /// Consumes an PasswordEntry, and returns a new one with a new name
-    pub fn with_new_name(old: PasswordEntry, base: &PathBuf, path: &PathBuf) -> PasswordEntry {
+    pub fn with_new_name(old: PasswordEntry, base: &PathBuf, relpath: &PathBuf) -> PasswordEntry {
         PasswordEntry {
-            name: to_name(base, path),
-            path: path.to_path_buf(),
+            name: to_name(relpath),
+            path: base.join(relpath),
             updated: old.updated,
             committed_by: old.committed_by,
             signature_status: old.signature_status,
-            filename: path.to_string_lossy().into_owned(),
             is_in_git: old.is_in_git,
         }
     }
@@ -712,14 +714,13 @@ impl PasswordEntry {
     }
 
     /// creates a `PasswordEntry` based on data in the filesystem
-    pub fn load_from_filesystem(base: &PathBuf, path: &PathBuf) -> Result<PasswordEntry> {
+    pub fn load_from_filesystem(base: &PathBuf, relpath: &PathBuf) -> Result<PasswordEntry> {
         Ok(PasswordEntry {
-            name: to_name(base, path),
-            path: path.to_path_buf(),
+            name: to_name(relpath),
+            path: base.join(relpath),
             updated: None,
             committed_by: None,
             signature_status: None,
-            filename: path.to_string_lossy().into_owned(),
             is_in_git: RepositoryStatus::NoRepo,
         })
     }
@@ -727,7 +728,7 @@ impl PasswordEntry {
     /// Decrypts and returns the full content of the PasswordEntry
     pub fn secret(&self) -> Result<String> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-        let mut input = File::open(&self.filename)?;
+        let mut input = File::open(&self.path)?;
         let mut output = Vec::new();
         ctx.decrypt(&mut input, &mut output)?;
         Ok(String::from_utf8(output)?)
@@ -758,7 +759,7 @@ impl PasswordEntry {
         let mut ciphertext = Vec::new();
         ctx.encrypt(&keys, secret, &mut ciphertext)?;
 
-        let mut output = File::create(&self.filename)?;
+        let mut output = File::create(&self.path)?;
         output.write_all(&ciphertext)?;
         Ok(())
     }
@@ -784,7 +785,7 @@ impl PasswordEntry {
 
     /// Removes this entry from the filesystem and commit that to git if a repository is supplied.
     pub fn delete_file(&self, store: &PasswordStore) -> Result<()> {
-        std::fs::remove_file(&self.filename)?;
+        std::fs::remove_file(&self.path)?;
 
         if store.repo().is_err() {
             return Ok(());
@@ -1297,15 +1298,6 @@ pub fn search(store: &PasswordStoreType, query: &str) -> Result<Vec<PasswordEntr
     };
     let matching = passwords.iter().filter(|p| matches(&p.name, query));
     Ok(matching.cloned().collect())
-}
-
-fn to_name(base: &PathBuf, path: &PathBuf) -> String {
-    path.strip_prefix(base)
-        .unwrap_or(path)
-        .to_string_lossy()
-        .into_owned()
-        .trim_end_matches(".gpg")
-        .to_string()
 }
 
 /// Determine password directory
