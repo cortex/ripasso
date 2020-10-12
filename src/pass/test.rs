@@ -201,14 +201,12 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
 
     cleanup(base_path, "password_store_with_files_in_initial_commit").unwrap();
 
-    let expected = vec![
-     "3.gpg", "A/1.gpg", "B/2.gpg"
-    ];
+    let expected = vec!["3", "A/1", "B/2"];
 
     assert_eq!(results.len(), expected.len());
 
-    for (i, e) in expected.iter().enumerate(){
-        assert_eq!(results[i].path.to_str(), Some(*e));
+    for (i, e) in expected.iter().enumerate() {
+        assert_eq!(results[i].name, e.to_string());
         assert_eq!(results[i].committed_by.is_none(), false);
         assert_eq!(results[i].updated.is_none(), false);
     }
