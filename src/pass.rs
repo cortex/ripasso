@@ -396,12 +396,13 @@ impl PasswordStore {
             last_commit = commit;
         }
 
-        last_tree.walk(git2::TreeWalkMode::PreOrder, |_, entry| {
+        last_tree.walk(git2::TreeWalkMode::PreOrder, |path, entry| {
             if let Some(entry_name) = entry.name() {
+                let name = format!("{}{}", path, entry_name);
                 files_to_consider.retain(|filename| {
                     push_password_if_match(
                         filename,
-                        &entry_name,
+                        &name,
                         &last_commit,
                         &repo,
                         &dir,
@@ -658,7 +659,7 @@ impl PasswordEntry {
     /// constructs a a `PasswordEntry` from the supplied parts
     pub fn new(
         base: &PathBuf, // Root of the password directory
-        path: &PathBuf, // Path to the password. If the path is not relative, 
+        path: &PathBuf, // Path to the password. If the path is not relative,
                         // it will be canonicalized to relative form.
         update_time: Result<DateTime<Local>>,
         committed_by: Result<String>,

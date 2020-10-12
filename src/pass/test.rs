@@ -202,7 +202,7 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
     cleanup(base_path, "password_store_with_files_in_initial_commit").unwrap();
 
     let expected = vec![
-     "3.gpg", "A/1.gpg", "2.gpg"
+     "3.gpg", "A/1.gpg", "B/2.gpg"
     ];
 
     assert_eq!(results.len(), expected.len());
