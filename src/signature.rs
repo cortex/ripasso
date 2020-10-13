@@ -274,7 +274,7 @@ impl Recipient {
                     file_content.push_str("0x");
                 }
                 file_content.push_str(recipient.key_id.as_str());
-                file_content.push_str("\n");
+                file_content.push('\n');
             }
             file.write_all(file_content.as_bytes())?;
 
