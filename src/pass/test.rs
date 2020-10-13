@@ -343,10 +343,7 @@ fn password_store_with_symlink() -> Result<()> {
     let mut password_dir: PathBuf = base_path.clone();
     password_dir.push("password_store_with_symlink_link");
 
-    unpack_tar_gz(
-        base_path.clone(),
-        "password_store_with_symlink.tar.gz",
-    )?;
+    unpack_tar_gz(base_path.clone(), "password_store_with_symlink.tar.gz")?;
 
     let mut target = base_path.clone();
     target.push("password_store_with_symlink");
