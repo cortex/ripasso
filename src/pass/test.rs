@@ -819,6 +819,10 @@ fn append_extension_with_dot() {
 
 #[test]
 fn rename_file() -> Result<()> {
+    let mut config = git2::Config::open_default()?;
+    config.set_str("user.name", "default")?;
+    config.set_str("user.email", "default@example.com")?;
+
     let mut base_path: PathBuf = std::env::current_exe().unwrap();
     base_path.pop();
     base_path.pop();
