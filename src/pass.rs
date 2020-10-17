@@ -556,7 +556,8 @@ impl PasswordStore {
         }
         if index != usize::MAX {
             let old_entry = passwords.swap_remove(index);
-            let new_entry = PasswordEntry::with_new_name(old_entry, &self.root, &new_path);
+            let relpath = new_path.strip_prefix(&self.root).expect("base was not a prefix of path").to_path_buf();
+            let new_entry = PasswordEntry::with_new_name(old_entry, &self.root, &relpath);
             passwords.push(new_entry);
         }
 
@@ -665,9 +666,6 @@ impl PasswordEntry {
         signature_status: Result<SignatureStatus>,
         is_in_git: RepositoryStatus,
     ) -> PasswordEntry {
-        if !relpath.is_relative() {
-            panic!();
-        }
         PasswordEntry {
             name: to_name(relpath),
             path: base.join(relpath),
@@ -703,9 +701,10 @@ impl PasswordEntry {
     pub fn load_from_git(base: &PathBuf, path: &PathBuf, repo: &git2::Repository) -> PasswordEntry {
         let (update_time, committed_by, signature_status) = read_git_meta_data(base, path, repo);
 
+        let relpath = path.strip_prefix(&base).expect("base was not a prefix of path").to_path_buf();
         PasswordEntry::new(
             base,
-            path,
+            &relpath,
             update_time,
             committed_by,
             signature_status,
