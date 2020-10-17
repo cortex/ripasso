@@ -818,6 +818,39 @@ fn append_extension_with_dot() {
 }
 
 #[test]
+fn rename_file() -> Result<()> {
+    let mut base_path: PathBuf = std::env::current_exe().unwrap();
+    base_path.pop();
+    base_path.pop();
+    base_path.pop();
+    base_path.pop();
+    base_path.push("testres");
+
+    let home: PathBuf = base_path.clone();
+    let mut password_dir: PathBuf = base_path.clone();
+    password_dir.push("rename_file");
+
+    unpack_tar_gz(base_path.clone(), "rename_file.tar.gz")?;
+
+    let mut store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
+    store.reload_password_list()?;
+    store.rename_file("1/test", "2/test")?;
+    let results = store.all_passwords()?;
+
+    cleanup(base_path, "rename_file").unwrap();
+
+    assert_eq!(results.len(), 2);
+    assert_eq!(results[0].name, "2/test");
+    assert_eq!(results[0].committed_by.is_none(), false);
+    assert_eq!(results[0].updated.is_none(), false);
+
+    assert_eq!(results[1].name, "test");
+    assert_eq!(results[1].committed_by.is_none(), false);
+    assert_eq!(results[1].updated.is_none(), false);
+    Ok(())
+}
+
+#[test]
 fn rename_file_absolute_path() -> Result<()> {
     let mut base_path: PathBuf = std::env::current_exe().unwrap();
     base_path.pop();
@@ -834,18 +867,10 @@ fn rename_file_absolute_path() -> Result<()> {
 
     let mut store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
     store.reload_password_list()?;
-    store.rename_file("1/test", "2/test")?;
-    let results = store.all_passwords()?;
+    let res = store.rename_file("1/test", "/2/test");
 
     cleanup(base_path, "rename_file_absolute_path").unwrap();
 
-    assert_eq!(results.len(), 2);
-    assert_eq!(results[0].name, "2/test");
-    assert_eq!(results[0].committed_by.is_none(), false);
-    assert_eq!(results[0].updated.is_none(), false);
-
-    assert_eq!(results[1].name, "test");
-    assert_eq!(results[1].committed_by.is_none(), false);
-    assert_eq!(results[1].updated.is_none(), false);
+    assert_eq!(true, res.is_err());
     Ok(())
 }

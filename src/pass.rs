@@ -520,6 +520,10 @@ impl PasswordStore {
     ///Renames a password file to a new name
     ///returns the index in the password vec of the renamed PasswordEntry
     pub fn rename_file(&mut self, old_name: &str, new_name: &str) -> Result<usize> {
+        if new_name.starts_with('/') || new_name.contains("..") {
+            return Err(Error::Generic("directory traversal not allowed"));
+        }
+
         let mut old_path = self.root.clone();
         old_path.push(PathBuf::from(old_name));
         let old_path = append_extension(old_path, ".gpg");
