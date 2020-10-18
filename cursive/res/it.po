@@ -2,20 +2,20 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-# 
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2020-06-29 10:33+0200\n"
-"PO-Revision-Date: 2020-01-24 21:48+0100\n"
+"PO-Revision-Date: 2020-10-17 23:12+0200\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 2.0.6\n"
+"X-Generator: Poedit 2.3\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: cursive/src/main.rs:782
@@ -55,6 +55,8 @@ msgid ""
 "Can't import team member due to that the GPG trust relationship level isn't "
 "Ultimate"
 msgstr ""
+"Non posso aggiungere un nuovo membro nel team dato che il livello di GPG "
+"trust non e' \"ultimate\""
 
 #: cursive/src/main.rs:197 cursive/src/main.rs:394 cursive/src/main.rs:509
 #: cursive/src/main.rs:554 cursive/src/main.rs:632 cursive/src/main.rs:1122
@@ -64,12 +66,11 @@ msgstr "Cancel"
 
 #: cursive/src/main.rs:302
 msgid "Close"
-msgstr ""
+msgstr "Chiudi"
 
 #: cursive/src/main.rs:159
-#, fuzzy
 msgid "Copied file name to copy buffer"
-msgstr "Password nel copy buffer per 40 secondi"
+msgstr "Password copiata nel copy buffer"
 
 #: cursive/src/main.rs:133
 msgid "Copied password to copy buffer for 40 seconds"
@@ -80,9 +81,8 @@ msgid "Copy (ctrl-y)"
 msgstr "Copia (ctrl-y)"
 
 #: cursive/src/main.rs:1493
-#, fuzzy
 msgid "Copy Name (ctrl-u)"
-msgstr "Copia (ctrl-y)"
+msgstr "Copia Nomeo (ctrl-u)"
 
 #: cursive/src/wizard.rs:77 cursive/src/wizard.rs:102 cursive/src/wizard.rs:146
 msgid "Create"
@@ -106,16 +106,15 @@ msgstr "Eliminato membro del team dal password store"
 
 #: cursive/src/main.rs:1082 cursive/src/main.rs:1191
 msgid "Directory: "
-msgstr ""
+msgstr "Cartella: "
 
 #: cursive/src/main.rs:1257
-#, fuzzy
 msgid "Edit password stores"
-msgstr "Aggiunto un nuovo membro del team al password store"
+msgstr "Mofica gli store delle passwords"
 
 #: cursive/src/main.rs:1117
 msgid "Edit store config"
-msgstr ""
+msgstr "Modifica la configurazione di store"
 
 #: cursive/src/helpers.rs:39
 msgid "Error"
@@ -127,15 +126,15 @@ msgstr "F1: Menu | "
 
 #: cursive/src/main.rs:254
 msgid "File History"
-msgstr ""
+msgstr "Storico dei file"
 
 #: cursive/src/main.rs:1498
 msgid "File History (ctrl-h)"
-msgstr ""
+msgstr "Storico dei file (ctrl-h)"
 
 #: cursive/src/main.rs:654
 msgid "Full"
-msgstr ""
+msgstr "Completo"
 
 #: cursive/src/main.rs:609
 msgid "GPG Key ID: "
@@ -167,27 +166,27 @@ msgstr "Password repo inizializzato con Ripasso"
 
 #: cursive/src/main.rs:1553
 msgid "Manage"
-msgstr ""
+msgstr "Gestisci"
 
 #: cursive/src/main.rs:655
 msgid "Marginal"
-msgstr ""
+msgstr "Marginale"
 
 #: cursive/src/main.rs:1071 cursive/src/main.rs:1181
 msgid "Name: "
-msgstr ""
+msgstr "Nome: "
 
 #: cursive/src/main.rs:656
 msgid "Never"
-msgstr ""
+msgstr "Mai"
 
 #: cursive/src/main.rs:375
 msgid "New file name: "
-msgstr ""
+msgstr "Nuovo nome file: "
 
 #: cursive/src/main.rs:1221
 msgid "New store config"
-msgstr ""
+msgstr "Nuova configurazione di store"
 
 #: cursive/src/wizard.rs:80
 msgid "No"
@@ -195,7 +194,7 @@ msgstr "No"
 
 #: cursive/src/main.rs:487
 msgid "Note: "
-msgstr ""
+msgstr "Nota: "
 
 #: cursive/src/helpers.rs:38 cursive/src/main.rs:255 cursive/src/main.rs:703
 #: cursive/src/main.rs:1258
@@ -204,7 +203,7 @@ msgstr "Ok"
 
 #: cursive/src/main.rs:365
 msgid "Old file name: "
-msgstr ""
+msgstr "Vecchio nome file: "
 
 #: cursive/src/main.rs:1494
 msgid "Open (ctrl-o)"
@@ -240,16 +239,15 @@ msgstr "Esci (esc)"
 
 #: cursive/src/main.rs:391
 msgid "Rename"
-msgstr ""
+msgstr "Rinomina"
 
 #: cursive/src/main.rs:390
 msgid "Rename File"
-msgstr ""
+msgstr "Rinomina File"
 
 #: cursive/src/main.rs:1510
-#, fuzzy
 msgid "Rename file (ctrl-r)"
-msgstr "Membri del team (ctrl-v)"
+msgstr "Rinomina file (ctrl-r)"
 
 #: cursive/src/wizard.rs:99
 msgid ""
@@ -266,7 +264,7 @@ msgstr "Salva"
 
 #: cursive/src/main.rs:1556
 msgid "Stores"
-msgstr ""
+msgstr "Stores"
 
 #: cursive/src/main.rs:702
 msgid "Team Members"
@@ -279,16 +277,21 @@ msgstr "Membri del team (ctrl-v)"
 #: cursive/src/helpers.rs:31
 msgid "Team member with key id {} isn't in your GPG keyring, fetch it first"
 msgstr ""
+"Il membro del team con la chiave GPG con id {} non e' nel tuo keyring GPG, "
+"per prima cosa recuperala"
 
 #: cursive/src/main.rs:1385
 msgid ""
 "The password store is backed by a git repository, but there is passwords "
 "there that's not in git. Please add them, otherwise they might get lost."
 msgstr ""
+"Lo store delle password si basa su un repository git, ma ci sono passwords "
+"che non sono in quel repository. Meglio aggiungerle, altrimenti poterbbero "
+"andare perse."
 
 #: cursive/src/main.rs:653
 msgid "Ultimate"
-msgstr ""
+msgstr "Ultimate"
 
 #: cursive/src/wizard.rs:70
 msgid "Unable to write file"
@@ -296,11 +299,11 @@ msgstr "Impossibile scrivere il file"
 
 #: cursive/src/main.rs:657
 msgid "Undefined"
-msgstr ""
+msgstr "Non definita"
 
 #: cursive/src/main.rs:658
 msgid "Unknown"
-msgstr ""
+msgstr "Sconosciuta"
 
 #: cursive/src/main.rs:1304 cursive/src/main.rs:1312
 msgid "Unknown argument, usage: ripasso-cursive [-h|--help]"
@@ -308,16 +311,15 @@ msgstr "Argomento sconosciuto, per l'aiuto: ripasso-cursive [-h|--help]"
 
 #: cursive/src/main.rs:991 cursive/src/main.rs:1033 cursive/src/main.rs:1166
 msgid "Updated config file"
-msgstr ""
+msgstr "File di configurazione aggiornato"
 
 #: cursive/src/main.rs:290
-#, fuzzy
 msgid "Updated password entry"
-msgstr "Nuova password creata"
+msgstr "Password aggiornata"
 
 #: cursive/src/main.rs:1093 cursive/src/main.rs:1201
 msgid "Valid Signing Keys: "
-msgstr ""
+msgstr "Chiavi di firmatura valide: "
 
 #: cursive/src/wizard.rs:145
 msgid ""
@@ -358,7 +360,7 @@ msgstr ""
 
 #: cursive/src/main.rs:1262
 msgid "ctrl-e: Edit | "
-msgstr ""
+msgstr "ctrl-e: Modifica | "
 
 #: cursive/src/main.rs:708 cursive/src/main.rs:1264
 msgid "del: Remove"
