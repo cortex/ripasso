@@ -26,7 +26,7 @@ $ cargo run
 
 ### Ubuntu
 ```
-$ apt install cargo libgtk-3-dev qtdeclarative5-dev libqt5svg5-dev cmake libncurses-dev libncursesw5-dev libssl-dev libgpgme-dev
+$ apt install cargo libgtk-3-dev qtdeclarative5-dev libqt5svg5-dev cmake libncurses-dev libncursesw5-dev libssl-dev libgpgme-dev libxcb-xfixes0-dev libxcb-shape0-dev
 $ cargo build --all
 ```
 
