@@ -4,6 +4,8 @@ use std::fs;
 use std::io::prelude::*;
 use std::path::PathBuf;
 
+use std::collections::{HashMap, HashSet};
+
 /// A git commit for a password might be signed by a gpg key, and this signature's verification
 /// state is one of these values.
 #[derive(Clone, Debug, PartialEq)]
@@ -138,6 +140,8 @@ pub struct Recipient {
     pub key_ring_status: KeyRingStatus,
     /// The trust level the owner of the key ring has placed in this person
     pub trust_level: OwnerTrustLevel,
+    /// The expiration date of the key
+    pub expired: bool,
 }
 
 fn build_recipient(
@@ -145,16 +149,16 @@ fn build_recipient(
     key_id: String,
     key_ring_status: KeyRingStatus,
     trust_level: OwnerTrustLevel,
+    expired: bool,
 ) -> Recipient {
     Recipient {
         name,
         key_id,
         key_ring_status,
         trust_level,
+        expired,
     }
 }
-
-use std::collections::{HashMap, HashSet};
 
 impl Recipient {
     /// Creates a Recipient from a gpg key id string
@@ -168,6 +172,7 @@ impl Recipient {
                 key_id,
                 KeyRingStatus::NotInKeyRing,
                 OwnerTrustLevel::Unknown,
+                false,
             ));
         }
 
@@ -188,6 +193,7 @@ impl Recipient {
                 .get(real_key.fingerprint()?)
                 .unwrap_or(&OwnerTrustLevel::Unknown))
             .clone(),
+            real_key.is_expired(),
         ))
     }
 
@@ -232,6 +238,7 @@ impl Recipient {
                     key.clone(),
                     KeyRingStatus::NotInKeyRing,
                     OwnerTrustLevel::Unknown,
+                    false,
                 ));
                 continue;
             }
@@ -250,6 +257,7 @@ impl Recipient {
                     .get(real_key.fingerprint()?)
                     .unwrap_or(&OwnerTrustLevel::Unknown))
                 .clone(),
+                real_key.is_expired(),
             ));
         }
 
