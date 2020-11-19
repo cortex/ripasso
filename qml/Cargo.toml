@@ -1,10 +1,10 @@
 [package]
 name = "ripasso-qt"
-version = "0.5.0-alpha"
+version = "0.6.0-alpha"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>"]
 edition = '2018'
 
 [dependencies]
 clipboard = "0.5"
-ripasso = { path = "../"}
+ripasso = { path = "../", version = "0.6.0-alpha" }
 qml = { git = "https://github.com/White-Oak/qml-rust" }
