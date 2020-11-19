@@ -187,7 +187,7 @@ impl Recipient {
 
         Ok(build_recipient(
             name.to_string(),
-            key_id,
+            real_key.fingerprint()?.to_string(),
             KeyRingStatus::InKeyRing,
             (*trusts
                 .get(real_key.fingerprint()?)
@@ -251,7 +251,7 @@ impl Recipient {
             }
             recipients.push(build_recipient(
                 name.to_string(),
-                real_key.id().unwrap_or("?").to_string(),
+                real_key.fingerprint()?.to_string(),
                 KeyRingStatus::InKeyRing,
                 (*trusts
                     .get(real_key.fingerprint()?)
@@ -277,7 +277,9 @@ impl Recipient {
                 .open(recipients_file)?;
 
             let mut file_content = "".to_string();
-            for recipient in recipients {
+            let mut sorted_recipients = recipients.to_owned();
+            sorted_recipients.sort_by(|a, b| a.key_id.cmp(&b.key_id));
+            for recipient in sorted_recipients {
                 if !recipient.key_id.starts_with("0x") {
                     file_content.push_str("0x");
                 }
