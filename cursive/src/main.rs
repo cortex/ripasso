@@ -424,7 +424,7 @@ fn create_save(s: &mut Cursive, store: PasswordStoreType) {
         return;
     }
     let mut password = password.unwrap();
-    if *password == "" {
+    if password.is_empty() {
         return;
     }
 
@@ -433,7 +433,7 @@ fn create_save(s: &mut Cursive, store: PasswordStoreType) {
         return;
     }
     let path = path.unwrap();
-    if *path == "" {
+    if path.is_empty() {
         return;
     }
 
@@ -664,11 +664,16 @@ fn render_recipient_label(
         OwnerTrustLevel::Unknown => CATALOG.gettext("Unknown"),
     };
     return format!(
-        "{} {:width_key$} {:width_name$} {}   ",
+        "{} {:width_key$} {:width_name$} {}  {}  ",
         symbol,
         &recipient.key_id,
         &recipient.name,
         trust,
+        if recipient.expired {
+            CATALOG.gettext("Expired")
+        } else {
+            CATALOG.gettext("Not expired")
+        },
         width_key = max_width_key,
         width_name = max_width_name
     );
