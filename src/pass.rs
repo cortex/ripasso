@@ -676,18 +676,9 @@ impl PasswordEntry {
         PasswordEntry {
             name: to_name(relpath),
             path: base.join(relpath),
-            updated: match update_time {
-                Ok(p) => Some(p),
-                Err(_) => None,
-            },
-            committed_by: match committed_by {
-                Ok(p) => Some(p),
-                Err(_) => None,
-            },
-            signature_status: match signature_status {
-                Ok(ss) => Some(ss),
-                Err(_) => None,
-            },
+            updated: update_time.ok(),
+            committed_by: committed_by.ok(),
+            signature_status: signature_status.ok(),
             is_in_git,
         }
     }
@@ -736,6 +727,10 @@ impl PasswordEntry {
 
     /// Decrypts and returns the full content of the PasswordEntry
     pub fn secret(&self) -> Result<String> {
+        let s = fs::metadata(&self.path)?;
+        if s.len() == 0 {
+            return Err(Error::Generic("empty password file"));
+        }
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
         let mut input = File::open(&self.path)?;
         let mut output = Vec::new();
