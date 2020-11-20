@@ -890,14 +890,22 @@ fn decrypt_secret_empty_file() -> Result<()> {
     let mut pass_file = File::create(dir.path().join(".password-store").join("file.gpg"))?;
     pass_file.flush()?;
 
-    let pe = PasswordEntry::new(&dir.path().join(".password-store"),
-                                &PathBuf::from("file.gpg"), Ok(Local::now()), Ok("".to_string()),
-                                Ok(SignatureStatus::Good), RepositoryStatus::NoRepo);
+    let pe = PasswordEntry::new(
+        &dir.path().join(".password-store"),
+        &PathBuf::from("file.gpg"),
+        Ok(Local::now()),
+        Ok("".to_string()),
+        Ok(SignatureStatus::Good),
+        RepositoryStatus::NoRepo,
+    );
 
     let res = pe.secret();
 
     assert_eq!(true, res.is_err());
-    assert_eq!("Generic(\"empty password file\")", format!("{:?}", res.err().unwrap()));
+    assert_eq!(
+        "Generic(\"empty password file\")",
+        format!("{:?}", res.err().unwrap())
+    );
 
     Ok(())
 }
@@ -913,14 +921,22 @@ fn decrypt_password_empty_file() -> Result<()> {
     let mut pass_file = File::create(dir.path().join(".password-store").join("file.gpg"))?;
     pass_file.flush()?;
 
-    let pe = PasswordEntry::new(&dir.path().join(".password-store"),
-                                &PathBuf::from("file.gpg"), Ok(Local::now()), Ok("".to_string()),
-                                Ok(SignatureStatus::Good), RepositoryStatus::NoRepo);
+    let pe = PasswordEntry::new(
+        &dir.path().join(".password-store"),
+        &PathBuf::from("file.gpg"),
+        Ok(Local::now()),
+        Ok("".to_string()),
+        Ok(SignatureStatus::Good),
+        RepositoryStatus::NoRepo,
+    );
 
     let res = pe.password();
 
     assert_eq!(true, res.is_err());
-    assert_eq!("Generic(\"empty password file\")", format!("{:?}", res.err().unwrap()));
+    assert_eq!(
+        "Generic(\"empty password file\")",
+        format!("{:?}", res.err().unwrap())
+    );
 
     Ok(())
 }
