@@ -940,3 +940,112 @@ fn decrypt_password_empty_file() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn delete_file() -> Result<()> {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
+    writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
+    gpg_file.flush()?;
+
+    let mut pass_file = File::create(dir.path().join(".password-store").join("file.gpg"))?;
+    pass_file.flush()?;
+
+    let store = PasswordStore::new(
+        "test",
+        &Some(dir.path().join(".password-store")),
+        &None,
+        &None,
+    )?;
+
+    let pe = PasswordEntry::new(
+        &dir.path().join(".password-store"),
+        &PathBuf::from("file.gpg"),
+        Ok(Local::now()),
+        Ok("".to_string()),
+        Ok(SignatureStatus::Good),
+        RepositoryStatus::NoRepo,
+    );
+
+    let res = pe.delete_file(&store);
+    assert_eq!(false, res.is_err());
+
+    let stat = fs::metadata(dir.path().join(".password-store").join("file.gpg"));
+    assert_eq!(true, stat.is_err());
+
+    Ok(())
+}
+
+#[test]
+fn get_history_no_repo() -> Result<()> {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
+    writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
+    gpg_file.flush()?;
+
+    let mut pass_file = File::create(dir.path().join(".password-store").join("file.gpg"))?;
+    pass_file.flush()?;
+
+    let store = PasswordStore::new(
+        "test",
+        &Some(dir.path().join(".password-store")),
+        &None,
+        &None,
+    )?;
+
+    let pe = PasswordEntry::new(
+        &dir.path().join(".password-store"),
+        &PathBuf::from("file.gpg"),
+        Ok(Local::now()),
+        Ok("".to_string()),
+        Ok(SignatureStatus::Good),
+        RepositoryStatus::NoRepo,
+    );
+
+    let history = pe.get_history(&Arc::new(Mutex::new(store)))?;
+
+    assert_eq!(0, history.len());
+
+    Ok(())
+}
+
+#[test]
+fn get_history_with_repo() -> Result<()> {
+    let mut base_path: PathBuf = std::env::current_exe().unwrap();
+    base_path.pop();
+    base_path.pop();
+    base_path.pop();
+    base_path.pop();
+    base_path.push("testres");
+
+    let home: PathBuf = base_path.clone();
+    let mut password_dir: PathBuf = base_path.clone();
+    password_dir.push("get_history_with_repo");
+
+    unpack_tar_gz(base_path.clone(), "get_history_with_repo.tar.gz")?;
+
+    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
+    let results = store.all_passwords().unwrap();
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].name, "test");
+    assert_eq!(results[0].committed_by, Some("default".to_string()));
+    assert_eq!(results[0].signature_status.is_none(), true);
+
+    let pw = &results[0];
+    let history = pw.get_history(&Arc::new(Mutex::new(store)))?;
+
+    cleanup(base_path, "get_history_with_repo").unwrap();
+
+    assert_eq!(history.len(), 3);
+    assert_eq!(history[0].message, "commit 3\n");
+    assert_eq!(history[0].signature_status, None);
+    assert_eq!(history[1].message, "commit 2\n");
+    assert_eq!(history[1].signature_status, None);
+    assert_eq!(history[2].message, "commit 1\n");
+    assert_eq!(history[2].signature_status, None);
+
+    Ok(())
+}
