@@ -878,3 +878,65 @@ fn rename_file_absolute_path() -> Result<()> {
     assert_eq!(true, res.is_err());
     Ok(())
 }
+
+#[test]
+fn decrypt_secret_empty_file() -> Result<()> {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
+    writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
+    gpg_file.flush()?;
+
+    let mut pass_file = File::create(dir.path().join(".password-store").join("file.gpg"))?;
+    pass_file.flush()?;
+
+    let pe = PasswordEntry::new(
+        &dir.path().join(".password-store"),
+        &PathBuf::from("file.gpg"),
+        Ok(Local::now()),
+        Ok("".to_string()),
+        Ok(SignatureStatus::Good),
+        RepositoryStatus::NoRepo,
+    );
+
+    let res = pe.secret();
+
+    assert_eq!(true, res.is_err());
+    assert_eq!(
+        "Generic(\"empty password file\")",
+        format!("{:?}", res.err().unwrap())
+    );
+
+    Ok(())
+}
+
+#[test]
+fn decrypt_password_empty_file() -> Result<()> {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
+    writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
+    gpg_file.flush()?;
+
+    let mut pass_file = File::create(dir.path().join(".password-store").join("file.gpg"))?;
+    pass_file.flush()?;
+
+    let pe = PasswordEntry::new(
+        &dir.path().join(".password-store"),
+        &PathBuf::from("file.gpg"),
+        Ok(Local::now()),
+        Ok("".to_string()),
+        Ok(SignatureStatus::Good),
+        RepositoryStatus::NoRepo,
+    );
+
+    let res = pe.password();
+
+    assert_eq!(true, res.is_err());
+    assert_eq!(
+        "Generic(\"empty password file\")",
+        format!("{:?}", res.err().unwrap())
+    );
+
+    Ok(())
+}
