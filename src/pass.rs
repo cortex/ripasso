@@ -46,6 +46,8 @@ pub struct PasswordStore {
     valid_gpg_signing_keys: Vec<String>,
     /// a list of password files with meta data
     pub passwords: Vec<PasswordEntry>,
+    /// A file that describes the style of the store
+    style_file: Option<PathBuf>,
 }
 
 impl PasswordStore {
@@ -55,6 +57,7 @@ impl PasswordStore {
         password_store_dir: &Option<PathBuf>,
         password_store_signing_key: &Option<String>,
         home: &Option<PathBuf>,
+        style_file: &Option<PathBuf>,
     ) -> Result<PasswordStore> {
         let pass_home = password_dir_raw(password_store_dir, home);
         if !pass_home.exists() {
@@ -72,6 +75,7 @@ impl PasswordStore {
             root: pass_home.canonicalize()?,
             valid_gpg_signing_keys: signing_keys,
             passwords: [].to_vec(),
+            style_file: style_file.to_owned(),
         })
     }
 
@@ -88,6 +92,11 @@ impl PasswordStore {
     /// returns the path to the directory where the store is located.
     pub fn get_store_path(&self) -> PathBuf {
         self.root.clone()
+    }
+
+    /// returns the style file for the store
+    pub fn get_style_file(&self) -> Option<PathBuf> {
+        self.style_file.clone()
     }
 
     /// returns true if the store is located in $HOME/.password-store

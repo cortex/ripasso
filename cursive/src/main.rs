@@ -908,12 +908,20 @@ fn get_stores(config: &config::Config, home: &Option<PathBuf>) -> pass::Result<V
                     },
                     None => None,
                 };
+                let style_path_opt = match store.get("style_path") {
+                    Some(path) => match path.clone().into_str() {
+                        Ok(p) => Some(PathBuf::from(p)),
+                        Err(_err) => None,
+                    },
+                    None => None,
+                };
 
                 final_stores.push(PasswordStore::new(
                     store_name,
                     &password_store_dir,
                     &valid_signing_keys,
                     home,
+                    &style_path_opt,
                 )?);
             }
         }
@@ -971,7 +979,7 @@ fn save_edit_config(
         _ => Some(e_k_str.clone()),
     };
 
-    let new_store = PasswordStore::new(e_n, &Some(PathBuf::from(e_d.clone())), &e_k, home);
+    let new_store = PasswordStore::new(e_n, &Some(PathBuf::from(e_d.clone())), &e_k, home, &None);
     if let Err(err) = new_store {
         helpers::errorbox(ui, &err);
         return;
@@ -1017,7 +1025,7 @@ fn save_new_config(
         _ => Some(e_k_str.clone()),
     };
 
-    let new_store = PasswordStore::new(e_n, &Some(PathBuf::from(e_d.clone())), &e_k, home);
+    let new_store = PasswordStore::new(e_n, &Some(PathBuf::from(e_d.clone())), &e_k, home, &None);
     if let Err(err) = new_store {
         helpers::errorbox(ui, &err);
         return;
@@ -1299,6 +1307,17 @@ fn show_manage_config_dialog(
     ui.add_layer(recipients_event);
 }
 
+fn get_style(style_file: &Option<PathBuf>) -> String {
+    if let Some(style_file) = style_file {
+        let content = std::fs::read_to_string(style_file);
+        if let Ok(content) = content {
+            return content;
+        }
+    }
+
+    include_str!("../res/style.toml").to_string()
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
 
@@ -1363,7 +1382,7 @@ fn main() {
     let stores: Arc<Mutex<Vec<PasswordStore>>> = Arc::new(Mutex::new(stores.unwrap()));
 
     let store = Arc::new(Mutex::new(
-        PasswordStore::new(&"".to_string(), &None, &None, &home).unwrap(),
+        PasswordStore::new(&"".to_string(), &None, &None, &home, &None).unwrap(),
     ));
     {
         let stores = stores.lock().unwrap();
@@ -1460,7 +1479,7 @@ fn main() {
 
     ui.add_global_callback(Event::Key(cursive::event::Key::Esc), |s| s.quit());
 
-    if let Err(err) = ui.load_toml(include_str!("../res/style.toml")) {
+    if let Err(err) = ui.load_toml(&get_style(&store.lock().unwrap().get_style_file())) {
         eprintln!("Error {:?}", err);
         process::exit(1);
     }
@@ -1552,6 +1571,7 @@ fn main() {
         let ss_store_path = ss.get_store_path();
         let ss_signing_keys = ss.get_valid_gpg_signing_keys().clone();
         let home = home.clone();
+        let style_file = ss.get_style_file();
         tree.add_leaf(store_name, move |ui: &mut Cursive| {
             let change_res = store
                 .lock()
@@ -1562,6 +1582,10 @@ fn main() {
                 helpers::errorbox(ui, &err);
             }
 
+            if let Err(err) = ui.load_toml(&get_style(&style_file)) {
+                eprintln!("Error {:?}", err);
+                process::exit(1);
+            }
             ui.call_on_name("search_box", |e: &mut EditView| {
                 e.set_content("");
             });

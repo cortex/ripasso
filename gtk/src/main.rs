@@ -410,6 +410,7 @@ fn main() {
             &password_store_dir,
             &password_store_signing_key,
             &home,
+            &None,
         )
         .unwrap(),
     ));
