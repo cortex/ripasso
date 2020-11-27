@@ -45,6 +45,13 @@ separated by commas."))
             .paragraph("    valid_signing_keys = \"AF77DAC5B3882EAD316B7312D5B659E1D2FDF0C3\"")
             .paragraph("  [stores.work]")
             .paragraph("    path = \"/home/user/.work_pass/\"")
+            .paragraph("    style_path = \"/home/user/.config/ripasso/work-style.toml\"")
+            .paragraph("")
+            .paragraph("Valid settings for a store are:")
+            .paragraph("path : This is the root path to the password store directory")
+            .paragraph("valid_signing_keys : this setting corresponds to the PASSWORD_STORE_SIGNING_KEY environmental variable")
+            .paragraph("style_path : color and style information for the store, different stores can have different styles and they will
+change when you switch store. Documentation on the format can be found here https://docs.rs/cursive_core/0.1.1/cursive_core/theme/index.html")
         )
         .render()
 }

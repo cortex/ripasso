@@ -95,7 +95,7 @@ fn populate_password_list_small_repo() -> Result<()> {
     )
     .unwrap();
 
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
+    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "populate_password_list_small_repo").unwrap();
@@ -125,7 +125,7 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
         "populate_password_list_repo_with_deleted_files.tar.gz",
     )?;
 
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
+    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "populate_password_list_repo_with_deleted_files").unwrap();
@@ -155,7 +155,7 @@ fn populate_password_list_directory_without_git() -> Result<()> {
         "populate_password_list_directory_without_git.tar.gz",
     )?;
 
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
+    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "populate_password_list_directory_without_git").unwrap();
@@ -196,7 +196,7 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
         "password_store_with_files_in_initial_commit.tar.gz",
     )?;
 
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
+    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "password_store_with_files_in_initial_commit").unwrap();
@@ -236,6 +236,7 @@ fn password_store_with_relative_path() -> Result<()> {
         &Some(PathBuf::from("./testres/password_store_with_relative_path")),
         &None,
         &Some(home),
+        &None,
     );
     if store.is_err() {
         eprintln!("{:?}", store.err().unwrap());
@@ -278,7 +279,7 @@ fn password_store_with_shallow_checkout() -> Result<()> {
         "password_store_with_shallow_checkout.tar.gz",
     )?;
 
-    let store = PasswordStore::new(&"default", &Some(password_dir), &None, &Some(home))?;
+    let store = PasswordStore::new(&"default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "password_store_with_shallow_checkout").unwrap();
@@ -309,7 +310,7 @@ fn password_store_with_sparse_checkout() -> Result<()> {
         "password_store_with_sparse_checkout.tar.gz",
     )?;
 
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
+    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path, "password_store_with_sparse_checkout").unwrap();
@@ -349,7 +350,7 @@ fn password_store_with_symlink() -> Result<()> {
     target.push("password_store_with_symlink");
     std::os::unix::fs::symlink(target, password_dir.clone())?;
 
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
+    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
 
     cleanup(base_path.clone(), "password_store_with_symlink").unwrap();
@@ -836,7 +837,7 @@ fn rename_file() -> Result<()> {
 
     unpack_tar_gz(base_path.clone(), "rename_file.tar.gz")?;
 
-    let mut store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
+    let mut store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     store.reload_password_list()?;
     store.rename_file("1/test", "2/test")?;
     let results = store.all_passwords()?;
@@ -869,7 +870,7 @@ fn rename_file_absolute_path() -> Result<()> {
 
     unpack_tar_gz(base_path.clone(), "rename_file_absolute_path.tar.gz")?;
 
-    let mut store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
+    let mut store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     store.reload_password_list()?;
     let res = store.rename_file("1/test", "/2/test");
 
@@ -957,6 +958,7 @@ fn delete_file() -> Result<()> {
         &Some(dir.path().join(".password-store")),
         &None,
         &None,
+        &None,
     )?;
 
     let pe = PasswordEntry::new(
@@ -993,6 +995,7 @@ fn get_history_no_repo() -> Result<()> {
         &Some(dir.path().join(".password-store")),
         &None,
         &None,
+        &None,
     )?;
 
     let pe = PasswordEntry::new(
@@ -1026,7 +1029,7 @@ fn get_history_with_repo() -> Result<()> {
 
     unpack_tar_gz(base_path.clone(), "get_history_with_repo.tar.gz")?;
 
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
+    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
 
     assert_eq!(results.len(), 1);
