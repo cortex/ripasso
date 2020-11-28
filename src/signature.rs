@@ -30,6 +30,9 @@ impl From<gpgme::SignatureSummary> for SignatureStatus {
     }
 }
 
+/// Turns an optional string into a vec of parsed gpg fingerprints in the form of strings.
+/// If any of the fingerprints isn't a full 40 chars or if they haven't been imported to
+/// the gpg keyring yet, this function instead returns an error.
 pub fn parse_signing_keys(password_store_signing_key: &Option<String>) -> Result<Vec<String>> {
     if password_store_signing_key.is_none() {
         return Ok(vec![]);
@@ -50,8 +53,8 @@ pub fn parse_signing_keys(password_store_signing_key: &Option<String>) -> Result
         let key_res = ctx.get_key(&trimmed);
         if key_res.is_err() {
             return Err(Error::GenericDyn(format!(
-                "signing key not found in keyring, error: {:?}",
-                key_res.err()
+                "signing key not found in keyring, error: {}",
+                key_res.err().unwrap()
             )));
         }
 
@@ -59,6 +62,7 @@ pub fn parse_signing_keys(password_store_signing_key: &Option<String>) -> Result
     }
     Ok(signing_keys)
 }
+
 /// Returns a gpg signature for the supplied string. Suitable to add to a gpg commit.
 pub fn gpg_sign_string(commit: &str) -> Result<String> {
     let config = git2::Config::open_default()?;
@@ -121,6 +125,7 @@ impl From<&gpgme::Validity> for OwnerTrustLevel {
     }
 }
 
+/// A Recipient can either be in the GPG keyring, or not.
 #[derive(Clone, PartialEq)]
 pub enum KeyRingStatus {
     InKeyRing,
@@ -144,30 +149,31 @@ pub struct Recipient {
     pub expired: bool,
 }
 
-fn build_recipient(
-    name: String,
-    key_id: String,
-    key_ring_status: KeyRingStatus,
-    trust_level: OwnerTrustLevel,
-    expired: bool,
-) -> Recipient {
-    Recipient {
-        name,
-        key_id,
-        key_ring_status,
-        trust_level,
-        expired,
-    }
-}
-
 impl Recipient {
+    /// Constructs a Recipient object.
+    fn new(
+        name: String,
+        key_id: String,
+        key_ring_status: KeyRingStatus,
+        trust_level: OwnerTrustLevel,
+        expired: bool,
+    ) -> Recipient {
+        Recipient {
+            name,
+            key_id,
+            key_ring_status,
+            trust_level,
+            expired,
+        }
+    }
+
     /// Creates a Recipient from a gpg key id string
-    pub fn new(key_id: String) -> Result<Recipient> {
+    pub fn from(key_id: String) -> Result<Recipient> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
         let key_option = ctx.get_key(key_id.clone());
         if key_option.is_err() {
-            return Ok(build_recipient(
+            return Ok(Recipient::new(
                 "key id not in keyring".to_string(),
                 key_id,
                 KeyRingStatus::NotInKeyRing,
@@ -185,7 +191,7 @@ impl Recipient {
 
         let trusts: HashMap<String, OwnerTrustLevel> = Recipient::get_all_trust_items()?;
 
-        Ok(build_recipient(
+        Ok(Recipient::new(
             name.to_string(),
             real_key.fingerprint()?.to_string(),
             KeyRingStatus::InKeyRing,
@@ -214,6 +220,7 @@ impl Recipient {
 
         Ok(trusts)
     }
+
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
     pub fn all_recipients(recipient_file: &PathBuf) -> Result<Vec<Recipient>> {
         let contents =
@@ -233,7 +240,7 @@ impl Recipient {
         for key in unique_recipients_keys {
             let key_option = ctx.get_key(key.clone());
             if key_option.is_err() {
-                recipients.push(build_recipient(
+                recipients.push(Recipient::new(
                     "key id not in keyring".to_string(),
                     key.clone(),
                     KeyRingStatus::NotInKeyRing,
@@ -249,7 +256,7 @@ impl Recipient {
             for user_id in real_key.user_ids() {
                 name = user_id.name().unwrap_or("?");
             }
-            recipients.push(build_recipient(
+            recipients.push(Recipient::new(
                 name.to_string(),
                 real_key.fingerprint()?.to_string(),
                 KeyRingStatus::InKeyRing,

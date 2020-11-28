@@ -126,5 +126,26 @@ impl
     }
 }
 
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match &*self {
+            Error::IO(err) => write!(f, "{}", err),
+            Error::Git(err) => write!(f, "{}", err),
+            Error::GPG(err) => write!(f, "{}", err),
+            Error::UTF8(err) => write!(f, "{}", err),
+            Error::Generic(err) => write!(f, "{}", err),
+            Error::GenericDyn(err) => write!(f, "{}", err),
+            Error::PathError(err) => write!(f, "{}", err),
+            Error::PatternError(err) => write!(f, "{}", err),
+            Error::GlobError(err) => write!(f, "{}", err),
+            Error::Utf8Error(err) => write!(f, "{}", err),
+            Error::RecipientNotInKeyRing(err) => write!(f, "{}", err),
+            Error::ConfigError(err) => write!(f, "{}", err),
+            Error::SerError(err) => write!(f, "{}", err),
+            Error::NoneError => write!(f, "NoneError"),
+        }
+    }
+}
+
 /// Convenience type for Results
 pub type Result<T> = std::result::Result<T, Error>;

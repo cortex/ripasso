@@ -564,7 +564,7 @@ fn delete_recipient_verification(ui: &mut Cursive, store: PasswordStoreType) {
 fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) {
     let l = &*get_value_from_input(ui, "key_id_input").unwrap();
 
-    match pass::Recipient::new(l.clone()) {
+    match pass::Recipient::from(l.clone()) {
         Err(err) => helpers::errorbox(ui, &err),
         Ok(recipient) => {
             if recipient.trust_level != OwnerTrustLevel::Ultimate {
@@ -1365,7 +1365,7 @@ fn main() {
         )
     };
     if let Err(err) = config_res {
-        eprintln!("Error {:?}", err);
+        eprintln!("Error {}", err);
         process::exit(1);
     }
     let (config, config_file_location) = config_res.unwrap();
@@ -1376,7 +1376,7 @@ fn main() {
 
     let stores = get_stores(&config, &home);
     if let Err(err) = stores {
-        eprintln!("Error {:?}", err);
+        eprintln!("Error {}", err);
         process::exit(1);
     }
     let stores: Arc<Mutex<Vec<PasswordStore>>> = Arc::new(Mutex::new(stores.unwrap()));
@@ -1401,7 +1401,7 @@ fn main() {
             .reset(&ss_store_path, &ss_signing_keys, &home);
 
         if let Err(err) = change_res {
-            eprintln!("error loading passwords: {:?}", err);
+            eprintln!("error loading passwords: {}", err);
             process::exit(1);
         }
     }

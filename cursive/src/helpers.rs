@@ -28,7 +28,7 @@ pub fn errorbox(ui: &mut Cursive, err: &pass::Error) {
             .gettext("Team member with key id {} isn't in your GPG keyring, fetch it first")
             .to_string()
             .replace("{}", key_id),
-        _ => format!("{:?}", err),
+        _ => format!("{}", err),
     };
 
     let d = Dialog::around(TextView::new(text))
