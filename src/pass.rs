@@ -1216,9 +1216,9 @@ fn read_git_meta_data(
     let blame_res = repo.blame_file(path_res.unwrap(), None);
     if let Err(e) = blame_res {
         return (
-            Err(Error::GenericDyn(format!("{:?}", e))),
-            Err(Error::GenericDyn(format!("{:?}", e))),
-            Err(Error::GenericDyn(format!("{:?}", e))),
+            Err(Error::GenericDyn(format!("{}", e))),
+            Err(Error::GenericDyn(format!("{}", e))),
+            Err(Error::GenericDyn(format!("{}", e))),
         );
     }
     let blame = blame_res.unwrap();
@@ -1228,9 +1228,9 @@ fn read_git_meta_data(
 
     if let Err(e) = id_res {
         return (
-            Err(Error::GenericDyn(format!("{:?}", e))),
-            Err(Error::GenericDyn(format!("{:?}", e))),
-            Err(Error::GenericDyn(format!("{:?}", e))),
+            Err(Error::GenericDyn(format!("{}", e))),
+            Err(Error::GenericDyn(format!("{}", e))),
+            Err(Error::GenericDyn(format!("{}", e))),
         );
     }
     let id = id_res.unwrap().orig_commit_id();
@@ -1238,9 +1238,9 @@ fn read_git_meta_data(
     let commit_res = repo.find_commit(id);
     if let Err(e) = commit_res {
         return (
-            Err(Error::GenericDyn(format!("{:?}", e))),
-            Err(Error::GenericDyn(format!("{:?}", e))),
-            Err(Error::GenericDyn(format!("{:?}", e))),
+            Err(Error::GenericDyn(format!("{}", e))),
+            Err(Error::GenericDyn(format!("{}", e))),
+            Err(Error::GenericDyn(format!("{}", e))),
         );
     }
     let commit = commit_res.unwrap();

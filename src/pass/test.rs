@@ -239,7 +239,7 @@ fn password_store_with_relative_path() -> Result<()> {
         &None,
     );
     if store.is_err() {
-        eprintln!("{:?}", store.err().unwrap());
+        eprintln!("{}", store.err().unwrap());
     } else {
         let results = store?.all_passwords()?;
 
@@ -376,6 +376,13 @@ fn parse_signing_keys_empty() {
     let result = parse_signing_keys(&None).unwrap();
 
     assert_eq!(result.len(), 0);
+}
+
+#[test]
+fn parse_signing_keys_short() {
+    let result = parse_signing_keys(&Some("0x1D108E6C07CBC406".to_string()));
+
+    assert_eq!(result.is_err(), true);
 }
 
 #[test]
@@ -906,10 +913,7 @@ fn decrypt_secret_empty_file() -> Result<()> {
     let res = pe.secret();
 
     assert_eq!(true, res.is_err());
-    assert_eq!(
-        "Generic(\"empty password file\")",
-        format!("{:?}", res.err().unwrap())
-    );
+    assert_eq!("empty password file", format!("{}", res.err().unwrap()));
 
     Ok(())
 }
@@ -937,10 +941,7 @@ fn decrypt_password_empty_file() -> Result<()> {
     let res = pe.password();
 
     assert_eq!(true, res.is_err());
-    assert_eq!(
-        "Generic(\"empty password file\")",
-        format!("{:?}", res.err().unwrap())
-    );
+    assert_eq!("empty password file", format!("{}", res.err().unwrap()));
 
     Ok(())
 }
@@ -1054,4 +1055,69 @@ fn get_history_with_repo() -> Result<()> {
     assert_eq!(history[2].signature_status, None);
 
     Ok(())
+}
+
+#[test]
+fn test_format_error() {
+    assert_eq!(
+        format!("{}", Error::from(std::io::Error::from_raw_os_error(3))),
+        "No such process (os error 3)"
+    );
+
+    assert_eq!(
+        format!("{}", Error::from(gpgme::Error::from_errno(3))),
+        "No such process (gpg error 32895)"
+    );
+
+    assert_eq!(
+        format!("{}", Error::from(git2::Error::from_str("git error"))),
+        "git error"
+    );
+
+    assert_eq!(
+        format!(
+            "{}",
+            Error::from(String::from_utf8(vec![255]).err().unwrap())
+        ),
+        "invalid utf-8 sequence of 1 bytes from index 0"
+    );
+
+    let path = Path::new("/test/haha/foo.txt");
+    assert_eq!(
+        format!("{}", Error::from(path.strip_prefix("test").err().unwrap())),
+        "prefix not found"
+    );
+
+    assert_eq!(
+        format!("{}", Error::from(glob::glob("****").err().unwrap())),
+        "Pattern syntax error near position 2: wildcards are either regular `*` or recursive `**`"
+    );
+
+    assert_eq!(
+        format!(
+            "{}",
+            Error::from(std::str::from_utf8(&vec![255]).err().unwrap())
+        ),
+        "invalid utf-8 sequence of 1 bytes from index 0"
+    );
+    assert_eq!(
+        format!(
+            "{}",
+            Error::from(Some(std::str::from_utf8(&vec![255]).err().unwrap()))
+        ),
+        "invalid utf-8 sequence of 1 bytes from index 0"
+    );
+    assert_eq!(
+        format!("{}", Error::from(config::ConfigError::Frozen)),
+        "configuration is frozen"
+    );
+    assert_eq!(
+        format!("{}", Error::from(toml::ser::Error::DateInvalid)),
+        "a serialized date was invalid"
+    );
+    assert_eq!(
+        format!("{}", Error::from("custom error message")),
+        "custom error message"
+    );
+    assert_eq!(format!("{}", Error::NoneError), "NoneError");
 }
