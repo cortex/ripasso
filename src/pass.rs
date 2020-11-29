@@ -964,7 +964,8 @@ fn commit(
 
         let commit = repo.commit_signed(commit_as_str, &sig, Some("gpgsig"))?;
 
-        repo.head()?.set_target(commit.clone(), "added a signed commit using ripasso")?;
+        repo.head()?
+            .set_target(commit, "added a signed commit using ripasso")?;
 
         Ok(commit)
     } else {
@@ -1197,12 +1198,18 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
     Ok(())
 }
 
-fn triple<T: Display>(e: &T) -> (Result<DateTime<Local>>, Result<String>, Result<SignatureStatus>) {
-    return (
+fn triple<T: Display>(
+    e: &T,
+) -> (
+    Result<DateTime<Local>>,
+    Result<String>,
+    Result<SignatureStatus>,
+) {
+    (
         Err(Error::GenericDyn(format!("{}", e))),
         Err(Error::GenericDyn(format!("{}", e))),
         Err(Error::GenericDyn(format!("{}", e))),
-    );
+    )
 }
 
 fn read_git_meta_data(
