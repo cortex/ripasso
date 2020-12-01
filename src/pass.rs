@@ -31,6 +31,7 @@ pub use crate::signature::{
     gpg_sign_string, parse_signing_keys, KeyRingStatus, OwnerTrustLevel, Recipient, SignatureStatus,
 };
 use std::collections::HashMap;
+use std::fmt::Display;
 
 /// The global state of all passwords are an instance of this type.
 pub type PasswordStoreType = Arc<Mutex<PasswordStore>>;
@@ -957,11 +958,15 @@ fn commit(
             parents,
         )?; // parents
 
-        let commit_as_str = str::from_utf8(&commit_buf)?.to_string();
+        let commit_as_str = str::from_utf8(&commit_buf)?;
 
-        let sig = gpg_sign_string(&commit_as_str)?;
+        let sig = gpg_sign_string(commit_as_str)?;
 
-        let commit = repo.commit_signed(&commit_as_str, &sig, Some("gpgsig"))?;
+        let commit = repo.commit_signed(commit_as_str, &sig, Some("gpgsig"))?;
+
+        repo.head()?
+            .set_target(commit, "added a signed commit using ripasso")?;
+
         Ok(commit)
     } else {
         let commit = repo.commit(
@@ -986,6 +991,7 @@ fn add_and_commit_internal(
     let mut index = repo.index()?;
     for path in paths {
         index.add_path(path)?;
+        index.write()?;
     }
     let oid = index.write_tree()?;
     let signature = repo.signature()?;
@@ -996,11 +1002,10 @@ fn add_and_commit_internal(
         parent_commit = parent_commit_res?;
         parents.push(&parent_commit);
     }
+    index.write_tree()?;
     let tree = repo.find_tree(oid)?;
 
     let oid = commit(&repo, &signature, &message.to_string(), &tree, &parents)?;
-    let obj = repo.find_object(oid, None)?;
-    repo.reset(&obj, git2::ResetType::Hard, None)?;
 
     Ok(oid)
 }
@@ -1014,6 +1019,7 @@ fn remove_and_commit(store: &PasswordStore, paths: &[PathBuf], message: &str) ->
     let mut index = repo.index()?;
     for path in paths {
         index.remove_path(path)?;
+        index.write()?;
     }
     let oid = index.write_tree()?;
     let signature = repo.signature()?;
@@ -1024,11 +1030,10 @@ fn remove_and_commit(store: &PasswordStore, paths: &[PathBuf], message: &str) ->
         parent_commit = parent_commit_res?;
         parents.push(&parent_commit);
     }
+    index.write_tree()?;
     let tree = repo.find_tree(oid)?;
 
     let oid = commit(&repo, &signature, &message.to_string(), &tree, &parents)?;
-    let obj = repo.find_object(oid, None)?;
-    repo.reset(&obj, git2::ResetType::Hard, None)?;
 
     Ok(oid)
 }
@@ -1059,8 +1064,6 @@ fn move_and_commit(
     let tree = repo.find_tree(oid)?;
 
     let oid = commit(&repo, &signature, &message.to_string(), &tree, &parents)?;
-    let obj = repo.find_object(oid, None)?;
-    repo.reset(&obj, git2::ResetType::Hard, None)?;
 
     Ok(oid)
 }
@@ -1195,6 +1198,20 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
     Ok(())
 }
 
+fn triple<T: Display>(
+    e: &T,
+) -> (
+    Result<DateTime<Local>>,
+    Result<String>,
+    Result<SignatureStatus>,
+) {
+    (
+        Err(Error::GenericDyn(format!("{}", e))),
+        Err(Error::GenericDyn(format!("{}", e))),
+        Err(Error::GenericDyn(format!("{}", e))),
+    )
+}
+
 fn read_git_meta_data(
     base: &PathBuf,
     path: &PathBuf,
@@ -1206,20 +1223,12 @@ fn read_git_meta_data(
 ) {
     let path_res = path.strip_prefix(base);
     if let Err(e) = path_res {
-        return (
-            Err(Error::from(e.clone())),
-            Err(Error::from(e.clone())),
-            Err(Error::from(e)),
-        );
+        return triple(&e);
     }
 
     let blame_res = repo.blame_file(path_res.unwrap(), None);
     if let Err(e) = blame_res {
-        return (
-            Err(Error::GenericDyn(format!("{}", e))),
-            Err(Error::GenericDyn(format!("{}", e))),
-            Err(Error::GenericDyn(format!("{}", e))),
-        );
+        return triple(&e);
     }
     let blame = blame_res.unwrap();
     let id_res = blame
@@ -1227,21 +1236,13 @@ fn read_git_meta_data(
         .ok_or(Error::Generic("no git history found"));
 
     if let Err(e) = id_res {
-        return (
-            Err(Error::GenericDyn(format!("{}", e))),
-            Err(Error::GenericDyn(format!("{}", e))),
-            Err(Error::GenericDyn(format!("{}", e))),
-        );
+        return triple(&e);
     }
     let id = id_res.unwrap().orig_commit_id();
 
     let commit_res = repo.find_commit(id);
     if let Err(e) = commit_res {
-        return (
-            Err(Error::GenericDyn(format!("{}", e))),
-            Err(Error::GenericDyn(format!("{}", e))),
-            Err(Error::GenericDyn(format!("{}", e))),
-        );
+        return triple(&e);
     }
     let commit = commit_res.unwrap();
 
