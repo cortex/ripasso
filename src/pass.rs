@@ -274,7 +274,7 @@ impl PasswordStore {
         }
 
         let mut output = Vec::new();
-        ctx.encrypt(&keys, content, &mut output)?;
+        ctx.encrypt_with_flags(&keys, content, &mut output, gpgme::EncryptFlags::NO_COMPRESS)?;
 
         if let Err(why) = file.write_all(&output) {
             return Err(Error::from(why));
@@ -771,7 +771,7 @@ impl PasswordEntry {
         }
 
         let mut ciphertext = Vec::new();
-        ctx.encrypt(&keys, secret, &mut ciphertext)?;
+        ctx.encrypt_with_flags(&keys, secret, &mut ciphertext, gpgme::EncryptFlags::NO_COMPRESS)?;
 
         let mut output = File::create(&self.path)?;
         output.write_all(&ciphertext)?;
