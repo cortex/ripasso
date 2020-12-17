@@ -204,11 +204,8 @@ fn get_selected_password_entry(ui: &mut Cursive) -> Option<ripasso::pass::Passwo
         });
 
     let password_entry: pass::PasswordEntry = (*(match password_entry_option {
-        Some(level_1) => match level_1 {
-            Some(level_2) => level_2,
-            None => return None,
-        },
-        None => return None,
+        Some(Some(entry)) => entry,
+        _ => return None,
     }))
     .clone();
 
