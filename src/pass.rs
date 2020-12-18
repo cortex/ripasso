@@ -1479,8 +1479,8 @@ fn xdg_config_file_location(
     }
 }
 
-fn file_settings(xdg_config_file: &PathBuf) -> Result<config::File<config::FileSourceFile>> {
-    Ok(config::File::from((*xdg_config_file).clone()))
+fn file_settings(xdg_config_file: &PathBuf) -> config::File<config::FileSourceFile> {
+    config::File::from((*xdg_config_file).clone())
 }
 
 fn append_extension(path: PathBuf, extension: &str) -> PathBuf {
@@ -1500,7 +1500,7 @@ pub fn read_config(
     let config_file_location = xdg_config_file_location(home, xdg_config_home)?;
 
     if settings_file_exists(&home, &xdg_config_home) {
-        settings.merge(file_settings(&config_file_location)?)?;
+        settings.merge(file_settings(&config_file_location))?;
     }
 
     if home_exists(&home, &settings) {
