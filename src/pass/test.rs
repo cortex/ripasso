@@ -549,7 +549,7 @@ fn file_settings_simple_file() -> Result<()> {
     let mut settings: config::Config = config::Config::default();
     settings.merge(file_settings(
         &xdg_config_file_location(&Some(dir.into_path()), &None).unwrap(),
-    )?)?;
+    ))?;
 
     let stores = settings.get_table("stores")?;
 
@@ -579,13 +579,10 @@ fn file_settings_file_in_xdg_config_home() -> Result<()> {
     file.flush()?;
 
     let mut settings: config::Config = config::Config::default();
-    settings.merge(
-        file_settings(&xdg_config_file_location(
-            &Some(dir.into_path()),
-            &Some(dir2.path().join(".random_config")),
-        )?)
-        .unwrap(),
-    )?;
+    settings.merge(file_settings(&xdg_config_file_location(
+        &Some(dir.into_path()),
+        &Some(dir2.path().join(".random_config")),
+    )?))?;
 
     let stores = settings.get_table("stores")?;
 

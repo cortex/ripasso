@@ -755,7 +755,8 @@ fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
             SignatureStatus::Bad => "⛔",
         }
     }
-    return format!("{:4$} {} {} {}",
+    return format!(
+        "{:4$} {} {} {}",
         p.name,
         verification_status,
         name,
