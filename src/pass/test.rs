@@ -103,7 +103,7 @@ fn populate_password_list_small_repo() -> Result<()> {
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "test");
     assert_eq!(results[0].committed_by, Some("Alexander Kjäll".to_string()));
-    assert_eq!(results[0].signature_status.is_none(), false);
+    assert_eq!(results[0].signature_status.is_none(), true);
     Ok(())
 }
 
@@ -843,6 +843,7 @@ fn rename_file() -> Result<()> {
     let mut config = git2::Config::open(&config_location)?;
     config.set_str("user.name", "default")?;
     config.set_str("user.email", "default@example.com")?;
+    config.set_str("commit.gpgsign", "false")?;
 
     let mut store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     store.reload_password_list()?;
@@ -907,7 +908,16 @@ fn decrypt_secret_empty_file() -> Result<()> {
         RepositoryStatus::NoRepo,
     );
 
-    let res = pe.secret();
+    let store = PasswordStore {
+        name: "store_name".to_string(),
+        root: dir.path().join(".password-store"),
+        valid_gpg_signing_keys: vec![],
+        passwords: vec![],
+        style_file: None,
+        crypto: Box::new(GpgMe {}),
+    };
+
+    let res = pe.secret(&store);
 
     assert_eq!(true, res.is_err());
     assert_eq!("empty password file", format!("{}", res.err().unwrap()));
@@ -935,7 +945,16 @@ fn decrypt_password_empty_file() -> Result<()> {
         RepositoryStatus::NoRepo,
     );
 
-    let res = pe.password();
+    let store = PasswordStore {
+        name: "store_name".to_string(),
+        root: dir.path().join(".password-store"),
+        valid_gpg_signing_keys: vec![],
+        passwords: vec![],
+        style_file: None,
+        crypto: Box::new(GpgMe {}),
+    };
+
+    let res = pe.password(&store);
 
     assert_eq!(true, res.is_err());
     assert_eq!("empty password file", format!("{}", res.err().unwrap()));

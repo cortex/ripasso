@@ -63,27 +63,6 @@ pub fn parse_signing_keys(password_store_signing_key: &Option<String>) -> Result
     Ok(signing_keys)
 }
 
-/// Returns a gpg signature for the supplied string. Suitable to add to a gpg commit.
-pub fn gpg_sign_string(commit: &str) -> Result<String> {
-    let config = git2::Config::open_default()?;
-
-    let signing_key = config.get_string("user.signingkey")?;
-
-    let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-    ctx.set_armor(true);
-    let key = ctx.get_secret_key(signing_key)?;
-
-    ctx.add_signer(&key)?;
-    let mut output = Vec::new();
-    let signature = ctx.sign_detached(commit, &mut output);
-
-    if let Err(e) = signature {
-        return Err(Error::GPG(e));
-    }
-
-    Ok(String::from_utf8(output)?)
-}
-
 /// the GPG trust level for a key
 #[derive(Clone, PartialEq)]
 pub enum OwnerTrustLevel {

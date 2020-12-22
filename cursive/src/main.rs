@@ -103,7 +103,7 @@ fn page_up(ui: &mut Cursive) {
     );
 }
 
-fn copy(ui: &mut Cursive) {
+fn copy(ui: &mut Cursive, store: &PasswordStoreType) {
     let sel = ui
         .find_name::<SelectView<pass::PasswordEntry>>("results")
         .unwrap()
@@ -113,7 +113,8 @@ fn copy(ui: &mut Cursive) {
         return;
     }
     if let Err(err) = || -> pass::Result<()> {
-        let password = sel.unwrap().password()?;
+        let store = store.lock().unwrap();
+        let password = sel.unwrap().password(&store)?;
         let mut ctx = clipboard::ClipboardContext::new()?;
         ctx.set_contents(password)?;
         Ok(())
@@ -268,9 +269,12 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) {
 
     let password_entry = password_entry_opt.unwrap();
 
-    let password = match password_entry.secret() {
-        Ok(p) => p,
-        Err(_e) => return,
+    let password = {
+        let store = store.lock().unwrap();
+        match password_entry.secret(&store) {
+            Ok(p) => p,
+            Err(_e) => return,
+        }
     };
     let d = Dialog::around(TextArea::new().content(password).with_name("editbox"))
         .button(CATALOG.gettext("Save"), move |s| {
@@ -1419,9 +1423,15 @@ fn main() {
 
     let mut ui = Cursive::default();
 
-    ui.add_global_callback(Event::CtrlChar('y'), copy);
+    ui.add_global_callback(Event::CtrlChar('y'), {
+        let store = store.clone();
+        move |ui: &mut Cursive| copy(ui, &store.clone())
+    });
     ui.add_global_callback(Event::CtrlChar('u'), copy_name);
-    ui.add_global_callback(Key::Enter, copy);
+    ui.add_global_callback(Key::Enter, {
+        let store = store.clone();
+        move |ui: &mut Cursive| copy(ui, &store.clone())
+    });
     ui.add_global_callback(Key::Del, {
         let store = store.clone();
         move |ui: &mut Cursive| delete(ui, store.clone())
@@ -1522,7 +1532,10 @@ fn main() {
     ui.menubar().add_subtree(
         CATALOG.gettext("Operations"),
         MenuTree::new()
-            .leaf(CATALOG.gettext("Copy (ctrl-y)"), copy)
+            .leaf(CATALOG.gettext("Copy (ctrl-y)"), {
+                let store = store.clone();
+                move |ui: &mut Cursive| copy(ui, &store.clone())
+            })
             .leaf(CATALOG.gettext("Copy Name (ctrl-u)"), copy_name)
             .leaf(CATALOG.gettext("Open (ctrl-o)"), {
                 let store = store.clone();
