@@ -915,18 +915,10 @@ fn find_last_commit(repo: &git2::Repository) -> Result<git2::Commit> {
 }
 
 /// Returns if a git commit should be gpg signed or not.
-fn should_sign() -> bool {
-    match git2::Config::open_default() {
+fn should_sign(repo: &git2::Repository) -> bool {
+    match repo.config() {
         Err(_) => false,
-        Ok(config) => {
-            let do_sign = config.get_bool("commit.gpgsign");
-
-            if do_sign.is_err() || !do_sign.unwrap() {
-                return false;
-            }
-
-            true
-        }
+        Ok(config) => config.get_bool("commit.gpgsign").unwrap_or(false),
     }
 }
 
@@ -939,7 +931,7 @@ fn commit(
     parents: &[&git2::Commit],
     crypto: &(dyn Crypto + Send),
 ) -> Result<git2::Oid> {
-    if should_sign() {
+    if should_sign(repo) {
         let commit_buf = repo.commit_create_buffer(
             signature, // author
             signature, // committer

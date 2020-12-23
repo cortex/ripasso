@@ -35,6 +35,17 @@ fn cleanup(mut base_path: PathBuf, path_name: &str) -> Result<()> {
     Ok(())
 }
 
+fn get_testres_path() -> PathBuf {
+    let mut base_path: PathBuf = std::env::current_exe().unwrap();
+    base_path.pop();
+    base_path.pop();
+    base_path.pop();
+    base_path.pop();
+    base_path.push("testres");
+
+    base_path
+}
+
 #[test]
 fn get_password_dir_no_env() {
     let dir = tempfile::tempdir().unwrap();
@@ -78,12 +89,7 @@ fn get_password_dir_raw_some_some() {
 
 #[test]
 fn populate_password_list_small_repo() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let base_path: PathBuf = get_testres_path();
 
     let home: PathBuf = base_path.clone();
     let mut password_dir: PathBuf = base_path.clone();
@@ -109,12 +115,7 @@ fn populate_password_list_small_repo() -> Result<()> {
 
 #[test]
 fn populate_password_list_repo_with_deleted_files() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let base_path: PathBuf = get_testres_path();
 
     let home: PathBuf = base_path.clone();
     let mut password_dir: PathBuf = base_path.clone();
@@ -139,12 +140,7 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
 
 #[test]
 fn populate_password_list_directory_without_git() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let base_path: PathBuf = get_testres_path();
 
     let home: PathBuf = base_path.clone();
     let mut password_dir: PathBuf = base_path.clone();
@@ -180,12 +176,7 @@ fn populate_password_list_directory_without_git() -> Result<()> {
 
 #[test]
 fn password_store_with_files_in_initial_commit() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let base_path: PathBuf = get_testres_path();
 
     let home: PathBuf = base_path.clone();
     let mut password_dir: PathBuf = base_path.clone();
@@ -215,12 +206,7 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
 
 #[test]
 fn password_store_with_relative_path() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let base_path: PathBuf = get_testres_path();
 
     let home: PathBuf = base_path.clone();
     let mut password_dir: PathBuf = base_path.clone();
@@ -263,12 +249,7 @@ fn password_store_with_relative_path() -> Result<()> {
 
 #[test]
 fn password_store_with_shallow_checkout() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let base_path: PathBuf = get_testres_path();
 
     let home: PathBuf = base_path.clone();
     let mut password_dir: PathBuf = base_path.clone();
@@ -294,12 +275,7 @@ fn password_store_with_shallow_checkout() -> Result<()> {
 
 #[test]
 fn password_store_with_sparse_checkout() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let base_path: PathBuf = get_testres_path();
 
     let home: PathBuf = base_path.clone();
     let mut password_dir: PathBuf = base_path.clone();
@@ -333,12 +309,7 @@ fn password_store_with_sparse_checkout() -> Result<()> {
 #[cfg(target_family = "unix")]
 #[test]
 fn password_store_with_symlink() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let base_path: PathBuf = get_testres_path();
 
     let home: PathBuf = base_path.clone();
     let mut password_dir: PathBuf = base_path.clone();
@@ -824,12 +795,7 @@ fn append_extension_with_dot() {
 
 #[test]
 fn rename_file() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let base_path: PathBuf = get_testres_path();
 
     let home: PathBuf = base_path.clone();
     let mut password_dir: PathBuf = base_path.clone();
@@ -865,12 +831,7 @@ fn rename_file() -> Result<()> {
 
 #[test]
 fn rename_file_absolute_path() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let base_path: PathBuf = get_testres_path();
 
     let home: PathBuf = base_path.clone();
     let mut password_dir: PathBuf = base_path.clone();
@@ -1036,12 +997,7 @@ fn get_history_no_repo() -> Result<()> {
 
 #[test]
 fn get_history_with_repo() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let base_path: PathBuf = get_testres_path();
 
     let home: PathBuf = base_path.clone();
     let mut password_dir: PathBuf = base_path.clone();
@@ -1136,4 +1092,44 @@ fn test_format_error() {
         "custom error message"
     );
     assert_eq!(format!("{}", Error::NoneError), "NoneError");
+}
+
+#[test]
+fn test_should_sign_true() -> Result<()> {
+    let base_path: PathBuf = get_testres_path();
+
+    let mut password_dir: PathBuf = base_path.clone();
+    password_dir.push("test_should_sign_true");
+
+    unpack_tar_gz(base_path.clone(), "test_should_sign_true.tar.gz")?;
+
+    let repo = git2::Repository::open(password_dir).unwrap();
+
+    let result = should_sign(&repo);
+
+    assert_eq!(true, result);
+
+    cleanup(base_path, "test_should_sign_true").unwrap();
+
+    Ok(())
+}
+
+#[test]
+fn test_should_sign_false() -> Result<()> {
+    let base_path: PathBuf = get_testres_path();
+
+    let mut password_dir: PathBuf = base_path.clone();
+    password_dir.push("test_should_sign_false");
+
+    unpack_tar_gz(base_path.clone(), "test_should_sign_false.tar.gz")?;
+
+    let repo = git2::Repository::open(password_dir).unwrap();
+
+    let result = should_sign(&repo);
+
+    assert_eq!(false, result);
+
+    cleanup(base_path, "test_should_sign_false").unwrap();
+
+    Ok(())
 }
