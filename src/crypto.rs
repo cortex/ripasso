@@ -1,7 +1,5 @@
 pub use crate::error::{Error, Result};
 use crate::signature::{KeyRingStatus, Recipient, SignatureStatus};
-use std::fs::File;
-use std::path::Path;
 
 /// The different types of errors that can occur when doing a signature verification
 pub enum VerificationError {
@@ -20,7 +18,7 @@ pub enum VerificationError {
 
 pub trait Crypto {
     /// Reads a file and decrypts it
-    fn decrypt_file(&self, file: &Path) -> Result<String>;
+    fn decrypt_string(&self, content: &[u8]) -> Result<String>;
     /// encrypts a string
     fn encrypt_string(&self, content: &str, recipients: &[Recipient]) -> Result<Vec<u8>>;
 
@@ -39,11 +37,10 @@ pub trait Crypto {
 pub struct GpgMe {}
 
 impl Crypto for GpgMe {
-    fn decrypt_file(&self, file: &Path) -> Result<String> {
+    fn decrypt_string(&self, content: &[u8]) -> Result<String> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-        let mut input = File::open(file)?;
         let mut output = Vec::new();
-        ctx.decrypt(&mut input, &mut output)?;
+        ctx.decrypt(content, &mut output)?;
         Ok(String::from_utf8(output)?)
     }
 

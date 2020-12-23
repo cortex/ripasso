@@ -736,7 +736,9 @@ impl PasswordEntry {
         if s.len() == 0 {
             return Err(Error::Generic("empty password file"));
         }
-        store.crypto.decrypt_file(&self.path)
+
+        let content = fs::read(&self.path)?;
+        store.crypto.decrypt_string(&content)
     }
 
     /// Decrypts and returns the first line of the PasswordEntry
