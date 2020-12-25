@@ -541,13 +541,7 @@ impl PasswordStore {
         if self.repo().is_ok() {
             let old_file_name = append_extension(PathBuf::from(old_name), ".gpg");
             let new_file_name = append_extension(PathBuf::from(new_name), ".gpg");
-            move_and_commit(
-                self,
-                &old_file_name,
-                &new_file_name,
-                "moved file",
-                self.crypto.as_ref(),
-            )?;
+            move_and_commit(self, &old_file_name, &new_file_name, "moved file")?;
         }
 
         let passwords = &mut self.passwords;
@@ -797,7 +791,6 @@ impl PasswordEntry {
             store,
             &[append_extension(PathBuf::from(&self.name), ".gpg")],
             &message,
-            store.crypto.as_ref(),
         )?;
         Ok(())
     }
@@ -1001,12 +994,7 @@ fn add_and_commit_internal(
 }
 
 /// Remove a file from the store, and commit the deletion to the supplied git repository.
-fn remove_and_commit(
-    store: &PasswordStore,
-    paths: &[PathBuf],
-    message: &str,
-    crypto: &(dyn Crypto + Send),
-) -> Result<git2::Oid> {
+fn remove_and_commit(store: &PasswordStore, paths: &[PathBuf], message: &str) -> Result<git2::Oid> {
     let repo = store
         .repo()
         .map_err(|_| Error::Generic("must have a repository"))?;
@@ -1034,7 +1022,7 @@ fn remove_and_commit(
         &message.to_string(),
         &tree,
         &parents,
-        crypto,
+        store.crypto.as_ref(),
     )?;
 
     Ok(oid)
@@ -1046,7 +1034,6 @@ fn move_and_commit(
     old_name: &Path,
     new_name: &Path,
     message: &str,
-    crypto: &(dyn Crypto + Send),
 ) -> Result<git2::Oid> {
     let repo = store
         .repo()
@@ -1072,7 +1059,7 @@ fn move_and_commit(
         &message.to_string(),
         &tree,
         &parents,
-        crypto,
+        store.crypto.as_ref(),
     )?;
 
     Ok(oid)
