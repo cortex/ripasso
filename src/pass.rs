@@ -939,8 +939,11 @@ fn commit(
 
         let commit = repo.commit_signed(commit_as_str, &sig, Some("gpgsig"))?;
 
-        repo.head()?
-            .set_target(commit, "added a signed commit using ripasso")?;
+        if let Ok(mut head) = repo.head() {
+            head.set_target(commit, "added a signed commit using ripasso")?;
+        } else {
+            repo.branch("master", &repo.find_commit(commit)?, false)?;
+        }
 
         Ok(commit)
     } else {

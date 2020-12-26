@@ -5,7 +5,9 @@ use std::fs::File;
 use std::path::PathBuf;
 use tar::Archive;
 
+use std::cell::RefCell;
 use std::env;
+use tempfile::tempdir;
 
 impl std::cmp::PartialEq for Error {
     fn eq(&self, other: &Error) -> bool {
@@ -1130,6 +1132,115 @@ fn test_should_sign_false() -> Result<()> {
     assert_eq!(false, result);
 
     cleanup(base_path, "test_should_sign_false").unwrap();
+
+    Ok(())
+}
+
+pub struct MockCrypto {
+    decrypt_called: RefCell<bool>,
+    encrypt_called: RefCell<bool>,
+    sign_called: RefCell<bool>,
+    verify_called: RefCell<bool>,
+}
+
+impl MockCrypto {
+    fn new() -> MockCrypto {
+        MockCrypto {
+            decrypt_called: RefCell::new(false),
+            encrypt_called: RefCell::new(false),
+            sign_called: RefCell::new(false),
+            verify_called: RefCell::new(false),
+        }
+    }
+}
+
+impl Crypto for MockCrypto {
+    fn decrypt_string(&self, _: &[u8]) -> Result<String> {
+        self.decrypt_called.replace(true);
+        Ok("".to_string())
+    }
+
+    fn encrypt_string(&self, _: &str, _: &[Recipient]) -> Result<Vec<u8>> {
+        self.encrypt_called.replace(true);
+        Ok(vec![])
+    }
+
+    fn sign_string(&self, _: &str) -> Result<String> {
+        self.sign_called.replace(true);
+        Ok("".to_string())
+    }
+
+    fn verify_sign(
+        &self,
+        _: &[u8],
+        _: &[u8],
+        _: &[String],
+    ) -> std::result::Result<SignatureStatus, VerificationError> {
+        self.verify_called.replace(true);
+        Err(VerificationError::SignatureFromWrongRecipient)
+    }
+}
+
+#[test]
+fn test_commit_unsigned() -> Result<()> {
+    let td = tempdir()?;
+    let repo = Repository::init(td.path())?;
+    let mut config = repo.config()?;
+
+    config.set_bool("commit.gpgsign", false)?;
+    config.set_str("user.name", "default")?;
+    config.set_str("user.email", "default@example.com")?;
+
+    let mut index = repo.index()?;
+    let path = td.path().join("password-to-add");
+    let mut f = File::create(path)?;
+    f.write_all("some data".as_bytes())?;
+    index.add_path(&Path::new("password-to-add"))?;
+    index.write()?;
+
+    let oid = index.write_tree()?;
+    let tree = repo.find_tree(oid)?;
+
+    let parents = vec![];
+
+    let crypto = MockCrypto::new();
+    let c_oid = commit(&repo, &repo.signature()?, "test", &tree, &parents, &crypto)?;
+
+    assert_eq!(false, *crypto.sign_called.borrow());
+
+    assert_eq!("test", repo.find_commit(c_oid).unwrap().message().unwrap());
+
+    Ok(())
+}
+
+#[test]
+fn test_commit_signed() -> Result<()> {
+    let td = tempdir()?;
+    let repo = Repository::init(td.path())?;
+    let mut config = repo.config()?;
+
+    config.set_bool("commit.gpgsign", true)?;
+    config.set_str("user.name", "default")?;
+    config.set_str("user.email", "default@example.com")?;
+
+    let mut index = repo.index()?;
+    let path = td.path().join("password-to-add");
+    let mut f = File::create(path)?;
+    f.write_all("some data".as_bytes())?;
+    index.add_path(&Path::new("password-to-add"))?;
+    index.write()?;
+
+    let oid = index.write_tree()?;
+    let tree = repo.find_tree(oid)?;
+
+    let parents = vec![];
+
+    let crypto = MockCrypto::new();
+    let c_oid = commit(&repo, &repo.signature()?, "test", &tree, &parents, &crypto)?;
+
+    assert_eq!(true, *crypto.sign_called.borrow());
+
+    assert_eq!("test", repo.find_commit(c_oid).unwrap().message().unwrap());
 
     Ok(())
 }
