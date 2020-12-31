@@ -1,51 +1,17 @@
 use super::*;
 
-use flate2::read::GzDecoder;
 use std::fs::File;
 use std::path::PathBuf;
-use tar::Archive;
 
-use std::cell::RefCell;
 use std::env;
 use tempfile::tempdir;
+
+use crate::pass::test_helpers::{MockCrypto, UnpackedDir};
 
 impl std::cmp::PartialEq for Error {
     fn eq(&self, other: &Error) -> bool {
         format!("{:?}", self) == format!("{:?}", *other)
     }
-}
-
-fn unpack_tar_gz(mut base_path: PathBuf, tar_gz_name: &str) -> Result<()> {
-    let target = format!("{}", base_path.as_path().display());
-    base_path.push(tar_gz_name);
-
-    let path = format!("{}", base_path.as_path().display());
-
-    let tar_gz = File::open(path)?;
-    let tar = GzDecoder::new(tar_gz);
-    let mut archive = Archive::new(tar);
-    archive.unpack(target)?;
-
-    Ok(())
-}
-
-fn cleanup(mut base_path: PathBuf, path_name: &str) -> Result<()> {
-    base_path.push(path_name);
-
-    std::fs::remove_dir_all(base_path)?;
-
-    Ok(())
-}
-
-fn get_testres_path() -> PathBuf {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
-
-    base_path
 }
 
 #[test]
@@ -91,22 +57,16 @@ fn get_password_dir_raw_some_some() {
 
 #[test]
 fn populate_password_list_small_repo() -> Result<()> {
-    let base_path: PathBuf = get_testres_path();
+    let dir = UnpackedDir::new("populate_password_list_small_repo")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("populate_password_list_small_repo");
-
-    unpack_tar_gz(
-        base_path.clone(),
-        "populate_password_list_small_repo.tar.gz",
-    )
-    .unwrap();
-
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
+    let store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
+    )?;
     let results = store.all_passwords().unwrap();
-
-    cleanup(base_path, "populate_password_list_small_repo").unwrap();
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "test");
@@ -117,21 +77,16 @@ fn populate_password_list_small_repo() -> Result<()> {
 
 #[test]
 fn populate_password_list_repo_with_deleted_files() -> Result<()> {
-    let base_path: PathBuf = get_testres_path();
+    let dir = UnpackedDir::new("populate_password_list_repo_with_deleted_files")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("populate_password_list_repo_with_deleted_files");
-
-    unpack_tar_gz(
-        base_path.clone(),
-        "populate_password_list_repo_with_deleted_files.tar.gz",
+    let store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
     )?;
-
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
-
-    cleanup(base_path, "populate_password_list_repo_with_deleted_files").unwrap();
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "10");
@@ -142,21 +97,16 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
 
 #[test]
 fn populate_password_list_directory_without_git() -> Result<()> {
-    let base_path: PathBuf = get_testres_path();
+    let dir = UnpackedDir::new("populate_password_list_directory_without_git")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("populate_password_list_directory_without_git");
-
-    unpack_tar_gz(
-        base_path.clone(),
-        "populate_password_list_directory_without_git.tar.gz",
+    let store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
     )?;
-
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
-
-    cleanup(base_path, "populate_password_list_directory_without_git").unwrap();
 
     assert_eq!(results.len(), 3);
     assert_eq!(results[0].name, "first");
@@ -178,21 +128,16 @@ fn populate_password_list_directory_without_git() -> Result<()> {
 
 #[test]
 fn password_store_with_files_in_initial_commit() -> Result<()> {
-    let base_path: PathBuf = get_testres_path();
+    let dir = UnpackedDir::new("password_store_with_files_in_initial_commit")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("password_store_with_files_in_initial_commit");
-
-    unpack_tar_gz(
-        base_path.clone(),
-        "password_store_with_files_in_initial_commit.tar.gz",
+    let store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
     )?;
-
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
-
-    cleanup(base_path, "password_store_with_files_in_initial_commit").unwrap();
 
     let expected = vec!["3", "A/1", "B/2"];
 
@@ -208,64 +153,46 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
 
 #[test]
 fn password_store_with_relative_path() -> Result<()> {
-    let base_path: PathBuf = get_testres_path();
-
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("password_store_with_relative_path");
-
-    unpack_tar_gz(
-        base_path.clone(),
-        "password_store_with_relative_path.tar.gz",
-    )?;
+    let dir = UnpackedDir::new("password_store_with_relative_path")?;
 
     let store = PasswordStore::new(
         "default",
-        &Some(PathBuf::from("./testres/password_store_with_relative_path")),
+        &Some(dir.dir().to_path_buf()),
         &None,
-        &Some(home),
+        &Some(dir.dir().to_path_buf()),
         &None,
-    );
-    if store.is_err() {
-        eprintln!("{}", store.err().unwrap());
-    } else {
-        let results = store?.all_passwords()?;
+    )?;
 
-        cleanup(base_path, "password_store_with_relative_path").unwrap();
+    let results = store.all_passwords()?;
 
-        assert_eq!(results.len(), 3);
-        assert_eq!(results[0].name, "3");
-        assert_eq!(results[0].committed_by.is_none(), false);
-        assert_eq!(results[0].updated.is_none(), false);
+    assert_eq!(results.len(), 3);
+    assert_eq!(results[0].name, "3");
+    assert_eq!(results[0].committed_by.is_none(), false);
+    assert_eq!(results[0].updated.is_none(), false);
 
-        assert_eq!(results[1].name, "2");
-        assert_eq!(results[1].committed_by.is_none(), false);
-        assert_eq!(results[1].updated.is_none(), false);
+    assert_eq!(results[1].name, "2");
+    assert_eq!(results[1].committed_by.is_none(), false);
+    assert_eq!(results[1].updated.is_none(), false);
 
-        assert_eq!(results[2].name, "1");
-        assert_eq!(results[2].committed_by.is_none(), false);
-        assert_eq!(results[2].updated.is_none(), false);
-    }
+    assert_eq!(results[2].name, "1");
+    assert_eq!(results[2].committed_by.is_none(), false);
+    assert_eq!(results[2].updated.is_none(), false);
+
     Ok(())
 }
 
 #[test]
 fn password_store_with_shallow_checkout() -> Result<()> {
-    let base_path: PathBuf = get_testres_path();
+    let dir = UnpackedDir::new("password_store_with_shallow_checkout")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("password_store_with_shallow_checkout");
-
-    unpack_tar_gz(
-        base_path.clone(),
-        "password_store_with_shallow_checkout.tar.gz",
+    let store = PasswordStore::new(
+        &"default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
     )?;
-
-    let store = PasswordStore::new(&"default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
-
-    cleanup(base_path, "password_store_with_shallow_checkout").unwrap();
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "1");
@@ -277,21 +204,16 @@ fn password_store_with_shallow_checkout() -> Result<()> {
 
 #[test]
 fn password_store_with_sparse_checkout() -> Result<()> {
-    let base_path: PathBuf = get_testres_path();
+    let dir = UnpackedDir::new("password_store_with_sparse_checkout")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("password_store_with_sparse_checkout");
-
-    unpack_tar_gz(
-        base_path.clone(),
-        "password_store_with_sparse_checkout.tar.gz",
+    let store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
     )?;
-
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
-
-    cleanup(base_path, "password_store_with_sparse_checkout").unwrap();
 
     assert_eq!(results.len(), 3);
     assert_eq!(results[0].name, "3/1");
@@ -311,23 +233,24 @@ fn password_store_with_sparse_checkout() -> Result<()> {
 #[cfg(target_family = "unix")]
 #[test]
 fn password_store_with_symlink() -> Result<()> {
-    let base_path: PathBuf = get_testres_path();
+    let dir = UnpackedDir::new("password_store_with_symlink")?;
+    let link_dir = dir
+        .dir()
+        .parent()
+        .unwrap()
+        .join("password_store_with_symlink_link");
+    std::os::unix::fs::symlink(dir.dir(), link_dir.clone())?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("password_store_with_symlink_link");
-
-    unpack_tar_gz(base_path.clone(), "password_store_with_symlink.tar.gz")?;
-
-    let mut target = base_path.clone();
-    target.push("password_store_with_symlink");
-    std::os::unix::fs::symlink(target, password_dir.clone())?;
-
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
+    let store = PasswordStore::new(
+        "default",
+        &Some(link_dir.clone()),
+        &None,
+        &Some(link_dir.clone()),
+        &None,
+    )?;
     let results = store.all_passwords().unwrap();
 
-    cleanup(base_path.clone(), "password_store_with_symlink").unwrap();
-    cleanup(base_path, "password_store_with_symlink_link").unwrap();
+    fs::remove_file(link_dir)?;
 
     assert_eq!(results.len(), 3);
     assert_eq!(results[0].name, "3");
@@ -797,15 +720,9 @@ fn append_extension_with_dot() {
 
 #[test]
 fn rename_file() -> Result<()> {
-    let base_path: PathBuf = get_testres_path();
+    let dir = UnpackedDir::new("rename_file")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("rename_file");
-
-    unpack_tar_gz(base_path.clone(), "rename_file.tar.gz")?;
-
-    let mut config_location = password_dir.clone();
+    let mut config_location = dir.dir().to_path_buf();
     config_location.push(".git");
     config_location.push("config");
     let mut config = git2::Config::open(&config_location)?;
@@ -813,12 +730,16 @@ fn rename_file() -> Result<()> {
     config.set_str("user.email", "default@example.com")?;
     config.set_str("commit.gpgsign", "false")?;
 
-    let mut store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
+    let mut store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
+    )?;
     store.reload_password_list()?;
     store.rename_file("1/test", "2/test")?;
     let results = store.all_passwords()?;
-
-    cleanup(base_path, "rename_file").unwrap();
 
     assert_eq!(results.len(), 2);
     assert_eq!(results[0].name, "2/test");
@@ -833,19 +754,17 @@ fn rename_file() -> Result<()> {
 
 #[test]
 fn rename_file_absolute_path() -> Result<()> {
-    let base_path: PathBuf = get_testres_path();
+    let dir = UnpackedDir::new("rename_file_absolute_path")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("rename_file_absolute_path");
-
-    unpack_tar_gz(base_path.clone(), "rename_file_absolute_path.tar.gz")?;
-
-    let mut store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
+    let mut store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
+    )?;
     store.reload_password_list()?;
     let res = store.rename_file("1/test", "/2/test");
-
-    cleanup(base_path, "rename_file_absolute_path").unwrap();
 
     assert_eq!(true, res.is_err());
     Ok(())
@@ -999,15 +918,15 @@ fn get_history_no_repo() -> Result<()> {
 
 #[test]
 fn get_history_with_repo() -> Result<()> {
-    let base_path: PathBuf = get_testres_path();
+    let dir = UnpackedDir::new("get_history_with_repo")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("get_history_with_repo");
-
-    unpack_tar_gz(base_path.clone(), "get_history_with_repo.tar.gz")?;
-
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
+    let store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
+    )?;
     let results = store.all_passwords().unwrap();
 
     assert_eq!(results.len(), 1);
@@ -1017,8 +936,6 @@ fn get_history_with_repo() -> Result<()> {
 
     let pw = &results[0];
     let history = pw.get_history(&Arc::new(Mutex::new(store)))?;
-
-    cleanup(base_path, "get_history_with_repo").unwrap();
 
     assert_eq!(history.len(), 3);
     assert_eq!(history[0].message, "commit 3\n");
@@ -1098,87 +1015,28 @@ fn test_format_error() {
 
 #[test]
 fn test_should_sign_true() -> Result<()> {
-    let base_path: PathBuf = get_testres_path();
+    let dir = UnpackedDir::new("test_should_sign_true")?;
 
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("test_should_sign_true");
-
-    unpack_tar_gz(base_path.clone(), "test_should_sign_true.tar.gz")?;
-
-    let repo = git2::Repository::open(password_dir).unwrap();
+    let repo = git2::Repository::open(dir.dir()).unwrap();
 
     let result = should_sign(&repo);
 
     assert_eq!(true, result);
-
-    cleanup(base_path, "test_should_sign_true").unwrap();
 
     Ok(())
 }
 
 #[test]
 fn test_should_sign_false() -> Result<()> {
-    let base_path: PathBuf = get_testres_path();
+    let dir = UnpackedDir::new("test_should_sign_false")?;
 
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("test_should_sign_false");
-
-    unpack_tar_gz(base_path.clone(), "test_should_sign_false.tar.gz")?;
-
-    let repo = git2::Repository::open(password_dir).unwrap();
+    let repo = git2::Repository::open(dir.dir()).unwrap();
 
     let result = should_sign(&repo);
 
     assert_eq!(false, result);
 
-    cleanup(base_path, "test_should_sign_false").unwrap();
-
     Ok(())
-}
-
-pub struct MockCrypto {
-    decrypt_called: RefCell<bool>,
-    encrypt_called: RefCell<bool>,
-    sign_called: RefCell<bool>,
-    verify_called: RefCell<bool>,
-}
-
-impl MockCrypto {
-    fn new() -> MockCrypto {
-        MockCrypto {
-            decrypt_called: RefCell::new(false),
-            encrypt_called: RefCell::new(false),
-            sign_called: RefCell::new(false),
-            verify_called: RefCell::new(false),
-        }
-    }
-}
-
-impl Crypto for MockCrypto {
-    fn decrypt_string(&self, _: &[u8]) -> Result<String> {
-        self.decrypt_called.replace(true);
-        Ok("".to_string())
-    }
-
-    fn encrypt_string(&self, _: &str, _: &[Recipient]) -> Result<Vec<u8>> {
-        self.encrypt_called.replace(true);
-        Ok(vec![])
-    }
-
-    fn sign_string(&self, _: &str) -> Result<String> {
-        self.sign_called.replace(true);
-        Ok("".to_string())
-    }
-
-    fn verify_sign(
-        &self,
-        _: &[u8],
-        _: &[u8],
-        _: &[String],
-    ) -> std::result::Result<SignatureStatus, VerificationError> {
-        self.verify_called.replace(true);
-        Err(VerificationError::SignatureFromWrongRecipient)
-    }
 }
 
 #[test]
@@ -1247,14 +1105,9 @@ fn test_commit_signed() -> Result<()> {
 
 #[test]
 fn test_move_and_commit_signed() -> Result<()> {
-    let base_path: PathBuf = get_testres_path();
+    let dir = UnpackedDir::new("test_move_and_commit_signed")?;
 
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("test_move_and_commit_signed");
-
-    unpack_tar_gz(base_path.clone(), "test_move_and_commit_signed.tar.gz")?;
-
-    let repo = Repository::init(&password_dir)?;
+    let repo = Repository::init(dir.dir())?;
     let mut config = repo.config()?;
 
     config.set_bool("commit.gpgsign", true)?;
@@ -1262,13 +1115,13 @@ fn test_move_and_commit_signed() -> Result<()> {
     config.set_str("user.email", "default@example.com")?;
 
     fs::rename(
-        &password_dir.join("first_pass.gpg"),
-        &password_dir.join("second_pass.gpg"),
+        &dir.dir().join("first_pass.gpg"),
+        &dir.dir().join("second_pass.gpg"),
     )?;
 
     let store = PasswordStore {
         name: "store_name".to_string(),
-        root: password_dir.clone(),
+        root: dir.dir().to_path_buf(),
         valid_gpg_signing_keys: vec![],
         passwords: vec![],
         style_file: None,
@@ -1285,8 +1138,6 @@ fn test_move_and_commit_signed() -> Result<()> {
         "unit test",
         repo.find_commit(c_oid).unwrap().message().unwrap()
     );
-
-    cleanup(base_path, "test_move_and_commit_signed").unwrap();
 
     Ok(())
 }
