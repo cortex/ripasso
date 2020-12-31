@@ -1031,7 +1031,7 @@ fn remove_and_commit(store: &PasswordStore, paths: &[PathBuf], message: &str) ->
     Ok(oid)
 }
 
-/// Remove a file from the store, and commit the deletion to the supplied git repository.
+/// Move a file to a new place in the store, and commit the move to the supplied git repository.
 fn move_and_commit(
     store: &PasswordStore,
     old_name: &Path,

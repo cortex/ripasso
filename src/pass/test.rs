@@ -1244,3 +1244,49 @@ fn test_commit_signed() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_move_and_commit_signed() -> Result<()> {
+    let base_path: PathBuf = get_testres_path();
+
+    let mut password_dir: PathBuf = base_path.clone();
+    password_dir.push("test_move_and_commit_signed");
+
+    unpack_tar_gz(base_path.clone(), "test_move_and_commit_signed.tar.gz")?;
+
+    let repo = Repository::init(&password_dir)?;
+    let mut config = repo.config()?;
+
+    config.set_bool("commit.gpgsign", true)?;
+    config.set_str("user.name", "default")?;
+    config.set_str("user.email", "default@example.com")?;
+
+    fs::rename(
+        &password_dir.join("first_pass.gpg"),
+        &password_dir.join("second_pass.gpg"),
+    )?;
+
+    let store = PasswordStore {
+        name: "store_name".to_string(),
+        root: password_dir.clone(),
+        valid_gpg_signing_keys: vec![],
+        passwords: vec![],
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+    };
+    let c_oid = move_and_commit(
+        &store,
+        &Path::new("first_pass.gpg"),
+        &Path::new("second_pass.gpg"),
+        "unit test",
+    )?;
+
+    assert_eq!(
+        "unit test",
+        repo.find_commit(c_oid).unwrap().message().unwrap()
+    );
+
+    cleanup(base_path, "test_move_and_commit_signed").unwrap();
+
+    Ok(())
+}
