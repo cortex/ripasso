@@ -1294,10 +1294,10 @@ pub fn search(store: &PasswordStoreType, query: &str) -> Result<Vec<PasswordEntr
     let passwords = &store.lock()?.passwords;
     fn normalized(s: &str) -> String {
         s.to_lowercase()
-    };
+    }
     fn matches(s: &str, q: &str) -> bool {
         normalized(s).as_str().contains(normalized(q).as_str())
-    };
+    }
     let matching = passwords.iter().filter(|p| matches(&p.name, query));
     Ok(matching.cloned().collect())
 }
