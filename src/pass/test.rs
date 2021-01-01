@@ -1141,3 +1141,48 @@ fn test_move_and_commit_signed() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_search() -> Result<()> {
+    let p1 = PasswordEntry {
+        name: "no/match/check".to_string(),
+        path: Default::default(),
+        updated: None,
+        committed_by: None,
+        signature_status: None,
+        is_in_git: RepositoryStatus::InRepo,
+    };
+    let p2 = PasswordEntry {
+        name: "dir/test/middle".to_string(),
+        path: Default::default(),
+        updated: None,
+        committed_by: None,
+        signature_status: None,
+        is_in_git: RepositoryStatus::InRepo,
+    };
+    let p3 = PasswordEntry {
+        name: " space test ".to_string(),
+        path: Default::default(),
+        updated: None,
+        committed_by: None,
+        signature_status: None,
+        is_in_git: RepositoryStatus::InRepo,
+    };
+    let store = PasswordStore {
+        name: "store_name".to_string(),
+        root: std::env::temp_dir(),
+        valid_gpg_signing_keys: vec![],
+        passwords: vec![p1, p2, p3],
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+    };
+    let store = Arc::new(Mutex::new(store));
+
+    let result = search(&store, "test")?;
+
+    assert_eq!(2, result.len());
+    assert_eq!("dir/test/middle", result[0].name);
+    assert_eq!(" space test ", result[1].name);
+
+    Ok(())
+}
