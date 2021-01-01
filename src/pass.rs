@@ -1289,17 +1289,6 @@ pub fn init_git_repo(base: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-/// When setting up a `watch` for the password store directory, events of these types will be sent.
-#[derive(Debug)]
-pub enum PasswordEvent {
-    /// A new password file was created.
-    NewPassword(PasswordEntry),
-    /// A password file was removed.
-    RemovedPassword(PathBuf),
-    /// An error occurred
-    Error(Error),
-}
-
 /// Return a list of all passwords whose name contains `query`.
 pub fn search(store: &PasswordStoreType, query: &str) -> Result<Vec<PasswordEntry>> {
     let passwords = &store.lock()?.passwords;

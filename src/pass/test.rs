@@ -1186,3 +1186,27 @@ fn test_search() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_verify_git_signature() -> Result<()> {
+    let dir = UnpackedDir::new("test_verify_git_signature")?;
+
+    let repo = git2::Repository::open(dir.dir()).unwrap();
+    let oid = repo.head()?.target().unwrap();
+
+    let store = PasswordStore {
+        name: "store_name".to_string(),
+        root: dir.dir().to_path_buf(),
+        valid_gpg_signing_keys: vec!["7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_string()],
+        passwords: [].to_vec(),
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+    };
+
+    let result = verify_git_signature(&repo, &oid, &store);
+
+    assert_eq!(Error::Generic("the commit wasn\'t signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY"),
+               result.err().unwrap());
+
+    Ok(())
+}
