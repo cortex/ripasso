@@ -1216,6 +1216,12 @@ fn test_add_and_commit_internal() -> Result<()> {
     let dir = UnpackedDir::new("test_add_and_commit_internal")?;
 
     let repo = Repository::init(dir.dir())?;
+    let mut config = repo.config()?;
+
+    config.set_bool("commit.gpgsign", true)?;
+    config.set_str("user.name", "default")?;
+    config.set_str("user.email", "default@example.com")?;
+
     let crypto = MockCrypto::new();
 
     let new_password = dir.dir().join("new_password");
