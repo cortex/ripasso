@@ -1273,7 +1273,6 @@ fn test_remove_and_commit() -> Result<()> {
     )
     .unwrap();
 
-
     assert_eq!(
         "unit test",
         repo.find_commit(c_oid).unwrap().message().unwrap()
