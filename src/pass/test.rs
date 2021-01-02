@@ -1282,3 +1282,13 @@ fn test_remove_and_commit() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_to_name() {
+    assert_eq!("name", to_name(&PathBuf::from("name.gpg")));
+    assert_eq!("dir/name", to_name(&PathBuf::from("dir/name.gpg")));
+    assert_eq!(
+        "dir/name without gpg on end",
+        to_name(&PathBuf::from("dir/name without gpg on end"))
+    );
+}

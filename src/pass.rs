@@ -649,11 +649,14 @@ pub struct PasswordEntry {
 }
 
 fn to_name(relpath: &PathBuf) -> String {
-    relpath
-        .to_string_lossy()
-        .strip_suffix(".gpg")
-        .unwrap()
-        .to_string()
+    let mut s = relpath.to_string_lossy().to_string();
+    match s.ends_with(".gpg") {
+        true => {
+            s.truncate(s.len() - 4);
+            s
+        }
+        false => s,
+    }
 }
 
 impl PasswordEntry {
