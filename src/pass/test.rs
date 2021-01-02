@@ -1210,3 +1210,32 @@ fn test_verify_git_signature() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_add_and_commit_internal() -> Result<()> {
+    let dir = UnpackedDir::new("test_add_and_commit_internal")?;
+
+    let repo = Repository::init(dir.dir())?;
+    let crypto = MockCrypto::new();
+
+    let new_password = dir.dir().join("new_password");
+    File::create(&new_password)
+        .unwrap()
+        .write_all("swordfish".as_bytes())
+        .unwrap();
+
+    let c_oid = add_and_commit_internal(
+        &repo,
+        &vec![PathBuf::from("new_password")],
+        "unit test",
+        &crypto,
+    )
+    .unwrap();
+
+    assert_eq!(
+        "unit test",
+        repo.find_commit(c_oid).unwrap().message().unwrap()
+    );
+
+    Ok(())
+}
