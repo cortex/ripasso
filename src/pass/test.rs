@@ -1239,3 +1239,35 @@ fn test_add_and_commit_internal() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_remove_and_commit() -> Result<()> {
+    let dir = UnpackedDir::new("test_remove_and_commit")?;
+
+    let store = PasswordStore {
+        name: "store_name".to_string(),
+        root: dir.dir().to_path_buf(),
+        valid_gpg_signing_keys: vec!["7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_string()],
+        passwords: [].to_vec(),
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+    };
+
+    let c_oid = remove_and_commit(
+        &store,
+        &vec![PathBuf::from("pass_to_be_deleted")],
+        "unit test",
+    )
+    .unwrap();
+
+    let repo = git2::Repository::open(dir.dir()).unwrap();
+
+    assert_eq!(
+        "unit test",
+        repo.find_commit(c_oid).unwrap().message().unwrap()
+    );
+
+    assert_eq!(false, dir.dir().join("pass_to_be_deleted").is_file());
+
+    Ok(())
+}
