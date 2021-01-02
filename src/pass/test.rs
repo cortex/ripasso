@@ -1259,6 +1259,13 @@ fn test_remove_and_commit() -> Result<()> {
         crypto: Box::new(MockCrypto::new()),
     };
 
+    let repo = git2::Repository::open(dir.dir()).unwrap();
+    let mut config = repo.config()?;
+
+    config.set_bool("commit.gpgsign", true)?;
+    config.set_str("user.name", "default")?;
+    config.set_str("user.email", "default@example.com")?;
+
     let c_oid = remove_and_commit(
         &store,
         &vec![PathBuf::from("pass_to_be_deleted")],
@@ -1266,7 +1273,6 @@ fn test_remove_and_commit() -> Result<()> {
     )
     .unwrap();
 
-    let repo = git2::Repository::open(dir.dir()).unwrap();
 
     assert_eq!(
         "unit test",
