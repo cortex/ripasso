@@ -1307,14 +1307,19 @@ fn test_verify_gpg_id_file_missing_sig_file() -> Result<()> {
         crypto: Box::new(MockCrypto::new()),
     };
 
-    fs::write(td.path().join(".gpg-id"), "7E068070D5EF794B00C8A9D91D108E6C07CBC406")?;
+    fs::write(
+        td.path().join(".gpg-id"),
+        "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
+    )?;
 
     let result = store.verify_gpg_id_file(&store.root, &store.valid_gpg_signing_keys);
 
     assert_eq!(true, result.is_err());
 
-    assert_eq!(Error::Generic("problem reading .gpg-id.sig, and strict signature checking was asked for"),
-               result.err().unwrap());
+    assert_eq!(
+        Error::Generic("problem reading .gpg-id.sig, and strict signature checking was asked for"),
+        result.err().unwrap()
+    );
 
     Ok(())
 }
@@ -1332,8 +1337,14 @@ fn test_verify_gpg_id_file() -> Result<()> {
         crypto: Box::new(MockCrypto::new()),
     };
 
-    fs::write(td.path().join(".gpg-id"), "7E068070D5EF794B00C8A9D91D108E6C07CBC406")?;
-    fs::write(td.path().join(".gpg-id.sig"), "here there should be gpg data")?;
+    fs::write(
+        td.path().join(".gpg-id"),
+        "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
+    )?;
+    fs::write(
+        td.path().join(".gpg-id.sig"),
+        "here there should be gpg data",
+    )?;
 
     let result = store.verify_gpg_id_file(&store.root, &store.valid_gpg_signing_keys);
 
