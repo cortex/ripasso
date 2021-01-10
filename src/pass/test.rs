@@ -738,17 +738,18 @@ fn rename_file() -> Result<()> {
         &None,
     )?;
     store.reload_password_list()?;
-    store.rename_file("1/test", "2/test")?;
-    let results = store.all_passwords()?;
+    let index = store.rename_file("1/test", "2/test")?;
 
-    assert_eq!(results.len(), 2);
-    assert_eq!(results[0].name, "2/test");
-    assert_eq!(results[0].committed_by.is_none(), false);
-    assert_eq!(results[0].updated.is_none(), false);
+    assert_eq!(1, index);
 
-    assert_eq!(results[1].name, "test");
-    assert_eq!(results[1].committed_by.is_none(), false);
-    assert_eq!(results[1].updated.is_none(), false);
+    assert_eq!(store.passwords.len(), 2);
+    assert_eq!(store.passwords[0].name, "test");
+    assert_eq!(store.passwords[0].committed_by.is_none(), false);
+    assert_eq!(store.passwords[0].updated.is_none(), false);
+
+    assert_eq!(store.passwords[1].name, "2/test");
+    assert_eq!(store.passwords[1].committed_by.is_none(), false);
+    assert_eq!(store.passwords[1].updated.is_none(), false);
     Ok(())
 }
 
@@ -1291,4 +1292,55 @@ fn test_to_name() {
         "dir/name without gpg on end",
         to_name(&PathBuf::from("dir/name without gpg on end"))
     );
+}
+
+#[test]
+fn test_verify_gpg_id_file_missing_sig_file() -> Result<()> {
+    let td = tempdir()?;
+
+    let store = PasswordStore {
+        name: "store_name".to_string(),
+        root: td.path().to_path_buf(),
+        valid_gpg_signing_keys: vec!["7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_string()],
+        passwords: [].to_vec(),
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+    };
+
+    fs::write(td.path().join(".gpg-id"), "7E068070D5EF794B00C8A9D91D108E6C07CBC406")?;
+
+    let result = store.verify_gpg_id_file(&store.root, &store.valid_gpg_signing_keys);
+
+    assert_eq!(true, result.is_err());
+
+    assert_eq!(Error::Generic("problem reading .gpg-id.sig, and strict signature checking was asked for"),
+               result.err().unwrap());
+
+    Ok(())
+}
+
+#[test]
+fn test_verify_gpg_id_file() -> Result<()> {
+    let td = tempdir()?;
+
+    let store = PasswordStore {
+        name: "store_name".to_string(),
+        root: td.path().to_path_buf(),
+        valid_gpg_signing_keys: vec!["7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_string()],
+        passwords: [].to_vec(),
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+    };
+
+    fs::write(td.path().join(".gpg-id"), "7E068070D5EF794B00C8A9D91D108E6C07CBC406")?;
+    fs::write(td.path().join(".gpg-id.sig"), "here there should be gpg data")?;
+
+    let result = store.verify_gpg_id_file(&store.root, &store.valid_gpg_signing_keys);
+
+    assert_eq!(true, result.is_err());
+
+    assert_eq!(Error::Generic("the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY"),
+               result.err().unwrap());
+
+    Ok(())
 }
