@@ -255,7 +255,7 @@ impl PasswordStore {
             return Err(Error::from(why));
         }
         match self.repo() {
-            Err(_) => PasswordEntry::load_from_filesystem(&self.root, &path),
+            Err(_) => PasswordEntry::load_from_filesystem(&self.root, &PathBuf::from(path_end)),
             Ok(repo) => {
                 let message = format!("Add password for {} using ripasso", path_end);
 

@@ -1355,3 +1355,32 @@ fn test_verify_gpg_id_file() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_new_password_file() -> Result<()> {
+    let td = tempdir()?;
+
+    let mut store = PasswordStore {
+        name: "store_name".to_string(),
+        root: td.path().to_path_buf(),
+        valid_gpg_signing_keys: vec![],
+        passwords: [].to_vec(),
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+    };
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
+    )?;
+
+    let result = store.new_password_file("test/file", "password").unwrap();
+
+    assert_eq!(RepositoryStatus::NoRepo, result.is_in_git);
+    assert_eq!(false, result.signature_status.is_some());
+    assert_eq!(false, result.committed_by.is_some());
+    assert_eq!(false, result.updated.is_some());
+    assert_eq!("test/file", result.name);
+
+    Ok(())
+}
