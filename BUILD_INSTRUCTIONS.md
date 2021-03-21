@@ -17,7 +17,7 @@ They are named different things on different platforms
 
 ```
 $ brew update
-$ brew install automake cmake gettext qt5 gtk+3
+$ brew install automake cmake gettext qt5 gtk+3 gpgme
 $ export PATH="/usr/local/opt/qt/bin:$PATH"
 $ git clone https://github.com/cortex/ripasso.git
 $ cd ripasso
@@ -53,7 +53,7 @@ The build produces a number of artifacts:
  * `./target/release/ripasso-man` - the manual page (sort of, more about this below)
  * `./target/translations/cursive/fr.mo` - french translation
  * `./target/translations/cursive/it.mo` - italian translation
- * `./target/translations/cursive/nb.mo` - norwegian bokmål translation
+ * `./target/translations/cursive/nb.mo` - norwegian bokmÃ¥l translation
  * `./target/translations/cursive/nn.mo` - norwegian nynorsk translation
  * `./target/translations/cursive/sv.mo` - swedish translation
 
