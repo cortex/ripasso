@@ -149,11 +149,11 @@ impl PasswordStore {
     /// resets the store object, so that it points to a different directory.
     pub fn reset(
         &mut self,
-        password_store_dir: &PathBuf,
+        password_store_dir: &Path,
         valid_signing_keys: &[String],
         home: &Option<PathBuf>,
     ) -> Result<()> {
-        let pass_home = password_dir_raw(&Some(password_store_dir.clone()), home);
+        let pass_home = password_dir_raw(&Some(password_store_dir.to_path_buf()), home);
         if !pass_home.exists() {
             return Err(Error::Generic("failed to locate password directory"));
         }
@@ -178,12 +178,12 @@ impl PasswordStore {
 
     fn verify_gpg_id_file(
         &self,
-        pass_home: &PathBuf,
+        pass_home: &Path,
         signing_keys: &[String],
     ) -> Result<SignatureStatus> {
-        let mut gpg_id_file = pass_home.clone();
+        let mut gpg_id_file = pass_home.to_path_buf();
         gpg_id_file.push(".gpg-id");
-        let mut gpg_id_sig_file = pass_home.clone();
+        let mut gpg_id_sig_file = pass_home.to_path_buf();
         gpg_id_sig_file.push(".gpg-id.sig");
 
         let gpg_id = fs::read(gpg_id_file)?;
@@ -648,7 +648,7 @@ pub struct PasswordEntry {
     pub is_in_git: RepositoryStatus,
 }
 
-fn to_name(relpath: &PathBuf) -> String {
+fn to_name(relpath: &Path) -> String {
     let mut s = relpath.to_string_lossy().to_string();
     match s.ends_with(".gpg") {
         true => {
@@ -662,8 +662,8 @@ fn to_name(relpath: &PathBuf) -> String {
 impl PasswordEntry {
     /// constructs a a `PasswordEntry` from the supplied parts
     pub fn new(
-        base: &PathBuf,    // Root of the password directory
-        relpath: &PathBuf, // Relative path to the password.
+        base: &Path,    // Root of the password directory
+        relpath: &Path, // Relative path to the password.
         update_time: Result<DateTime<Local>>,
         committed_by: Result<String>,
         signature_status: Result<SignatureStatus>,
@@ -680,7 +680,7 @@ impl PasswordEntry {
     }
 
     /// Consumes an PasswordEntry, and returns a new one with a new name
-    pub fn with_new_name(old: PasswordEntry, base: &PathBuf, relpath: &PathBuf) -> PasswordEntry {
+    pub fn with_new_name(old: PasswordEntry, base: &Path, relpath: &Path) -> PasswordEntry {
         PasswordEntry {
             name: to_name(relpath),
             path: base.join(relpath),
@@ -693,8 +693,8 @@ impl PasswordEntry {
 
     /// creates a `PasswordEntry` by running git blame on the specified path
     pub fn load_from_git(
-        base: &PathBuf,
-        path: &PathBuf,
+        base: &Path,
+        path: &Path,
         repo: &git2::Repository,
         store: &PasswordStore,
     ) -> PasswordEntry {
@@ -716,7 +716,7 @@ impl PasswordEntry {
     }
 
     /// creates a `PasswordEntry` based on data in the filesystem
-    pub fn load_from_filesystem(base: &PathBuf, relpath: &PathBuf) -> Result<PasswordEntry> {
+    pub fn load_from_filesystem(base: &Path, relpath: &Path) -> Result<PasswordEntry> {
         Ok(PasswordEntry {
             name: to_name(relpath),
             path: base.join(relpath),
@@ -1216,8 +1216,8 @@ fn triple<T: Display>(
 }
 
 fn read_git_meta_data(
-    base: &PathBuf,
-    path: &PathBuf,
+    base: &Path,
+    path: &Path,
     repo: &git2::Repository,
     store: &PasswordStore,
 ) -> (
@@ -1286,7 +1286,7 @@ fn verify_git_signature(
 }
 
 /// Initialize a git repository for the store.
-pub fn init_git_repo(base: &PathBuf) -> Result<()> {
+pub fn init_git_repo(base: &Path) -> Result<()> {
     git2::Repository::init(base)?;
 
     Ok(())
@@ -1460,8 +1460,8 @@ fn xdg_config_file_location(
     }
 }
 
-fn file_settings(xdg_config_file: &PathBuf) -> config::File<config::FileSourceFile> {
-    config::File::from((*xdg_config_file).clone())
+fn file_settings(xdg_config_file: &Path) -> config::File<config::FileSourceFile> {
+    config::File::from(xdg_config_file.to_path_buf())
 }
 
 fn append_extension(path: PathBuf, extension: &str) -> PathBuf {
@@ -1497,7 +1497,7 @@ pub fn read_config(
 
 pub fn save_config(
     stores: Arc<Mutex<Vec<PasswordStore>>>,
-    config_file_location: &PathBuf,
+    config_file_location: &Path,
 ) -> Result<()> {
     let mut stores_map = std::collections::HashMap::new();
     let stores_borrowed = stores.lock()?;

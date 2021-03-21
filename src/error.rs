@@ -7,7 +7,7 @@ use std::string;
 pub enum Error {
     IO(io::Error),
     Git(git2::Error),
-    GPG(gpgme::Error),
+    Gpg(gpgme::Error),
     UTF8(string::FromUtf8Error),
     Generic(&'static str),
     GenericDyn(String),
@@ -29,7 +29,7 @@ impl From<io::Error> for Error {
 
 impl From<gpgme::Error> for Error {
     fn from(err: gpgme::Error) -> Error {
-        Error::GPG(err)
+        Error::Gpg(err)
     }
 }
 
@@ -131,7 +131,7 @@ impl std::fmt::Display for Error {
         match &*self {
             Error::IO(err) => write!(f, "{}", err),
             Error::Git(err) => write!(f, "{}", err),
-            Error::GPG(err) => write!(f, "{}", err),
+            Error::Gpg(err) => write!(f, "{}", err),
             Error::UTF8(err) => write!(f, "{}", err),
             Error::Generic(err) => write!(f, "{}", err),
             Error::GenericDyn(err) => write!(f, "{}", err),

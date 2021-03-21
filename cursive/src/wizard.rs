@@ -64,7 +64,7 @@ fn do_create(ui: &mut Cursive, password_store_dir: &Option<PathBuf>, home: &Opti
         Ok(_) => {
             pass_home.push(".gpg-id");
             std::fs::write(pass_home, key_id).unwrap_or_else(|_| {
-                panic!(super::CATALOG.gettext("Unable to write file").to_string())
+                panic!("{}", super::CATALOG.gettext("Unable to write file").to_string())
             });
 
             let password_store_dir2 = password_store_dir.clone();

@@ -2,7 +2,7 @@ pub use crate::error::{Error, Result};
 use gpgme::Key;
 use std::fs;
 use std::io::prelude::*;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use std::collections::{HashMap, HashSet};
 
@@ -201,7 +201,7 @@ impl Recipient {
     }
 
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
-    pub fn all_recipients(recipient_file: &PathBuf) -> Result<Vec<Recipient>> {
+    pub fn all_recipients(recipient_file: &Path) -> Result<Vec<Recipient>> {
         let contents =
             fs::read_to_string(recipient_file).expect("Something went wrong reading the file");
 
@@ -252,7 +252,7 @@ impl Recipient {
 
     fn write_recipients_file(
         recipients: &[Recipient],
-        recipients_file: &PathBuf,
+        recipients_file: &Path,
         valid_gpg_signing_keys: &[String],
     ) -> Result<()> {
         {
@@ -293,7 +293,7 @@ impl Recipient {
                     ctx.sign_detached(file_content, &mut output)?;
 
                     let recipient_sig_filename: PathBuf = {
-                        let rf = recipients_file.clone();
+                        let rf = recipients_file.to_path_buf();
                         let mut sig = rf.into_os_string();
                         sig.push(".sig");
                         sig.into()
