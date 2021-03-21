@@ -65,7 +65,8 @@ impl UI {
             return None;
         }
         // Open password file
-        let password = self.get_password(i).password().unwrap();
+        let store = self.store.lock().unwrap();
+        let password = self.get_password(i).password(&store).unwrap();
 
         // Copy password to clipboard
         let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();

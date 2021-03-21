@@ -94,14 +94,19 @@ fn setup_menu(
         Inhibit(false)
     });
 
-    setup_menu_copy(builder, password_list, status_bar.clone());
+    setup_menu_copy(builder, password_list, status_bar.clone(), store.clone());
     setup_menu_copy_name(builder, password_list, status_bar);
     setup_menu_open(builder, password_list, store.clone());
     setup_menu_file_history(builder, password_list, store);
     setup_menu_quit(builder, window);
 }
 
-fn setup_menu_copy(builder: &Builder, password_list: &TreeView, status_bar: Arc<TextView>) {
+fn setup_menu_copy(
+    builder: &Builder,
+    password_list: &TreeView,
+    status_bar: Arc<TextView>,
+    store: PasswordStoreType,
+) {
     let copy_menu_item: MenuItem = builder
         .get_object("menuItemCopy")
         .expect("Couldn't get menuItemCopy");
@@ -119,7 +124,8 @@ fn setup_menu_copy(builder: &Builder, password_list: &TreeView, status_bar: Arc<
 
         let mut ctx = clipboard::ClipboardContext::new().unwrap();
 
-        let password_res = passwords[path[0].get_indices()[0] as usize].password();
+        let store = store.lock().unwrap();
+        let password_res = passwords[path[0].get_indices()[0] as usize].password(&store);
 
         match password_res {
             Err(err) => {
@@ -228,7 +234,10 @@ fn open_dialog(password: &pass::PasswordEntry, store: PasswordStoreType) -> pass
 
     let text_view = TextView::new();
     let buf = text_view.get_buffer().unwrap();
-    buf.insert(&mut buf.get_start_iter(), &password.password()?);
+    {
+        let store = store.lock().unwrap();
+        buf.insert(&mut buf.get_start_iter(), &password.password(&store)?);
+    }
     let content = dialog.get_content_area();
     content.add(&text_view);
 
@@ -450,12 +459,16 @@ fn main() {
     );
 
     let status_bar_clone = status_bar.clone();
+    let store2 = store.clone();
     password_list.connect_row_activated(move |_, path, _column| {
         let passwords = SHOWN_PASSWORDS.lock().unwrap();
 
         let mut ctx = clipboard::ClipboardContext::new().unwrap();
 
-        let password_res = passwords[path.get_indices()[0] as usize].password();
+        let password_res = {
+            let store = store2.lock().unwrap();
+            passwords[path.get_indices()[0] as usize].password(&store)
+        };
 
         match password_res {
             Err(err) => {
