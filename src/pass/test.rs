@@ -1418,3 +1418,27 @@ fn test_new_password_file_in_git_repo() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_new_password_file_outside_pass_dir() -> Result<()> {
+    let td = tempdir()?;
+
+    let mut store = PasswordStore {
+        name: "store_name".to_string(),
+        root: td.path().to_path_buf(),
+        valid_gpg_signing_keys: vec![],
+        passwords: [].to_vec(),
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+    };
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
+    )?;
+
+    let result = store.new_password_file("../file", "password");
+    assert_eq!(true, result.is_err());
+
+    Ok(())
+}
