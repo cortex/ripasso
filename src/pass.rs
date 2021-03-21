@@ -26,9 +26,10 @@ use std::sync::{Arc, Mutex};
 
 use git2::{Oid, Repository};
 
+use crate::crypto::{Crypto, GpgMe, VerificationError};
 pub use crate::error::{Error, Result};
 pub use crate::signature::{
-    gpg_sign_string, parse_signing_keys, KeyRingStatus, OwnerTrustLevel, Recipient, SignatureStatus,
+    parse_signing_keys, KeyRingStatus, OwnerTrustLevel, Recipient, SignatureStatus,
 };
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -49,6 +50,8 @@ pub struct PasswordStore {
     pub passwords: Vec<PasswordEntry>,
     /// A file that describes the style of the store
     style_file: Option<PathBuf>,
+    /// The gpg implementation
+    crypto: Box<dyn Crypto + Send>,
 }
 
 impl PasswordStore {
@@ -67,17 +70,20 @@ impl PasswordStore {
 
         let signing_keys = parse_signing_keys(password_store_signing_key)?;
 
-        if !signing_keys.is_empty() {
-            PasswordStore::verify_gpg_id_file(&pass_home, &signing_keys)?;
-        }
-
-        Ok(PasswordStore {
+        let store = PasswordStore {
             name: store_name.to_string(),
             root: pass_home.canonicalize()?,
             valid_gpg_signing_keys: signing_keys,
             passwords: [].to_vec(),
             style_file: style_file.to_owned(),
-        })
+            crypto: Box::new(GpgMe {}),
+        };
+
+        if !store.valid_gpg_signing_keys.is_empty() {
+            store.verify_gpg_id_file(&pass_home, &store.valid_gpg_signing_keys)?;
+        }
+
+        Ok(store)
     }
 
     /// Returns the name of the store, configured to the configuration file
@@ -134,7 +140,7 @@ impl PasswordStore {
         }
 
         if !self.valid_gpg_signing_keys.is_empty() {
-            PasswordStore::verify_gpg_id_file(&self.root, &self.valid_gpg_signing_keys)?;
+            self.verify_gpg_id_file(&self.root, &self.valid_gpg_signing_keys)?;
         }
 
         Ok(true)
@@ -153,7 +159,7 @@ impl PasswordStore {
         }
 
         if !valid_signing_keys.is_empty() {
-            PasswordStore::verify_gpg_id_file(&pass_home, &valid_signing_keys)?;
+            self.verify_gpg_id_file(&pass_home, &valid_signing_keys)?;
         }
 
         self.root = pass_home;
@@ -170,7 +176,11 @@ impl PasswordStore {
         git2::Repository::open(self.root.to_path_buf()).map_err(Error::Git)
     }
 
-    fn verify_gpg_id_file(pass_home: &PathBuf, signing_keys: &[String]) -> Result<SignatureStatus> {
+    fn verify_gpg_id_file(
+        &self,
+        pass_home: &PathBuf,
+        signing_keys: &[String],
+    ) -> Result<SignatureStatus> {
         let mut gpg_id_file = pass_home.clone();
         gpg_id_file.push(".gpg-id");
         let mut gpg_id_sig_file = pass_home.clone();
@@ -186,36 +196,13 @@ impl PasswordStore {
             }
         };
 
-        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-
-        let result = ctx.verify_detached(gpg_id_sig, gpg_id)?;
-
-        let mut sig_sum = None;
-
-        for (i, sig) in result.signatures().enumerate() {
-            let fpr = sig.fingerprint()?;
-
-            if !signing_keys.contains(&fpr.to_string()) {
-                return Err(Error::Generic("the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY"));
-            }
-            if i == 0 {
-                sig_sum = Some(sig.summary());
-            } else {
-                return Err(Error::Generic("Signature for .gpg-id file contained more than one signature, something is fishy"));
-            }
-        }
-
-        match sig_sum {
-            None => Err(Error::Generic(
-                "Missing signature for .gpg-id file, and PASSWORD_STORE_SIGNING_KEY specified",
-            )),
-            Some(sig_sum) => {
-                let sig_status: SignatureStatus = sig_sum.into();
-                match sig_status {
-                    SignatureStatus::Bad => Err(Error::Generic("Bad signature for .gpg-id file")),
-                    _ => Ok(sig_status),
-                }
-            }
+        match self.crypto.verify_sign(&gpg_id, &gpg_id_sig, signing_keys) {
+            Ok(r) => Ok(r),
+            Err(VerificationError::InfrastructureError(message)) => Err(Error::GenericDyn(message)),
+            Err(VerificationError::SignatureFromWrongRecipient) => Err(Error::Generic("the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY")),
+            Err(VerificationError::BadSignature) => Err(Error::Generic("Bad signature for .gpg-id file")),
+            Err(VerificationError::MissingSignatures) => Err(Error::Generic("Missing signature for .gpg-id file, and PASSWORD_STORE_SIGNING_KEY specified")),
+            Err(VerificationError::TooManySignatures) => Err(Error::Generic("Signature for .gpg-id file contained more than one signature, something is fishy")),
         }
     }
 
@@ -255,37 +242,20 @@ impl PasswordStore {
             Ok(file) => file,
         };
 
-        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-        ctx.set_armor(false);
-
-        let mut keys = Vec::new();
-
         if !self.valid_gpg_signing_keys.is_empty() {
-            PasswordStore::verify_gpg_id_file(&self.root, &self.valid_gpg_signing_keys)?;
+            self.verify_gpg_id_file(&self.root, &self.valid_gpg_signing_keys)?;
         }
 
         let mut recipient_file = self.root.clone();
         recipient_file.push(".gpg-id");
-        for recipient in Recipient::all_recipients(&recipient_file)? {
-            if recipient.key_ring_status == KeyRingStatus::NotInKeyRing {
-                return Err(Error::RecipientNotInKeyRing(recipient.key_id));
-            }
-            keys.push(ctx.get_key(recipient.key_id)?);
-        }
-
-        let mut output = Vec::new();
-        ctx.encrypt_with_flags(
-            &keys,
-            content,
-            &mut output,
-            gpgme::EncryptFlags::NO_COMPRESS,
-        )?;
+        let recipients = Recipient::all_recipients(&recipient_file)?;
+        let output = self.crypto.encrypt_string(content, &recipients)?;
 
         if let Err(why) = file.write_all(&output) {
             return Err(Error::from(why));
         }
         match self.repo() {
-            Err(_) => PasswordEntry::load_from_filesystem(&self.root, &path),
+            Err(_) => PasswordEntry::load_from_filesystem(&self.root, &PathBuf::from(path_end)),
             Ok(repo) => {
                 let message = format!("Add password for {} using ripasso", path_end);
 
@@ -293,9 +263,10 @@ impl PasswordStore {
                     &repo,
                     &[append_extension(PathBuf::from(path_end), ".gpg")],
                     &message,
+                    self.crypto.as_ref(),
                 )?;
 
-                Ok(PasswordEntry::load_from_git(&self.root, &path, &repo))
+                Ok(PasswordEntry::load_from_git(&self.root, &path, &repo, self))
             }
         }
     }
@@ -390,9 +361,9 @@ impl PasswordStore {
                                 &found,
                                 &commit,
                                 &repo,
-                                &self.root,
                                 &mut passwords,
                                 &oid,
+                                self,
                             )
                         });
                     }
@@ -418,9 +389,9 @@ impl PasswordStore {
                         &found,
                         &last_commit,
                         &repo,
-                        &self.root,
                         &mut passwords,
                         &last_commit.id(),
+                        self,
                     )
                 });
             }
@@ -445,7 +416,7 @@ impl PasswordStore {
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
     pub fn all_recipients(&self) -> Result<Vec<Recipient>> {
         if !self.valid_gpg_signing_keys.is_empty() {
-            PasswordStore::verify_gpg_id_file(&self.root, &self.valid_gpg_signing_keys)?;
+            self.verify_gpg_id_file(&self.root, &self.valid_gpg_signing_keys)?;
         }
 
         let mut recipient_file = self.root.clone();
@@ -480,7 +451,7 @@ impl PasswordStore {
     pub fn reencrypt_all_password_entries(&self) -> Result<()> {
         let mut names: Vec<PathBuf> = Vec::new();
         for entry in self.all_passwords()? {
-            entry.update_internal(entry.secret()?, self)?;
+            entry.update_internal(entry.secret(self)?, self)?;
             names.push(append_extension(PathBuf::from(&entry.name), ".gpg"));
         }
         names.push(PathBuf::from(".gpg-id"));
@@ -525,7 +496,14 @@ impl PasswordStore {
         }
         let tree = repo.find_tree(oid)?;
 
-        let oid = commit(&repo, &signature, &message.to_string(), &tree, &parents)?;
+        let oid = commit(
+            &repo,
+            &signature,
+            &message.to_string(),
+            &tree,
+            &parents,
+            self.crypto.as_ref(),
+        )?;
         let obj = repo.find_object(oid, None)?;
         repo.reset(&obj, git2::ResetType::Hard, None)?;
 
@@ -592,9 +570,9 @@ fn push_password_if_match(
     found: &Path,
     commit: &git2::Commit,
     repo: &git2::Repository,
-    dir: &PathBuf,
     passwords: &mut Vec<PasswordEntry>,
     oid: &git2::Oid,
+    store: &PasswordStore,
 ) -> bool {
     if *target == *found {
         let time = commit.time();
@@ -602,10 +580,10 @@ fn push_password_if_match(
 
         let name_return = name_from_commit(commit);
 
-        let signature_return = verify_git_signature(&repo, &oid);
+        let signature_return = verify_git_signature(&repo, &oid, store);
 
         passwords.push(PasswordEntry::new(
-            &dir,
+            &store.root,
             &target.to_path_buf(),
             time_return,
             name_return,
@@ -671,11 +649,14 @@ pub struct PasswordEntry {
 }
 
 fn to_name(relpath: &PathBuf) -> String {
-    relpath
-        .to_string_lossy()
-        .strip_suffix(".gpg")
-        .unwrap()
-        .to_string()
+    let mut s = relpath.to_string_lossy().to_string();
+    match s.ends_with(".gpg") {
+        true => {
+            s.truncate(s.len() - 4);
+            s
+        }
+        false => s,
+    }
 }
 
 impl PasswordEntry {
@@ -711,8 +692,14 @@ impl PasswordEntry {
     }
 
     /// creates a `PasswordEntry` by running git blame on the specified path
-    pub fn load_from_git(base: &PathBuf, path: &PathBuf, repo: &git2::Repository) -> PasswordEntry {
-        let (update_time, committed_by, signature_status) = read_git_meta_data(base, path, repo);
+    pub fn load_from_git(
+        base: &PathBuf,
+        path: &PathBuf,
+        repo: &git2::Repository,
+        store: &PasswordStore,
+    ) -> PasswordEntry {
+        let (update_time, committed_by, signature_status) =
+            read_git_meta_data(base, path, repo, store);
 
         let relpath = path
             .strip_prefix(&base)
@@ -741,47 +728,34 @@ impl PasswordEntry {
     }
 
     /// Decrypts and returns the full content of the PasswordEntry
-    pub fn secret(&self) -> Result<String> {
+    pub fn secret(&self, store: &PasswordStore) -> Result<String> {
         let s = fs::metadata(&self.path)?;
         if s.len() == 0 {
             return Err(Error::Generic("empty password file"));
         }
-        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-        let mut input = File::open(&self.path)?;
-        let mut output = Vec::new();
-        ctx.decrypt(&mut input, &mut output)?;
-        Ok(String::from_utf8(output)?)
+
+        let content = fs::read(&self.path)?;
+        store.crypto.decrypt_string(&content)
     }
 
     /// Decrypts and returns the first line of the PasswordEntry
-    pub fn password(&self) -> Result<String> {
-        Ok(self.secret()?.split('\n').take(1).collect())
+    pub fn password(&self, store: &PasswordStore) -> Result<String> {
+        Ok(self.secret(store)?.split('\n').take(1).collect())
     }
 
     fn update_internal(&self, secret: String, store: &PasswordStore) -> Result<()> {
-        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-
-        let mut keys = Vec::new();
         let recipient_file = {
             let mut rf = store.root.clone();
             rf.push(".gpg-id");
             rf
         };
 
-        for recipient in Recipient::all_recipients(&recipient_file)? {
-            if recipient.key_ring_status == KeyRingStatus::NotInKeyRing {
-                return Err(Error::RecipientNotInKeyRing(recipient.key_id));
-            }
-            keys.push(ctx.get_key(recipient.key_id)?);
+        if !store.valid_gpg_signing_keys.is_empty() {
+            store.verify_gpg_id_file(&store.root, &store.valid_gpg_signing_keys)?;
         }
 
-        let mut ciphertext = Vec::new();
-        ctx.encrypt_with_flags(
-            &keys,
-            secret,
-            &mut ciphertext,
-            gpgme::EncryptFlags::NO_COMPRESS,
-        )?;
+        let recipients = Recipient::all_recipients(&recipient_file)?;
+        let ciphertext = store.crypto.encrypt_string(&secret, &recipients)?;
 
         let mut output = File::create(&self.path)?;
         output.write_all(&ciphertext)?;
@@ -883,7 +857,8 @@ impl PasswordEntry {
                         let time = commit.time();
                         let dt = Local.timestamp(time.seconds(), 0);
 
-                        let signature_status = verify_git_signature(&repo, &oid);
+                        let store = store.lock().unwrap();
+                        let signature_status = verify_git_signature(&repo, &oid, &store);
                         Some(GitLogLine::new(
                             commit.message().unwrap_or("<no message>").to_string(),
                             dt,
@@ -936,18 +911,10 @@ fn find_last_commit(repo: &git2::Repository) -> Result<git2::Commit> {
 }
 
 /// Returns if a git commit should be gpg signed or not.
-fn should_sign() -> bool {
-    match git2::Config::open_default() {
+fn should_sign(repo: &git2::Repository) -> bool {
+    match repo.config() {
         Err(_) => false,
-        Ok(config) => {
-            let do_sign = config.get_bool("commit.gpgsign");
-
-            if do_sign.is_err() || !do_sign.unwrap() {
-                return false;
-            }
-
-            true
-        }
+        Ok(config) => config.get_bool("commit.gpgsign").unwrap_or(false),
     }
 }
 
@@ -958,8 +925,9 @@ fn commit(
     message: &str,
     tree: &git2::Tree,
     parents: &[&git2::Commit],
+    crypto: &(dyn Crypto + Send),
 ) -> Result<git2::Oid> {
-    if should_sign() {
+    if should_sign(repo) {
         let commit_buf = repo.commit_create_buffer(
             signature, // author
             signature, // committer
@@ -970,12 +938,15 @@ fn commit(
 
         let commit_as_str = str::from_utf8(&commit_buf)?;
 
-        let sig = gpg_sign_string(commit_as_str)?;
+        let sig = crypto.sign_string(commit_as_str)?;
 
         let commit = repo.commit_signed(commit_as_str, &sig, Some("gpgsig"))?;
 
-        repo.head()?
-            .set_target(commit, "added a signed commit using ripasso")?;
+        if let Ok(mut head) = repo.head() {
+            head.set_target(commit, "added a signed commit using ripasso")?;
+        } else {
+            repo.branch("master", &repo.find_commit(commit)?, false)?;
+        }
 
         Ok(commit)
     } else {
@@ -997,6 +968,7 @@ fn add_and_commit_internal(
     repo: &git2::Repository,
     paths: &[PathBuf],
     message: &str,
+    crypto: &(dyn Crypto + Send),
 ) -> Result<git2::Oid> {
     let mut index = repo.index()?;
     for path in paths {
@@ -1015,7 +987,14 @@ fn add_and_commit_internal(
     index.write_tree()?;
     let tree = repo.find_tree(oid)?;
 
-    let oid = commit(&repo, &signature, &message.to_string(), &tree, &parents)?;
+    let oid = commit(
+        &repo,
+        &signature,
+        &message.to_string(),
+        &tree,
+        &parents,
+        crypto,
+    )?;
 
     Ok(oid)
 }
@@ -1043,12 +1022,19 @@ fn remove_and_commit(store: &PasswordStore, paths: &[PathBuf], message: &str) ->
     index.write_tree()?;
     let tree = repo.find_tree(oid)?;
 
-    let oid = commit(&repo, &signature, &message.to_string(), &tree, &parents)?;
+    let oid = commit(
+        &repo,
+        &signature,
+        &message.to_string(),
+        &tree,
+        &parents,
+        store.crypto.as_ref(),
+    )?;
 
     Ok(oid)
 }
 
-/// Remove a file from the store, and commit the deletion to the supplied git repository.
+/// Move a file to a new place in the store, and commit the move to the supplied git repository.
 fn move_and_commit(
     store: &PasswordStore,
     old_name: &Path,
@@ -1073,7 +1059,14 @@ fn move_and_commit(
     }
     let tree = repo.find_tree(oid)?;
 
-    let oid = commit(&repo, &signature, &message.to_string(), &tree, &parents)?;
+    let oid = commit(
+        &repo,
+        &signature,
+        &message.to_string(),
+        &tree,
+        &parents,
+        store.crypto.as_ref(),
+    )?;
 
     Ok(oid)
 }
@@ -1226,6 +1219,7 @@ fn read_git_meta_data(
     base: &PathBuf,
     path: &PathBuf,
     repo: &git2::Repository,
+    store: &PasswordStore,
 ) -> (
     Result<DateTime<Local>>,
     Result<String>,
@@ -1261,35 +1255,33 @@ fn read_git_meta_data(
 
     let name_return = name_from_commit(&commit);
 
-    let signature_return = verify_git_signature(repo, &id);
+    let signature_return = verify_git_signature(repo, &id, store);
 
     (time_return, name_return, signature_return)
 }
 
-fn verify_git_signature(repo: &Repository, id: &Oid) -> Result<SignatureStatus> {
+fn verify_git_signature(
+    repo: &Repository,
+    id: &Oid,
+    store: &PasswordStore,
+) -> Result<SignatureStatus> {
     let (signature, signed_data) = repo.extract_signature(&id, Some("gpgsig"))?;
-
-    let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
     let signature_str = str::from_utf8(&signature)?.to_string();
     let signed_data_str = str::from_utf8(&signed_data)?.to_string();
-    let result = ctx.verify_detached(signature_str, signed_data_str)?;
 
-    let mut sig_sum = None;
-
-    for (i, sig) in result.signatures().enumerate() {
-        if i == 0 {
-            sig_sum = Some(sig.summary());
-        } else {
-            return Err(Error::Generic(
-                "If a git contains more than one signature, something is fishy",
-            ));
-        }
+    if store.valid_gpg_signing_keys.is_empty() {
+        return Err(Error::Generic(
+            "signature not checked as PASSWORD_STORE_SIGNING_KEY is not configured",
+        ));
     }
-
-    match sig_sum {
-        None => Err(Error::Generic("Missing signature")),
-        Some(s) => Ok(s.into()),
+    match store.crypto.verify_sign(&signed_data_str.into_bytes(), &signature_str.into_bytes(), &store.valid_gpg_signing_keys) {
+        Ok(r) => Ok(r),
+        Err(VerificationError::InfrastructureError(message)) => Err(Error::GenericDyn(message)),
+        Err(VerificationError::SignatureFromWrongRecipient) => Err(Error::Generic("the commit wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY")),
+        Err(VerificationError::BadSignature) => Err(Error::Generic("Bad signature for commit")),
+        Err(VerificationError::MissingSignatures) => Err(Error::Generic("Missing signature for commit")),
+        Err(VerificationError::TooManySignatures) => Err(Error::Generic("If a git commit contains more than one signature, something is fishy")),
     }
 }
 
@@ -1300,26 +1292,15 @@ pub fn init_git_repo(base: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-/// When setting up a `watch` for the password store directory, events of these types will be sent.
-#[derive(Debug)]
-pub enum PasswordEvent {
-    /// A new password file was created.
-    NewPassword(PasswordEntry),
-    /// A password file was removed.
-    RemovedPassword(PathBuf),
-    /// An error occurred
-    Error(Error),
-}
-
 /// Return a list of all passwords whose name contains `query`.
 pub fn search(store: &PasswordStoreType, query: &str) -> Result<Vec<PasswordEntry>> {
     let passwords = &store.lock()?.passwords;
     fn normalized(s: &str) -> String {
         s.to_lowercase()
-    };
+    }
     fn matches(s: &str, q: &str) -> bool {
         normalized(s).as_str().contains(normalized(q).as_str())
-    };
+    }
     let matching = passwords.iter().filter(|p| matches(&p.name, query));
     Ok(matching.cloned().collect())
 }
@@ -1551,3 +1532,5 @@ pub fn save_config(
 
 #[cfg(test)]
 mod test;
+#[cfg(test)]
+mod test_helpers;

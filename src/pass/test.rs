@@ -1,38 +1,17 @@
 use super::*;
 
-use flate2::read::GzDecoder;
 use std::fs::File;
 use std::path::PathBuf;
-use tar::Archive;
 
 use std::env;
+use tempfile::tempdir;
+
+use crate::pass::test_helpers::{MockCrypto, UnpackedDir};
 
 impl std::cmp::PartialEq for Error {
     fn eq(&self, other: &Error) -> bool {
         format!("{:?}", self) == format!("{:?}", *other)
     }
-}
-
-fn unpack_tar_gz(mut base_path: PathBuf, tar_gz_name: &str) -> Result<()> {
-    let target = format!("{}", base_path.as_path().display());
-    base_path.push(tar_gz_name);
-
-    let path = format!("{}", base_path.as_path().display());
-
-    let tar_gz = File::open(path)?;
-    let tar = GzDecoder::new(tar_gz);
-    let mut archive = Archive::new(tar);
-    archive.unpack(target)?;
-
-    Ok(())
-}
-
-fn cleanup(mut base_path: PathBuf, path_name: &str) -> Result<()> {
-    base_path.push(path_name);
-
-    std::fs::remove_dir_all(base_path)?;
-
-    Ok(())
 }
 
 #[test]
@@ -78,57 +57,36 @@ fn get_password_dir_raw_some_some() {
 
 #[test]
 fn populate_password_list_small_repo() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let dir = UnpackedDir::new("populate_password_list_small_repo")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("populate_password_list_small_repo");
-
-    unpack_tar_gz(
-        base_path.clone(),
-        "populate_password_list_small_repo.tar.gz",
-    )
-    .unwrap();
-
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
+    let store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
+    )?;
     let results = store.all_passwords().unwrap();
-
-    cleanup(base_path, "populate_password_list_small_repo").unwrap();
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "test");
     assert_eq!(results[0].committed_by, Some("Alexander Kjäll".to_string()));
-    assert_eq!(results[0].signature_status.is_none(), false);
+    assert_eq!(results[0].signature_status.is_none(), true);
     Ok(())
 }
 
 #[test]
 fn populate_password_list_repo_with_deleted_files() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let dir = UnpackedDir::new("populate_password_list_repo_with_deleted_files")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("populate_password_list_repo_with_deleted_files");
-
-    unpack_tar_gz(
-        base_path.clone(),
-        "populate_password_list_repo_with_deleted_files.tar.gz",
+    let store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
     )?;
-
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
-
-    cleanup(base_path, "populate_password_list_repo_with_deleted_files").unwrap();
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "10");
@@ -139,26 +97,16 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
 
 #[test]
 fn populate_password_list_directory_without_git() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let dir = UnpackedDir::new("populate_password_list_directory_without_git")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("populate_password_list_directory_without_git");
-
-    unpack_tar_gz(
-        base_path.clone(),
-        "populate_password_list_directory_without_git.tar.gz",
+    let store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
     )?;
-
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
-
-    cleanup(base_path, "populate_password_list_directory_without_git").unwrap();
 
     assert_eq!(results.len(), 3);
     assert_eq!(results[0].name, "first");
@@ -180,26 +128,16 @@ fn populate_password_list_directory_without_git() -> Result<()> {
 
 #[test]
 fn password_store_with_files_in_initial_commit() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let dir = UnpackedDir::new("password_store_with_files_in_initial_commit")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("password_store_with_files_in_initial_commit");
-
-    unpack_tar_gz(
-        base_path.clone(),
-        "password_store_with_files_in_initial_commit.tar.gz",
+    let store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
     )?;
-
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
-
-    cleanup(base_path, "password_store_with_files_in_initial_commit").unwrap();
 
     let expected = vec!["3", "A/1", "B/2"];
 
@@ -215,74 +153,46 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
 
 #[test]
 fn password_store_with_relative_path() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
-
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("password_store_with_relative_path");
-
-    unpack_tar_gz(
-        base_path.clone(),
-        "password_store_with_relative_path.tar.gz",
-    )?;
+    let dir = UnpackedDir::new("password_store_with_relative_path")?;
 
     let store = PasswordStore::new(
         "default",
-        &Some(PathBuf::from("./testres/password_store_with_relative_path")),
+        &Some(dir.dir().to_path_buf()),
         &None,
-        &Some(home),
+        &Some(dir.dir().to_path_buf()),
         &None,
-    );
-    if store.is_err() {
-        eprintln!("{}", store.err().unwrap());
-    } else {
-        let results = store?.all_passwords()?;
+    )?;
 
-        cleanup(base_path, "password_store_with_relative_path").unwrap();
+    let results = store.all_passwords()?;
 
-        assert_eq!(results.len(), 3);
-        assert_eq!(results[0].name, "3");
-        assert_eq!(results[0].committed_by.is_none(), false);
-        assert_eq!(results[0].updated.is_none(), false);
+    assert_eq!(results.len(), 3);
+    assert_eq!(results[0].name, "3");
+    assert_eq!(results[0].committed_by.is_none(), false);
+    assert_eq!(results[0].updated.is_none(), false);
 
-        assert_eq!(results[1].name, "2");
-        assert_eq!(results[1].committed_by.is_none(), false);
-        assert_eq!(results[1].updated.is_none(), false);
+    assert_eq!(results[1].name, "2");
+    assert_eq!(results[1].committed_by.is_none(), false);
+    assert_eq!(results[1].updated.is_none(), false);
 
-        assert_eq!(results[2].name, "1");
-        assert_eq!(results[2].committed_by.is_none(), false);
-        assert_eq!(results[2].updated.is_none(), false);
-    }
+    assert_eq!(results[2].name, "1");
+    assert_eq!(results[2].committed_by.is_none(), false);
+    assert_eq!(results[2].updated.is_none(), false);
+
     Ok(())
 }
 
 #[test]
 fn password_store_with_shallow_checkout() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let dir = UnpackedDir::new("password_store_with_shallow_checkout")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("password_store_with_shallow_checkout");
-
-    unpack_tar_gz(
-        base_path.clone(),
-        "password_store_with_shallow_checkout.tar.gz",
+    let store = PasswordStore::new(
+        &"default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
     )?;
-
-    let store = PasswordStore::new(&"default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
-
-    cleanup(base_path, "password_store_with_shallow_checkout").unwrap();
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "1");
@@ -294,26 +204,16 @@ fn password_store_with_shallow_checkout() -> Result<()> {
 
 #[test]
 fn password_store_with_sparse_checkout() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let dir = UnpackedDir::new("password_store_with_sparse_checkout")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("password_store_with_sparse_checkout");
-
-    unpack_tar_gz(
-        base_path.clone(),
-        "password_store_with_sparse_checkout.tar.gz",
+    let store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
     )?;
-
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
     let results = store.all_passwords().unwrap();
-
-    cleanup(base_path, "password_store_with_sparse_checkout").unwrap();
 
     assert_eq!(results.len(), 3);
     assert_eq!(results[0].name, "3/1");
@@ -333,28 +233,24 @@ fn password_store_with_sparse_checkout() -> Result<()> {
 #[cfg(target_family = "unix")]
 #[test]
 fn password_store_with_symlink() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let dir = UnpackedDir::new("password_store_with_symlink")?;
+    let link_dir = dir
+        .dir()
+        .parent()
+        .unwrap()
+        .join("password_store_with_symlink_link");
+    std::os::unix::fs::symlink(dir.dir(), link_dir.clone())?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("password_store_with_symlink_link");
-
-    unpack_tar_gz(base_path.clone(), "password_store_with_symlink.tar.gz")?;
-
-    let mut target = base_path.clone();
-    target.push("password_store_with_symlink");
-    std::os::unix::fs::symlink(target, password_dir.clone())?;
-
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
+    let store = PasswordStore::new(
+        "default",
+        &Some(link_dir.clone()),
+        &None,
+        &Some(link_dir.clone()),
+        &None,
+    )?;
     let results = store.all_passwords().unwrap();
 
-    cleanup(base_path.clone(), "password_store_with_symlink").unwrap();
-    cleanup(base_path, "password_store_with_symlink_link").unwrap();
+    fs::remove_file(link_dir)?;
 
     assert_eq!(results.len(), 3);
     assert_eq!(results[0].name, "3");
@@ -824,64 +720,52 @@ fn append_extension_with_dot() {
 
 #[test]
 fn rename_file() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let dir = UnpackedDir::new("rename_file")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("rename_file");
-
-    unpack_tar_gz(base_path.clone(), "rename_file.tar.gz")?;
-
-    let mut config_location = password_dir.clone();
+    let mut config_location = dir.dir().to_path_buf();
     config_location.push(".git");
     config_location.push("config");
     let mut config = git2::Config::open(&config_location)?;
     config.set_str("user.name", "default")?;
     config.set_str("user.email", "default@example.com")?;
+    config.set_str("commit.gpgsign", "false")?;
 
-    let mut store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
+    let mut store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
+    )?;
     store.reload_password_list()?;
-    store.rename_file("1/test", "2/test")?;
-    let results = store.all_passwords()?;
+    let index = store.rename_file("1/test", "2/test")?;
 
-    cleanup(base_path, "rename_file").unwrap();
+    assert_eq!(1, index);
 
-    assert_eq!(results.len(), 2);
-    assert_eq!(results[0].name, "2/test");
-    assert_eq!(results[0].committed_by.is_none(), false);
-    assert_eq!(results[0].updated.is_none(), false);
+    assert_eq!(store.passwords.len(), 2);
+    assert_eq!(store.passwords[0].name, "test");
+    assert_eq!(store.passwords[0].committed_by.is_none(), false);
+    assert_eq!(store.passwords[0].updated.is_none(), false);
 
-    assert_eq!(results[1].name, "test");
-    assert_eq!(results[1].committed_by.is_none(), false);
-    assert_eq!(results[1].updated.is_none(), false);
+    assert_eq!(store.passwords[1].name, "2/test");
+    assert_eq!(store.passwords[1].committed_by.is_none(), false);
+    assert_eq!(store.passwords[1].updated.is_none(), false);
     Ok(())
 }
 
 #[test]
 fn rename_file_absolute_path() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let dir = UnpackedDir::new("rename_file_absolute_path")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("rename_file_absolute_path");
-
-    unpack_tar_gz(base_path.clone(), "rename_file_absolute_path.tar.gz")?;
-
-    let mut store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
+    let mut store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
+    )?;
     store.reload_password_list()?;
     let res = store.rename_file("1/test", "/2/test");
-
-    cleanup(base_path, "rename_file_absolute_path").unwrap();
 
     assert_eq!(true, res.is_err());
     Ok(())
@@ -907,7 +791,16 @@ fn decrypt_secret_empty_file() -> Result<()> {
         RepositoryStatus::NoRepo,
     );
 
-    let res = pe.secret();
+    let store = PasswordStore {
+        name: "store_name".to_string(),
+        root: dir.path().join(".password-store"),
+        valid_gpg_signing_keys: vec![],
+        passwords: vec![],
+        style_file: None,
+        crypto: Box::new(GpgMe {}),
+    };
+
+    let res = pe.secret(&store);
 
     assert_eq!(true, res.is_err());
     assert_eq!("empty password file", format!("{}", res.err().unwrap()));
@@ -935,7 +828,16 @@ fn decrypt_password_empty_file() -> Result<()> {
         RepositoryStatus::NoRepo,
     );
 
-    let res = pe.password();
+    let store = PasswordStore {
+        name: "store_name".to_string(),
+        root: dir.path().join(".password-store"),
+        valid_gpg_signing_keys: vec![],
+        passwords: vec![],
+        style_file: None,
+        crypto: Box::new(GpgMe {}),
+    };
+
+    let res = pe.password(&store);
 
     assert_eq!(true, res.is_err());
     assert_eq!("empty password file", format!("{}", res.err().unwrap()));
@@ -1017,20 +919,15 @@ fn get_history_no_repo() -> Result<()> {
 
 #[test]
 fn get_history_with_repo() -> Result<()> {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.push("testres");
+    let dir = UnpackedDir::new("get_history_with_repo")?;
 
-    let home: PathBuf = base_path.clone();
-    let mut password_dir: PathBuf = base_path.clone();
-    password_dir.push("get_history_with_repo");
-
-    unpack_tar_gz(base_path.clone(), "get_history_with_repo.tar.gz")?;
-
-    let store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home), &None)?;
+    let store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
+    )?;
     let results = store.all_passwords().unwrap();
 
     assert_eq!(results.len(), 1);
@@ -1040,8 +937,6 @@ fn get_history_with_repo() -> Result<()> {
 
     let pw = &results[0];
     let history = pw.get_history(&Arc::new(Mutex::new(store)))?;
-
-    cleanup(base_path, "get_history_with_repo").unwrap();
 
     assert_eq!(history.len(), 3);
     assert_eq!(history[0].message, "commit 3\n");
@@ -1117,4 +1012,433 @@ fn test_format_error() {
         "custom error message"
     );
     assert_eq!(format!("{}", Error::NoneError), "NoneError");
+}
+
+#[test]
+fn test_should_sign_true() -> Result<()> {
+    let dir = UnpackedDir::new("test_should_sign_true")?;
+
+    let repo = git2::Repository::open(dir.dir()).unwrap();
+
+    let result = should_sign(&repo);
+
+    assert_eq!(true, result);
+
+    Ok(())
+}
+
+#[test]
+fn test_should_sign_false() -> Result<()> {
+    let dir = UnpackedDir::new("test_should_sign_false")?;
+
+    let repo = git2::Repository::open(dir.dir()).unwrap();
+
+    let result = should_sign(&repo);
+
+    assert_eq!(false, result);
+
+    Ok(())
+}
+
+#[test]
+fn test_commit_unsigned() -> Result<()> {
+    let td = tempdir()?;
+    let repo = Repository::init(td.path())?;
+    let mut config = repo.config()?;
+
+    config.set_bool("commit.gpgsign", false)?;
+    config.set_str("user.name", "default")?;
+    config.set_str("user.email", "default@example.com")?;
+
+    let mut index = repo.index()?;
+    let path = td.path().join("password-to-add");
+    let mut f = File::create(path)?;
+    f.write_all("some data".as_bytes())?;
+    index.add_path(&Path::new("password-to-add"))?;
+    index.write()?;
+
+    let oid = index.write_tree()?;
+    let tree = repo.find_tree(oid)?;
+
+    let parents = vec![];
+
+    let crypto = MockCrypto::new();
+    let c_oid = commit(&repo, &repo.signature()?, "test", &tree, &parents, &crypto)?;
+
+    assert_eq!(false, *crypto.sign_called.borrow());
+
+    assert_eq!("test", repo.find_commit(c_oid).unwrap().message().unwrap());
+
+    Ok(())
+}
+
+#[test]
+fn test_commit_signed() -> Result<()> {
+    let td = tempdir()?;
+    let repo = Repository::init(td.path())?;
+    let mut config = repo.config()?;
+
+    config.set_bool("commit.gpgsign", true)?;
+    config.set_str("user.name", "default")?;
+    config.set_str("user.email", "default@example.com")?;
+
+    let mut index = repo.index()?;
+    let path = td.path().join("password-to-add");
+    let mut f = File::create(path)?;
+    f.write_all("some data".as_bytes())?;
+    index.add_path(&Path::new("password-to-add"))?;
+    index.write()?;
+
+    let oid = index.write_tree()?;
+    let tree = repo.find_tree(oid)?;
+
+    let parents = vec![];
+
+    let crypto = MockCrypto::new();
+    let c_oid = commit(&repo, &repo.signature()?, "test", &tree, &parents, &crypto)?;
+
+    assert_eq!(true, *crypto.sign_called.borrow());
+
+    assert_eq!("test", repo.find_commit(c_oid).unwrap().message().unwrap());
+
+    Ok(())
+}
+
+#[test]
+fn test_move_and_commit_signed() -> Result<()> {
+    let dir = UnpackedDir::new("test_move_and_commit_signed")?;
+
+    let repo = Repository::init(dir.dir())?;
+    let mut config = repo.config()?;
+
+    config.set_bool("commit.gpgsign", true)?;
+    config.set_str("user.name", "default")?;
+    config.set_str("user.email", "default@example.com")?;
+
+    fs::rename(
+        &dir.dir().join("first_pass.gpg"),
+        &dir.dir().join("second_pass.gpg"),
+    )?;
+
+    let store = PasswordStore {
+        name: "store_name".to_string(),
+        root: dir.dir().to_path_buf(),
+        valid_gpg_signing_keys: vec![],
+        passwords: vec![],
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+    };
+    let c_oid = move_and_commit(
+        &store,
+        &Path::new("first_pass.gpg"),
+        &Path::new("second_pass.gpg"),
+        "unit test",
+    )?;
+
+    assert_eq!(
+        "unit test",
+        repo.find_commit(c_oid).unwrap().message().unwrap()
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_search() -> Result<()> {
+    let p1 = PasswordEntry {
+        name: "no/match/check".to_string(),
+        path: Default::default(),
+        updated: None,
+        committed_by: None,
+        signature_status: None,
+        is_in_git: RepositoryStatus::InRepo,
+    };
+    let p2 = PasswordEntry {
+        name: "dir/test/middle".to_string(),
+        path: Default::default(),
+        updated: None,
+        committed_by: None,
+        signature_status: None,
+        is_in_git: RepositoryStatus::InRepo,
+    };
+    let p3 = PasswordEntry {
+        name: " space test ".to_string(),
+        path: Default::default(),
+        updated: None,
+        committed_by: None,
+        signature_status: None,
+        is_in_git: RepositoryStatus::InRepo,
+    };
+    let store = PasswordStore {
+        name: "store_name".to_string(),
+        root: std::env::temp_dir(),
+        valid_gpg_signing_keys: vec![],
+        passwords: vec![p1, p2, p3],
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+    };
+    let store = Arc::new(Mutex::new(store));
+
+    let result = search(&store, "test")?;
+
+    assert_eq!(2, result.len());
+    assert_eq!("dir/test/middle", result[0].name);
+    assert_eq!(" space test ", result[1].name);
+
+    Ok(())
+}
+
+#[test]
+fn test_verify_git_signature() -> Result<()> {
+    let dir = UnpackedDir::new("test_verify_git_signature")?;
+
+    let repo = git2::Repository::open(dir.dir()).unwrap();
+    let oid = repo.head()?.target().unwrap();
+
+    let store = PasswordStore {
+        name: "store_name".to_string(),
+        root: dir.dir().to_path_buf(),
+        valid_gpg_signing_keys: vec!["7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_string()],
+        passwords: [].to_vec(),
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+    };
+
+    let result = verify_git_signature(&repo, &oid, &store);
+
+    assert_eq!(Error::Generic("the commit wasn\'t signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY"),
+               result.err().unwrap());
+
+    Ok(())
+}
+
+#[test]
+fn test_add_and_commit_internal() -> Result<()> {
+    let dir = UnpackedDir::new("test_add_and_commit_internal")?;
+
+    let repo = Repository::init(dir.dir())?;
+    let mut config = repo.config()?;
+
+    config.set_bool("commit.gpgsign", true)?;
+    config.set_str("user.name", "default")?;
+    config.set_str("user.email", "default@example.com")?;
+
+    let crypto = MockCrypto::new();
+
+    let new_password = dir.dir().join("new_password");
+    File::create(&new_password)
+        .unwrap()
+        .write_all("swordfish".as_bytes())
+        .unwrap();
+
+    let c_oid = add_and_commit_internal(
+        &repo,
+        &vec![PathBuf::from("new_password")],
+        "unit test",
+        &crypto,
+    )
+    .unwrap();
+
+    assert_eq!(
+        "unit test",
+        repo.find_commit(c_oid).unwrap().message().unwrap()
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_remove_and_commit() -> Result<()> {
+    let dir = UnpackedDir::new("test_remove_and_commit")?;
+
+    let store = PasswordStore {
+        name: "store_name".to_string(),
+        root: dir.dir().to_path_buf(),
+        valid_gpg_signing_keys: vec!["7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_string()],
+        passwords: [].to_vec(),
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+    };
+
+    let repo = git2::Repository::open(dir.dir()).unwrap();
+    let mut config = repo.config()?;
+
+    config.set_bool("commit.gpgsign", true)?;
+    config.set_str("user.name", "default")?;
+    config.set_str("user.email", "default@example.com")?;
+
+    let c_oid = remove_and_commit(
+        &store,
+        &vec![PathBuf::from("pass_to_be_deleted")],
+        "unit test",
+    )
+    .unwrap();
+
+    assert_eq!(
+        "unit test",
+        repo.find_commit(c_oid).unwrap().message().unwrap()
+    );
+
+    assert_eq!(false, dir.dir().join("pass_to_be_deleted").is_file());
+
+    Ok(())
+}
+
+#[test]
+fn test_to_name() {
+    assert_eq!("name", to_name(&PathBuf::from("name.gpg")));
+    assert_eq!("dir/name", to_name(&PathBuf::from("dir/name.gpg")));
+    assert_eq!(
+        "dir/name without gpg on end",
+        to_name(&PathBuf::from("dir/name without gpg on end"))
+    );
+}
+
+#[test]
+fn test_verify_gpg_id_file_missing_sig_file() -> Result<()> {
+    let td = tempdir()?;
+
+    let store = PasswordStore {
+        name: "store_name".to_string(),
+        root: td.path().to_path_buf(),
+        valid_gpg_signing_keys: vec!["7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_string()],
+        passwords: [].to_vec(),
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+    };
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
+    )?;
+
+    let result = store.verify_gpg_id_file(&store.root, &store.valid_gpg_signing_keys);
+
+    assert_eq!(true, result.is_err());
+
+    assert_eq!(
+        Error::Generic("problem reading .gpg-id.sig, and strict signature checking was asked for"),
+        result.err().unwrap()
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_verify_gpg_id_file() -> Result<()> {
+    let td = tempdir()?;
+
+    let store = PasswordStore {
+        name: "store_name".to_string(),
+        root: td.path().to_path_buf(),
+        valid_gpg_signing_keys: vec!["7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_string()],
+        passwords: [].to_vec(),
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+    };
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
+    )?;
+    fs::write(
+        td.path().join(".gpg-id.sig"),
+        "here there should be gpg data",
+    )?;
+
+    let result = store.verify_gpg_id_file(&store.root, &store.valid_gpg_signing_keys);
+
+    assert_eq!(true, result.is_err());
+
+    assert_eq!(Error::Generic("the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY"),
+               result.err().unwrap());
+
+    Ok(())
+}
+
+#[test]
+fn test_new_password_file() -> Result<()> {
+    let td = tempdir()?;
+
+    let mut store = PasswordStore {
+        name: "store_name".to_string(),
+        root: td.path().to_path_buf(),
+        valid_gpg_signing_keys: vec![],
+        passwords: [].to_vec(),
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+    };
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
+    )?;
+
+    let result = store.new_password_file("test/file", "password").unwrap();
+
+    assert_eq!(RepositoryStatus::NoRepo, result.is_in_git);
+    assert_eq!(false, result.signature_status.is_some());
+    assert_eq!(false, result.committed_by.is_some());
+    assert_eq!(false, result.updated.is_some());
+    assert_eq!("test/file", result.name);
+
+    Ok(())
+}
+
+#[test]
+fn test_new_password_file_in_git_repo() -> Result<()> {
+    let td = tempdir()?;
+
+    let mut store = PasswordStore {
+        name: "store_name".to_string(),
+        root: td.path().to_path_buf(),
+        valid_gpg_signing_keys: vec![],
+        passwords: [].to_vec(),
+        style_file: None,
+        crypto: Box::new(MockCrypto::new().with_encrypt_string_return(vec![32, 32, 32, 32])),
+    };
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
+    )?;
+
+    let repo = git2::Repository::init(td.path())?;
+    let mut config = repo.config()?;
+    config.set_str("user.name", "default")?;
+    config.set_str("user.email", "default@example.com")?;
+
+    let result = store.new_password_file("test/file", "password").unwrap();
+
+    assert_eq!(RepositoryStatus::InRepo, result.is_in_git);
+    assert_eq!(false, result.signature_status.is_some());
+    assert_eq!(true, result.committed_by.is_some());
+    assert_eq!(true, result.updated.is_some());
+    assert_eq!("test/file", result.name);
+
+    Ok(())
+}
+
+#[test]
+fn test_new_password_file_outside_pass_dir() -> Result<()> {
+    let td = tempdir()?;
+
+    let mut store = PasswordStore {
+        name: "store_name".to_string(),
+        root: td.path().to_path_buf(),
+        valid_gpg_signing_keys: vec![],
+        passwords: [].to_vec(),
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+    };
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
+    )?;
+
+    let result = store.new_password_file("../file", "password");
+    assert_eq!(true, result.is_err());
+
+    Ok(())
 }
