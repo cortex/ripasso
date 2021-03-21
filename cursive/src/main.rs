@@ -32,7 +32,7 @@ use clipboard::{ClipboardContext, ClipboardProvider};
 
 use ripasso::pass;
 use ripasso::pass::{OwnerTrustLevel, PasswordStore, PasswordStoreType, SignatureStatus};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
@@ -969,7 +969,7 @@ fn save_edit_config(
     ui: &mut Cursive,
     stores: Arc<Mutex<Vec<PasswordStore>>>,
     name: &str,
-    config_file_location: &PathBuf,
+    config_file_location: &Path,
     home: &Option<PathBuf>,
 ) {
     let e_n = &*get_value_from_input(ui, "edit_name_input").unwrap();
@@ -1015,7 +1015,7 @@ fn save_edit_config(
 fn save_new_config(
     ui: &mut Cursive,
     stores: Arc<Mutex<Vec<PasswordStore>>>,
-    config_file_location: &PathBuf,
+    config_file_location: &Path,
     home: &Option<PathBuf>,
 ) {
     let e_n = &*get_value_from_input(ui, "new_name_input").unwrap();
@@ -1057,7 +1057,7 @@ fn save_new_config(
 fn edit_store_in_config(
     ui: &mut Cursive,
     stores: Arc<Mutex<Vec<PasswordStore>>>,
-    config_file_location: &PathBuf,
+    config_file_location: &Path,
     home: &Option<PathBuf>,
 ) {
     let l = ui.find_name::<SelectView<String>>("stores").unwrap();
@@ -1128,8 +1128,8 @@ fn edit_store_in_config(
     let stores3 = stores.clone();
     let name2 = store.get_name().clone();
     let name3 = store.get_name().clone();
-    let config_file_location = config_file_location.clone();
-    let config_file_location2 = config_file_location.clone();
+    let config_file_location = config_file_location.to_path_buf();
+    let config_file_location2 = config_file_location.to_path_buf();
     let home = home.clone();
     let home2 = home.clone();
 
@@ -1156,7 +1156,7 @@ fn edit_store_in_config(
 fn delete_store_from_config(
     ui: &mut Cursive,
     stores: Arc<Mutex<Vec<PasswordStore>>>,
-    config_file_location: &PathBuf,
+    config_file_location: &Path,
 ) {
     let mut l = ui.find_name::<SelectView<String>>("stores").unwrap();
 
@@ -1190,7 +1190,7 @@ fn delete_store_from_config(
 fn add_store_to_config(
     ui: &mut Cursive,
     stores: Arc<Mutex<Vec<PasswordStore>>>,
-    config_file_location: &PathBuf,
+    config_file_location: &Path,
     home: &Option<PathBuf>,
 ) {
     let mut fields = LinearLayout::vertical();
@@ -1232,8 +1232,8 @@ fn add_store_to_config(
     fields.add_child(keys_fields);
 
     let stores2 = stores.clone();
-    let config_file_location = config_file_location.clone();
-    let config_file_location2 = config_file_location.clone();
+    let config_file_location = config_file_location.to_path_buf();
+    let config_file_location2 = config_file_location.to_path_buf();
     let home = home.clone();
     let home2 = home.clone();
 

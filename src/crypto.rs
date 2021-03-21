@@ -82,7 +82,7 @@ impl Crypto for GpgMe {
         let signature = ctx.sign_detached(to_sign, &mut output);
 
         if let Err(e) = signature {
-            return Err(Error::GPG(e));
+            return Err(Error::Gpg(e));
         }
 
         Ok(String::from_utf8(output)?)
