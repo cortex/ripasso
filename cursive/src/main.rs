@@ -46,8 +46,7 @@ use pass::Result;
 mod helpers;
 mod wizard;
 
-#[macro_use]
-extern crate lazy_static;
+use lazy_static::lazy_static;
 
 lazy_static! {
     static ref CATALOG: gettext::Catalog = get_translation_catalog();
