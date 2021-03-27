@@ -58,7 +58,7 @@ fn do_create(ui: &mut Cursive, password_store_dir: &Option<PathBuf>, home: &Opti
     let home = home.clone();
     match std::fs::create_dir_all(&pass_home) {
         Err(err) => {
-            helpers::errorbox(ui, &pass::Error::IO(err));
+            helpers::errorbox(ui, &pass::Error::Io(err));
             ui.quit();
         }
         Ok(_) => {

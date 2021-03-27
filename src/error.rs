@@ -5,10 +5,10 @@ use std::string;
 /// A enum that contains the different types of errors that the library returns as part of Result's.
 #[derive(Debug)]
 pub enum Error {
-    IO(io::Error),
+    Io(io::Error),
     Git(git2::Error),
     Gpg(gpgme::Error),
-    UTF8(string::FromUtf8Error),
+    Utf8(string::FromUtf8Error),
     Generic(&'static str),
     GenericDyn(String),
     PathError(path::StripPrefixError),
@@ -23,7 +23,7 @@ pub enum Error {
 
 impl From<io::Error> for Error {
     fn from(err: io::Error) -> Error {
-        Error::IO(err)
+        Error::Io(err)
     }
 }
 
@@ -41,7 +41,7 @@ impl From<git2::Error> for Error {
 
 impl From<string::FromUtf8Error> for Error {
     fn from(err: string::FromUtf8Error) -> Error {
-        Error::UTF8(err)
+        Error::Utf8(err)
     }
 }
 
@@ -129,10 +129,10 @@ impl
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match &*self {
-            Error::IO(err) => write!(f, "{}", err),
+            Error::Io(err) => write!(f, "{}", err),
             Error::Git(err) => write!(f, "{}", err),
             Error::Gpg(err) => write!(f, "{}", err),
-            Error::UTF8(err) => write!(f, "{}", err),
+            Error::Utf8(err) => write!(f, "{}", err),
             Error::Generic(err) => write!(f, "{}", err),
             Error::GenericDyn(err) => write!(f, "{}", err),
             Error::PathError(err) => write!(f, "{}", err),
