@@ -82,7 +82,7 @@ msgstr "Kopiera (ctrl-y)"
 
 #: cursive/src/main.rs:1493
 msgid "Copy Name (ctrl-u)"
-msgstr "Kopiera Namnet (ctrl-y)"
+msgstr "Kopiera Namnet (ctrl-u)"
 
 #: cursive/src/wizard.rs:77 cursive/src/wizard.rs:102 cursive/src/wizard.rs:146
 msgid "Create"
