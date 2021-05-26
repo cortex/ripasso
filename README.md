@@ -74,7 +74,8 @@ yay install ripasso-cursive
 
 ### Fedora
 
-Avaliable in [Copr](https://copr.fedorainfracloud.org/coprs/atim/ripasso/)
+Avaliable in [Copr](https://copr.fedorainfracloud.org/coprs/atim/ripasso/) 
+[ currently not working on 34 ]
 ```
 sudo dnf copr enable atim/ripasso -y
 ```
