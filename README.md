@@ -66,7 +66,6 @@ For it to run, you need to be in the gtk directory
 ```
 cd gtk
 cargo run
-
 ```
 ## Install instructions
 
