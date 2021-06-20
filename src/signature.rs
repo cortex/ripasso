@@ -320,7 +320,7 @@ impl Recipient {
     ) -> Result<()> {
         let mut recipients: Vec<Recipient> = Recipient::all_recipients(&recipient_file)?;
 
-        recipients.retain(|ref vs| vs.key_id != s.key_id);
+        recipients.retain(|vs| vs.key_id != s.key_id);
 
         if recipients.is_empty() {
             return Err(Error::Generic("Can't delete the last encryption key"));

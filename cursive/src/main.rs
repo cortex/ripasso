@@ -337,7 +337,7 @@ fn do_rename_file(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
 
             let col = ui.screen_size().x;
             let entry = &store.lock()?.passwords[index];
-            l.add_item(create_label(&entry, col), entry.clone());
+            l.add_item(create_label(entry, col), entry.clone());
             l.sort_by_label();
 
             ui.pop_layer();
@@ -777,14 +777,14 @@ fn search(store: &PasswordStoreType, ui: &mut Cursive, query: &str) {
         .find_name::<SelectView<pass::PasswordEntry>>("results")
         .unwrap();
 
-    match pass::search(&store, &String::from(query)) {
+    match pass::search(store, &String::from(query)) {
         Err(err) => {
             helpers::errorbox(ui, &err);
         }
         Ok(r) => {
             l.clear();
             for p in &r {
-                l.add_item(create_label(&p, col), p.clone());
+                l.add_item(create_label(p, col), p.clone());
             }
             l.sort_by_label();
         }
@@ -818,7 +818,7 @@ fn git_pull(ui: &mut Cursive, store: PasswordStoreType) {
     ui.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
         l.clear();
         for p in store.passwords.iter() {
-            l.add_item(create_label(&p, col), p.clone());
+            l.add_item(create_label(p, col), p.clone());
         }
     });
     ui.call_on_name("status_bar", |l: &mut TextView| {
