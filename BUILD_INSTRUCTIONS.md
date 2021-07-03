@@ -34,7 +34,19 @@ $ cargo build --all
 ```
 $ pacman -S qt5-base qt5-svg qt5-declarative
 ```
-
+### Fedora
+#### All
+```
+$ dnf install cargo gpgme-devel openssl-devel
+```
+#### GTK
+```
+$ dnf install rust-gdk-devel
+```
+#### QML
+```
+$ dnf install qt5-qtbase-devel qt5-qtdeclarative-devel qt5-qtsvg-devel qt5-qtquickcontrols
+```
 ## Building
 
 Perform the build with:
