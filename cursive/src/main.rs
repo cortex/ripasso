@@ -50,6 +50,24 @@ use lazy_static::lazy_static;
 
 lazy_static! {
     static ref CATALOG: gettext::Catalog = get_translation_catalog();
+    static ref DEFAULT_TERMINAL_SIZE: (usize, usize) = match term_size::dimensions() {
+        Some((w, h)) => (w + 8, h),
+        _ => (0, 0)
+    };
+}
+
+fn screen_width(ui: &mut Cursive) -> usize {
+    match ui.screen_size().x {
+        0 => DEFAULT_TERMINAL_SIZE.0,
+        w => w
+    }
+}
+
+fn screen_height(ui: &mut Cursive) -> usize {
+    match ui.screen_size().y {
+        0 => DEFAULT_TERMINAL_SIZE.1,
+        h => h
+    }
 }
 
 fn down(ui: &mut Cursive) {
@@ -80,7 +98,7 @@ fn page_down(ui: &mut Cursive) {
     let mut l = ui
         .find_name::<SelectView<pass::PasswordEntry>>("results")
         .unwrap();
-    l.select_down(ui.screen_size().y);
+    l.select_down(screen_height(ui));
     ui.call_on_name(
         "scroll_results",
         |l: &mut ScrollView<ResizedView<NamedView<SelectView<pass::PasswordEntry>>>>| {
@@ -93,7 +111,7 @@ fn page_up(ui: &mut Cursive) {
     let mut l = ui
         .find_name::<SelectView<pass::PasswordEntry>>("results")
         .unwrap();
-    l.select_up(ui.screen_size().y);
+    l.select_up(screen_height(ui));
     ui.call_on_name(
         "scroll_results",
         |l: &mut ScrollView<ResizedView<NamedView<SelectView<pass::PasswordEntry>>>>| {
@@ -335,7 +353,7 @@ fn do_rename_file(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
                 l.remove_item(delete_id);
             }
 
-            let col = ui.screen_size().x;
+            let col = screen_width(ui);
             let entry = &store.lock()?.passwords[index];
             l.add_item(create_label(entry, col), entry.clone());
             l.sort_by_label();
@@ -448,7 +466,7 @@ fn create_save(s: &mut Cursive, store: PasswordStoreType) {
     match entry {
         Err(err) => helpers::errorbox(s, &err),
         Ok(entry) => {
-            let col = s.screen_size().x;
+            let col = screen_width(s);
             s.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
                 l.add_item(create_label(&entry, col), entry);
                 l.sort_by_label();
@@ -767,12 +785,12 @@ fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
             Some(d) => format!("{}", d.format("%Y-%m-%d")),
             None => CATALOG.gettext("n/a").to_string(),
         },
-        _ = col - 12 - 15 - 9, // Optimized for 80 cols
+        col - 12 - 15 - 9, // Optimized for 80 cols
     );
 }
 
 fn search(store: &PasswordStoreType, ui: &mut Cursive, query: &str) {
-    let col = ui.screen_size().x;
+    let col = screen_width(ui);
     let mut l = ui
         .find_name::<SelectView<pass::PasswordEntry>>("results")
         .unwrap();
@@ -813,7 +831,7 @@ fn git_pull(ui: &mut Cursive, store: PasswordStoreType) {
         .reload_password_list()
         .map_err(|err| helpers::errorbox(ui, &err));
 
-    let col = ui.screen_size().x;
+    let col = screen_width(ui);
 
     ui.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
         l.clear();
