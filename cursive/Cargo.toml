@@ -10,17 +10,18 @@ edition = '2018'
 build = "build.rs"
 
 [dependencies]
-cursive = { version = "0.15", default-features = false, features = ["toml", "crossterm-backend"]}
+cursive = { version = "0.16.3", default-features = false, features = ["toml", "crossterm-backend"]}
 clipboard = "0.5"
 ripasso = { path = "../", version = "0.6.0-alpha" }
 locale_config = "0.3.0"
 unic-langid = "0.9.0"
 gettext = "0.4.0"
 lazy_static = "1.4.0"
-toml = "0.5.7"
+toml = "0.5.8"
+term_size = "0.3.2"
 
 [dependencies.config]
-version = "0.10.1"
+version = "0.11.0"
 default-features = false
 features = ["toml"]
 

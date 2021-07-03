@@ -159,7 +159,7 @@ impl PasswordStore {
         }
 
         if !valid_signing_keys.is_empty() {
-            self.verify_gpg_id_file(&pass_home, &valid_signing_keys)?;
+            self.verify_gpg_id_file(&pass_home, valid_signing_keys)?;
         }
 
         self.root = pass_home;
@@ -358,7 +358,7 @@ impl PasswordStore {
                         files_to_find.retain(|target| {
                             push_password_if_match(
                                 target,
-                                &found,
+                                found,
                                 &commit,
                                 &repo,
                                 &mut passwords,
@@ -433,7 +433,7 @@ impl PasswordStore {
     /// Removes a key from the .gpg-id file and re-encrypts all the passwords
     pub fn remove_recipient(&self, r: &Recipient) -> Result<()> {
         Recipient::remove_recipient_from_file(
-            &r,
+            r,
             self.recipient_file(),
             &self.valid_gpg_signing_keys,
         )?;
@@ -442,7 +442,7 @@ impl PasswordStore {
 
     /// Adds a key to the .gpg-id file and re-encrypts all the passwords
     pub fn add_recipient(&self, r: &Recipient) -> Result<()> {
-        Recipient::add_recipient_to_file(&r, self.recipient_file(), &self.valid_gpg_signing_keys)?;
+        Recipient::add_recipient_to_file(r, self.recipient_file(), &self.valid_gpg_signing_keys)?;
         self.reencrypt_all_password_entries()
     }
 
@@ -580,7 +580,7 @@ fn push_password_if_match(
 
         let name_return = name_from_commit(commit);
 
-        let signature_return = verify_git_signature(&repo, &oid, store);
+        let signature_return = verify_git_signature(repo, oid, store);
 
         passwords.push(PasswordEntry::new(
             &store.root,
@@ -765,7 +765,7 @@ impl PasswordEntry {
     /// Updates the password store entry with new content, and commits those to git if a repository
     /// is supplied.
     pub fn update(&self, secret: String, store: &PasswordStore) -> Result<()> {
-        self.update_internal(secret, &store)?;
+        self.update_internal(secret, store)?;
 
         if store.repo().is_err() {
             return Ok(());
@@ -977,7 +977,7 @@ fn add_and_commit_internal(
     }
     let oid = index.write_tree()?;
     let signature = repo.signature()?;
-    let parent_commit_res = find_last_commit(&repo);
+    let parent_commit_res = find_last_commit(repo);
     let mut parents = vec![];
     let parent_commit;
     if parent_commit_res.is_ok() {
@@ -988,7 +988,7 @@ fn add_and_commit_internal(
     let tree = repo.find_tree(oid)?;
 
     let oid = commit(
-        &repo,
+        repo,
         &signature,
         &message.to_string(),
         &tree,
@@ -1085,7 +1085,7 @@ fn find_origin(repo: &git2::Repository) -> Result<(git2::Remote, String)> {
             let upstream_name = upstream_name_buf
                 .as_str()
                 .ok_or("Can't convert to string")?;
-            let origin = repo.find_remote(&upstream_name)?;
+            let origin = repo.find_remote(upstream_name)?;
             return Ok((origin, b.name()?.ok_or("no branch name")?.to_string()));
         }
     }
@@ -1265,7 +1265,7 @@ fn verify_git_signature(
     id: &Oid,
     store: &PasswordStore,
 ) -> Result<SignatureStatus> {
-    let (signature, signed_data) = repo.extract_signature(&id, Some("gpgsig"))?;
+    let (signature, signed_data) = repo.extract_signature(id, Some("gpgsig"))?;
 
     let signature_str = str::from_utf8(&signature)?.to_string();
     let signed_data_str = str::from_utf8(&signed_data)?.to_string();
@@ -1480,15 +1480,15 @@ pub fn read_config(
     let mut settings = config::Config::default();
     let config_file_location = xdg_config_file_location(home, xdg_config_home)?;
 
-    if settings_file_exists(&home, &xdg_config_home) {
+    if settings_file_exists(home, xdg_config_home) {
         settings.merge(file_settings(&config_file_location))?;
     }
 
-    if home_exists(&home, &settings) {
-        settings.merge(home_settings(&home)?)?;
+    if home_exists(home, &settings) {
+        settings.merge(home_settings(home)?)?;
     }
 
-    if env_var_exists(&store_dir, signing_keys) {
+    if env_var_exists(store_dir, signing_keys) {
         settings.merge(var_settings(store_dir, signing_keys)?)?;
     }
 
