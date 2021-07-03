@@ -43,7 +43,7 @@ fn create_git_repo(ui: &mut Cursive, password_store_dir: &Option<PathBuf>, home:
             &None,
         ) {
             Err(err) => helpers::errorbox(ui, &err),
-            Ok(store) => match store.add_and_commit(&[PathBuf::from(".gpg-id")], &message) {
+            Ok(store) => match store.add_and_commit(&[PathBuf::from(".gpg-id")], message) {
                 Err(err) => helpers::errorbox(ui, &err),
                 Ok(_) => ui.quit(),
             },
