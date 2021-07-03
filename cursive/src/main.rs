@@ -52,21 +52,21 @@ lazy_static! {
     static ref CATALOG: gettext::Catalog = get_translation_catalog();
     static ref DEFAULT_TERMINAL_SIZE: (usize, usize) = match term_size::dimensions() {
         Some((w, h)) => (w + 8, h),
-        _ => (0, 0)
+        _ => (0, 0),
     };
 }
 
 fn screen_width(ui: &mut Cursive) -> usize {
     match ui.screen_size().x {
         0 => DEFAULT_TERMINAL_SIZE.0,
-        w => w
+        w => w,
     }
 }
 
 fn screen_height(ui: &mut Cursive) -> usize {
     match ui.screen_size().y {
         0 => DEFAULT_TERMINAL_SIZE.1,
-        h => h
+        h => h,
     }
 }
 
