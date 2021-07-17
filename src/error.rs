@@ -18,6 +18,7 @@ pub enum Error {
     RecipientNotInKeyRing(String),
     ConfigError(config::ConfigError),
     SerError(toml::ser::Error),
+    ReqwestError(reqwest::Error),
     NoneError,
 }
 
@@ -110,6 +111,12 @@ impl From<std::sync::PoisonError<std::sync::MutexGuard<'_, crate::pass::Password
     }
 }
 
+impl From<reqwest::Error> for Error {
+    fn from(err: reqwest::Error) -> Error {
+        Error::ReqwestError(err)
+    }
+}
+
 impl
     From<
         std::sync::PoisonError<
@@ -142,6 +149,7 @@ impl std::fmt::Display for Error {
             Error::RecipientNotInKeyRing(err) => write!(f, "{}", err),
             Error::ConfigError(err) => write!(f, "{}", err),
             Error::SerError(err) => write!(f, "{}", err),
+            Error::ReqwestError(err) => write!(f, "{}", err),
             Error::NoneError => write!(f, "NoneError"),
         }
     }

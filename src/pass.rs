@@ -44,7 +44,7 @@ pub struct PasswordStore {
     /// The absolute path to the root directory of the password store
     root: PathBuf,
     /// A list of keys that are allowed to sign the .gpg-id file, obtained from the environmental
-    /// variable `PASSWORD_STORE_SIGNING_KEY`
+    /// variable `PASSWORD_STORE_SIGNING_KEY` or from the configuration file
     valid_gpg_signing_keys: Vec<String>,
     /// a list of password files with meta data
     pub passwords: Vec<PasswordEntry>,
@@ -91,7 +91,7 @@ impl PasswordStore {
         &self.name
     }
 
-    /// Returns a vec with the keys in the .gog-id file
+    /// Returns a vec with the keys that are allowed to sign the .gpg-id file
     pub fn get_valid_gpg_signing_keys(&self) -> &Vec<String> {
         &self.valid_gpg_signing_keys
     }
@@ -1199,6 +1199,17 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
     //cleanup
     repo.cleanup_state()?;
     Ok(())
+}
+
+/// Import the key_ids from the signature file from a keyserver.
+pub fn pgp_pull(store: &PasswordStore) -> Result<String> {
+    let mut recipient_file = store.root.clone();
+    recipient_file.push(".gpg-id");
+    let recipients = Recipient::all_recipients(&recipient_file)?;
+
+    let result = store.crypto.pull_keys(&recipients)?;
+
+    Ok(result)
 }
 
 fn triple<T: Display>(

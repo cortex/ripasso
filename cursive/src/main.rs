@@ -844,6 +844,38 @@ fn git_pull(ui: &mut Cursive, store: PasswordStoreType) {
     });
 }
 
+fn pgp_pull(ui: &mut Cursive, store: PasswordStoreType) {
+    let d = Dialog::around(TextView::new(
+        "Download pgp data from keys.openpgp.org and import them into your key ring?",
+    ))
+    .dismiss_button(CATALOG.gettext("Cancel"))
+    .button(CATALOG.gettext("Download"), move |ui| {
+        ui.pop_layer();
+        let store = store.lock().unwrap();
+        match pass::pgp_pull(&store) {
+            Err(err) => helpers::errorbox(ui, &err),
+            Ok(result) => {
+                let d = Dialog::around(TextView::new(result))
+                    .dismiss_button(CATALOG.gettext("Ok"))
+                    .title(CATALOG.gettext("Import Results"));
+
+                let ev = OnEventView::new(d).on_event(Key::Esc, |s| {
+                    s.pop_layer();
+                });
+
+                ui.add_layer(ev);
+            }
+        }
+    })
+    .title(CATALOG.gettext("GPG Download"));
+
+    let ev = OnEventView::new(d).on_event(Key::Esc, |s| {
+        s.pop_layer();
+    });
+
+    ui.add_layer(ev);
+}
+
 fn do_delete_last_word(ui: &mut Cursive, store: PasswordStoreType) {
     ui.call_on_name("search_box", |e: &mut EditView| {
         let s = e.get_content();
@@ -1586,6 +1618,11 @@ fn main() {
             .leaf(CATALOG.gettext("Git Push (ctrl-g)"), {
                 let store = store.clone();
                 move |ui: &mut Cursive| git_push(ui, store.clone())
+            })
+            .delimiter()
+            .leaf(CATALOG.gettext("Pull PGP Certificates"), {
+                let store = store.clone();
+                move |ui: &mut Cursive| pgp_pull(ui, store.clone())
             })
             .delimiter()
             .leaf(CATALOG.gettext("Quit (esc)"), |s| s.quit()),

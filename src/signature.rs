@@ -118,7 +118,7 @@ pub enum KeyRingStatus {
 pub struct Recipient {
     /// Human readable name of the person.
     pub name: String,
-    /// Machine readable identity, in the form of a gpg key id.
+    /// Machine readable identity, in the form of a gpg key id (16 hex chars) or a fingerprint (40 hex chars).
     pub key_id: String,
     /// The status of the key in GPG's keyring
     pub key_ring_status: KeyRingStatus,
