@@ -32,6 +32,9 @@ pub trait Crypto {
         sig: &[u8],
         valid_signing_keys: &[String],
     ) -> std::result::Result<SignatureStatus, VerificationError>;
+
+    /// pull keys from the keyserver for those recipients.
+    fn pull_keys(&self, recipients: &[Recipient]) -> Result<String>;
 }
 
 pub struct GpgMe {}
@@ -128,5 +131,46 @@ impl Crypto for GpgMe {
                 }
             }
         }
+    }
+
+    fn pull_keys(&self, recipients: &[Recipient]) -> Result<String> {
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+
+        let mut result_str = "".to_owned();
+        for recipient in recipients {
+            let url = match recipient.key_id.len() {
+                16 => format!(
+                    "https://keys.openpgp.org/vks/v1/by-keyid/{}",
+                    recipient.key_id
+                )
+                .to_string(),
+                18 if recipient.key_id.starts_with("0x") => format!(
+                    "https://keys.openpgp.org/vks/v1/by-keyid/{}",
+                    recipient.key_id[2..].to_string()
+                )
+                .to_string(),
+                40 => format!(
+                    "https://keys.openpgp.org/vks/v1/by-fingerprint/{}",
+                    recipient.key_id
+                )
+                .to_string(),
+                42 if recipient.key_id.starts_with("0x") => format!(
+                    "https://keys.openpgp.org/vks/v1/by-fingerprint/{}",
+                    recipient.key_id[2..].to_string()
+                )
+                .to_string(),
+                _ => return Err(Error::Generic("key id is not 16 or 40 hex chars")),
+            };
+            let response = reqwest::blocking::get(url)?.text()?;
+
+            let result = ctx.import(response)?;
+
+            result_str.push_str(&format!(
+                "{}: import result: {:?}\n\n",
+                recipient.key_id, result
+            ));
+        }
+
+        Ok(result_str)
     }
 }
