@@ -100,4 +100,8 @@ impl Crypto for MockCrypto {
         self.verify_called.replace(true);
         Err(VerificationError::SignatureFromWrongRecipient)
     }
+
+    fn pull_keys(&self, _recipients: &[Recipient]) -> Result<String> {
+        Ok("dummy implementation".to_owned())
+    }
 }
