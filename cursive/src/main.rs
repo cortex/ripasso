@@ -844,6 +844,46 @@ fn git_pull(ui: &mut Cursive, store: PasswordStoreType) {
     });
 }
 
+fn pgp_import(ui: &mut Cursive, store: PasswordStoreType) {
+    let d = Dialog::around(
+        TextArea::new()
+            .with_name("gpg_import_text_area")
+            .min_size((50, 20)),
+    )
+    .title(CATALOG.gettext("Manual GPG Import"))
+    .dismiss_button(CATALOG.gettext("Cancel"))
+    .button(CATALOG.gettext("Import"), move |s| {
+        let store = store.clone();
+        let store = store.lock().unwrap();
+
+        let ta = s.find_name::<TextArea>("gpg_import_text_area").unwrap();
+        let text = ta.get_content();
+
+        s.pop_layer();
+
+        match pass::pgp_import(&store, text) {
+            Err(err) => helpers::errorbox(s, &err),
+            Ok(result) => {
+                let d = Dialog::around(TextView::new(result))
+                    .dismiss_button(CATALOG.gettext("Ok"))
+                    .title(CATALOG.gettext("Import Results"));
+
+                let ev = OnEventView::new(d).on_event(Key::Esc, |s| {
+                    s.pop_layer();
+                });
+
+                s.add_layer(ev);
+            }
+        }
+    });
+
+    let ev = OnEventView::new(d).on_event(Key::Esc, |s| {
+        s.pop_layer();
+    });
+
+    ui.add_layer(ev);
+}
+
 fn pgp_pull(ui: &mut Cursive, store: PasswordStoreType) {
     let d = Dialog::around(TextView::new(
         "Download pgp data from keys.openpgp.org and import them into your key ring?",
@@ -1623,6 +1663,10 @@ fn main() {
             .leaf(CATALOG.gettext("Pull PGP Certificates"), {
                 let store = store.clone();
                 move |ui: &mut Cursive| pgp_pull(ui, store.clone())
+            })
+            .leaf(CATALOG.gettext("Import PGP Certificate from text"), {
+                let store = store.clone();
+                move |ui: &mut Cursive| pgp_import(ui, store.clone())
             })
             .delimiter()
             .leaf(CATALOG.gettext("Quit (esc)"), |s| s.quit()),

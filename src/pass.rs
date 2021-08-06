@@ -1212,6 +1212,10 @@ pub fn pgp_pull(store: &PasswordStore) -> Result<String> {
     Ok(result)
 }
 
+pub fn pgp_import(store: &PasswordStore, text: &str) -> Result<String> {
+    store.crypto.import_key(text)
+}
+
 fn triple<T: Display>(
     e: &T,
 ) -> (
