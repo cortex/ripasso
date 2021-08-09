@@ -104,4 +104,8 @@ impl Crypto for MockCrypto {
     fn pull_keys(&self, _recipients: &[Recipient]) -> Result<String> {
         Ok("dummy implementation".to_owned())
     }
+
+    fn import_key(&self, key: &str) -> Result<String> {
+        Ok("dummy implementation".to_owned())
+    }
 }

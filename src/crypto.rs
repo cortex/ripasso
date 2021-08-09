@@ -35,6 +35,9 @@ pub trait Crypto {
 
     /// pull keys from the keyserver for those recipients.
     fn pull_keys(&self, recipients: &[Recipient]) -> Result<String>;
+
+    /// import a key from text.
+    fn import_key(&self, key: &str) -> Result<String>;
 }
 
 pub struct GpgMe {}
@@ -170,6 +173,16 @@ impl Crypto for GpgMe {
                 recipient.key_id, result
             ));
         }
+
+        Ok(result_str)
+    }
+
+    fn import_key(&self, key: &str) -> Result<String> {
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+
+        let result = ctx.import(key)?;
+
+        let result_str = format!("Import result: {:?}\n\n", result);
 
         Ok(result_str)
     }
