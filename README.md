@@ -74,7 +74,7 @@ yay install ripasso-cursive
 
 ### Fedora
 
-Avaliable in [Copr](https://copr.fedorainfracloud.org/coprs/atim/ripasso/)
+Available in [Copr](https://copr.fedorainfracloud.org/coprs/atim/ripasso/)
 ```
 sudo dnf copr enable atim/ripasso -y
 ```
@@ -113,6 +113,8 @@ nix-env -iA nixpkgs.ripasso-cursive
 
 [See here](https://github.com/cortex/ripasso/blob/master/BUILD_INSTRUCTIONS.md)
 
-## Translation howto
+## Translations
+
+Do you want to have ripasso in your native language? Help out with a translation:
 
 [See here](https://github.com/cortex/ripasso/blob/master/TRANSLATIONS.md)

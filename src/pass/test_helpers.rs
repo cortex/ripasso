@@ -105,7 +105,7 @@ impl Crypto for MockCrypto {
         Ok("dummy implementation".to_owned())
     }
 
-    fn import_key(&self, key: &str) -> Result<String> {
+    fn import_key(&self, _key: &str) -> Result<String> {
         Ok("dummy implementation".to_owned())
     }
 }

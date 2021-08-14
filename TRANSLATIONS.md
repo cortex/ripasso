@@ -24,4 +24,6 @@ If you want to translate ripasso to your language here is how:
 4. Translate the strings `poedit cursive/res/fr.po`
 
 After that you just need to submit a [pull request on github](https://docs.github.com/en/free-pro-team@latest/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request)
-with your changes in them.
+with your changes. Poedit will generate a `.mo` file in addition to the
+`.po` file, that is only a binary representation of the information in the `.po` file
+and should not be included in the pull request.

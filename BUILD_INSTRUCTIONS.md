@@ -62,14 +62,12 @@ The build produces a number of artifacts:
  * `./target/release/ripasso-cursive` - the main application binary, with the ncurses TUI
  * `./target/release/ripasso-gtk` - the GTK application, still in an experimental phase and not really usable
  * `./target/release/ripasso-qt` - the QT application, still in an experimental phase and not really usable
- * `./target/release/ripasso-man` - the manual page (sort of, more about this below)
+ * `./target/man-page/cursive/ripasso-cursive.1` - The manual page for ripasso-cursive
  * `./target/translations/cursive/fr.mo` - french translation
  * `./target/translations/cursive/it.mo` - italian translation
  * `./target/translations/cursive/nb.mo` - norwegian bokmål translation
  * `./target/translations/cursive/nn.mo` - norwegian nynorsk translation
  * `./target/translations/cursive/sv.mo` - swedish translation
-
-The man page setup is a bit non-standard, the `ripasso-man` project outputs a binary, that in turn prints a man-page when run.
 
 The translation files are in gettext binary format, and should be installed in `/usr/share/ripasso/`. If that location doesn't
 conform to your distribution's guidelines, then you can supply the environmental variable `TRANSLATION_INPUT_PATH` when building to specify another.
