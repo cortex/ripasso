@@ -55,6 +55,7 @@ pub struct MockCrypto {
     pub sign_called: RefCell<bool>,
     pub verify_called: RefCell<bool>,
     encrypt_string_return: Vec<u8>,
+    encrypt_string_error: Option<String>,
 }
 
 impl MockCrypto {
@@ -65,11 +66,18 @@ impl MockCrypto {
             sign_called: RefCell::new(false),
             verify_called: RefCell::new(false),
             encrypt_string_return: vec![],
+            encrypt_string_error: None,
         }
     }
 
     pub fn with_encrypt_string_return(mut self, data: Vec<u8>) -> MockCrypto {
         self.encrypt_string_return = data;
+
+        self
+    }
+
+    pub fn with_encrypt_error(mut self, err_str: String) -> MockCrypto {
+        self.encrypt_string_error = Some(err_str);
 
         self
     }
@@ -83,7 +91,13 @@ impl Crypto for MockCrypto {
 
     fn encrypt_string(&self, _: &str, _: &[Recipient]) -> Result<Vec<u8>> {
         self.encrypt_called.replace(true);
-        Ok(self.encrypt_string_return.clone())
+        if self.encrypt_string_error.is_some() {
+            Err(Error::GenericDyn(
+                self.encrypt_string_error.clone().unwrap(),
+            ))
+        } else {
+            Ok(self.encrypt_string_return.clone())
+        }
     }
 
     fn sign_string(&self, _: &str) -> Result<String> {

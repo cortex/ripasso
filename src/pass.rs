@@ -237,10 +237,25 @@ impl PasswordStore {
             return Err(Error::Generic("file already exist"));
         }
 
-        let mut file = match File::create(path.clone()) {
-            Err(why) => return Err(Error::from(why)),
-            Ok(file) => file,
-        };
+        match self.new_password_file_internal(&path, path_end, content) {
+            Ok(pe) => Ok(pe),
+            Err(err) => {
+                // try to remove the file we created, as cleanup
+                let _ = std::fs::remove_file(path);
+
+                // but always return the original error
+                Err(err)
+            }
+        }
+    }
+
+    fn new_password_file_internal(
+        &mut self,
+        path: &Path,
+        path_end: &str,
+        content: &str,
+    ) -> Result<PasswordEntry> {
+        let mut file = File::create(&path)?;
 
         if !self.valid_gpg_signing_keys.is_empty() {
             self.verify_gpg_id_file(&self.root, &self.valid_gpg_signing_keys)?;
@@ -266,7 +281,7 @@ impl PasswordStore {
                     self.crypto.as_ref(),
                 )?;
 
-                Ok(PasswordEntry::load_from_git(&self.root, &path, &repo, self))
+                Ok(PasswordEntry::load_from_git(&self.root, path, &repo, self))
             }
         }
     }
