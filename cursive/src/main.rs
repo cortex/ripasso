@@ -582,7 +582,7 @@ fn delete_recipient_verification(ui: &mut Cursive, store: PasswordStoreType) {
 fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) {
     let l = &*get_value_from_input(ui, "key_id_input").unwrap();
 
-    match pass::Recipient::from(l.clone()) {
+    match store.lock().unwrap().recipient_from(l) {
         Err(err) => helpers::errorbox(ui, &err),
         Ok(recipient) => {
             if recipient.trust_level != OwnerTrustLevel::Ultimate {
@@ -687,10 +687,10 @@ fn render_recipient_label(
         &recipient.key_id,
         &recipient.name,
         trust,
-        if recipient.expired {
-            CATALOG.gettext("Expired")
+        if recipient.not_usable {
+            CATALOG.gettext("Not Usable")
         } else {
-            CATALOG.gettext("Not expired")
+            CATALOG.gettext("Usable")
         },
         width_key = max_width_key,
         width_name = max_width_name

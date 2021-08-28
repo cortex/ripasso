@@ -1,5 +1,6 @@
 pub use crate::error::{Error, Result};
 use crate::signature::{KeyRingStatus, Recipient, SignatureStatus};
+use std::collections::HashMap;
 
 /// The different types of errors that can occur when doing a signature verification
 pub enum VerificationError {
@@ -16,6 +17,46 @@ pub enum VerificationError {
     TooManySignatures,
 }
 
+/// The strategy for finding the gpg key to sign with can either be to look at the git
+/// config, or ask gpg.
+pub enum FindSigningFingerprintStrategy {
+    GIT,
+    GPG,
+}
+
+pub trait Key {
+    fn user_id_names(&self) -> Vec<String>;
+
+    fn fingerprint(&self) -> Result<String>;
+
+    fn is_not_usable(&self) -> bool;
+}
+
+pub struct GpgMeKey {
+    key: gpgme::Key,
+}
+
+impl Key for GpgMeKey {
+    fn user_id_names(&self) -> Vec<String> {
+        self.key
+            .user_ids()
+            .map(|user_id| user_id.name().unwrap_or("?").to_owned())
+            .collect()
+    }
+
+    fn fingerprint(&self) -> Result<String> {
+        Ok(self.key.fingerprint()?.to_string())
+    }
+
+    fn is_not_usable(&self) -> bool {
+        self.key.is_bad()
+            || self.key.is_revoked()
+            || self.key.is_expired()
+            || self.key.is_disabled()
+            || self.key.is_invalid()
+    }
+}
+
 pub trait Crypto {
     /// Reads a file and decrypts it
     fn decrypt_string(&self, content: &[u8]) -> Result<String>;
@@ -23,7 +64,12 @@ pub trait Crypto {
     fn encrypt_string(&self, content: &str, recipients: &[Recipient]) -> Result<Vec<u8>>;
 
     /// Returns a gpg signature for the supplied string. Suitable to add to a gpg commit.
-    fn sign_string(&self, to_sign: &str) -> Result<String>;
+    fn sign_string(
+        &self,
+        to_sign: &str,
+        valid_gpg_signing_keys: &[String],
+        strategy: &FindSigningFingerprintStrategy,
+    ) -> Result<String>;
 
     /// verifies is a signature is valid
     fn verify_sign(
@@ -38,6 +84,11 @@ pub trait Crypto {
 
     /// import a key from text.
     fn import_key(&self, key: &str) -> Result<String>;
+
+    /// return a key corresponding to the given key id.
+    fn get_key(&self, key_id: &str) -> Result<Box<dyn crate::crypto::Key>>;
+
+    fn get_all_trust_items(&self) -> Result<HashMap<String, crate::signature::OwnerTrustLevel>>;
 }
 
 pub struct GpgMe {}
@@ -73,12 +124,36 @@ impl Crypto for GpgMe {
         Ok(output)
     }
 
-    fn sign_string(&self, to_sign: &str) -> Result<String> {
+    fn sign_string(
+        &self,
+        to_sign: &str,
+        valid_gpg_signing_keys: &[String],
+        strategy: &FindSigningFingerprintStrategy,
+    ) -> Result<String> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
         let config = git2::Config::open_default()?;
 
-        let signing_key = config.get_string("user.signingkey")?;
+        let signing_key = match strategy {
+            FindSigningFingerprintStrategy::GIT => config.get_string("user.signingkey")?,
+            FindSigningFingerprintStrategy::GPG => {
+                let mut key_opt: Option<gpgme::Key> = None;
+
+                for key_id in valid_gpg_signing_keys {
+                    let key_res = ctx.get_key(key_id);
+
+                    if let Ok(r) = key_res {
+                        key_opt = Some(r);
+                    }
+                }
+
+                if let Some(key) = key_opt {
+                    key.fingerprint()?.to_owned()
+                } else {
+                    return Err(Error::Generic("no valid signing key"));
+                }
+            }
+        };
 
         ctx.set_armor(true);
         let key = ctx.get_secret_key(signing_key)?;
@@ -185,5 +260,31 @@ impl Crypto for GpgMe {
         let result_str = format!("Import result: {:?}\n\n", result);
 
         Ok(result_str)
+    }
+
+    fn get_key(&self, key_id: &str) -> Result<Box<dyn crate::crypto::Key>> {
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+
+        Ok(Box::new(GpgMeKey {
+            key: ctx.get_key(key_id)?,
+        }))
+    }
+
+    fn get_all_trust_items(&self) -> Result<HashMap<String, crate::signature::OwnerTrustLevel>> {
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+        ctx.set_key_list_mode(gpgme::KeyListMode::SIGS)?;
+
+        let keys = ctx.find_keys(vec!["".to_string()])?;
+
+        let mut trusts = HashMap::new();
+        for key_res in keys {
+            let key = key_res?;
+            trusts.insert(
+                key.fingerprint()?.to_string(),
+                crate::signature::OwnerTrustLevel::from(&key.owner_trust()),
+            );
+        }
+
+        Ok(trusts)
     }
 }

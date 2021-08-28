@@ -26,7 +26,7 @@ use std::sync::{Arc, Mutex};
 
 use git2::{Oid, Repository};
 
-use crate::crypto::{Crypto, GpgMe, VerificationError};
+use crate::crypto::{Crypto, FindSigningFingerprintStrategy, GpgMe, VerificationError};
 pub use crate::error::{Error, Result};
 pub use crate::signature::{
     parse_signing_keys, KeyRingStatus, OwnerTrustLevel, Recipient, SignatureStatus,
@@ -248,7 +248,7 @@ impl PasswordStore {
 
         let mut recipient_file = self.root.clone();
         recipient_file.push(".gpg-id");
-        let recipients = Recipient::all_recipients(&recipient_file)?;
+        let recipients = self.all_recipients()?;
         let output = self.crypto.encrypt_string(content, &recipients)?;
 
         if let Err(why) = file.write_all(&output) {
@@ -421,7 +421,7 @@ impl PasswordStore {
 
         let mut recipient_file = self.root.clone();
         recipient_file.push(".gpg-id");
-        Recipient::all_recipients(&recipient_file)
+        Recipient::all_recipients(&recipient_file, self.crypto.as_ref())
     }
 
     fn recipient_file(&self) -> PathBuf {
@@ -436,13 +436,19 @@ impl PasswordStore {
             r,
             self.recipient_file(),
             &self.valid_gpg_signing_keys,
+            self.crypto.as_ref(),
         )?;
         self.reencrypt_all_password_entries()
     }
 
     /// Adds a key to the .gpg-id file and re-encrypts all the passwords
     pub fn add_recipient(&self, r: &Recipient) -> Result<()> {
-        Recipient::add_recipient_to_file(r, self.recipient_file(), &self.valid_gpg_signing_keys)?;
+        Recipient::add_recipient_to_file(
+            r,
+            self.recipient_file(),
+            &self.valid_gpg_signing_keys,
+            self.crypto.as_ref(),
+        )?;
         self.reencrypt_all_password_entries()
     }
 
@@ -460,9 +466,8 @@ impl PasswordStore {
             return Ok(());
         }
 
-        let mut recipient_file = self.root.clone();
-        recipient_file.push(".gpg-id");
-        let keys = Recipient::all_recipients(&recipient_file)?
+        let keys = self
+            .all_recipients()?
             .into_iter()
             .map(|s| format!("0x{}, ", s.key_id))
             .collect::<String>();
@@ -562,6 +567,10 @@ impl PasswordStore {
         }
 
         Ok(passwords.len() - 1)
+    }
+
+    pub fn recipient_from(&self, key_id: &str) -> Result<Recipient> {
+        crate::signature::Recipient::from(key_id, self.crypto.as_ref())
     }
 }
 
@@ -744,17 +753,11 @@ impl PasswordEntry {
     }
 
     fn update_internal(&self, secret: String, store: &PasswordStore) -> Result<()> {
-        let recipient_file = {
-            let mut rf = store.root.clone();
-            rf.push(".gpg-id");
-            rf
-        };
-
         if !store.valid_gpg_signing_keys.is_empty() {
             store.verify_gpg_id_file(&store.root, &store.valid_gpg_signing_keys)?;
         }
 
-        let recipients = Recipient::all_recipients(&recipient_file)?;
+        let recipients = store.all_recipients()?;
         let ciphertext = store.crypto.encrypt_string(&secret, &recipients)?;
 
         let mut output = File::create(&self.path)?;
@@ -938,7 +941,7 @@ fn commit(
 
         let commit_as_str = str::from_utf8(&commit_buf)?;
 
-        let sig = crypto.sign_string(commit_as_str)?;
+        let sig = crypto.sign_string(commit_as_str, &[], &FindSigningFingerprintStrategy::GIT)?;
 
         let commit = repo.commit_signed(commit_as_str, &sig, Some("gpgsig"))?;
 
@@ -1205,7 +1208,7 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
 pub fn pgp_pull(store: &PasswordStore) -> Result<String> {
     let mut recipient_file = store.root.clone();
     recipient_file.push(".gpg-id");
-    let recipients = Recipient::all_recipients(&recipient_file)?;
+    let recipients = store.all_recipients()?;
 
     let result = store.crypto.pull_keys(&recipients)?;
 

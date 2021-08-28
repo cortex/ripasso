@@ -1,9 +1,9 @@
 pub use crate::error::{Error, Result};
-use gpgme::Key;
 use std::fs;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
+use crate::crypto::FindSigningFingerprintStrategy;
 use std::collections::{HashMap, HashSet};
 
 /// A git commit for a password might be signed by a gpg key, and this signature's verification
@@ -124,8 +124,9 @@ pub struct Recipient {
     pub key_ring_status: KeyRingStatus,
     /// The trust level the owner of the key ring has placed in this person
     pub trust_level: OwnerTrustLevel,
-    /// The expiration date of the key
-    pub expired: bool,
+    /// If the key isn't usable for any reason, i.e. if any of the gpg function
+    /// `is_bad`, `is_revoked`, `is_expired`, `is_disabled` or `is_invalid` returns true
+    pub not_usable: bool,
 }
 
 impl Recipient {
@@ -135,73 +136,58 @@ impl Recipient {
         key_id: String,
         key_ring_status: KeyRingStatus,
         trust_level: OwnerTrustLevel,
-        expired: bool,
+        not_usable: bool,
     ) -> Recipient {
         Recipient {
             name,
             key_id,
             key_ring_status,
             trust_level,
-            expired,
+            not_usable,
         }
     }
 
     /// Creates a Recipient from a gpg key id string
-    pub fn from(key_id: String) -> Result<Recipient> {
-        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-
-        let key_option = ctx.get_key(key_id.clone());
-        if key_option.is_err() {
+    pub fn from(key_id: &str, crypto: &(dyn crate::crypto::Crypto + Send)) -> Result<Recipient> {
+        let key_result = crypto.get_key(key_id);
+        if key_result.is_err() {
             return Ok(Recipient::new(
                 "key id not in keyring".to_string(),
-                key_id,
+                key_id.to_string(),
                 KeyRingStatus::NotInKeyRing,
                 OwnerTrustLevel::Unknown,
-                false,
+                true,
             ));
         }
 
-        let real_key = key_option?;
+        let real_key = key_result?;
 
-        let mut name = "?";
-        for user_id in real_key.user_ids() {
-            name = user_id.name().unwrap_or("?");
-        }
+        let mut names = real_key.user_id_names();
 
-        let trusts: HashMap<String, OwnerTrustLevel> = Recipient::get_all_trust_items()?;
+        let name = match names.len() {
+            0 => "?".to_string(),
+            _ => names.pop().unwrap(),
+        };
+
+        let trusts: HashMap<String, OwnerTrustLevel> = crypto.get_all_trust_items()?;
 
         Ok(Recipient::new(
-            name.to_string(),
-            real_key.fingerprint()?.to_string(),
+            name,
+            real_key.fingerprint()?,
             KeyRingStatus::InKeyRing,
             (*trusts
-                .get(real_key.fingerprint()?)
+                .get(&real_key.fingerprint()?)
                 .unwrap_or(&OwnerTrustLevel::Unknown))
             .clone(),
-            real_key.is_expired(),
+            real_key.is_not_usable(),
         ))
     }
 
-    fn get_all_trust_items() -> Result<HashMap<String, OwnerTrustLevel>> {
-        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-        ctx.set_key_list_mode(gpgme::KeyListMode::SIGS)?;
-
-        let keys = ctx.find_keys(vec!["".to_string()])?;
-
-        let mut trusts = HashMap::new();
-        for key_res in keys {
-            let key = key_res?;
-            trusts.insert(
-                key.fingerprint()?.to_string(),
-                OwnerTrustLevel::from(&key.owner_trust()),
-            );
-        }
-
-        Ok(trusts)
-    }
-
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
-    pub fn all_recipients(recipient_file: &Path) -> Result<Vec<Recipient>> {
+    pub fn all_recipients(
+        recipient_file: &Path,
+        crypto: &(dyn crate::crypto::Crypto + Send),
+    ) -> Result<Vec<Recipient>> {
         let contents =
             fs::read_to_string(recipient_file).expect("Something went wrong reading the file");
 
@@ -213,38 +199,8 @@ impl Recipient {
             }
         }
 
-        let trusts: HashMap<String, OwnerTrustLevel> = Recipient::get_all_trust_items()?;
-
-        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
         for key in unique_recipients_keys {
-            let key_option = ctx.get_key(key.clone());
-            if key_option.is_err() {
-                recipients.push(Recipient::new(
-                    "key id not in keyring".to_string(),
-                    key.clone(),
-                    KeyRingStatus::NotInKeyRing,
-                    OwnerTrustLevel::Unknown,
-                    false,
-                ));
-                continue;
-            }
-
-            let real_key = key_option?;
-
-            let mut name = "?";
-            for user_id in real_key.user_ids() {
-                name = user_id.name().unwrap_or("?");
-            }
-            recipients.push(Recipient::new(
-                name.to_string(),
-                real_key.fingerprint()?.to_string(),
-                KeyRingStatus::InKeyRing,
-                (*trusts
-                    .get(real_key.fingerprint()?)
-                    .unwrap_or(&OwnerTrustLevel::Unknown))
-                .clone(),
-                real_key.is_expired(),
-            ));
+            recipients.push(Recipient::from(&key, crypto)?)
         }
 
         Ok(recipients)
@@ -254,61 +210,49 @@ impl Recipient {
         recipients: &[Recipient],
         recipients_file: &Path,
         valid_gpg_signing_keys: &[String],
+        crypto: &(dyn crate::crypto::Crypto + Send),
     ) -> Result<()> {
-        {
-            let mut file = std::fs::OpenOptions::new()
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(recipients_file)?;
+
+        let mut file_content = "".to_string();
+        let mut sorted_recipients = recipients.to_owned();
+        sorted_recipients.sort_by(|a, b| a.key_id.cmp(&b.key_id));
+        for recipient in sorted_recipients {
+            if !recipient.key_id.starts_with("0x") {
+                file_content.push_str("0x");
+            }
+            file_content.push_str(recipient.key_id.as_str());
+            file_content.push('\n');
+        }
+        file.write_all(file_content.as_bytes())?;
+
+        if !valid_gpg_signing_keys.is_empty() {
+            let output = crypto.sign_string(
+                &file_content,
+                valid_gpg_signing_keys,
+                &FindSigningFingerprintStrategy::GPG,
+            )?;
+
+            let recipient_sig_filename: PathBuf = {
+                let rf = recipients_file.to_path_buf();
+                let mut sig = rf.into_os_string();
+                sig.push(".sig");
+                sig.into()
+            };
+
+            let mut recipient_sig_file = std::fs::OpenOptions::new()
                 .write(true)
                 .create(true)
                 .truncate(true)
-                .open(recipients_file)?;
+                .open(recipient_sig_filename)?;
 
-            let mut file_content = "".to_string();
-            let mut sorted_recipients = recipients.to_owned();
-            sorted_recipients.sort_by(|a, b| a.key_id.cmp(&b.key_id));
-            for recipient in sorted_recipients {
-                if !recipient.key_id.starts_with("0x") {
-                    file_content.push_str("0x");
-                }
-                file_content.push_str(recipient.key_id.as_str());
-                file_content.push('\n');
-            }
-            file.write_all(file_content.as_bytes())?;
-
-            if !valid_gpg_signing_keys.is_empty() {
-                let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
-                let mut key_opt: Option<Key> = None;
-
-                for key_id in valid_gpg_signing_keys {
-                    let key_res = ctx.get_key(key_id);
-
-                    if let Ok(r) = key_res {
-                        key_opt = Some(r);
-                    }
-                }
-
-                if let Some(key) = key_opt {
-                    ctx.add_signer(&key)?;
-
-                    let mut output = Vec::new();
-                    ctx.sign_detached(file_content, &mut output)?;
-
-                    let recipient_sig_filename: PathBuf = {
-                        let rf = recipients_file.to_path_buf();
-                        let mut sig = rf.into_os_string();
-                        sig.push(".sig");
-                        sig.into()
-                    };
-
-                    let mut recipient_sig_file = std::fs::OpenOptions::new()
-                        .write(true)
-                        .create(true)
-                        .truncate(true)
-                        .open(recipient_sig_filename)?;
-
-                    recipient_sig_file.write_all(&output)?;
-                }
-            }
+            recipient_sig_file.write_all(output.as_bytes())?;
         }
+
         Ok(())
     }
 
@@ -317,8 +261,9 @@ impl Recipient {
         s: &Recipient,
         recipient_file: PathBuf,
         valid_gpg_signing_keys: &[String],
+        crypto: &(dyn crate::crypto::Crypto + Send),
     ) -> Result<()> {
-        let mut recipients: Vec<Recipient> = Recipient::all_recipients(&recipient_file)?;
+        let mut recipients: Vec<Recipient> = Recipient::all_recipients(&recipient_file, crypto)?;
 
         recipients.retain(|vs| vs.key_id != s.key_id);
 
@@ -326,7 +271,12 @@ impl Recipient {
             return Err(Error::Generic("Can't delete the last encryption key"));
         }
 
-        Recipient::write_recipients_file(&recipients, &recipient_file, valid_gpg_signing_keys)
+        Recipient::write_recipients_file(
+            &recipients,
+            &recipient_file,
+            valid_gpg_signing_keys,
+            crypto,
+        )
     }
 
     /// Add a new person to the list of team members to encrypt the passwords for.
@@ -334,8 +284,9 @@ impl Recipient {
         recipient: &Recipient,
         recipient_file: PathBuf,
         valid_gpg_signing_keys: &[String],
+        crypto: &(dyn crate::crypto::Crypto + Send),
     ) -> Result<()> {
-        let mut recipients: Vec<Recipient> = Recipient::all_recipients(&recipient_file)?;
+        let mut recipients: Vec<Recipient> = Recipient::all_recipients(&recipient_file, crypto)?;
 
         for r in &recipients {
             if r.key_id == recipient.key_id {
@@ -346,6 +297,11 @@ impl Recipient {
         }
         recipients.push((*recipient).clone());
 
-        Recipient::write_recipients_file(&recipients, &recipient_file, valid_gpg_signing_keys)
+        Recipient::write_recipients_file(
+            &recipients,
+            &recipient_file,
+            valid_gpg_signing_keys,
+            crypto,
+        )
     }
 }
