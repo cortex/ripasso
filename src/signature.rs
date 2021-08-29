@@ -33,7 +33,10 @@ impl From<gpgme::SignatureSummary> for SignatureStatus {
 /// Turns an optional string into a vec of parsed gpg fingerprints in the form of strings.
 /// If any of the fingerprints isn't a full 40 chars or if they haven't been imported to
 /// the gpg keyring yet, this function instead returns an error.
-pub fn parse_signing_keys(password_store_signing_key: &Option<String>, crypto: &(dyn crate::crypto::Crypto + Send)) -> Result<Vec<String>> {
+pub fn parse_signing_keys(
+    password_store_signing_key: &Option<String>,
+    crypto: &(dyn crate::crypto::Crypto + Send),
+) -> Result<Vec<String>> {
     if password_store_signing_key.is_none() {
         return Ok(vec![]);
     }
