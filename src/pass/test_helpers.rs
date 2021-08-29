@@ -1,5 +1,6 @@
 use super::*;
 
+use crate::crypto::Key;
 use flate2::read::GzDecoder;
 use std::cell::RefCell;
 use std::fs::File;
@@ -47,6 +48,22 @@ fn get_testres_path() -> PathBuf {
     base_path.push("testres");
 
     base_path
+}
+
+pub struct MockKey {}
+
+impl Key for MockKey {
+    fn user_id_names(&self) -> Vec<String> {
+        vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()]
+    }
+
+    fn fingerprint(&self) -> Result<String> {
+        Ok("7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_owned())
+    }
+
+    fn is_not_usable(&self) -> bool {
+        false
+    }
 }
 
 pub struct MockCrypto {
@@ -100,7 +117,12 @@ impl Crypto for MockCrypto {
         }
     }
 
-    fn sign_string(&self, _: &str) -> Result<String> {
+    fn sign_string(
+        &self,
+        _: &str,
+        _: &[String],
+        _: &FindSigningFingerprintStrategy,
+    ) -> Result<String> {
         self.sign_called.replace(true);
         Ok("".to_string())
     }
@@ -121,5 +143,13 @@ impl Crypto for MockCrypto {
 
     fn import_key(&self, _key: &str) -> Result<String> {
         Ok("dummy implementation".to_owned())
+    }
+
+    fn get_key(&self, _key_id: &str) -> Result<Box<dyn Key>> {
+        Ok(Box::new(MockKey {}))
+    }
+
+    fn get_all_trust_items(&self) -> Result<HashMap<String, OwnerTrustLevel>> {
+        Ok(HashMap::new())
     }
 }
