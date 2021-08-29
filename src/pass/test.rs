@@ -1420,6 +1420,77 @@ fn test_new_password_file_in_git_repo() -> Result<()> {
 }
 
 #[test]
+fn test_new_password_file_encryption_failure() -> Result<()> {
+    let td = tempdir()?;
+
+    let mut store = PasswordStore {
+        name: "store_name".to_string(),
+        root: td.path().to_path_buf(),
+        valid_gpg_signing_keys: vec![],
+        passwords: [].to_vec(),
+        style_file: None,
+        crypto: Box::new(MockCrypto::new().with_encrypt_error("unit test error".to_owned())),
+    };
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
+    )?;
+
+    let repo = git2::Repository::init(td.path())?;
+    let mut config = repo.config()?;
+    config.set_str("user.name", "default")?;
+    config.set_str("user.email", "default@example.com")?;
+
+    let err = store.new_password_file("test/file", "password");
+
+    assert_eq!(true, err.is_err());
+
+    assert_eq!(false, td.path().join("test").join("file.gpg").exists());
+
+    Ok(())
+}
+
+#[test]
+fn test_new_password_file_twice() -> Result<()> {
+    let td = tempdir()?;
+
+    let mut store = PasswordStore {
+        name: "store_name".to_string(),
+        root: td.path().to_path_buf(),
+        valid_gpg_signing_keys: vec![],
+        passwords: [].to_vec(),
+        style_file: None,
+        crypto: Box::new(MockCrypto::new().with_encrypt_string_return(vec![32, 32, 32, 32])),
+    };
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
+    )?;
+
+    let repo = git2::Repository::init(td.path())?;
+    let mut config = repo.config()?;
+    config.set_str("user.name", "default")?;
+    config.set_str("user.email", "default@example.com")?;
+
+    let result = store.new_password_file("test/file", "password").unwrap();
+
+    assert_eq!(RepositoryStatus::InRepo, result.is_in_git);
+    assert_eq!(false, result.signature_status.is_some());
+    assert_eq!(true, result.committed_by.is_some());
+    assert_eq!(true, result.updated.is_some());
+    assert_eq!("test/file", result.name);
+
+    let result = store.new_password_file("test/file", "password");
+
+    assert_eq!(true, result.is_err());
+    assert_eq!(true, td.path().join("test").join("file.gpg").exists());
+
+    Ok(())
+}
+
+#[test]
 fn test_new_password_file_outside_pass_dir() -> Result<()> {
     let td = tempdir()?;
 
