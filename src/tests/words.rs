@@ -1,4 +1,4 @@
-use super::*;
+use crate::words::generate_password;
 
 #[test]
 fn do_not_generate_passwords_that_ends_in_space() {

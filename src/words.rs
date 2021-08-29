@@ -7792,4 +7792,5 @@ const WORDS: &[&str] = &[
 ];
 
 #[cfg(test)]
-mod test;
+#[path = "tests/words.rs"]
+mod words_tests;

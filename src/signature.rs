@@ -33,24 +33,22 @@ impl From<gpgme::SignatureSummary> for SignatureStatus {
 /// Turns an optional string into a vec of parsed gpg fingerprints in the form of strings.
 /// If any of the fingerprints isn't a full 40 chars or if they haven't been imported to
 /// the gpg keyring yet, this function instead returns an error.
-pub fn parse_signing_keys(password_store_signing_key: &Option<String>) -> Result<Vec<String>> {
+pub fn parse_signing_keys(password_store_signing_key: &Option<String>, crypto: &(dyn crate::crypto::Crypto + Send)) -> Result<Vec<String>> {
     if password_store_signing_key.is_none() {
         return Ok(vec![]);
     }
-
-    let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
     let mut signing_keys = vec![];
     for key in password_store_signing_key.as_ref().unwrap().split(',') {
         let trimmed = key.trim().to_string();
 
-        if trimmed.len() != 40 || (trimmed.len() != 42 && trimmed.starts_with("0x")) {
+        if trimmed.len() != 40 && (trimmed.len() != 42 && trimmed.starts_with("0x")) {
             return Err(Error::Generic(
                 "signing key isn't in full 40 character id format",
             ));
         }
 
-        let key_res = ctx.get_key(&trimmed);
+        let key_res = crypto.get_key(&trimmed);
         if key_res.is_err() {
             return Err(Error::GenericDyn(format!(
                 "signing key not found in keyring, error: {}",
@@ -305,3 +303,7 @@ impl Recipient {
         )
     }
 }
+
+#[cfg(test)]
+#[path = "tests/signature.rs"]
+mod signature_tests;

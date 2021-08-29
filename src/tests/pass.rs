@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::env;
 use tempfile::tempdir;
 
-use crate::pass::test_helpers::{MockCrypto, UnpackedDir};
+use crate::test_helpers::{MockCrypto, UnpackedDir};
 
 impl std::cmp::PartialEq for Error {
     fn eq(&self, other: &Error) -> bool {
@@ -265,20 +265,6 @@ fn password_store_with_symlink() -> Result<()> {
     assert_eq!(results[2].committed_by.is_none(), false);
     assert_eq!(results[2].updated.is_none(), false);
     Ok(())
-}
-
-#[test]
-fn parse_signing_keys_empty() {
-    let result = parse_signing_keys(&None).unwrap();
-
-    assert_eq!(result.len(), 0);
-}
-
-#[test]
-fn parse_signing_keys_short() {
-    let result = parse_signing_keys(&Some("0x1D108E6C07CBC406".to_owned()));
-
-    assert_eq!(result.is_err(), true);
 }
 
 #[test]

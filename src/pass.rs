@@ -68,7 +68,9 @@ impl PasswordStore {
             return Err(Error::Generic("failed to locate password directory"));
         }
 
-        let signing_keys = parse_signing_keys(password_store_signing_key)?;
+        let crypto = Box::new(GpgMe {});
+
+        let signing_keys = parse_signing_keys(password_store_signing_key, crypto.as_ref())?;
 
         let store = PasswordStore {
             name: store_name.to_string(),
@@ -76,7 +78,7 @@ impl PasswordStore {
             valid_gpg_signing_keys: signing_keys,
             passwords: [].to_vec(),
             style_file: style_file.to_owned(),
-            crypto: Box::new(GpgMe {}),
+            crypto,
         };
 
         if !store.valid_gpg_signing_keys.is_empty() {
@@ -1564,6 +1566,5 @@ pub fn save_config(
 }
 
 #[cfg(test)]
-mod test;
-#[cfg(test)]
-mod test_helpers;
+#[path = "tests/pass.rs"]
+mod pass_tests;
