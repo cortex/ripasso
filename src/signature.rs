@@ -201,7 +201,17 @@ impl Recipient {
         }
 
         for key in unique_recipients_keys {
-            recipients.push(Recipient::from(&key, crypto)?)
+            let recipient = match Recipient::from(&key, crypto) {
+                Ok(r) => r,
+                Err(err) => Recipient::new(
+                    err.to_string(),
+                    key.to_string(),
+                    KeyRingStatus::NotInKeyRing,
+                    OwnerTrustLevel::Unknown,
+                    true,
+                ),
+            };
+            recipients.push(recipient)
         }
 
         Ok(recipients)

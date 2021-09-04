@@ -76,6 +76,7 @@ pub struct MockCrypto {
     pub verify_called: RefCell<bool>,
     encrypt_string_return: Vec<u8>,
     encrypt_string_error: Option<String>,
+    get_key_string_error: Option<String>,
 }
 
 impl MockCrypto {
@@ -87,6 +88,7 @@ impl MockCrypto {
             verify_called: RefCell::new(false),
             encrypt_string_return: vec![],
             encrypt_string_error: None,
+            get_key_string_error: None,
         }
     }
 
@@ -98,6 +100,12 @@ impl MockCrypto {
 
     pub fn with_encrypt_error(mut self, err_str: String) -> MockCrypto {
         self.encrypt_string_error = Some(err_str);
+
+        self
+    }
+
+    pub fn with_get_key_error(mut self, err_str: String) -> MockCrypto {
+        self.get_key_string_error = Some(err_str);
 
         self
     }
@@ -149,7 +157,13 @@ impl Crypto for MockCrypto {
     }
 
     fn get_key(&self, _key_id: &str) -> Result<Box<dyn Key>> {
-        Ok(Box::new(MockKey {}))
+        if self.get_key_string_error.is_some() {
+            Err(Error::GenericDyn(
+                self.get_key_string_error.clone().unwrap(),
+            ))
+        } else {
+            Ok(Box::new(MockKey {}))
+        }
     }
 
     fn get_all_trust_items(&self) -> Result<HashMap<String, OwnerTrustLevel>> {
