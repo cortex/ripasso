@@ -274,7 +274,7 @@ impl Crypto for GpgMe {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
         ctx.set_key_list_mode(gpgme::KeyListMode::SIGS)?;
 
-        let keys = ctx.find_keys(vec!["".to_string()])?;
+        let keys = ctx.find_keys(vec!["".to_owned()])?;
 
         let mut trusts = HashMap::new();
         for key_res in keys {

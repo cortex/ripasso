@@ -49,7 +49,7 @@ impl UI {
             self.current_passwords
                 .clone()
                 .into_iter()
-                .map(|p| (p.name, "".to_string()))
+                .map(|p| (p.name, "".to_owned()))
                 .collect(),
         );
         None
@@ -87,7 +87,7 @@ impl UI {
             // Select notihng if passwords list is empty
             let pass = self.get_password(i);
             self.password.set_name(pass.name);
-            self.password.set_meta("".to_string());
+            self.password.set_meta("".to_owned());
         }
         None
     }
@@ -182,7 +182,7 @@ fn main() {
 
     let store = Arc::new(Mutex::new(
         pass::PasswordStore::new(
-            &"default".to_string(),
+            &"default".to_owned(),
             &password_store_dir,
             &password_store_signing_key,
             &home,

@@ -143,7 +143,7 @@ fn copy(ui: &mut Cursive, store: &PasswordStoreType) {
     thread::spawn(|| {
         thread::sleep(time::Duration::from_secs(40));
         let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-        ctx.set_contents("".to_string()).unwrap();
+        ctx.set_contents("".to_owned()).unwrap();
     });
     ui.call_on_name("status_bar", |l: &mut TextView| {
         l.set_content(CATALOG.gettext("Copied password to copy buffer for 40 seconds"));
@@ -1473,7 +1473,7 @@ fn main() {
     let stores: Arc<Mutex<Vec<PasswordStore>>> = Arc::new(Mutex::new(stores.unwrap()));
 
     let store = Arc::new(Mutex::new(
-        PasswordStore::new(&"".to_string(), &None, &None, &home, &None).unwrap(),
+        PasswordStore::new(&"".to_owned(), &None, &None, &home, &None).unwrap(),
     ));
     {
         let stores = stores.lock().unwrap();

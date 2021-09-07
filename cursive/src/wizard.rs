@@ -36,7 +36,7 @@ fn create_git_repo(ui: &mut Cursive, password_store_dir: &Option<PathBuf>, home:
     } else {
         let message = super::CATALOG.gettext("Initialized password repo with Ripasso");
         match pass::PasswordStore::new(
-            &"default".to_string(),
+            &"default".to_owned(),
             password_store_dir,
             &None,
             home,
