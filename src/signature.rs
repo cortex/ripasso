@@ -1,4 +1,6 @@
 pub use crate::error::{Error, Result};
+use hex::FromHex;
+use std::cmp::PartialEq;
 use std::fs;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -119,8 +121,12 @@ pub enum KeyRingStatus {
 pub struct Recipient {
     /// Human readable name of the person.
     pub name: String,
-    /// Machine readable identity, in the form of a gpg key id (16 hex chars) or a fingerprint (40 hex chars).
+    /// Machine readable identity taken from the .gpg-id file, in the form of a gpg key id
+    /// (16 hex chars) or a fingerprint (40 hex chars).
     pub key_id: String,
+    /// The fingerprint of the gpg key, as 40 hex characters, not prefixed by '0x',
+    /// if the fingerprint of the key is not known, this will be None.
+    pub fingerprint: Option<[u8; 20]>,
     /// The status of the key in GPG's keyring
     pub key_ring_status: KeyRingStatus,
     /// The trust level the owner of the key ring has placed in this person
@@ -135,6 +141,7 @@ impl Recipient {
     fn new(
         name: String,
         key_id: String,
+        fingerprint: Option<[u8; 20]>,
         key_ring_status: KeyRingStatus,
         trust_level: OwnerTrustLevel,
         not_usable: bool,
@@ -142,6 +149,7 @@ impl Recipient {
         Recipient {
             name,
             key_id,
+            fingerprint,
             key_ring_status,
             trust_level,
             not_usable,
@@ -155,6 +163,7 @@ impl Recipient {
             return Ok(Recipient::new(
                 "key id not in keyring".to_owned(),
                 key_id.to_string(),
+                None,
                 KeyRingStatus::NotInKeyRing,
                 OwnerTrustLevel::Unknown,
                 true,
@@ -172,9 +181,12 @@ impl Recipient {
 
         let trusts: HashMap<String, OwnerTrustLevel> = crypto.get_all_trust_items()?;
 
+        let fingerprint = <[u8; 20]>::from_hex(real_key.fingerprint()?)?;
+
         Ok(Recipient::new(
             name,
             real_key.fingerprint()?,
+            Some(fingerprint),
             KeyRingStatus::InKeyRing,
             (*trusts
                 .get(&real_key.fingerprint()?)
@@ -186,11 +198,10 @@ impl Recipient {
 
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
     pub fn all_recipients(
-        recipient_file: &Path,
+        recipients_file: &Path,
         crypto: &(dyn crate::crypto::Crypto + Send),
     ) -> Result<Vec<Recipient>> {
-        let contents =
-            fs::read_to_string(recipient_file).expect("Something went wrong reading the file");
+        let contents = fs::read_to_string(recipients_file)?;
 
         let mut recipients: Vec<Recipient> = Vec::new();
         let mut unique_recipients_keys: HashSet<String> = HashSet::new();
@@ -206,6 +217,7 @@ impl Recipient {
                 Err(err) => Recipient::new(
                     err.to_string(),
                     key.to_string(),
+                    None,
                     KeyRingStatus::NotInKeyRing,
                     OwnerTrustLevel::Unknown,
                     true,
@@ -231,12 +243,17 @@ impl Recipient {
 
         let mut file_content = "".to_owned();
         let mut sorted_recipients = recipients.to_owned();
-        sorted_recipients.sort_by(|a, b| a.key_id.cmp(&b.key_id));
+        sorted_recipients.sort_by(|a, b| a.fingerprint.cmp(&b.fingerprint));
         for recipient in sorted_recipients {
-            if !recipient.key_id.starts_with("0x") {
+            let to_add = match recipient.fingerprint {
+                Some(f) => hex::encode_upper(f),
+                None => recipient.key_id,
+            };
+
+            if !to_add.starts_with("0x") {
                 file_content.push_str("0x");
             }
-            file_content.push_str(recipient.key_id.as_str());
+            file_content.push_str(&to_add);
             file_content.push('\n');
         }
         file.write_all(file_content.as_bytes())?;
@@ -270,11 +287,11 @@ impl Recipient {
     /// Delete one of the persons from the list of team members to encrypt the passwords for.
     pub fn remove_recipient_from_file(
         s: &Recipient,
-        recipient_file: PathBuf,
+        recipients_file: &Path,
         valid_gpg_signing_keys: &[String],
         crypto: &(dyn crate::crypto::Crypto + Send),
     ) -> Result<()> {
-        let mut recipients: Vec<Recipient> = Recipient::all_recipients(&recipient_file, crypto)?;
+        let mut recipients: Vec<Recipient> = Recipient::all_recipients(recipients_file, crypto)?;
 
         recipients.retain(|vs| vs.key_id != s.key_id);
 
@@ -284,7 +301,7 @@ impl Recipient {
 
         Recipient::write_recipients_file(
             &recipients,
-            &recipient_file,
+            recipients_file,
             valid_gpg_signing_keys,
             crypto,
         )
@@ -293,14 +310,14 @@ impl Recipient {
     /// Add a new person to the list of team members to encrypt the passwords for.
     pub fn add_recipient_to_file(
         recipient: &Recipient,
-        recipient_file: PathBuf,
+        recipients_file: &Path,
         valid_gpg_signing_keys: &[String],
         crypto: &(dyn crate::crypto::Crypto + Send),
     ) -> Result<()> {
-        let mut recipients: Vec<Recipient> = Recipient::all_recipients(&recipient_file, crypto)?;
+        let mut recipients: Vec<Recipient> = Recipient::all_recipients(recipients_file, crypto)?;
 
         for r in &recipients {
-            if r.key_id == recipient.key_id {
+            if r == recipient {
                 return Err(Error::Generic(
                     "Team member is already in the list of key ids",
                 ));
@@ -310,10 +327,20 @@ impl Recipient {
 
         Recipient::write_recipients_file(
             &recipients,
-            &recipient_file,
+            recipients_file,
             valid_gpg_signing_keys,
             crypto,
         )
+    }
+}
+
+impl PartialEq for Recipient {
+    fn eq(&self, other: &Self) -> bool {
+        if self.fingerprint == None || other.fingerprint == None {
+            return false;
+        }
+
+        return self.fingerprint.as_ref().unwrap() == other.fingerprint.as_ref().unwrap();
     }
 }
 

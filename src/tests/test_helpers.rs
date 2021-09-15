@@ -1,9 +1,10 @@
 use crate::crypto::{Crypto, FindSigningFingerprintStrategy, Key, VerificationError};
 use crate::error::Error;
 use crate::error::Result;
-use crate::pass::{OwnerTrustLevel, SignatureStatus};
+use crate::pass::{KeyRingStatus, OwnerTrustLevel, SignatureStatus};
 use crate::signature::Recipient;
 use flate2::read::GzDecoder;
+use hex::FromHex;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs::File;
@@ -53,15 +54,19 @@ fn get_testres_path() -> PathBuf {
     base_path
 }
 
-pub struct MockKey {}
+#[derive(Clone)]
+pub struct MockKey {
+    fingerprint: String,
+    user_id_names: Vec<String>,
+}
 
 impl Key for MockKey {
     fn user_id_names(&self) -> Vec<String> {
-        vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()]
+        self.user_id_names.clone()
     }
 
     fn fingerprint(&self) -> Result<String> {
-        Ok("7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_owned())
+        Ok(self.fingerprint.clone())
     }
 
     fn is_not_usable(&self) -> bool {
@@ -69,14 +74,33 @@ impl Key for MockKey {
     }
 }
 
+impl MockKey {
+    pub fn new() -> MockKey {
+        MockKey {
+            fingerprint: "7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_owned(),
+            user_id_names: vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()],
+        }
+    }
+
+    pub fn from_args(fingerprint: String, user_id_names: Vec<String>) -> MockKey {
+        MockKey {
+            user_id_names,
+            fingerprint,
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct MockCrypto {
     pub decrypt_called: RefCell<bool>,
     pub encrypt_called: RefCell<bool>,
     pub sign_called: RefCell<bool>,
     pub verify_called: RefCell<bool>,
     encrypt_string_return: Vec<u8>,
+    sign_string_return: Option<String>,
     encrypt_string_error: Option<String>,
     get_key_string_error: Option<String>,
+    get_key_answers: HashMap<String, MockKey>,
 }
 
 impl MockCrypto {
@@ -87,8 +111,10 @@ impl MockCrypto {
             sign_called: RefCell::new(false),
             verify_called: RefCell::new(false),
             encrypt_string_return: vec![],
+            sign_string_return: None,
             encrypt_string_error: None,
             get_key_string_error: None,
+            get_key_answers: HashMap::new(),
         }
     }
 
@@ -106,6 +132,18 @@ impl MockCrypto {
 
     pub fn with_get_key_error(mut self, err_str: String) -> MockCrypto {
         self.get_key_string_error = Some(err_str);
+
+        self
+    }
+
+    pub fn with_get_key_result(mut self, key_id: String, key: MockKey) -> MockCrypto {
+        self.get_key_answers.insert(key_id, key);
+
+        self
+    }
+
+    pub fn with_sign_string_return(mut self, sign_str: String) -> MockCrypto {
+        self.sign_string_return = Some(sign_str);
 
         self
     }
@@ -135,7 +173,10 @@ impl Crypto for MockCrypto {
         _: &FindSigningFingerprintStrategy,
     ) -> Result<String> {
         self.sign_called.replace(true);
-        Ok("".to_owned())
+        Ok(match self.sign_string_return.as_ref() {
+            Some(s) => s.to_owned(),
+            None => "".to_owned(),
+        })
     }
 
     fn verify_sign(
@@ -156,17 +197,53 @@ impl Crypto for MockCrypto {
         Ok("dummy implementation".to_owned())
     }
 
-    fn get_key(&self, _key_id: &str) -> Result<Box<dyn Key>> {
+    fn get_key(&self, key_id: &str) -> Result<Box<dyn Key>> {
         if self.get_key_string_error.is_some() {
             Err(Error::GenericDyn(
                 self.get_key_string_error.clone().unwrap(),
             ))
         } else {
-            Ok(Box::new(MockKey {}))
+            if self.get_key_answers.contains_key(key_id) {
+                Ok(Box::new(self.get_key_answers.get(key_id).unwrap().clone()))
+            } else {
+                Err(Error::Generic("no key configured"))
+            }
         }
     }
 
     fn get_all_trust_items(&self) -> Result<HashMap<String, OwnerTrustLevel>> {
         Ok(HashMap::new())
     }
+}
+
+pub fn recipient_alex() -> Recipient {
+    Recipient {
+        name: "Alexander Kjäll <alexander.kjall@gmail.com>".to_owned(),
+        key_id: "1D108E6C07CBC406".to_owned(),
+        fingerprint: Some(
+            <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+        ),
+        key_ring_status: KeyRingStatus::InKeyRing,
+        trust_level: OwnerTrustLevel::Ultimate,
+        not_usable: false,
+    }
+}
+pub fn recipient_alex_old() -> Recipient {
+    Recipient {
+        name: "Alexander Kjäll <alexander.kjall@gmail.com>".to_owned(),
+        key_id: "DF0C3D316B7312D5".to_owned(),
+        fingerprint: Some(
+            <[u8; 20]>::from_hex("DB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5").unwrap(),
+        ),
+        key_ring_status: KeyRingStatus::InKeyRing,
+        trust_level: OwnerTrustLevel::Ultimate,
+        not_usable: false,
+    }
+}
+
+pub fn append_file_name(file: &Path) -> PathBuf {
+    let rf = file.to_path_buf();
+    let mut sig = rf.into_os_string();
+    sig.push(".sig");
+    sig.into()
 }

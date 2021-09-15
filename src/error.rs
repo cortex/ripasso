@@ -1,3 +1,4 @@
+use hex::FromHexError;
 use std::io;
 use std::path;
 use std::string;
@@ -20,6 +21,7 @@ pub enum Error {
     SerError(toml::ser::Error),
     ReqwestError(reqwest::Error),
     NoneError,
+    HexError(FromHexError),
 }
 
 impl From<io::Error> for Error {
@@ -133,6 +135,12 @@ impl
     }
 }
 
+impl From<FromHexError> for Error {
+    fn from(err: FromHexError) -> Error {
+        Error::HexError(err)
+    }
+}
+
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match &*self {
@@ -151,6 +159,7 @@ impl std::fmt::Display for Error {
             Error::SerError(err) => write!(f, "{}", err),
             Error::ReqwestError(err) => write!(f, "{}", err),
             Error::NoneError => write!(f, "NoneError"),
+            Error::HexError(err) => write!(f, "{}", err),
         }
     }
 }
