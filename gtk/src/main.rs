@@ -144,7 +144,7 @@ fn setup_menu_copy(
                 thread::spawn(|| {
                     thread::sleep(time::Duration::from_secs(40));
                     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-                    ctx.set_contents("".to_string()).unwrap();
+                    ctx.set_contents("".to_owned()).unwrap();
                 });
             }
         }
@@ -192,7 +192,7 @@ fn setup_menu_copy_name(builder: &Builder, password_list: &TreeView, status_bar:
                 thread::spawn(|| {
                     thread::sleep(time::Duration::from_secs(40));
                     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-                    ctx.set_contents("".to_string()).unwrap();
+                    ctx.set_contents("".to_owned()).unwrap();
                 });
             }
         }
@@ -414,7 +414,7 @@ fn main() {
 
     let store = Arc::new(Mutex::new(
         pass::PasswordStore::new(
-            &"default".to_string(),
+            &"default".to_owned(),
             &password_store_dir,
             &password_store_signing_key,
             &home,
@@ -487,7 +487,7 @@ fn main() {
                 thread::spawn(|| {
                     thread::sleep(time::Duration::from_secs(40));
                     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-                    ctx.set_contents("".to_string()).unwrap();
+                    ctx.set_contents("".to_owned()).unwrap();
                 });
             }
         }

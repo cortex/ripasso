@@ -152,7 +152,7 @@ impl Recipient {
         let key_result = crypto.get_key(key_id);
         if key_result.is_err() {
             return Ok(Recipient::new(
-                "key id not in keyring".to_string(),
+                "key id not in keyring".to_owned(),
                 key_id.to_string(),
                 KeyRingStatus::NotInKeyRing,
                 OwnerTrustLevel::Unknown,
@@ -165,7 +165,7 @@ impl Recipient {
         let mut names = real_key.user_id_names();
 
         let name = match names.len() {
-            0 => "?".to_string(),
+            0 => "?".to_owned(),
             _ => names.pop().unwrap(),
         };
 
@@ -218,7 +218,7 @@ impl Recipient {
             .truncate(true)
             .open(recipients_file)?;
 
-        let mut file_content = "".to_string();
+        let mut file_content = "".to_owned();
         let mut sorted_recipients = recipients.to_owned();
         sorted_recipients.sort_by(|a, b| a.key_id.cmp(&b.key_id));
         for recipient in sorted_recipients {

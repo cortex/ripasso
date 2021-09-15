@@ -1436,12 +1436,12 @@ fn home_settings(home: &Option<PathBuf>) -> Result<config::Config> {
     let home = home.as_ref().ok_or("no home directory set")?;
 
     default_store.insert(
-        "path".to_string(),
+        "path".to_owned(),
         home.join(".password-store/").to_string_lossy().to_string(),
     );
 
     let mut stores_map = std::collections::HashMap::new();
-    stores_map.insert("default".to_string(), default_store);
+    stores_map.insert("default".to_owned(), default_store);
 
     let mut new_settings = config::Config::default();
     new_settings.set("stores", stores_map)?;
@@ -1457,19 +1457,19 @@ fn var_settings(
 
     if let Some(dir) = store_dir {
         if dir.ends_with('/') {
-            default_store.insert("path".to_string(), dir.clone());
+            default_store.insert("path".to_owned(), dir.clone());
         } else {
-            default_store.insert("path".to_string(), dir.clone() + "/");
+            default_store.insert("path".to_owned(), dir.clone() + "/");
         }
     }
     if let Some(keys) = signing_keys {
-        default_store.insert("valid_signing_keys".to_string(), keys.clone());
+        default_store.insert("valid_signing_keys".to_owned(), keys.clone());
     } else {
-        default_store.insert("valid_signing_keys".to_string(), "-1".to_owned());
+        default_store.insert("valid_signing_keys".to_owned(), "-1".to_owned());
     }
 
     let mut stores_map = std::collections::HashMap::new();
-    stores_map.insert("default".to_string(), default_store);
+    stores_map.insert("default".to_owned(), default_store);
 
     let mut new_settings = config::Config::default();
     new_settings.set("stores", stores_map)?;

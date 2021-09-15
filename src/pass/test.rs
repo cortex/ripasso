@@ -70,7 +70,7 @@ fn populate_password_list_small_repo() -> Result<()> {
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "test");
-    assert_eq!(results[0].committed_by, Some("Alexander Kjäll".to_string()));
+    assert_eq!(results[0].committed_by, Some("Alexander Kjäll".to_owned()));
     assert_eq!(results[0].signature_status.is_none(), true);
     Ok(())
 }
@@ -90,7 +90,7 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "10");
-    assert_eq!(results[0].committed_by, Some("Alexander Kjäll".to_string()));
+    assert_eq!(results[0].committed_by, Some("Alexander Kjäll".to_owned()));
     assert_eq!(results[0].signature_status.is_none(), true);
     Ok(())
 }
@@ -276,7 +276,7 @@ fn parse_signing_keys_empty() {
 
 #[test]
 fn parse_signing_keys_short() {
-    let result = parse_signing_keys(&Some("0x1D108E6C07CBC406".to_string()));
+    let result = parse_signing_keys(&Some("0x1D108E6C07CBC406".to_owned()));
 
     assert_eq!(result.is_err(), true);
 }
@@ -353,7 +353,7 @@ fn env_var_exists_test_with_dir() {
 #[test]
 fn home_settings_missing() {
     assert_eq!(
-        Error::GenericDyn("no home directory set".to_string()),
+        Error::GenericDyn("no home directory set".to_owned()),
         home_settings(&None).err().unwrap()
     );
 }
@@ -407,8 +407,8 @@ fn home_settings_dir_doesnt_exists() -> Result<()> {
 #[test]
 fn var_settings_test() -> Result<()> {
     let settings = var_settings(
-        &Some("/home/user/.password-store".to_string()),
-        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_string()),
+        &Some("/home/user/.password-store".to_owned()),
+        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_owned()),
     )?;
 
     let stores = settings.get_table("stores")?;
@@ -526,7 +526,7 @@ fn read_config_empty_config_file_with_keys_env() -> Result<()> {
 
     let (settings, _) = read_config(
         &None,
-        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_string()),
+        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_owned()),
         &Some(PathBuf::from(dir.path())),
         &None,
     )?;
@@ -566,7 +566,7 @@ fn read_config_env_vars() -> Result<()> {
                 .unwrap()
                 .to_owned(),
         ),
-        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_string()),
+        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_owned()),
         &Some(PathBuf::from(dir.path())),
         &None,
     )?;
@@ -608,7 +608,7 @@ fn read_config_home_and_env_vars() -> Result<()> {
                 .unwrap()
                 .to_owned(),
         ),
-        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_string()),
+        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_owned()),
         &Some(PathBuf::from(dir.path())),
         &None,
     )?;
@@ -786,13 +786,13 @@ fn decrypt_secret_empty_file() -> Result<()> {
         &dir.path().join(".password-store"),
         &PathBuf::from("file.gpg"),
         Ok(Local::now()),
-        Ok("".to_string()),
+        Ok("".to_owned()),
         Ok(SignatureStatus::Good),
         RepositoryStatus::NoRepo,
     );
 
     let store = PasswordStore {
-        name: "store_name".to_string(),
+        name: "store_name".to_owned(),
         root: dir.path().join(".password-store"),
         valid_gpg_signing_keys: vec![],
         passwords: vec![],
@@ -823,13 +823,13 @@ fn decrypt_password_empty_file() -> Result<()> {
         &dir.path().join(".password-store"),
         &PathBuf::from("file.gpg"),
         Ok(Local::now()),
-        Ok("".to_string()),
+        Ok("".to_owned()),
         Ok(SignatureStatus::Good),
         RepositoryStatus::NoRepo,
     );
 
     let store = PasswordStore {
-        name: "store_name".to_string(),
+        name: "store_name".to_owned(),
         root: dir.path().join(".password-store"),
         valid_gpg_signing_keys: vec![],
         passwords: vec![],
@@ -868,7 +868,7 @@ fn delete_file() -> Result<()> {
         &dir.path().join(".password-store"),
         &PathBuf::from("file.gpg"),
         Ok(Local::now()),
-        Ok("".to_string()),
+        Ok("".to_owned()),
         Ok(SignatureStatus::Good),
         RepositoryStatus::NoRepo,
     );
@@ -905,7 +905,7 @@ fn get_history_no_repo() -> Result<()> {
         &dir.path().join(".password-store"),
         &PathBuf::from("file.gpg"),
         Ok(Local::now()),
-        Ok("".to_string()),
+        Ok("".to_owned()),
         Ok(SignatureStatus::Good),
         RepositoryStatus::NoRepo,
     );
@@ -932,7 +932,7 @@ fn get_history_with_repo() -> Result<()> {
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "test");
-    assert_eq!(results[0].committed_by, Some("default".to_string()));
+    assert_eq!(results[0].committed_by, Some("default".to_owned()));
     assert_eq!(results[0].signature_status.is_none(), true);
 
     let pw = &results[0];
@@ -1121,7 +1121,7 @@ fn test_move_and_commit_signed() -> Result<()> {
     )?;
 
     let store = PasswordStore {
-        name: "store_name".to_string(),
+        name: "store_name".to_owned(),
         root: dir.dir().to_path_buf(),
         valid_gpg_signing_keys: vec![],
         passwords: vec![],
@@ -1146,7 +1146,7 @@ fn test_move_and_commit_signed() -> Result<()> {
 #[test]
 fn test_search() -> Result<()> {
     let p1 = PasswordEntry {
-        name: "no/match/check".to_string(),
+        name: "no/match/check".to_owned(),
         path: Default::default(),
         updated: None,
         committed_by: None,
@@ -1154,7 +1154,7 @@ fn test_search() -> Result<()> {
         is_in_git: RepositoryStatus::InRepo,
     };
     let p2 = PasswordEntry {
-        name: "dir/test/middle".to_string(),
+        name: "dir/test/middle".to_owned(),
         path: Default::default(),
         updated: None,
         committed_by: None,
@@ -1162,7 +1162,7 @@ fn test_search() -> Result<()> {
         is_in_git: RepositoryStatus::InRepo,
     };
     let p3 = PasswordEntry {
-        name: " space test ".to_string(),
+        name: " space test ".to_owned(),
         path: Default::default(),
         updated: None,
         committed_by: None,
@@ -1170,7 +1170,7 @@ fn test_search() -> Result<()> {
         is_in_git: RepositoryStatus::InRepo,
     };
     let store = PasswordStore {
-        name: "store_name".to_string(),
+        name: "store_name".to_owned(),
         root: std::env::temp_dir(),
         valid_gpg_signing_keys: vec![],
         passwords: vec![p1, p2, p3],
@@ -1196,9 +1196,9 @@ fn test_verify_git_signature() -> Result<()> {
     let oid = repo.head()?.target().unwrap();
 
     let store = PasswordStore {
-        name: "store_name".to_string(),
+        name: "store_name".to_owned(),
         root: dir.dir().to_path_buf(),
-        valid_gpg_signing_keys: vec!["7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_string()],
+        valid_gpg_signing_keys: vec!["7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_owned()],
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
@@ -1252,9 +1252,9 @@ fn test_remove_and_commit() -> Result<()> {
     let dir = UnpackedDir::new("test_remove_and_commit")?;
 
     let store = PasswordStore {
-        name: "store_name".to_string(),
+        name: "store_name".to_owned(),
         root: dir.dir().to_path_buf(),
-        valid_gpg_signing_keys: vec!["7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_string()],
+        valid_gpg_signing_keys: vec!["7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_owned()],
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
@@ -1299,9 +1299,9 @@ fn test_verify_gpg_id_file_missing_sig_file() -> Result<()> {
     let td = tempdir()?;
 
     let store = PasswordStore {
-        name: "store_name".to_string(),
+        name: "store_name".to_owned(),
         root: td.path().to_path_buf(),
-        valid_gpg_signing_keys: vec!["7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_string()],
+        valid_gpg_signing_keys: vec!["7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_owned()],
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
@@ -1329,9 +1329,9 @@ fn test_verify_gpg_id_file() -> Result<()> {
     let td = tempdir()?;
 
     let store = PasswordStore {
-        name: "store_name".to_string(),
+        name: "store_name".to_owned(),
         root: td.path().to_path_buf(),
-        valid_gpg_signing_keys: vec!["7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_string()],
+        valid_gpg_signing_keys: vec!["7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_owned()],
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
@@ -1361,7 +1361,7 @@ fn test_new_password_file() -> Result<()> {
     let td = tempdir()?;
 
     let mut store = PasswordStore {
-        name: "store_name".to_string(),
+        name: "store_name".to_owned(),
         root: td.path().to_path_buf(),
         valid_gpg_signing_keys: vec![],
         passwords: [].to_vec(),
@@ -1390,7 +1390,7 @@ fn test_new_password_file_in_git_repo() -> Result<()> {
     let td = tempdir()?;
 
     let mut store = PasswordStore {
-        name: "store_name".to_string(),
+        name: "store_name".to_owned(),
         root: td.path().to_path_buf(),
         valid_gpg_signing_keys: vec![],
         passwords: [].to_vec(),
@@ -1424,7 +1424,7 @@ fn test_new_password_file_encryption_failure() -> Result<()> {
     let td = tempdir()?;
 
     let mut store = PasswordStore {
-        name: "store_name".to_string(),
+        name: "store_name".to_owned(),
         root: td.path().to_path_buf(),
         valid_gpg_signing_keys: vec![],
         passwords: [].to_vec(),
@@ -1456,7 +1456,7 @@ fn test_new_password_file_twice() -> Result<()> {
     let td = tempdir()?;
 
     let mut store = PasswordStore {
-        name: "store_name".to_string(),
+        name: "store_name".to_owned(),
         root: td.path().to_path_buf(),
         valid_gpg_signing_keys: vec![],
         passwords: [].to_vec(),
@@ -1495,7 +1495,7 @@ fn test_new_password_file_outside_pass_dir() -> Result<()> {
     let td = tempdir()?;
 
     let mut store = PasswordStore {
-        name: "store_name".to_string(),
+        name: "store_name".to_owned(),
         root: td.path().to_path_buf(),
         valid_gpg_signing_keys: vec![],
         passwords: [].to_vec(),

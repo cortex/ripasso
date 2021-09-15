@@ -103,7 +103,7 @@ impl MockCrypto {
 impl Crypto for MockCrypto {
     fn decrypt_string(&self, _: &[u8]) -> Result<String> {
         self.decrypt_called.replace(true);
-        Ok("".to_string())
+        Ok("".to_owned())
     }
 
     fn encrypt_string(&self, _: &str, _: &[Recipient]) -> Result<Vec<u8>> {
@@ -124,7 +124,7 @@ impl Crypto for MockCrypto {
         _: &FindSigningFingerprintStrategy,
     ) -> Result<String> {
         self.sign_called.replace(true);
-        Ok("".to_string())
+        Ok("".to_owned())
     }
 
     fn verify_sign(
