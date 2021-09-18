@@ -56,7 +56,7 @@ fn get_testres_path() -> PathBuf {
 
 #[derive(Clone)]
 pub struct MockKey {
-    fingerprint: String,
+    fingerprint: [u8; 20],
     user_id_names: Vec<String>,
 }
 
@@ -65,7 +65,7 @@ impl Key for MockKey {
         self.user_id_names.clone()
     }
 
-    fn fingerprint(&self) -> Result<String> {
+    fn fingerprint(&self) -> Result<[u8; 20]> {
         Ok(self.fingerprint.clone())
     }
 
@@ -77,12 +77,12 @@ impl Key for MockKey {
 impl MockKey {
     pub fn new() -> MockKey {
         MockKey {
-            fingerprint: "7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_owned(),
+            fingerprint: <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
             user_id_names: vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()],
         }
     }
 
-    pub fn from_args(fingerprint: String, user_id_names: Vec<String>) -> MockKey {
+    pub fn from_args(fingerprint: [u8; 20], user_id_names: Vec<String>) -> MockKey {
         MockKey {
             user_id_names,
             fingerprint,
@@ -211,7 +211,7 @@ impl Crypto for MockCrypto {
         }
     }
 
-    fn get_all_trust_items(&self) -> Result<HashMap<String, OwnerTrustLevel>> {
+    fn get_all_trust_items(&self) -> Result<HashMap<[u8; 20], OwnerTrustLevel>> {
         Ok(HashMap::new())
     }
 }

@@ -110,7 +110,7 @@ fn all_recipients() {
     let crypto = MockCrypto::new().with_get_key_result(
         "0x1D108E6C07CBC406".to_owned(),
         MockKey::from_args(
-            "7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_owned(),
+            <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
             vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()],
         ),
     );
@@ -128,7 +128,7 @@ fn all_recipients() {
         "Alexander Kjäll <alexander.kjall@gmail.com>",
         result[0].name
     );
-    assert_eq!("7E068070D5EF794B00C8A9D91D108E6C07CBC406", result[0].key_id);
+    assert_eq!("0x1D108E6C07CBC406", result[0].key_id);
     assert_eq!(true, KeyRingStatus::InKeyRing == result[0].key_ring_status);
 }
 
@@ -321,17 +321,11 @@ fn remove_recipient_from_file_two() {
     let crypto = MockCrypto::new()
         .with_get_key_result(
             r.key_id.clone(),
-            MockKey::from_args(
-                hex::encode_upper(r.fingerprint.unwrap()),
-                vec![r.name.clone()],
-            ),
+            MockKey::from_args(r.fingerprint.unwrap(), vec![r.name.clone()]),
         )
         .with_get_key_result(
             r2.key_id.clone(),
-            MockKey::from_args(
-                hex::encode_upper(r2.fingerprint.unwrap()),
-                vec![r2.name.clone()],
-            ),
+            MockKey::from_args(r2.fingerprint.unwrap(), vec![r2.name.clone()]),
         );
 
     assert_eq!(false, recipients_file.exists());
@@ -406,14 +400,14 @@ fn remove_recipient_from_file_same_key_id_different_fingerprint() {
         .with_get_key_result(
             "0xDB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5".to_owned(),
             MockKey::from_args(
-                "0xDB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5".to_owned(),
+                <[u8; 20]>::from_hex("DB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5").unwrap(),
                 vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()],
             ),
         )
         .with_get_key_result(
             "0x88283D2EF664DD5F6AEBB51CDF0C3D316B7312D5".to_owned(),
             MockKey::from_args(
-                "0x88283D2EF664DD5F6AEBB51CDF0C3D316B7312D5".to_owned(),
+                <[u8; 20]>::from_hex("88283D2EF664DD5F6AEBB51CDF0C3D316B7312D5").unwrap(),
                 vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()],
             ),
         );
@@ -470,17 +464,11 @@ fn add_recipient_from_file_one_plus_one() {
     let crypto = MockCrypto::new()
         .with_get_key_result(
             r.key_id.clone(),
-            MockKey::from_args(
-                hex::encode_upper(r.fingerprint.unwrap()),
-                vec![r.name.clone()],
-            ),
+            MockKey::from_args(r.fingerprint.unwrap(), vec![r.name.clone()]),
         )
         .with_get_key_result(
             r2.key_id.clone(),
-            MockKey::from_args(
-                hex::encode_upper(r2.fingerprint.unwrap()),
-                vec![r2.name.clone()],
-            ),
+            MockKey::from_args(r2.fingerprint.unwrap(), vec![r2.name.clone()]),
         );
 
     assert_eq!(false, recipients_file.exists());

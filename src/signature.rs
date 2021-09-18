@@ -1,5 +1,4 @@
 pub use crate::error::{Error, Result};
-use hex::FromHex;
 use std::cmp::PartialEq;
 use std::fs;
 use std::io::prelude::*;
@@ -179,13 +178,13 @@ impl Recipient {
             _ => names.pop().unwrap(),
         };
 
-        let trusts: HashMap<String, OwnerTrustLevel> = crypto.get_all_trust_items()?;
+        let trusts: HashMap<[u8; 20], OwnerTrustLevel> = crypto.get_all_trust_items()?;
 
-        let fingerprint = <[u8; 20]>::from_hex(real_key.fingerprint()?)?;
+        let fingerprint = real_key.fingerprint()?;
 
         Ok(Recipient::new(
             name,
-            real_key.fingerprint()?,
+            key_id.to_owned(),
             Some(fingerprint),
             KeyRingStatus::InKeyRing,
             (*trusts
