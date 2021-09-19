@@ -68,7 +68,9 @@ impl PasswordStore {
             return Err(Error::Generic("failed to locate password directory"));
         }
 
-        let signing_keys = parse_signing_keys(password_store_signing_key)?;
+        let crypto = Box::new(GpgMe {});
+
+        let signing_keys = parse_signing_keys(password_store_signing_key, crypto.as_ref())?;
 
         let store = PasswordStore {
             name: store_name.to_string(),
@@ -76,7 +78,7 @@ impl PasswordStore {
             valid_gpg_signing_keys: signing_keys,
             passwords: [].to_vec(),
             style_file: style_file.to_owned(),
-            crypto: Box::new(GpgMe {}),
+            crypto,
         };
 
         if !store.valid_gpg_signing_keys.is_empty() {
@@ -261,8 +263,8 @@ impl PasswordStore {
             self.verify_gpg_id_file(&self.root, &self.valid_gpg_signing_keys)?;
         }
 
-        let mut recipient_file = self.root.clone();
-        recipient_file.push(".gpg-id");
+        let mut recipients_file = self.root.clone();
+        recipients_file.push(".gpg-id");
         let recipients = self.all_recipients()?;
         let output = self.crypto.encrypt_string(content, &recipients)?;
 
@@ -434,12 +436,10 @@ impl PasswordStore {
             self.verify_gpg_id_file(&self.root, &self.valid_gpg_signing_keys)?;
         }
 
-        let mut recipient_file = self.root.clone();
-        recipient_file.push(".gpg-id");
-        Recipient::all_recipients(&recipient_file, self.crypto.as_ref())
+        Recipient::all_recipients(&self.recipients_file(), self.crypto.as_ref())
     }
 
-    fn recipient_file(&self) -> PathBuf {
+    fn recipients_file(&self) -> PathBuf {
         let mut rf = self.root.clone();
         rf.push(".gpg-id");
         rf
@@ -449,7 +449,7 @@ impl PasswordStore {
     pub fn remove_recipient(&self, r: &Recipient) -> Result<()> {
         Recipient::remove_recipient_from_file(
             r,
-            self.recipient_file(),
+            &self.recipients_file(),
             &self.valid_gpg_signing_keys,
             self.crypto.as_ref(),
         )?;
@@ -460,7 +460,7 @@ impl PasswordStore {
     pub fn add_recipient(&self, r: &Recipient) -> Result<()> {
         Recipient::add_recipient_to_file(
             r,
-            self.recipient_file(),
+            &self.recipients_file(),
             &self.valid_gpg_signing_keys,
             self.crypto.as_ref(),
         )?;
@@ -1221,8 +1221,6 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
 
 /// Import the key_ids from the signature file from a keyserver.
 pub fn pgp_pull(store: &PasswordStore) -> Result<String> {
-    let mut recipient_file = store.root.clone();
-    recipient_file.push(".gpg-id");
     let recipients = store.all_recipients()?;
 
     let result = store.crypto.pull_keys(&recipients)?;
@@ -1564,6 +1562,5 @@ pub fn save_config(
 }
 
 #[cfg(test)]
-mod test;
-#[cfg(test)]
-mod test_helpers;
+#[path = "tests/pass.rs"]
+mod pass_tests;

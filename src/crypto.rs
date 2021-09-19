@@ -1,5 +1,6 @@
 pub use crate::error::{Error, Result};
 use crate::signature::{KeyRingStatus, Recipient, SignatureStatus};
+use hex::FromHex;
 use std::collections::HashMap;
 
 /// The different types of errors that can occur when doing a signature verification
@@ -27,7 +28,7 @@ pub enum FindSigningFingerprintStrategy {
 pub trait Key {
     fn user_id_names(&self) -> Vec<String>;
 
-    fn fingerprint(&self) -> Result<String>;
+    fn fingerprint(&self) -> Result<[u8; 20]>;
 
     fn is_not_usable(&self) -> bool;
 }
@@ -44,8 +45,10 @@ impl Key for GpgMeKey {
             .collect()
     }
 
-    fn fingerprint(&self) -> Result<String> {
-        Ok(self.key.fingerprint()?.to_string())
+    fn fingerprint(&self) -> Result<[u8; 20]> {
+        let fp = self.key.fingerprint()?;
+
+        Ok(<[u8; 20]>::from_hex(fp)?)
     }
 
     fn is_not_usable(&self) -> bool {
@@ -88,7 +91,7 @@ pub trait Crypto {
     /// return a key corresponding to the given key id.
     fn get_key(&self, key_id: &str) -> Result<Box<dyn crate::crypto::Key>>;
 
-    fn get_all_trust_items(&self) -> Result<HashMap<String, crate::signature::OwnerTrustLevel>>;
+    fn get_all_trust_items(&self) -> Result<HashMap<[u8; 20], crate::signature::OwnerTrustLevel>>;
 }
 
 pub struct GpgMe {}
@@ -270,7 +273,7 @@ impl Crypto for GpgMe {
         }))
     }
 
-    fn get_all_trust_items(&self) -> Result<HashMap<String, crate::signature::OwnerTrustLevel>> {
+    fn get_all_trust_items(&self) -> Result<HashMap<[u8; 20], crate::signature::OwnerTrustLevel>> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
         ctx.set_key_list_mode(gpgme::KeyListMode::SIGS)?;
 
@@ -280,7 +283,7 @@ impl Crypto for GpgMe {
         for key_res in keys {
             let key = key_res?;
             trusts.insert(
-                key.fingerprint()?.to_string(),
+                <[u8; 20]>::from_hex(key.fingerprint()?)?,
                 crate::signature::OwnerTrustLevel::from(&key.owner_trust()),
             );
         }
