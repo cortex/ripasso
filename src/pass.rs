@@ -272,7 +272,10 @@ impl PasswordStore {
             return Err(Error::from(why));
         }
         match self.repo() {
-            Err(_) => PasswordEntry::load_from_filesystem(&self.root, &PathBuf::from(path_end)),
+            Err(_) => {
+                self.passwords.push(PasswordEntry::load_from_filesystem(&self.root, &PathBuf::from(path_end))?);
+                PasswordEntry::load_from_filesystem(&self.root, &PathBuf::from(path_end))
+            },
             Ok(repo) => {
                 let message = format!("Add password for {} using ripasso", path_end);
 
@@ -282,6 +285,8 @@ impl PasswordStore {
                     &message,
                     self.crypto.as_ref(),
                 )?;
+
+                self.passwords.push(PasswordEntry::load_from_git(&self.root, path, &repo, self));
 
                 Ok(PasswordEntry::load_from_git(&self.root, path, &repo, self))
             }
