@@ -44,7 +44,7 @@ pub fn parse_signing_keys(
 
     let mut signing_keys = vec![];
     for key in password_store_signing_key.as_ref().unwrap().split(',') {
-        let trimmed = key.trim().to_string();
+        let trimmed = key.trim().to_owned();
 
         if trimmed.len() != 40 && (trimmed.len() != 42 && trimmed.starts_with("0x")) {
             return Err(Error::Generic(
@@ -161,7 +161,7 @@ impl Recipient {
         if key_result.is_err() {
             return Ok(Recipient::new(
                 "key id not in keyring".to_owned(),
-                key_id.to_string(),
+                key_id.to_owned(),
                 None,
                 KeyRingStatus::NotInKeyRing,
                 OwnerTrustLevel::Unknown,
@@ -206,7 +206,7 @@ impl Recipient {
         let mut unique_recipients_keys: HashSet<String> = HashSet::new();
         for key in contents.split('\n') {
             if key.len() > 1 {
-                unique_recipients_keys.insert(key.to_string());
+                unique_recipients_keys.insert(key.to_owned());
             }
         }
 
@@ -215,7 +215,7 @@ impl Recipient {
                 Ok(r) => r,
                 Err(err) => Recipient::new(
                     err.to_string(),
-                    key.to_string(),
+                    key.to_owned(),
                     None,
                     KeyRingStatus::NotInKeyRing,
                     OwnerTrustLevel::Unknown,
@@ -292,7 +292,13 @@ impl Recipient {
     ) -> Result<()> {
         let mut recipients: Vec<Recipient> = Recipient::all_recipients(recipients_file, crypto)?;
 
-        recipients.retain(|vs| vs.key_id != s.key_id);
+        recipients.retain(|vs| {
+            if vs.fingerprint.is_some() && s.fingerprint.is_some() {
+                vs.fingerprint != s.fingerprint
+            } else {
+                vs.key_id != s.key_id
+            }
+        });
 
         if recipients.is_empty() {
             return Err(Error::Generic("Can't delete the last encryption key"));

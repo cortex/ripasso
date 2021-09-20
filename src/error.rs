@@ -101,7 +101,7 @@ impl From<toml::ser::Error> for Error {
 
 impl From<&str> for Error {
     fn from(err: &str) -> Error {
-        Error::GenericDyn(err.to_string())
+        Error::GenericDyn(err.to_owned())
     }
 }
 

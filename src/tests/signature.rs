@@ -437,11 +437,7 @@ fn remove_recipient_from_file_same_key_id_different_fingerprint() {
     assert_eq!(false, result.is_err());
 
     let contents = std::fs::read_to_string(&recipients_file).unwrap();
-    assert_eq!(86, contents.len());
-    assert_eq!(
-        true,
-        contents.contains("0xDB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5")
-    );
+    assert_eq!(43, contents.len());
     assert_eq!(
         true,
         contents.contains("0x88283D2EF664DD5F6AEBB51CDF0C3D316B7312D5")
