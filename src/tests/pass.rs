@@ -1360,7 +1360,12 @@ fn test_new_password_file() -> Result<()> {
         "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
     )?;
 
+    assert_eq!(0, store.passwords.len());
+
     let result = store.new_password_file("test/file", "password").unwrap();
+
+    assert_eq!(1, store.passwords.len());
+    assert_eq!("test/file", store.passwords[0].name);
 
     assert_eq!(RepositoryStatus::NoRepo, result.is_in_git);
     assert_eq!(false, result.signature_status.is_some());
@@ -1394,7 +1399,12 @@ fn test_new_password_file_in_git_repo() -> Result<()> {
     config.set_str("user.name", "default")?;
     config.set_str("user.email", "default@example.com")?;
 
+    assert_eq!(0, store.passwords.len());
+
     let result = store.new_password_file("test/file", "password").unwrap();
+
+    assert_eq!(1, store.passwords.len());
+    assert_eq!("test/file", store.passwords[0].name);
 
     assert_eq!(RepositoryStatus::InRepo, result.is_in_git);
     assert_eq!(false, result.signature_status.is_some());
@@ -1428,7 +1438,11 @@ fn test_new_password_file_encryption_failure() -> Result<()> {
     config.set_str("user.name", "default")?;
     config.set_str("user.email", "default@example.com")?;
 
+    assert_eq!(0, store.passwords.len());
+
     let err = store.new_password_file("test/file", "password");
+
+    assert_eq!(0, store.passwords.len());
 
     assert_eq!(true, err.is_err());
 
@@ -1460,7 +1474,12 @@ fn test_new_password_file_twice() -> Result<()> {
     config.set_str("user.name", "default")?;
     config.set_str("user.email", "default@example.com")?;
 
+    assert_eq!(0, store.passwords.len());
+
     let result = store.new_password_file("test/file", "password").unwrap();
+
+    assert_eq!(1, store.passwords.len());
+    assert_eq!("test/file", store.passwords[0].name);
 
     assert_eq!(RepositoryStatus::InRepo, result.is_in_git);
     assert_eq!(false, result.signature_status.is_some());
@@ -1469,6 +1488,9 @@ fn test_new_password_file_twice() -> Result<()> {
     assert_eq!("test/file", result.name);
 
     let result = store.new_password_file("test/file", "password");
+
+    assert_eq!(1, store.passwords.len());
+    assert_eq!("test/file", store.passwords[0].name);
 
     assert_eq!(true, result.is_err());
     assert_eq!(true, td.path().join("test").join("file.gpg").exists());
@@ -1494,7 +1516,12 @@ fn test_new_password_file_outside_pass_dir() -> Result<()> {
         "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
     )?;
 
+    assert_eq!(0, store.passwords.len());
+
     let result = store.new_password_file("../file", "password");
+
+    assert_eq!(0, store.passwords.len());
+
     assert_eq!(true, result.is_err());
 
     Ok(())
