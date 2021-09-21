@@ -795,6 +795,83 @@ fn decrypt_secret_empty_file() -> Result<()> {
 }
 
 #[test]
+fn decrypt_secret_missing_file() -> Result<()> {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
+    writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
+    gpg_file.flush()?;
+
+    let pe = PasswordEntry::new(
+        &dir.path().join(".password-store"),
+        &PathBuf::from("file.gpg"),
+        Ok(Local::now()),
+        Ok("".to_owned()),
+        Ok(SignatureStatus::Good),
+        RepositoryStatus::NoRepo,
+    );
+
+    let store = PasswordStore {
+        name: "store_name".to_owned(),
+        root: dir.path().join(".password-store"),
+        valid_gpg_signing_keys: vec![],
+        passwords: vec![],
+        style_file: None,
+        crypto: Box::new(GpgMe {}),
+    };
+
+    let res = pe.secret(&store);
+
+    assert_eq!(true, res.is_err());
+    assert_eq!(
+        "No such file or directory (os error 2)",
+        format!("{}", res.err().unwrap())
+    );
+
+    Ok(())
+}
+
+#[test]
+fn decrypt_secret() -> Result<()> {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
+    writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
+    gpg_file.flush()?;
+
+    let mut pass_file = File::create(dir.path().join(".password-store").join("file.gpg"))?;
+    pass_file.write_all("dummy data".as_bytes()).unwrap();
+    pass_file.flush()?;
+
+    let pe = PasswordEntry::new(
+        &dir.path().join(".password-store"),
+        &PathBuf::from("file.gpg"),
+        Ok(Local::now()),
+        Ok("".to_owned()),
+        Ok(SignatureStatus::Good),
+        RepositoryStatus::NoRepo,
+    );
+
+    let crypto =
+        MockCrypto::new().with_decrypt_string_return("decrypt_secret unit test".to_owned());
+
+    let store = PasswordStore {
+        name: "store_name".to_owned(),
+        root: dir.path().join(".password-store"),
+        valid_gpg_signing_keys: vec![],
+        passwords: vec![],
+        style_file: None,
+        crypto: Box::new(crypto),
+    };
+
+    let res = pe.secret(&store).unwrap();
+
+    assert_eq!("decrypt_secret unit test", res);
+
+    Ok(())
+}
+
+#[test]
 fn decrypt_password_empty_file() -> Result<()> {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join(".password-store"))?;
@@ -827,6 +904,91 @@ fn decrypt_password_empty_file() -> Result<()> {
 
     assert_eq!(true, res.is_err());
     assert_eq!("empty password file", format!("{}", res.err().unwrap()));
+
+    Ok(())
+}
+
+#[test]
+fn decrypt_password_multiline() -> Result<()> {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
+    writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
+    gpg_file.flush()?;
+
+    let mut pass_file = File::create(dir.path().join(".password-store").join("file.gpg"))?;
+    pass_file.write_all("dummy data".as_bytes()).unwrap();
+    pass_file.flush()?;
+
+    let pe = PasswordEntry::new(
+        &dir.path().join(".password-store"),
+        &PathBuf::from("file.gpg"),
+        Ok(Local::now()),
+        Ok("".to_owned()),
+        Ok(SignatureStatus::Good),
+        RepositoryStatus::NoRepo,
+    );
+
+    let crypto =
+        MockCrypto::new().with_decrypt_string_return("row one\nrow two\nrow three".to_owned());
+
+    let store = PasswordStore {
+        name: "store_name".to_owned(),
+        root: dir.path().join(".password-store"),
+        valid_gpg_signing_keys: vec![],
+        passwords: vec![],
+        style_file: None,
+        crypto: Box::new(crypto),
+    };
+
+    let res = pe.password(&store).unwrap();
+
+    assert_eq!("row one", res);
+
+    Ok(())
+}
+
+#[test]
+fn update() -> Result<()> {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
+    writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
+    gpg_file.flush()?;
+
+    let mut pass_file = File::create(dir.path().join(".password-store").join("file.gpg"))?;
+    pass_file.write_all("dummy data".as_bytes()).unwrap();
+    pass_file.flush()?;
+
+    let pe = PasswordEntry::new(
+        &dir.path().join(".password-store"),
+        &PathBuf::from("file.gpg"),
+        Ok(Local::now()),
+        Ok("".to_owned()),
+        Ok(SignatureStatus::Good),
+        RepositoryStatus::NoRepo,
+    );
+
+    let crypto = MockCrypto::new().with_encrypt_string_return(vec![1, 2, 3]);
+
+    let store = PasswordStore {
+        name: "store_name".to_owned(),
+        root: dir.path().join(".password-store"),
+        valid_gpg_signing_keys: vec![],
+        passwords: vec![],
+        style_file: None,
+        crypto: Box::new(crypto),
+    };
+
+    let res = pe.update("new content".to_owned(), &store);
+
+    assert_eq!(false, res.is_err());
+
+    let mut pass_file = File::open(dir.path().join(".password-store").join("file.gpg"))?;
+    let mut data = Vec::new();
+    pass_file.read_to_end(&mut data)?;
+
+    assert_eq!(vec![1, 2, 3], data);
 
     Ok(())
 }

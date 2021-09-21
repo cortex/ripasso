@@ -73,7 +73,7 @@ impl PasswordStore {
         let signing_keys = parse_signing_keys(password_store_signing_key, crypto.as_ref())?;
 
         let store = PasswordStore {
-            name: store_name.to_string(),
+            name: store_name.to_owned(),
             root: pass_home.canonicalize()?,
             valid_gpg_signing_keys: signing_keys,
             passwords: [].to_vec(),
@@ -123,29 +123,6 @@ impl PasswordStore {
                 p == ph
             }
         }
-    }
-
-    /// validates the signature file of the .gpg-id file
-    pub fn validate(&self) -> Result<bool> {
-        let password_dir = Path::new(&self.root);
-        if !password_dir.exists() {
-            return Err(Error::GenericDyn(format!("path {:?} missing", &self.root)));
-        }
-
-        let mut gpg_id_file = password_dir.to_path_buf();
-        gpg_id_file.push(".gpg-id");
-        if !gpg_id_file.exists() {
-            return Err(Error::GenericDyn(format!(
-                "path {:?}/.gpg-id missing for store {}",
-                &self.root, &self.name
-            )));
-        }
-
-        if !self.valid_gpg_signing_keys.is_empty() {
-            self.verify_gpg_id_file(&self.root, &self.valid_gpg_signing_keys)?;
-        }
-
-        Ok(true)
     }
 
     /// resets the store object, so that it points to a different directory.
@@ -478,7 +455,7 @@ impl PasswordStore {
 
     /// Reencrypt all the entries in the store, for example when a new collaborator is added
     /// to the team.
-    pub fn reencrypt_all_password_entries(&self) -> Result<()> {
+    fn reencrypt_all_password_entries(&self) -> Result<()> {
         let mut names: Vec<PathBuf> = Vec::new();
         for entry in self.all_passwords()? {
             entry.update_internal(entry.secret(self)?, self)?;
@@ -528,7 +505,7 @@ impl PasswordStore {
         let oid = commit(
             &repo,
             &signature,
-            &message.to_string(),
+            message,
             &tree,
             &parents,
             self.crypto.as_ref(),
@@ -631,7 +608,7 @@ fn push_password_if_match(
 /// Find the name of the committer, or an error message
 fn name_from_commit(commit: &git2::Commit) -> Result<String> {
     match commit.committer().name() {
-        Some(s) => Ok(s.to_string()),
+        Some(s) => Ok(s.to_owned()),
         None => Err(Error::Generic("missing committer name")),
     }
 }
@@ -843,13 +820,7 @@ impl PasswordEntry {
 
         revwalk.push_head()?;
 
-        let mut p = self.path.to_str().ok_or("missing path")?.to_string();
-        let root = store.lock()?.root.clone();
-        let mut prefix = root.to_str().ok_or("missing path")?.to_string();
-        if !prefix.ends_with('/') {
-            prefix += "/";
-        }
-        strip_prefix(&mut p, prefix.len());
+        let p = self.path.strip_prefix(&store.lock()?.root)?;
         let ps = git2::Pathspec::new(vec![&p])?;
 
         let mut diffopts = git2::DiffOptions::new();
@@ -887,7 +858,7 @@ impl PasswordEntry {
                         let store = store.lock().unwrap();
                         let signature_status = verify_git_signature(&repo, &oid, &store);
                         Some(GitLogLine::new(
-                            commit.message().unwrap_or("<no message>").to_string(),
+                            commit.message().unwrap_or("<no message>").to_owned(),
                             dt,
                             signature_status.ok(),
                         ))
@@ -916,19 +887,6 @@ fn match_with_parent(
     let b = commit.tree()?;
     let diff = repo.diff_tree_to_tree(Some(&a), Some(&b), Some(opts))?;
     Ok(diff.deltas().len() > 0)
-}
-
-/// removes the pos first characters from a string
-/// delete thing function when String.strip_prefix stabilizes
-fn strip_prefix(s: &mut String, pos: usize) {
-    match s.char_indices().nth(pos) {
-        Some((pos, _)) => {
-            s.drain(..pos);
-        }
-        None => {
-            s.clear();
-        }
-    }
 }
 
 fn find_last_commit(repo: &git2::Repository) -> Result<git2::Commit> {
@@ -1014,14 +972,7 @@ fn add_and_commit_internal(
     index.write_tree()?;
     let tree = repo.find_tree(oid)?;
 
-    let oid = commit(
-        repo,
-        &signature,
-        &message.to_string(),
-        &tree,
-        &parents,
-        crypto,
-    )?;
+    let oid = commit(repo, &signature, message, &tree, &parents, crypto)?;
 
     Ok(oid)
 }
@@ -1052,7 +1003,7 @@ fn remove_and_commit(store: &PasswordStore, paths: &[PathBuf], message: &str) ->
     let oid = commit(
         &repo,
         &signature,
-        &message.to_string(),
+        message,
         &tree,
         &parents,
         store.crypto.as_ref(),
@@ -1089,7 +1040,7 @@ fn move_and_commit(
     let oid = commit(
         &repo,
         &signature,
-        &message.to_string(),
+        message,
         &tree,
         &parents,
         store.crypto.as_ref(),
@@ -1113,7 +1064,7 @@ fn find_origin(repo: &git2::Repository) -> Result<(git2::Remote, String)> {
                 .as_str()
                 .ok_or("Can't convert to string")?;
             let origin = repo.find_remote(upstream_name)?;
-            return Ok((origin, b.name()?.ok_or("no branch name")?.to_string()));
+            return Ok((origin, b.name()?.ok_or("no branch name")?.to_owned()));
         }
     }
 
@@ -1161,7 +1112,7 @@ pub fn push(store: &PasswordStore) -> Result<()> {
         });
         callbacks.push_update_reference(|refname, status| {
             assert_eq!(refname, format!("refs/heads/{}", branch_name));
-            ref_status = status.map(|s| s.to_string());
+            ref_status = status.map(|s| s.to_owned());
             Ok(())
         });
         let mut opts = git2::PushOptions::new();
@@ -1307,8 +1258,8 @@ fn verify_git_signature(
 ) -> Result<SignatureStatus> {
     let (signature, signed_data) = repo.extract_signature(id, Some("gpgsig"))?;
 
-    let signature_str = str::from_utf8(&signature)?.to_string();
-    let signed_data_str = str::from_utf8(&signed_data)?.to_string();
+    let signature_str = str::from_utf8(&signature)?.to_owned();
+    let signed_data_str = str::from_utf8(&signed_data)?.to_owned();
 
     if store.valid_gpg_signing_keys.is_empty() {
         return Err(Error::Generic(
@@ -1510,7 +1461,7 @@ fn append_extension(path: PathBuf, extension: &str) -> PathBuf {
     PathBuf::from(str)
 }
 
-/// reads ripasso's config file, in `$XDG_CONFIG_HOME/ripasso/settings.toml`
+/// reads ripassos config file, in `$XDG_CONFIG_HOME/ripasso/settings.toml`
 pub fn read_config(
     store_dir: &Option<String>,
     signing_keys: &Option<String>,
