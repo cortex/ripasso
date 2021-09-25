@@ -1688,3 +1688,16 @@ fn test_new_password_file_outside_pass_dir() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn init_git_repo_success() -> Result<()> {
+    let td = tempdir()?;
+
+    assert_eq!(false, td.path().join(".git").exists());
+
+    init_git_repo(&td.path())?;
+
+    assert_eq!(true, td.path().join(".git").exists());
+
+    Ok(())
+}
