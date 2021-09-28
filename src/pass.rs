@@ -108,23 +108,6 @@ impl PasswordStore {
         self.style_file.clone()
     }
 
-    /// returns true if the store is located in $HOME/.password-store
-    pub fn is_default(&self, home: Option<PathBuf>) -> bool {
-        if self.name == "default" {
-            return true;
-        }
-
-        match home {
-            None => false,
-            Some(home) => {
-                let p = self.root.clone();
-                let ph = home.join(".password-store");
-
-                p == ph
-            }
-        }
-    }
-
     /// resets the store object, so that it points to a different directory.
     pub fn reset(
         &mut self,
