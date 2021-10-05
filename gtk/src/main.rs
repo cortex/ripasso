@@ -429,9 +429,7 @@ fn main() {
         process::exit(0x01);
     }
 
-    if gtk::init().is_err() {
-        panic!("failed to initialize GTK.");
-    }
+    assert!(gtk::init().is_ok(), "failed to initialize GTK.");
 
     let settings = gtk::Settings::get_default();
     settings
