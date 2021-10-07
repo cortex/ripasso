@@ -429,8 +429,9 @@ fn main() {
         process::exit(0x01);
     }
 
-    if gtk::init().is_err() {
-        panic!("failed to initialize GTK.");
+    if let Err(e) = gtk::init() {
+        eprintln!("Error: {}", e);
+        process::exit(0x01);
     }
 
     let settings = gtk::Settings::get_default();
