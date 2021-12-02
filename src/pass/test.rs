@@ -819,10 +819,6 @@ fn append_extension_with_dot() {
 
 #[test]
 fn rename_file() -> Result<()> {
-    let mut config = git2::Config::open_default()?;
-    config.set_str("user.name", "default")?;
-    config.set_str("user.email", "default@example.com")?;
-
     let mut base_path: PathBuf = std::env::current_exe().unwrap();
     base_path.pop();
     base_path.pop();
@@ -835,6 +831,13 @@ fn rename_file() -> Result<()> {
     password_dir.push("rename_file");
 
     unpack_tar_gz(base_path.clone(), "rename_file.tar.gz")?;
+
+    let mut config_location = password_dir.clone();
+    config_location.push(".git");
+    config_location.push("config");
+    let mut config = git2::Config::open(&config_location)?;
+    config.set_str("user.name", "default")?;
+    config.set_str("user.email", "default@example.com")?;
 
     let mut store = PasswordStore::new("default", &Some(password_dir), &None, &Some(home))?;
     store.reload_password_list()?;

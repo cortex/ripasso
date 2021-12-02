@@ -543,7 +543,7 @@ fn receive() -> glib::Continue {
     GLOBAL.with(|global| {
         if let Some((ref password_search, ref password_list, ref store)) = *global.borrow() {
             let query = password_search.get_text();
-            password_list.set_model(Some(&results(&store, &query)));
+            password_list.set_model(Some(&results(store, &query)));
         }
     });
     glib::Continue(false)

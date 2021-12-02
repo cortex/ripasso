@@ -2,6 +2,7 @@ pub use crate::error::{Error, Result};
 use gpgme::Key;
 use std::fs;
 use std::io::prelude::*;
+use std::path::Path;
 use std::path::PathBuf;
 
 /// A git commit for a password might be signed by a gpg key, and this signature's verification
@@ -209,7 +210,7 @@ impl Recipient {
         Ok(trusts)
     }
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
-    pub fn all_recipients(recipient_file: &PathBuf) -> Result<Vec<Recipient>> {
+    pub fn all_recipients(recipient_file: &Path) -> Result<Vec<Recipient>> {
         let contents =
             fs::read_to_string(recipient_file).expect("Something went wrong reading the file");
 
@@ -258,7 +259,7 @@ impl Recipient {
 
     fn write_recipients_file(
         recipients: &[Recipient],
-        recipients_file: &PathBuf,
+        recipients_file: &Path,
         valid_gpg_signing_keys: &[String],
     ) -> Result<()> {
         {
@@ -297,8 +298,7 @@ impl Recipient {
                     ctx.sign_detached(file_content, &mut output)?;
 
                     let recipient_sig_filename: PathBuf = {
-                        let rf = recipients_file.clone();
-                        let mut sig = rf.into_os_string();
+                        let mut sig = recipients_file.to_path_buf().into_os_string();
                         sig.push(".sig");
                         sig.into()
                     };
@@ -324,7 +324,7 @@ impl Recipient {
     ) -> Result<()> {
         let mut recipients: Vec<Recipient> = Recipient::all_recipients(&recipient_file)?;
 
-        recipients.retain(|ref vs| vs.key_id != s.key_id);
+        recipients.retain(|vs| vs.key_id != s.key_id);
 
         if recipients.is_empty() {
             return Err(Error::Generic("Can't delete the last encryption key"));

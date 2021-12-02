@@ -32,6 +32,7 @@ use clipboard::{ClipboardContext, ClipboardProvider};
 
 use ripasso::pass;
 use ripasso::pass::{OwnerTrustLevel, PasswordStore, PasswordStoreType, SignatureStatus};
+use std::path::Path;
 use std::path::PathBuf;
 use std::process;
 use std::rc::Rc;
@@ -204,10 +205,8 @@ fn get_selected_password_entry(ui: &mut Cursive) -> Option<ripasso::pass::Passwo
         });
 
     let password_entry: pass::PasswordEntry = (*(match password_entry_option {
-        Some(level_1) => match level_1 {
-            Some(level_2) => level_2,
-            None => return None,
-        },
+        Some(Some(level_2)) => level_2,
+        Some(None) => return None,
         None => return None,
     }))
     .clone();
@@ -337,7 +336,7 @@ fn do_rename_file(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
 
             let col = ui.screen_size().x;
             let entry = &store.lock()?.passwords[index];
-            l.add_item(create_label(&entry, col), entry.clone());
+            l.add_item(create_label(entry, col), entry.clone());
             l.sort_by_label();
 
             ui.pop_layer();
@@ -424,7 +423,7 @@ fn create_save(s: &mut Cursive, store: PasswordStoreType) {
         return;
     }
     let mut password = password.unwrap();
-    if *password == "" {
+    if password.is_empty() {
         return;
     }
 
@@ -433,7 +432,7 @@ fn create_save(s: &mut Cursive, store: PasswordStoreType) {
         return;
     }
     let path = path.unwrap();
-    if *path == "" {
+    if path.is_empty() {
         return;
     }
 
@@ -753,7 +752,8 @@ fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
             SignatureStatus::Bad => "⛔",
         }
     }
-    return format!("{:4$} {} {} {}",
+    return format!(
+        "{:4$} {} {} {}",
         p.name,
         verification_status,
         name,
@@ -771,14 +771,14 @@ fn search(store: &PasswordStoreType, ui: &mut Cursive, query: &str) {
         .find_name::<SelectView<pass::PasswordEntry>>("results")
         .unwrap();
 
-    match pass::search(&store, &String::from(query)) {
+    match pass::search(store, &String::from(query)) {
         Err(err) => {
             helpers::errorbox(ui, &err);
         }
         Ok(r) => {
             l.clear();
             for p in &r {
-                l.add_item(create_label(&p, col), p.clone());
+                l.add_item(create_label(p, col), p.clone());
             }
             l.sort_by_label();
         }
@@ -812,7 +812,7 @@ fn git_pull(ui: &mut Cursive, store: PasswordStoreType) {
     ui.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
         l.clear();
         for p in store.passwords.iter() {
-            l.add_item(create_label(&p, col), p.clone());
+            l.add_item(create_label(p, col), p.clone());
         }
     });
     ui.call_on_name("status_bar", |l: &mut TextView| {
@@ -954,7 +954,7 @@ fn save_edit_config(
     ui: &mut Cursive,
     stores: Arc<Mutex<Vec<PasswordStore>>>,
     name: &str,
-    config_file_location: &PathBuf,
+    config_file_location: &Path,
     home: &Option<PathBuf>,
 ) {
     let e_n = &*get_value_from_input(ui, "edit_name_input").unwrap();
@@ -1000,7 +1000,7 @@ fn save_edit_config(
 fn save_new_config(
     ui: &mut Cursive,
     stores: Arc<Mutex<Vec<PasswordStore>>>,
-    config_file_location: &PathBuf,
+    config_file_location: &Path,
     home: &Option<PathBuf>,
 ) {
     let e_n = &*get_value_from_input(ui, "new_name_input").unwrap();
@@ -1042,7 +1042,7 @@ fn save_new_config(
 fn edit_store_in_config(
     ui: &mut Cursive,
     stores: Arc<Mutex<Vec<PasswordStore>>>,
-    config_file_location: &PathBuf,
+    config_file_location: &Path,
     home: &Option<PathBuf>,
 ) {
     let l = ui.find_name::<SelectView<String>>("stores").unwrap();
@@ -1113,7 +1113,7 @@ fn edit_store_in_config(
     let stores3 = stores.clone();
     let name2 = store.get_name().clone();
     let name3 = store.get_name().clone();
-    let config_file_location = config_file_location.clone();
+    let config_file_location = config_file_location.to_path_buf();
     let config_file_location2 = config_file_location.clone();
     let home = home.clone();
     let home2 = home.clone();
@@ -1141,7 +1141,7 @@ fn edit_store_in_config(
 fn delete_store_from_config(
     ui: &mut Cursive,
     stores: Arc<Mutex<Vec<PasswordStore>>>,
-    config_file_location: &PathBuf,
+    config_file_location: &Path,
 ) {
     let mut l = ui.find_name::<SelectView<String>>("stores").unwrap();
 
@@ -1175,7 +1175,7 @@ fn delete_store_from_config(
 fn add_store_to_config(
     ui: &mut Cursive,
     stores: Arc<Mutex<Vec<PasswordStore>>>,
-    config_file_location: &PathBuf,
+    config_file_location: &Path,
     home: &Option<PathBuf>,
 ) {
     let mut fields = LinearLayout::vertical();
@@ -1217,7 +1217,7 @@ fn add_store_to_config(
     fields.add_child(keys_fields);
 
     let stores2 = stores.clone();
-    let config_file_location = config_file_location.clone();
+    let config_file_location = config_file_location.to_path_buf();
     let config_file_location2 = config_file_location.clone();
     let home = home.clone();
     let home2 = home.clone();
