@@ -1,11 +1,11 @@
 [package]
 name = "ripasso-gtk"
-version = "0.5.1"
+version = "0.5.2"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>"]
 edition = '2018'
 
 [dependencies]
-ripasso = { path = "../", version = "0.5.1" }
+ripasso = { path = "../", version = "0.5.2" }
 gtk = { version = "0.9.0", features = ["v3_22"] }
 gdk = "0.13.0"
 glib = "0.10.0"
