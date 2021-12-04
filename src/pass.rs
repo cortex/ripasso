@@ -1036,6 +1036,7 @@ fn move_and_commit(
 /// find the branch that HEAD points to, and read the remote configured for that branch
 /// returns the remote and the name of the local branch
 fn find_origin(repo: &git2::Repository) -> Result<(git2::Remote, String)> {
+    let mut illegal_branch_name = None;
     for branch in repo.branches(Some(git2::BranchType::Local))? {
         let b = branch?.0;
         if b.is_head() {
@@ -1046,9 +1047,22 @@ fn find_origin(repo: &git2::Repository) -> Result<(git2::Remote, String)> {
             let upstream_name = upstream_name_buf
                 .as_str()
                 .ok_or("Can't convert to string")?;
-            let origin = repo.find_remote(upstream_name)?;
-            return Ok((origin, b.name()?.ok_or("no branch name")?.to_owned()));
+
+            if !git2::Remote::is_valid_name(upstream_name) {
+                illegal_branch_name = Some((
+                    upstream_name.to_owned(),
+                    b.name()?.ok_or("no branch name")?.to_owned(),
+                ))
+            } else {
+                let origin = repo.find_remote(upstream_name)?;
+                return Ok((origin, b.name()?.ok_or("no branch name")?.to_owned()));
+            }
         }
+    }
+
+    if let Some((remote_name, branch_name)) = illegal_branch_name {
+        let origin = repo.remote("added_by_ripasso", &remote_name)?;
+        return Ok((origin, branch_name));
     }
 
     Err(Error::Generic("no remotes configured"))

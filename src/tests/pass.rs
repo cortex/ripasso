@@ -126,6 +126,34 @@ fn populate_password_list_directory_without_git() -> Result<()> {
     Ok(())
 }
 
+/// This special case was generated with the following commands
+/// ```bash
+/// git init
+/// git config branch.master.remote capitol@tone.hackeriet.no:/home/capitol/d/
+/// ```
+/// This results in an illegal remote name, but `git pull` / `git push` manages to handle
+/// that special case, so I guess that we should also do that.
+#[test]
+fn password_store_with_remote_url_as_name() -> Result<()> {
+    let dir = UnpackedDir::new("password_store_with_remote_url_as_name")?;
+
+    let store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
+    )?;
+
+    let res = crate::pass::push(&store);
+
+    let res_str = format!("{:?}", res);
+
+    assert!(!res_str.contains("capitol@tone.hackeriet.no:/home/capitol/d/"));
+
+    Ok(())
+}
+
 #[test]
 fn password_store_with_files_in_initial_commit() -> Result<()> {
     let dir = UnpackedDir::new("password_store_with_files_in_initial_commit")?;
