@@ -12,11 +12,11 @@ edition = '2018'
 glob = "0.3.0"
 gpgme = "0.10.0"
 chrono = "0.4"
-git2 = "0.13.20"
+git2 = "0.13.24"
 rand = "0.8.4"
-whoami = "1.1.2"
+whoami = "1.2.0"
 toml = "0.5.8"
-reqwest = { version = "0.11.4", features = ["blocking"] }
+reqwest = { version = "0.11.6", features = ["blocking"] }
 hex = "0.4.3"
 
 [dependencies.config]
@@ -26,9 +26,9 @@ features = ["toml"]
 
 [dev-dependencies]
 tempfile = "3.2.0"
-flate2 = "1.0.20"
-tar = "0.4.35"
-criterion = "0.3.4"
+flate2 = "1.0.22"
+tar = "0.4.37"
+criterion = "0.3.5"
 
 [workspace]
 
