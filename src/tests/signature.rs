@@ -1,5 +1,5 @@
 use crate::pass::{KeyRingStatus, OwnerTrustLevel, Recipient};
-use crate::signature::parse_signing_keys;
+use crate::signature::{parse_signing_keys, Comment};
 use crate::test_helpers::{
     append_file_name, recipient_alex, recipient_alex_old, MockCrypto, MockKey,
 };
@@ -98,7 +98,7 @@ fn parse_signing_keys_short() {
 fn recipient_from_key_error() {
     let crypto = MockCrypto::new().with_get_key_error("unit test error".to_owned());
 
-    let result = Recipient::from("0x1D108E6C07CBC406", &crypto);
+    let result = Recipient::from("0x1D108E6C07CBC406", &[], None, &crypto);
 
     assert_eq!(false, result.is_err());
     let result = result.unwrap();
@@ -127,6 +127,109 @@ fn all_recipients() {
     assert_eq!(
         "Alexander Kjäll <alexander.kjall@gmail.com>",
         result[0].name
+    );
+    assert_eq!("0x1D108E6C07CBC406", result[0].key_id);
+    assert_eq!(true, KeyRingStatus::InKeyRing == result[0].key_ring_status);
+}
+
+#[test]
+fn all_recipients_with_one_comment_line() {
+    let crypto = MockCrypto::new().with_get_key_result(
+        "0x1D108E6C07CBC406".to_owned(),
+        MockKey::from_args(
+            <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+            vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()],
+        ),
+    );
+
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join(".gpg-id");
+
+    std::fs::File::create(&file).unwrap();
+    std::fs::write(&file, "# first comment\n0x1D108E6C07CBC406").unwrap();
+
+    let result = Recipient::all_recipients(&file, &crypto).unwrap();
+
+    assert_eq!(1, result.len());
+    assert_eq!(
+        "Alexander Kjäll <alexander.kjall@gmail.com>",
+        result[0].name
+    );
+    assert_eq!(
+        " first comment",
+        result[0].comment.pre_comment.as_ref().unwrap()
+    );
+    assert_eq!(None, result[0].comment.post_comment);
+    assert_eq!("0x1D108E6C07CBC406", result[0].key_id);
+    assert_eq!(true, KeyRingStatus::InKeyRing == result[0].key_ring_status);
+}
+
+#[test]
+fn all_recipients_with_multiple_comment_lines() {
+    let crypto = MockCrypto::new().with_get_key_result(
+        "0x1D108E6C07CBC406".to_owned(),
+        MockKey::from_args(
+            <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+            vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()],
+        ),
+    );
+
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join(".gpg-id");
+
+    std::fs::File::create(&file).unwrap();
+    std::fs::write(
+        &file,
+        "# first comment\n\n#comment two\n0x1D108E6C07CBC406\n# end comment\n",
+    )
+    .unwrap();
+
+    let result = Recipient::all_recipients(&file, &crypto).unwrap();
+
+    assert_eq!(1, result.len());
+    assert_eq!(
+        "Alexander Kjäll <alexander.kjall@gmail.com>",
+        result[0].name
+    );
+    assert_eq!(
+        " first comment\ncomment two",
+        result[0].comment.pre_comment.as_ref().unwrap()
+    );
+    assert_eq!(None, result[0].comment.post_comment);
+    assert_eq!("0x1D108E6C07CBC406", result[0].key_id);
+    assert_eq!(true, KeyRingStatus::InKeyRing == result[0].key_ring_status);
+}
+
+#[test]
+fn all_recipients_with_comment_lines_pre_and_post() {
+    let crypto = MockCrypto::new().with_get_key_result(
+        "0x1D108E6C07CBC406".to_owned(),
+        MockKey::from_args(
+            <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+            vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()],
+        ),
+    );
+
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join(".gpg-id");
+
+    std::fs::File::create(&file).unwrap();
+    std::fs::write(
+        &file,
+        "# first comment\n\n#comment two\n0x1D108E6C07CBC406 # post comment\n",
+    )
+    .unwrap();
+
+    let result = Recipient::all_recipients(&file, &crypto).unwrap();
+
+    assert_eq!(1, result.len());
+    assert_eq!(
+        "Alexander Kjäll <alexander.kjall@gmail.com>",
+        result[0].name
+    );
+    assert_eq!(
+        " first comment\ncomment two",
+        result[0].comment.pre_comment.as_ref().unwrap()
     );
     assert_eq!("0x1D108E6C07CBC406", result[0].key_id);
     assert_eq!(true, KeyRingStatus::InKeyRing == result[0].key_ring_status);
@@ -227,6 +330,132 @@ fn write_recipients_file_one() {
 
     let contents = std::fs::read_to_string(recipients_file).unwrap();
     assert_eq!("0x7E068070D5EF794B00C8A9D91D108E6C07CBC406\n", contents);
+    assert_eq!(false, signature_file.exists());
+}
+
+#[test]
+fn write_recipients_file_one_with_pre_comment() {
+    let mut r = recipient_alex();
+    r.comment = Comment {
+        pre_comment: Some("comment line".to_owned()),
+        post_comment: None,
+    };
+    let recipients = vec![r];
+
+    let dir = tempfile::tempdir().unwrap();
+    let recipients_file = dir.path().join(".gpg-id");
+    let signature_file = dir.path().join(".gpg-id.sig");
+
+    let valid_gpg_signing_keys = vec![];
+
+    let crypto = MockCrypto::new();
+
+    assert_eq!(false, recipients_file.exists());
+    assert_eq!(false, signature_file.exists());
+
+    let result = Recipient::write_recipients_file(
+        &recipients,
+        &recipients_file,
+        &valid_gpg_signing_keys,
+        &crypto,
+    );
+
+    assert_eq!(false, result.is_err());
+    assert_eq!(true, recipients_file.exists());
+
+    let recipient_sig_filename = append_file_name(&recipients_file);
+
+    assert_eq!(false, recipient_sig_filename.exists());
+
+    let contents = std::fs::read_to_string(recipients_file).unwrap();
+    assert_eq!(
+        "#comment line\n0x7E068070D5EF794B00C8A9D91D108E6C07CBC406\n",
+        contents
+    );
+    assert_eq!(false, signature_file.exists());
+}
+
+#[test]
+fn write_recipients_file_one_with_multi_line_comment() {
+    let mut r = recipient_alex();
+    r.comment = Comment {
+        pre_comment: Some("comment one\ncomment two".to_owned()),
+        post_comment: None,
+    };
+    let recipients = vec![r];
+
+    let dir = tempfile::tempdir().unwrap();
+    let recipients_file = dir.path().join(".gpg-id");
+    let signature_file = dir.path().join(".gpg-id.sig");
+
+    let valid_gpg_signing_keys = vec![];
+
+    let crypto = MockCrypto::new();
+
+    assert_eq!(false, recipients_file.exists());
+    assert_eq!(false, signature_file.exists());
+
+    let result = Recipient::write_recipients_file(
+        &recipients,
+        &recipients_file,
+        &valid_gpg_signing_keys,
+        &crypto,
+    );
+
+    assert_eq!(false, result.is_err());
+    assert_eq!(true, recipients_file.exists());
+
+    let recipient_sig_filename = append_file_name(&recipients_file);
+
+    assert_eq!(false, recipient_sig_filename.exists());
+
+    let contents = std::fs::read_to_string(recipients_file).unwrap();
+    assert_eq!(
+        "#comment one\n#comment two\n0x7E068070D5EF794B00C8A9D91D108E6C07CBC406\n",
+        contents
+    );
+    assert_eq!(false, signature_file.exists());
+}
+
+#[test]
+fn write_recipients_file_one_comment_pre_and_post() {
+    let mut r = recipient_alex();
+    r.comment = Comment {
+        pre_comment: Some("pre comment".to_owned()),
+        post_comment: Some("post comment".to_owned()),
+    };
+    let recipients = vec![r];
+
+    let dir = tempfile::tempdir().unwrap();
+    let recipients_file = dir.path().join(".gpg-id");
+    let signature_file = dir.path().join(".gpg-id.sig");
+
+    let valid_gpg_signing_keys = vec![];
+
+    let crypto = MockCrypto::new();
+
+    assert_eq!(false, recipients_file.exists());
+    assert_eq!(false, signature_file.exists());
+
+    let result = Recipient::write_recipients_file(
+        &recipients,
+        &recipients_file,
+        &valid_gpg_signing_keys,
+        &crypto,
+    );
+
+    assert_eq!(false, result.is_err());
+    assert_eq!(true, recipients_file.exists());
+
+    let recipient_sig_filename = append_file_name(&recipients_file);
+
+    assert_eq!(false, recipient_sig_filename.exists());
+
+    let contents = std::fs::read_to_string(recipients_file).unwrap();
+    assert_eq!(
+        "#pre comment\n0x7E068070D5EF794B00C8A9D91D108E6C07CBC406 #post comment\n",
+        contents
+    );
     assert_eq!(false, signature_file.exists());
 }
 
@@ -369,6 +598,10 @@ fn remove_recipient_from_file_two() {
 fn remove_recipient_from_file_same_key_id_different_fingerprint() {
     let r = Recipient {
         name: "Alexander Kjäll <alexander.kjall@gmail.com>".to_owned(),
+        comment: Comment {
+            pre_comment: None,
+            post_comment: None,
+        },
         key_id: "DF0C3D316B7312D5".to_owned(),
         fingerprint: Some(
             <[u8; 20]>::from_hex("DB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5").unwrap(),
@@ -379,6 +612,10 @@ fn remove_recipient_from_file_same_key_id_different_fingerprint() {
     };
     let r2 = Recipient {
         name: "Alexander Kjäll <alexander.kjall@gmail.com>".to_owned(),
+        comment: Comment {
+            pre_comment: None,
+            post_comment: None,
+        },
         key_id: "DF0C3D316B7312D5".to_owned(),
         fingerprint: Some(
             <[u8; 20]>::from_hex("88283D2EF664DD5F6AEBB51CDF0C3D316B7312D5").unwrap(),
@@ -513,6 +750,10 @@ fn add_recipient_from_file_one_plus_one() {
 fn recipient_both_none() {
     let r1 = Recipient {
         name: "Alexander Kjäll <alexander.kjall@gmail.com>".to_owned(),
+        comment: Comment {
+            pre_comment: None,
+            post_comment: None,
+        },
         key_id: "DF0C3D316B7312D5".to_owned(),
         fingerprint: None,
         key_ring_status: KeyRingStatus::InKeyRing,
@@ -521,6 +762,10 @@ fn recipient_both_none() {
     };
     let r2 = Recipient {
         name: "Alexander Kjäll <alexander.kjall@gmail.com>".to_owned(),
+        comment: Comment {
+            pre_comment: None,
+            post_comment: None,
+        },
         key_id: "DF0C3D316B7312D5".to_owned(),
         fingerprint: None,
         key_ring_status: KeyRingStatus::InKeyRing,
@@ -538,6 +783,10 @@ fn recipient_both_none() {
 fn recipient_one_none() {
     let r1 = Recipient {
         name: "Alexander Kjäll <alexander.kjall@gmail.com>".to_owned(),
+        comment: Comment {
+            pre_comment: None,
+            post_comment: None,
+        },
         key_id: "DF0C3D316B7312D5".to_owned(),
         fingerprint: Some(
             <[u8; 20]>::from_hex("DB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5").unwrap(),
@@ -548,6 +797,10 @@ fn recipient_one_none() {
     };
     let r2 = Recipient {
         name: "Alexander Kjäll <alexander.kjall@gmail.com>".to_owned(),
+        comment: Comment {
+            pre_comment: None,
+            post_comment: None,
+        },
         key_id: "DF0C3D316B7312D5".to_owned(),
         fingerprint: None,
         key_ring_status: KeyRingStatus::InKeyRing,
@@ -565,6 +818,10 @@ fn recipient_one_none() {
 fn recipient_same_fingerprint_different_key_id() {
     let r1 = Recipient {
         name: "Alexander Kjäll <alexander.kjall@gmail.com>".to_owned(),
+        comment: Comment {
+            pre_comment: None,
+            post_comment: None,
+        },
         key_id: "DF0C3D316B7312D5".to_owned(),
         fingerprint: Some(
             <[u8; 20]>::from_hex("DB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5").unwrap(),
@@ -575,6 +832,10 @@ fn recipient_same_fingerprint_different_key_id() {
     };
     let r2 = Recipient {
         name: "Alexander Kjäll <alexander.kjall@gmail.com>".to_owned(),
+        comment: Comment {
+            pre_comment: None,
+            post_comment: None,
+        },
         key_id: "DB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5".to_owned(),
         fingerprint: Some(
             <[u8; 20]>::from_hex("DB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5").unwrap(),

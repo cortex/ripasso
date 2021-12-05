@@ -2,7 +2,7 @@ use crate::crypto::{Crypto, FindSigningFingerprintStrategy, Key, VerificationErr
 use crate::error::Error;
 use crate::error::Result;
 use crate::pass::{KeyRingStatus, OwnerTrustLevel, SignatureStatus};
-use crate::signature::Recipient;
+use crate::signature::{Comment, Recipient};
 use flate2::read::GzDecoder;
 use hex::FromHex;
 use std::cell::RefCell;
@@ -231,6 +231,10 @@ impl Crypto for MockCrypto {
 pub fn recipient_alex() -> Recipient {
     Recipient {
         name: "Alexander Kjäll <alexander.kjall@gmail.com>".to_owned(),
+        comment: Comment {
+            pre_comment: None,
+            post_comment: None,
+        },
         key_id: "1D108E6C07CBC406".to_owned(),
         fingerprint: Some(
             <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
@@ -243,6 +247,10 @@ pub fn recipient_alex() -> Recipient {
 pub fn recipient_alex_old() -> Recipient {
     Recipient {
         name: "Alexander Kjäll <alexander.kjall@gmail.com>".to_owned(),
+        comment: Comment {
+            pre_comment: None,
+            post_comment: None,
+        },
         key_id: "DF0C3D316B7312D5".to_owned(),
         fingerprint: Some(
             <[u8; 20]>::from_hex("DB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5").unwrap(),
