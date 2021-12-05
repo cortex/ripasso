@@ -582,7 +582,7 @@ fn delete_recipient_verification(ui: &mut Cursive, store: PasswordStoreType) {
 fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) {
     let l = &*get_value_from_input(ui, "key_id_input").unwrap();
 
-    match store.lock().unwrap().recipient_from(l) {
+    match store.lock().unwrap().recipient_from(l, &[], None) {
         Err(err) => helpers::errorbox(ui, &err),
         Ok(recipient) => {
             if recipient.trust_level != OwnerTrustLevel::Ultimate {
