@@ -131,6 +131,36 @@ fn copy(ui: &mut Cursive, store: &PasswordStoreType) {
     }
     if let Err(err) = || -> pass::Result<()> {
         let store = store.lock().unwrap();
+        let password = sel.unwrap().secret(&store)?;
+        let mut ctx = clipboard::ClipboardContext::new()?;
+        ctx.set_contents(password)?;
+        Ok(())
+    }() {
+        helpers::errorbox(ui, &err);
+        return;
+    }
+
+    thread::spawn(|| {
+        thread::sleep(time::Duration::from_secs(40));
+        let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+        ctx.set_contents("".to_owned()).unwrap();
+    });
+    ui.call_on_name("status_bar", |l: &mut TextView| {
+        l.set_content(CATALOG.gettext("Copied password to copy buffer for 40 seconds"));
+    });
+}
+
+fn copy_first_line(ui: &mut Cursive, store: &PasswordStoreType) {
+    let sel = ui
+        .find_name::<SelectView<pass::PasswordEntry>>("results")
+        .unwrap()
+        .selection();
+
+    if sel.is_none() {
+        return;
+    }
+    if let Err(err) = || -> pass::Result<()> {
+        let store = store.lock().unwrap();
         let password = sel.unwrap().password(&store)?;
         let mut ctx = clipboard::ClipboardContext::new()?;
         ctx.set_contents(password)?;
@@ -1519,7 +1549,7 @@ fn main() {
     ui.add_global_callback(Event::CtrlChar('u'), copy_name);
     ui.add_global_callback(Key::Enter, {
         let store = store.clone();
-        move |ui: &mut Cursive| copy(ui, &store.clone())
+        move |ui: &mut Cursive| copy_first_line(ui, &store.clone())
     });
     ui.add_global_callback(Key::Del, {
         let store = store.clone();
