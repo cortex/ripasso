@@ -553,8 +553,13 @@ impl PasswordStore {
         Ok(passwords.len() - 1)
     }
 
-    pub fn recipient_from(&self, key_id: &str) -> Result<Recipient> {
-        crate::signature::Recipient::from(key_id, self.crypto.as_ref())
+    pub fn recipient_from(
+        &self,
+        key_id: &str,
+        pre_comment: &[String],
+        post_comment: Option<String>,
+    ) -> Result<Recipient> {
+        crate::signature::Recipient::from(key_id, pre_comment, post_comment, self.crypto.as_ref())
     }
 }
 

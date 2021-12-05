@@ -113,6 +113,39 @@ pub enum KeyRingStatus {
     NotInKeyRing,
 }
 
+/// internal holder of a user id row and the comments that belong to it
+struct IdComment {
+    pub id: String,
+    pub pre_comment: Vec<String>,
+    pub post_comment: Option<String>,
+}
+
+impl std::hash::Hash for IdComment {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+impl std::cmp::PartialEq for IdComment {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl std::cmp::Eq for IdComment {}
+
+/// Describes a comment around a gpg id / fingerprint. See this commit for source:
+/// https://git.zx2c4.com/password-store/commit/?id=a271b43cbd76cc30406202c49041b552656538bd
+#[derive(Clone)]
+pub struct Comment {
+    /// The comment field from the .gpg-id file, above the user fingerprint
+    /// not including the leading '#' characters.
+    pub pre_comment: Option<String>,
+    /// The comment field from the .gpg-id file, after the user fingerprint
+    /// not including the leading '#' characters.
+    pub post_comment: Option<String>,
+}
+
 /// Represents one person on the team.
 ///
 /// All secrets are encrypted with the key_id of the recipients.
@@ -120,6 +153,8 @@ pub enum KeyRingStatus {
 pub struct Recipient {
     /// Human readable name of the person.
     pub name: String,
+    /// The comment field from the .gpg-id file, not including the leading '#' characters.
+    pub comment: Comment,
     /// Machine readable identity taken from the .gpg-id file, in the form of a gpg key id
     /// (16 hex chars) or a fingerprint (40 hex chars).
     pub key_id: String,
@@ -139,6 +174,7 @@ impl Recipient {
     /// Constructs a Recipient object.
     fn new(
         name: String,
+        comment: Comment,
         key_id: String,
         fingerprint: Option<[u8; 20]>,
         key_ring_status: KeyRingStatus,
@@ -147,6 +183,7 @@ impl Recipient {
     ) -> Recipient {
         Recipient {
             name,
+            comment,
             key_id,
             fingerprint,
             key_ring_status,
@@ -156,11 +193,26 @@ impl Recipient {
     }
 
     /// Creates a Recipient from a gpg key id string
-    pub fn from(key_id: &str, crypto: &(dyn crate::crypto::Crypto + Send)) -> Result<Recipient> {
+    pub fn from(
+        key_id: &str,
+        pre_comment: &[String],
+        post_comment: Option<String>,
+        crypto: &(dyn crate::crypto::Crypto + Send),
+    ) -> Result<Recipient> {
+        let comment_opt = match pre_comment.len() {
+            0 => None,
+            _ => Some(pre_comment.join("\n")),
+        };
+        let comment = Comment {
+            pre_comment: comment_opt,
+            post_comment,
+        };
+
         let key_result = crypto.get_key(key_id);
         if key_result.is_err() {
             return Ok(Recipient::new(
                 "key id not in keyring".to_owned(),
+                comment,
                 key_id.to_owned(),
                 None,
                 KeyRingStatus::NotInKeyRing,
@@ -184,6 +236,7 @@ impl Recipient {
 
         Ok(Recipient::new(
             name,
+            comment,
             key_id.to_owned(),
             Some(fingerprint),
             KeyRingStatus::InKeyRing,
@@ -203,24 +256,61 @@ impl Recipient {
         let contents = fs::read_to_string(recipients_file)?;
 
         let mut recipients: Vec<Recipient> = Vec::new();
-        let mut unique_recipients_keys: HashSet<String> = HashSet::new();
+        let mut unique_recipients_keys: HashSet<IdComment> = HashSet::new();
+        let mut comment_buf = vec![];
         for key in contents.split('\n') {
             if key.len() > 1 {
-                unique_recipients_keys.insert(key.to_owned());
+                if key.starts_with('#') {
+                    comment_buf.push(key.chars().skip(1).collect());
+                } else if key.contains('#') {
+                    let mut splitter = key.splitn(2, '#');
+                    let key = splitter.next().unwrap().trim();
+                    let comment = splitter.next().unwrap();
+
+                    unique_recipients_keys.insert(IdComment {
+                        id: key.to_owned(),
+                        pre_comment: comment_buf.clone(),
+                        post_comment: Some(comment.to_owned()),
+                    });
+                    comment_buf.clear();
+                } else {
+                    unique_recipients_keys.insert(IdComment {
+                        id: key.to_owned(),
+                        pre_comment: comment_buf.clone(),
+                        post_comment: None,
+                    });
+                    comment_buf.clear();
+                }
             }
         }
 
         for key in unique_recipients_keys {
-            let recipient = match Recipient::from(&key, crypto) {
+            let recipient = match Recipient::from(
+                &key.id,
+                &key.pre_comment,
+                key.post_comment.clone(),
+                crypto,
+            ) {
                 Ok(r) => r,
-                Err(err) => Recipient::new(
-                    err.to_string(),
-                    key.to_owned(),
-                    None,
-                    KeyRingStatus::NotInKeyRing,
-                    OwnerTrustLevel::Unknown,
-                    true,
-                ),
+                Err(err) => {
+                    let comment_opt = match key.pre_comment.len() {
+                        0 => None,
+                        _ => Some(key.pre_comment.join("\n")),
+                    };
+
+                    Recipient::new(
+                        err.to_string(),
+                        Comment {
+                            pre_comment: comment_opt,
+                            post_comment: key.post_comment,
+                        },
+                        key.id.clone(),
+                        None,
+                        KeyRingStatus::NotInKeyRing,
+                        OwnerTrustLevel::Unknown,
+                        true,
+                    )
+                }
             };
             recipients.push(recipient)
         }
@@ -249,10 +339,23 @@ impl Recipient {
                 None => recipient.key_id,
             };
 
+            if recipient.comment.pre_comment.is_some() {
+                for line in recipient.comment.pre_comment.as_ref().unwrap().split('\n') {
+                    file_content.push('#');
+                    file_content.push_str(line);
+                    file_content.push('\n');
+                }
+            }
+
             if !to_add.starts_with("0x") {
                 file_content.push_str("0x");
             }
             file_content.push_str(&to_add);
+
+            if recipient.comment.post_comment.is_some() {
+                file_content.push_str(" #");
+                file_content.push_str(recipient.comment.post_comment.as_ref().unwrap());
+            }
             file_content.push('\n');
         }
         file.write_all(file_content.as_bytes())?;
