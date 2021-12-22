@@ -28,8 +28,6 @@ use cursive::CursiveExt;
 use cursive::direction::Orientation;
 use cursive::event::{Event, Key};
 
-use clipboard::{ClipboardContext, ClipboardProvider};
-
 use ripasso::pass;
 use ripasso::pass::{OwnerTrustLevel, PasswordStore, PasswordStoreType, SignatureStatus};
 use std::path::{Path, PathBuf};
@@ -131,9 +129,7 @@ fn copy(ui: &mut Cursive, store: &PasswordStoreType) {
     }
     if let Err(err) = || -> pass::Result<()> {
         let store = store.lock().unwrap();
-        let password = sel.unwrap().secret(&store)?;
-        let mut ctx = clipboard::ClipboardContext::new()?;
-        ctx.set_contents(password)?;
+        helpers::set_clipboard(sel.unwrap().secret(&store)?)?;
         Ok(())
     }() {
         helpers::errorbox(ui, &err);
@@ -142,8 +138,7 @@ fn copy(ui: &mut Cursive, store: &PasswordStoreType) {
 
     thread::spawn(|| {
         thread::sleep(time::Duration::from_secs(40));
-        let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-        ctx.set_contents("".to_owned()).unwrap();
+        helpers::set_clipboard("".to_owned()).unwrap();
     });
     ui.call_on_name("status_bar", |l: &mut TextView| {
         l.set_content(CATALOG.gettext("Copied password to copy buffer for 40 seconds"));
@@ -161,9 +156,7 @@ fn copy_first_line(ui: &mut Cursive, store: &PasswordStoreType) {
     }
     if let Err(err) = || -> pass::Result<()> {
         let store = store.lock().unwrap();
-        let password = sel.unwrap().password(&store)?;
-        let mut ctx = clipboard::ClipboardContext::new()?;
-        ctx.set_contents(password)?;
+        helpers::set_clipboard(sel.unwrap().secret(&store)?)?;
         Ok(())
     }() {
         helpers::errorbox(ui, &err);
@@ -172,8 +165,7 @@ fn copy_first_line(ui: &mut Cursive, store: &PasswordStoreType) {
 
     thread::spawn(|| {
         thread::sleep(time::Duration::from_secs(40));
-        let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-        ctx.set_contents("".to_owned()).unwrap();
+        helpers::set_clipboard("".to_owned()).unwrap();
     });
     ui.call_on_name("status_bar", |l: &mut TextView| {
         l.set_content(CATALOG.gettext("Copied password to copy buffer for 40 seconds"));
@@ -193,8 +185,7 @@ fn copy_name(ui: &mut Cursive) {
 
     if let Err(err) = || -> pass::Result<()> {
         let name = sel.name.split('/').next_back();
-        let mut ctx = clipboard::ClipboardContext::new()?;
-        ctx.set_contents(name.unwrap_or("").to_string())?;
+        helpers::set_clipboard(name.unwrap_or("").to_string())?;
         Ok(())
     }() {
         helpers::errorbox(ui, &err);
