@@ -19,6 +19,7 @@ gettext = "0.4.0"
 lazy_static = "1.4.0"
 toml = "0.5.8"
 term_size = "0.3.2"
+wl-clipboard-rs = "0.4.1"
 
 [dependencies.config]
 version = "0.11.0"

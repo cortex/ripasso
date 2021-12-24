@@ -22,6 +22,12 @@ use cursive::Cursive;
 
 use ripasso::pass;
 
+use clipboard::ClipboardProvider;
+use wl_clipboard_rs::copy::{MimeType, Options, Source};
+
+use pass::Result;
+
+/// Displays an error in a cursive dialog
 pub fn errorbox(ui: &mut Cursive, err: &pass::Error) {
     let text = match err {
         pass::Error::RecipientNotInKeyRing(key_id) => super::CATALOG
@@ -40,4 +46,20 @@ pub fn errorbox(ui: &mut Cursive, err: &pass::Error) {
     });
 
     ui.add_layer(ev);
+}
+
+/// Copies content to the clipboard.
+/// It first tries to copy to a wayland clipboard, and if that's not availible due to that the
+/// user runs x11/mac/windows we instead try the more generic clipboard crate.
+pub fn set_clipboard(content: String) -> Result<()> {
+    let opts = Options::new();
+    let result = opts.copy(
+        Source::Bytes(content.clone().into_bytes().into()),
+        MimeType::Autodetect,
+    );
+    if result.is_err() {
+        let mut ctx = clipboard::ClipboardContext::new()?;
+        ctx.set_contents(content)?;
+    }
+    Ok(())
 }
