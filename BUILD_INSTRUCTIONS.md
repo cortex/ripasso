@@ -34,6 +34,13 @@ $ cargo build --all
 ```
 $ pacman -S qt5-base qt5-svg qt5-declarative
 ```
+
+### Alpine
+#### Cursive
+```
+apk add cargo python3-dev ncurses libgpg-error-dev gpgme-dev openssl-dev libxcb-dev
+```
+
 ### Fedora
 #### All
 ```
