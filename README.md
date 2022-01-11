@@ -69,7 +69,7 @@ cargo build -p ripasso-gtk
 
 TUI version
 ```
-yay install ripasso-cursive
+paru install ripasso-cursive
 ```
 
 ### Fedora
