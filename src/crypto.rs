@@ -227,7 +227,7 @@ impl Crypto for GpgMe {
                 .to_string(),
                 18 if recipient.key_id.starts_with("0x") => format!(
                     "https://keys.openpgp.org/vks/v1/by-keyid/{}",
-                    recipient.key_id[2..].to_string()
+                    &recipient.key_id[2..]
                 )
                 .to_string(),
                 40 => format!(
@@ -237,7 +237,7 @@ impl Crypto for GpgMe {
                 .to_string(),
                 42 if recipient.key_id.starts_with("0x") => format!(
                     "https://keys.openpgp.org/vks/v1/by-fingerprint/{}",
-                    recipient.key_id[2..].to_string()
+                    &recipient.key_id[2..]
                 )
                 .to_string(),
                 _ => return Err(Error::Generic("key id is not 16 or 40 hex chars")),
