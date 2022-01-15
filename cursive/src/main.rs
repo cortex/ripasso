@@ -21,7 +21,7 @@ use cursive::views::{
     SelectView, TextArea, TextView,
 };
 
-use cursive::menu::MenuTree;
+use cursive::menu::Tree;
 use cursive::Cursive;
 use cursive::CursiveExt;
 
@@ -222,7 +222,7 @@ fn do_delete(ui: &mut Cursive, store: &PasswordStoreType) {
 }
 
 fn delete(ui: &mut Cursive, store: PasswordStoreType) {
-    ui.add_layer(CircularFocus::wrap_tab(
+    ui.add_layer(CircularFocus::new(
         Dialog::around(TextView::new(
             CATALOG.gettext("Are you sure you want to delete the password?"),
         ))
@@ -405,22 +405,22 @@ fn rename_file_dialog(ui: &mut Cursive, store: PasswordStoreType) {
     old_name_fields.add_child(
         TextView::new(CATALOG.gettext("Old file name: "))
             .with_name("old_name_name")
-            .fixed_size((10, 1)),
+            .fixed_size((10_usize, 1_usize)),
     );
     old_name_fields.add_child(
         TextView::new(old_name)
             .with_name("old_name_input")
-            .fixed_size((50, 1)),
+            .fixed_size((50_usize, 1_usize)),
     );
     new_name_fields.add_child(
         TextView::new(CATALOG.gettext("New file name: "))
             .with_name("new_name_name")
-            .fixed_size((10, 1)),
+            .fixed_size((10_usize, 1_usize)),
     );
     new_name_fields.add_child(
         EditView::new()
             .with_name("new_name_input")
-            .fixed_size((50, 1)),
+            .fixed_size((50_usize, 1_usize)),
     );
 
     fields.add_child(old_name_fields);
@@ -510,28 +510,28 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
     path_fields.add_child(
         TextView::new(CATALOG.gettext("Path: "))
             .with_name("path_name")
-            .fixed_size((10, 1)),
+            .fixed_size((10_usize, 1_usize)),
     );
     path_fields.add_child(
         EditView::new()
             .with_name("new_path_input")
-            .fixed_size((50, 1)),
+            .fixed_size((50_usize, 1_usize)),
     );
     password_fields.add_child(
         TextView::new(CATALOG.gettext("Password: "))
             .with_name("password_name")
-            .fixed_size((10, 1)),
+            .fixed_size((10_usize, 1_usize)),
     );
     password_fields.add_child(
         EditView::new()
             .secret()
             .with_name("new_password_input")
-            .fixed_size((50, 1)),
+            .fixed_size((50_usize, 1_usize)),
     );
     note_fields.add_child(
         TextView::new(CATALOG.gettext("Note: "))
             .with_name("note_name")
-            .fixed_size((10, 1)),
+            .fixed_size((10_usize, 1_usize)),
     );
     note_fields.add_child(TextArea::new().with_name("note_input").min_size((50, 1)));
     fields.add_child(path_fields);
@@ -588,7 +588,7 @@ fn delete_recipient(ui: &mut Cursive, store: PasswordStoreType) {
 }
 
 fn delete_recipient_verification(ui: &mut Cursive, store: PasswordStoreType) {
-    ui.add_layer(CircularFocus::wrap_tab(
+    ui.add_layer(CircularFocus::new(
         Dialog::around(TextView::new(
             CATALOG.gettext("Are you sure you want to remove this person?"),
         ))
@@ -653,7 +653,7 @@ fn add_recipient_dialog(ui: &mut Cursive, store: PasswordStoreType) {
     recipient_fields.add_child(
         TextView::new(CATALOG.gettext("GPG Key ID: "))
             .with_name("key_id")
-            .fixed_size((16, 1)),
+            .fixed_size((16_usize, 1_usize)),
     );
 
     let store2 = store.clone();
@@ -661,7 +661,7 @@ fn add_recipient_dialog(ui: &mut Cursive, store: PasswordStoreType) {
     let gpg_key_edit_view = OnEventView::new(
         EditView::new()
             .with_name("key_id_input")
-            .fixed_size((50, 1)),
+            .fixed_size((50_usize, 1_usize)),
     )
     .on_event(Key::Enter, move |ui: &mut Cursive| {
         add_recipient(ui, store.clone())
@@ -669,7 +669,7 @@ fn add_recipient_dialog(ui: &mut Cursive, store: PasswordStoreType) {
 
     recipient_fields.add_child(gpg_key_edit_view);
 
-    let cf = CircularFocus::wrap_tab(
+    let cf = CircularFocus::new(
         Dialog::around(recipient_fields)
             .button(CATALOG.gettext("Yes"), move |ui: &mut Cursive| {
                 add_recipient(ui, store2.clone())
@@ -1200,29 +1200,29 @@ fn edit_store_in_config(
     name_fields.add_child(
         TextView::new(CATALOG.gettext("Name: "))
             .with_name("name_name")
-            .fixed_size((10, 1)),
+            .fixed_size((10_usize, 1_usize)),
     );
     name_fields.add_child(
         EditView::new()
             .content(store.get_name())
             .with_name("edit_name_input")
-            .fixed_size((50, 1)),
+            .fixed_size((50_usize, 1_usize)),
     );
     directory_fields.add_child(
         TextView::new(CATALOG.gettext("Directory: "))
             .with_name("directory_name")
-            .fixed_size((10, 1)),
+            .fixed_size((10_usize, 1_usize)),
     );
     directory_fields.add_child(
         EditView::new()
             .content(store.get_store_path().to_string_lossy().into_owned())
             .with_name("edit_directory_input")
-            .fixed_size((50, 1)),
+            .fixed_size((50_usize, 1_usize)),
     );
     keys_fields.add_child(
         TextView::new(CATALOG.gettext("Valid Signing Keys: "))
             .with_name("keys_name")
-            .fixed_size((10, 1)),
+            .fixed_size((10_usize, 1_usize)),
     );
     keys_fields.add_child(
         EditView::new()
@@ -1310,27 +1310,27 @@ fn add_store_to_config(
     name_fields.add_child(
         TextView::new(CATALOG.gettext("Name: "))
             .with_name("new_name_name")
-            .fixed_size((10, 1)),
+            .fixed_size((10_usize, 1_usize)),
     );
     name_fields.add_child(
         EditView::new()
             .with_name("new_name_input")
-            .fixed_size((50, 1)),
+            .fixed_size((50_usize, 1_usize)),
     );
     directory_fields.add_child(
         TextView::new(CATALOG.gettext("Directory: "))
             .with_name("new_directory_name")
-            .fixed_size((10, 1)),
+            .fixed_size((10_usize, 1_usize)),
     );
     directory_fields.add_child(
         EditView::new()
             .with_name("new_directory_input")
-            .fixed_size((50, 1)),
+            .fixed_size((50_usize, 1_usize)),
     );
     keys_fields.add_child(
         TextView::new(CATALOG.gettext("Valid Signing Keys: "))
             .with_name("new_keys_name")
-            .fixed_size((10, 1)),
+            .fixed_size((10_usize, 1_usize)),
     );
     keys_fields.add_child(
         EditView::new()
@@ -1641,7 +1641,7 @@ fn main() {
 
     ui.menubar().add_subtree(
         CATALOG.gettext("Operations"),
-        MenuTree::new()
+        Tree::new()
             .leaf(CATALOG.gettext("Copy (ctrl-y)"), {
                 let store = store.clone();
                 move |ui: &mut Cursive| copy(ui, &store.clone())
@@ -1693,7 +1693,7 @@ fn main() {
             .leaf(CATALOG.gettext("Quit (esc)"), |s| s.quit()),
     );
 
-    let mut tree = MenuTree::new();
+    let mut tree = Tree::new();
     for s in stores.lock().unwrap().iter() {
         let ss = &s;
         let store_name = ss.get_name().clone();

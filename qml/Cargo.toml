@@ -2,7 +2,7 @@
 name = "ripasso-qt"
 version = "0.6.0-alpha"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>"]
-edition = '2018'
+edition = '2021'
 
 [dependencies]
 clipboard = "0.5"
