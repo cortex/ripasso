@@ -822,9 +822,7 @@ impl PasswordEntry {
                             0 => {
                                 if let Ok(tree) = commit.tree() {
                                     let flags = git2::PathspecFlags::NO_MATCH_ERROR;
-                                    if ps.match_tree(&tree, flags).is_err() {
-                                        return None;
-                                    }
+                                    ps.match_tree(&tree, flags).ok()?;
                                 } else {
                                     return None;
                                 }
