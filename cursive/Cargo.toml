@@ -6,11 +6,11 @@ keywords = ["password-manager", "pass"]
 version = "0.6.0-alpha"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>", "Alexander Kjäll <alexander.kjall@gmail.com>"]
 license = "GPL-3.0-only"
-edition = '2018'
+edition = '2021'
 build = "build.rs"
 
 [dependencies]
-cursive = { version = "0.16.3", default-features = false, features = ["toml", "crossterm-backend"]}
+cursive = { version = "0.17.0", default-features = false, features = ["toml", "crossterm-backend"]}
 clipboard = "0.5"
 ripasso = { path = "../", version = "0.6.0-alpha" }
 locale_config = "0.3.0"
