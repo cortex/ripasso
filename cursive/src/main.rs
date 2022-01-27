@@ -1127,7 +1127,7 @@ fn save_new_config(
     stores: Arc<Mutex<Vec<PasswordStore>>>,
     config_file_location: &Path,
     home: &Option<PathBuf>,
-) {
+) -> Result<()> {
     let e_n = &*get_value_from_input(ui, "new_name_input").unwrap();
     let e_d = &*get_value_from_input(ui, "new_directory_input").unwrap();
     let e_k_str = &*get_value_from_input(ui, "new_keys_input").unwrap();
@@ -1137,23 +1137,14 @@ fn save_new_config(
         _ => Some(e_k_str.clone()),
     };
 
-    let new_store = PasswordStore::new(e_n, &Some(PathBuf::from(e_d.clone())), &e_k, home, &None);
-    if let Err(err) = new_store {
-        helpers::errorbox(ui, &err);
-        return;
-    }
-    let new_store = new_store.unwrap();
+    let new_store = PasswordStore::new(e_n, &Some(PathBuf::from(e_d.clone())), &e_k, home, &None)?;
 
     {
         let mut stores_borrowed = stores.lock().unwrap();
         stores_borrowed.push(new_store);
     }
 
-    let save_res = pass::save_config(stores, config_file_location);
-    if let Err(err) = save_res {
-        helpers::errorbox(ui, &err);
-        return;
-    }
+    pass::save_config(stores, config_file_location)?;
 
     let mut l = ui.find_name::<SelectView<String>>("stores").unwrap();
 
@@ -1162,6 +1153,8 @@ fn save_new_config(
     ui.call_on_name("status_bar", |l: &mut TextView| {
         l.set_content(CATALOG.gettext("Updated config file"));
     });
+
+    Ok(())
 }
 
 fn edit_store_in_config(
@@ -1350,8 +1343,12 @@ fn add_store_to_config(
     let d = Dialog::around(fields)
         .title(CATALOG.gettext("New store config"))
         .button(CATALOG.gettext("Save"), move |ui: &mut Cursive| {
-            save_new_config(ui, stores.clone(), &config_file_location, &home);
-            ui.pop_layer();
+            let res = save_new_config(ui, stores.clone(), &config_file_location, &home);
+            if let Err(err) = res {
+                helpers::errorbox(ui, &err);
+            } else {
+                ui.pop_layer();
+            }
         })
         .dismiss_button(CATALOG.gettext("Cancel"));
 
@@ -1360,8 +1357,12 @@ fn add_store_to_config(
             s.pop_layer();
         })
         .on_event(Key::Enter, move |ui: &mut Cursive| {
-            save_new_config(ui, stores2.clone(), &config_file_location2, &home2);
-            ui.pop_layer();
+            let res = save_new_config(ui, stores2.clone(), &config_file_location2, &home2);
+            if let Err(err) = res {
+                helpers::errorbox(ui, &err);
+            } else {
+                ui.pop_layer();
+            }
         });
 
     ui.add_layer(ev);
