@@ -1494,7 +1494,7 @@ fn main() {
     let stores: Arc<Mutex<Vec<PasswordStore>>> = Arc::new(Mutex::new(stores.unwrap()));
 
     let store = Arc::new(Mutex::new(
-        PasswordStore::new(&"".to_owned(), &None, &None, &home, &None).unwrap(),
+        PasswordStore::new("", &None, &None, &home, &None).unwrap(),
     ));
     {
         let stores = stores.lock().unwrap();

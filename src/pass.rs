@@ -135,7 +135,7 @@ impl PasswordStore {
     }
 
     fn repo(&self) -> Result<git2::Repository> {
-        git2::Repository::open(self.root.to_path_buf()).map_err(Error::Git)
+        git2::Repository::open(&self.root).map_err(Error::Git)
     }
 
     fn verify_gpg_id_file(
@@ -582,7 +582,7 @@ fn push_password_if_match(
 
         passwords.push(PasswordEntry::new(
             &store.root,
-            &target.to_path_buf(),
+            target,
             time_return,
             name_return,
             signature_return,
