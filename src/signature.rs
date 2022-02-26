@@ -318,7 +318,8 @@ impl Recipient {
         Ok(recipients)
     }
 
-    fn write_recipients_file(
+    /// write the .gpg-id.sig file
+    pub fn write_recipients_file(
         recipients: &[Recipient],
         recipients_file: &Path,
         valid_gpg_signing_keys: &[String],

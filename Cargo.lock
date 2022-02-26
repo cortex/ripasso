@@ -2264,6 +2264,7 @@ dependencies = [
  "cursive",
  "gettext",
  "glob",
+ "hex",
  "lazy_static 1.4.0",
  "locale_config",
  "man",
