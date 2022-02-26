@@ -35,13 +35,7 @@ fn create_git_repo(ui: &mut Cursive, password_store_dir: &Option<PathBuf>, home:
         helpers::errorbox(ui, &init_res.err().unwrap());
     } else {
         let message = super::CATALOG.gettext("Initialized password repo with Ripasso");
-        match pass::PasswordStore::new(
-            &"default".to_owned(),
-            password_store_dir,
-            &None,
-            home,
-            &None,
-        ) {
+        match pass::PasswordStore::new("default", password_store_dir, &None, home, &None) {
             Err(err) => helpers::errorbox(ui, &err),
             Ok(store) => match store.add_and_commit(&[PathBuf::from(".gpg-id")], message) {
                 Err(err) => helpers::errorbox(ui, &err),
