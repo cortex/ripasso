@@ -1,6 +1,5 @@
 use super::*;
 
-
 #[test]
 fn is_checkbox_checked_false() {
     let mut siv = cursive::default();

@@ -29,7 +29,7 @@ use cursive::direction::Orientation;
 use cursive::event::{Event, Key};
 
 use ripasso::pass;
-use ripasso::pass::{OwnerTrustLevel, PasswordStore, PasswordStoreType, SignatureStatus};
+use ripasso::pass::{OwnerTrustLevel, PasswordStore, PasswordStoreType, SignatureStatus, all_recipients_from_stores};
 use std::path::{Path, PathBuf};
 use std::process;
 use std::rc::Rc;
@@ -1175,28 +1175,6 @@ fn is_checkbox_checked(ui: &mut Cursive, name: &str) -> bool {
     });
 
     checked
-}
-
-fn all_recipients_from_stores(stores: Arc<Mutex<Vec<PasswordStore>>>) -> Result<Vec<Recipient>> {
-    let all_recipients: Vec<Recipient> = {
-        let mut ar: HashMap<String, Recipient> = HashMap::new();
-        let stores = stores.lock().unwrap();
-        for store in stores.iter() {
-            for recipient in store.all_recipients()? {
-                let key = {
-                    if recipient.fingerprint == None {
-                        recipient.key_id.clone()
-                    } else {
-                        hex::encode_upper(recipient.fingerprint.as_ref().unwrap())
-                    }
-                };
-                ar.insert(key, recipient);
-            }
-        }
-        ar.into_iter().map(|(_id, r)| r).collect()
-    };
-
-    Ok(all_recipients)
 }
 
 fn edit_store_in_config(

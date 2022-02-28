@@ -1701,3 +1701,26 @@ fn init_git_repo_success() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn all_recipients_from_stores_plain() -> Result<()> {
+    let td = tempdir()?;
+
+    fs::write(td.path().join(".gpg-id"), "7E068070D5EF794B00C8A9D91D108E6C07CBC406")?;
+
+    let s1 = PasswordStore {
+        name: "unit test store".to_owned(),
+        root: td.path().to_path_buf(),
+        valid_gpg_signing_keys: vec![],
+        passwords: vec![],
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+    };
+
+    let result = all_recipients_from_stores(Arc::new(Mutex::new(vec![s1])))?;
+
+    assert_eq!(1, result.len());
+    assert_eq!("7E068070D5EF794B00C8A9D91D108E6C07CBC406", result[0].key_id);
+
+    Ok(())
+}

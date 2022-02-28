@@ -29,7 +29,7 @@ use git2::{Oid, Repository};
 use crate::crypto::{Crypto, FindSigningFingerprintStrategy, GpgMe, VerificationError};
 pub use crate::error::{Error, Result};
 pub use crate::signature::{
-    parse_signing_keys, KeyRingStatus, OwnerTrustLevel, Recipient, SignatureStatus,
+    parse_signing_keys, KeyRingStatus, OwnerTrustLevel, Recipient, SignatureStatus, Comment
 };
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -626,6 +626,28 @@ impl PasswordStore {
     ) -> Result<Recipient> {
         crate::signature::Recipient::from(key_id, pre_comment, post_comment, self.crypto.as_ref())
     }
+}
+
+pub fn all_recipients_from_stores(stores: Arc<Mutex<Vec<PasswordStore>>>) -> Result<Vec<Recipient>> {
+    let all_recipients: Vec<Recipient> = {
+        let mut ar: HashMap<String, Recipient> = HashMap::new();
+        let stores = stores.lock().unwrap();
+        for store in stores.iter() {
+            for recipient in store.all_recipients()? {
+                let key = {
+                    if recipient.fingerprint == None {
+                        recipient.key_id.clone()
+                    } else {
+                        hex::encode_upper(recipient.fingerprint.as_ref().unwrap())
+                    }
+                };
+                ar.insert(key, recipient);
+            }
+        }
+        ar.into_iter().map(|(_id, r)| r).collect()
+    };
+
+    Ok(all_recipients)
 }
 
 fn push_password_if_match(
