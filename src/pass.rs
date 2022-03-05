@@ -16,7 +16,7 @@
 */
 
 use std::fs;
-use std::fs::File;
+use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
 use std::str;
 
@@ -29,7 +29,7 @@ use git2::{Oid, Repository};
 use crate::crypto::{Crypto, FindSigningFingerprintStrategy, GpgMe, VerificationError};
 pub use crate::error::{Error, Result};
 pub use crate::signature::{
-    parse_signing_keys, KeyRingStatus, OwnerTrustLevel, Recipient, SignatureStatus,
+    parse_signing_keys, Comment, KeyRingStatus, OwnerTrustLevel, Recipient, SignatureStatus,
 };
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -55,7 +55,8 @@ pub struct PasswordStore {
 }
 
 impl PasswordStore {
-    /// Creates a `PasswordStore`
+    /// Constructs a `PasswordStore` object. If `password_store_signing_key` is present,
+    /// the function verifies that the .gpg-id file is signed correctly
     pub fn new(
         store_name: &str,
         password_store_dir: &Option<PathBuf>,
@@ -84,6 +85,92 @@ impl PasswordStore {
         if !store.valid_gpg_signing_keys.is_empty() {
             store.verify_gpg_id_file(&pass_home, &store.valid_gpg_signing_keys)?;
         }
+
+        Ok(store)
+    }
+
+    /// Creates a `PasswordStore`
+    pub fn create(
+        store_name: &str,
+        password_store_dir: &Option<PathBuf>,
+        recipients: &[Recipient],
+        recipients_as_signers: bool,
+        home: &Option<PathBuf>,
+        style_file: &Option<PathBuf>,
+    ) -> Result<PasswordStore> {
+        let pass_home = password_dir_raw(password_store_dir, home);
+        if pass_home.exists() {
+            return Err(Error::Generic(
+                "trying to create a pass store in an existing directory",
+            ));
+        }
+
+        if recipients.is_empty() {
+            return Err(Error::Generic(
+                "password store must have at least one member",
+            ));
+        }
+        for recipient in recipients {
+            if recipient.key_id.len() != 40 && recipient.key_id.len() != 42 {
+                return Err(Error::Generic(
+                    "member specification wasn't a full pgp fingerprint",
+                ));
+            }
+        }
+
+        let crypto = Box::new(GpgMe {});
+
+        let signing_keys = {
+            if recipients_as_signers {
+                let mut fingerprints = vec![];
+                for r in recipients {
+                    if r.fingerprint.is_none() {
+                        return Err(Error::GenericDyn(format!(
+                            "recipient {} ({}) doesn't have a fingerprint",
+                            r.name, r.key_id
+                        )));
+                    }
+                    fingerprints.push(hex::encode_upper(r.fingerprint.unwrap()))
+                }
+                fingerprints
+            } else {
+                vec![]
+            }
+        };
+
+        create_dir_all(&pass_home)?;
+        Recipient::write_recipients_file(
+            recipients,
+            &pass_home.join(".gpg-id"),
+            &signing_keys,
+            crypto.as_ref(),
+        )?;
+        let repo = init_git_repo(&pass_home)?;
+
+        if recipients_as_signers {
+            add_and_commit_internal(
+                &repo,
+                &[PathBuf::from(".gpg-id"), PathBuf::from(".gpg-id.sig")],
+                "initial commit by Ripasso",
+                crypto.as_ref(),
+            )?;
+        } else {
+            add_and_commit_internal(
+                &repo,
+                &[PathBuf::from(".gpg-id")],
+                "initial commit by Ripasso",
+                crypto.as_ref(),
+            )?;
+        }
+
+        let store = PasswordStore {
+            name: store_name.to_owned(),
+            root: pass_home.canonicalize()?,
+            valid_gpg_signing_keys: signing_keys,
+            passwords: [].to_vec(),
+            style_file: style_file.to_owned(),
+            crypto,
+        };
 
         Ok(store)
     }
@@ -561,6 +648,30 @@ impl PasswordStore {
     ) -> Result<Recipient> {
         crate::signature::Recipient::from(key_id, pre_comment, post_comment, self.crypto.as_ref())
     }
+}
+
+pub fn all_recipients_from_stores(
+    stores: Arc<Mutex<Vec<PasswordStore>>>,
+) -> Result<Vec<Recipient>> {
+    let all_recipients: Vec<Recipient> = {
+        let mut ar: HashMap<String, Recipient> = HashMap::new();
+        let stores = stores.lock().unwrap();
+        for store in stores.iter() {
+            for recipient in store.all_recipients()? {
+                let key = {
+                    if recipient.fingerprint == None {
+                        recipient.key_id.clone()
+                    } else {
+                        hex::encode_upper(recipient.fingerprint.as_ref().unwrap())
+                    }
+                };
+                ar.insert(key, recipient);
+            }
+        }
+        ar.into_iter().map(|(_id, r)| r).collect()
+    };
+
+    Ok(all_recipients)
 }
 
 fn push_password_if_match(
@@ -1263,10 +1374,8 @@ fn verify_git_signature(
 }
 
 /// Initialize a git repository for the store.
-pub fn init_git_repo(base: &Path) -> Result<()> {
-    git2::Repository::init(base)?;
-
-    Ok(())
+pub fn init_git_repo(base: &Path) -> Result<git2::Repository> {
+    Ok(git2::Repository::init(base)?)
 }
 
 /// Return a list of all passwords whose name contains `query`.

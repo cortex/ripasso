@@ -66,7 +66,7 @@ pub fn parse_signing_keys(
 }
 
 /// the GPG trust level for a key
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum OwnerTrustLevel {
     /// is only used for your own keys. You trust this key 'per se'. Any message signed with that key,
     /// will be trusted. This is also the reason why any key from a friend, that is signed by you, will
@@ -107,7 +107,7 @@ impl From<&gpgme::Validity> for OwnerTrustLevel {
 }
 
 /// A Recipient can either be in the GPG keyring, or not.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum KeyRingStatus {
     InKeyRing,
     NotInKeyRing,
@@ -136,7 +136,7 @@ impl std::cmp::Eq for IdComment {}
 
 /// Describes a comment around a gpg id / fingerprint. See this commit for source:
 /// https://git.zx2c4.com/password-store/commit/?id=a271b43cbd76cc30406202c49041b552656538bd
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Comment {
     /// The comment field from the .gpg-id file, above the user fingerprint
     /// not including the leading '#' characters.
@@ -149,7 +149,7 @@ pub struct Comment {
 /// Represents one person on the team.
 ///
 /// All secrets are encrypted with the key_id of the recipients.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Recipient {
     /// Human readable name of the person.
     pub name: String,
@@ -318,7 +318,8 @@ impl Recipient {
         Ok(recipients)
     }
 
-    fn write_recipients_file(
+    /// write the .gpg-id.sig file
+    pub fn write_recipients_file(
         recipients: &[Recipient],
         recipients_file: &Path,
         valid_gpg_signing_keys: &[String],

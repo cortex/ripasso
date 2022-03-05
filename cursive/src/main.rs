@@ -17,8 +17,8 @@
 
 use cursive::traits::*;
 use cursive::views::{
-    CircularFocus, Dialog, EditView, LinearLayout, NamedView, OnEventView, ResizedView, ScrollView,
-    SelectView, TextArea, TextView,
+    Checkbox, CircularFocus, Dialog, EditView, LinearLayout, NamedView, OnEventView, ResizedView,
+    ScrollView, SelectView, TextArea, TextView,
 };
 
 use cursive::menu::Tree;
@@ -29,7 +29,9 @@ use cursive::direction::Orientation;
 use cursive::event::{Event, Key};
 
 use ripasso::pass;
-use ripasso::pass::{OwnerTrustLevel, PasswordStore, PasswordStoreType, SignatureStatus};
+use ripasso::pass::{
+    all_recipients_from_stores, OwnerTrustLevel, PasswordStore, PasswordStoreType, SignatureStatus,
+};
 use std::path::{Path, PathBuf};
 use std::process;
 use std::rc::Rc;
@@ -40,6 +42,7 @@ use std::collections::HashMap;
 use unic_langid::LanguageIdentifier;
 
 use pass::Result;
+use ripasso::pass::Recipient;
 
 mod helpers;
 mod wizard;
@@ -1084,11 +1087,29 @@ fn save_edit_config(
 ) {
     let e_n = &*get_value_from_input(ui, "edit_name_input").unwrap();
     let e_d = &*get_value_from_input(ui, "edit_directory_input").unwrap();
-    let e_k_str = &*get_value_from_input(ui, "new_keys_input").unwrap();
+    let e_k_bool = is_checkbox_checked(ui, "edit_keys_input");
 
-    let e_k = match e_k_str.len() {
-        0 => None,
-        _ => Some(e_k_str.clone()),
+    let e_k = if e_k_bool {
+        let mut recipients: Vec<Recipient> = vec![];
+        for (i, r) in all_recipients_from_stores(stores.clone())
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
+            if is_checkbox_checked(ui, &format!("edit_recipient_{}", i)) && r.fingerprint.is_some()
+            {
+                recipients.push(r.clone());
+            }
+        }
+        Some(
+            recipients
+                .iter()
+                .map(|f| hex::encode_upper(f.fingerprint.unwrap()))
+                .collect::<Vec<String>>()
+                .join(","),
+        )
+    } else {
+        None
     };
 
     let new_store = PasswordStore::new(e_n, &Some(PathBuf::from(e_d.clone())), &e_k, home, &None);
@@ -1127,33 +1148,34 @@ fn save_new_config(
     stores: Arc<Mutex<Vec<PasswordStore>>>,
     config_file_location: &Path,
     home: &Option<PathBuf>,
-) {
+    all_recipients: &[Recipient],
+) -> Result<()> {
     let e_n = &*get_value_from_input(ui, "new_name_input").unwrap();
     let e_d = &*get_value_from_input(ui, "new_directory_input").unwrap();
-    let e_k_str = &*get_value_from_input(ui, "new_keys_input").unwrap();
+    let e_k = is_checkbox_checked(ui, "new_keys_input");
 
-    let e_k = match e_k_str.len() {
-        0 => None,
-        _ => Some(e_k_str.clone()),
-    };
-
-    let new_store = PasswordStore::new(e_n, &Some(PathBuf::from(e_d.clone())), &e_k, home, &None);
-    if let Err(err) = new_store {
-        helpers::errorbox(ui, &err);
-        return;
+    let mut recipients = vec![];
+    for (i, r) in all_recipients.iter().enumerate() {
+        if is_checkbox_checked(ui, &format!("new_recipient_{}", i)) {
+            recipients.push(r.clone());
+        }
     }
-    let new_store = new_store.unwrap();
+
+    let new_store = PasswordStore::create(
+        e_n,
+        &Some(PathBuf::from(e_d.clone())),
+        &recipients,
+        e_k,
+        home,
+        &None,
+    )?;
 
     {
         let mut stores_borrowed = stores.lock().unwrap();
         stores_borrowed.push(new_store);
     }
 
-    let save_res = pass::save_config(stores, config_file_location);
-    if let Err(err) = save_res {
-        helpers::errorbox(ui, &err);
-        return;
-    }
+    pass::save_config(stores, config_file_location)?;
 
     let mut l = ui.find_name::<SelectView<String>>("stores").unwrap();
 
@@ -1162,6 +1184,17 @@ fn save_new_config(
     ui.call_on_name("status_bar", |l: &mut TextView| {
         l.set_content(CATALOG.gettext("Updated config file"));
     });
+
+    Ok(())
+}
+
+fn is_checkbox_checked(ui: &mut Cursive, name: &str) -> bool {
+    let mut checked = false;
+    ui.call_on_name(name, |l: &mut Checkbox| {
+        checked = l.is_checked();
+    });
+
+    checked
 }
 
 fn edit_store_in_config(
@@ -1169,13 +1202,15 @@ fn edit_store_in_config(
     stores: Arc<Mutex<Vec<PasswordStore>>>,
     config_file_location: &Path,
     home: &Option<PathBuf>,
-) {
+) -> Result<()> {
+    let all_recipients = all_recipients_from_stores(stores.clone())?;
+
     let l = ui.find_name::<SelectView<String>>("stores").unwrap();
 
     let sel = l.selection();
 
     if sel.is_none() {
-        return;
+        return Ok(());
     }
     let sel = sel.unwrap();
     let name = sel.as_ref();
@@ -1189,7 +1224,7 @@ fn edit_store_in_config(
     }
 
     if store_opt.is_none() {
-        return;
+        return Ok(());
     }
     let store = store_opt.unwrap();
 
@@ -1220,19 +1255,33 @@ fn edit_store_in_config(
             .fixed_size((50_usize, 1_usize)),
     );
     keys_fields.add_child(
-        TextView::new(CATALOG.gettext("Valid Signing Keys: "))
+        TextView::new(CATALOG.gettext("Enforce signing of .gpg-id file: "))
             .with_name("keys_name")
-            .fixed_size((10_usize, 1_usize)),
+            .fixed_size((30_usize, 1_usize)),
     );
-    keys_fields.add_child(
-        EditView::new()
-            .content(store.get_valid_gpg_signing_keys().join(","))
-            .with_name("edit_keys_input")
-            .min_size((50, 1)),
-    );
+    let mut c_b = Checkbox::new();
+    if !store.get_valid_gpg_signing_keys().is_empty() {
+        c_b.set_checked(true);
+    }
+    keys_fields.add_child(c_b.with_name("edit_keys_input"));
     fields.add_child(name_fields);
     fields.add_child(directory_fields);
     fields.add_child(keys_fields);
+
+    fields.add_child(
+        TextView::new(CATALOG.gettext("Store Members: ")).fixed_size((30_usize, 1_usize)),
+    );
+    let store_recipients = store.all_recipients()?;
+    for (i, recipient) in all_recipients.iter().enumerate() {
+        let mut row = LinearLayout::horizontal();
+        row.add_child(TextView::new(&recipient.name).fixed_size((30_usize, 1_usize)));
+        let mut c = Checkbox::new();
+        if store_recipients.contains(recipient) {
+            c.set_checked(true);
+        }
+        row.add_child(c.with_name(format!("new_recipient_{}", i)));
+        fields.add_child(row);
+    }
 
     let stores2 = stores.clone();
     let stores3 = stores.clone();
@@ -1261,6 +1310,8 @@ fn edit_store_in_config(
         });
 
     ui.add_layer(ev);
+
+    Ok(())
 }
 
 fn delete_store_from_config(
@@ -1302,7 +1353,9 @@ fn add_store_to_config(
     stores: Arc<Mutex<Vec<PasswordStore>>>,
     config_file_location: &Path,
     home: &Option<PathBuf>,
-) {
+) -> Result<()> {
+    let all_recipients = all_recipients_from_stores(stores.clone())?;
+
     let mut fields = LinearLayout::vertical();
     let mut name_fields = LinearLayout::horizontal();
     let mut directory_fields = LinearLayout::horizontal();
@@ -1310,7 +1363,7 @@ fn add_store_to_config(
     name_fields.add_child(
         TextView::new(CATALOG.gettext("Name: "))
             .with_name("new_name_name")
-            .fixed_size((10_usize, 1_usize)),
+            .fixed_size((30_usize, 1_usize)),
     );
     name_fields.add_child(
         EditView::new()
@@ -1320,7 +1373,7 @@ fn add_store_to_config(
     directory_fields.add_child(
         TextView::new(CATALOG.gettext("Directory: "))
             .with_name("new_directory_name")
-            .fixed_size((10_usize, 1_usize)),
+            .fixed_size((30_usize, 1_usize)),
     );
     directory_fields.add_child(
         EditView::new()
@@ -1328,30 +1381,47 @@ fn add_store_to_config(
             .fixed_size((50_usize, 1_usize)),
     );
     keys_fields.add_child(
-        TextView::new(CATALOG.gettext("Valid Signing Keys: "))
+        TextView::new(CATALOG.gettext("Enforce signing of .gpg-id file: "))
             .with_name("new_keys_name")
-            .fixed_size((10_usize, 1_usize)),
+            .fixed_size((30_usize, 1_usize)),
     );
-    keys_fields.add_child(
-        EditView::new()
-            .with_name("new_keys_input")
-            .min_size((50, 1)),
-    );
+    keys_fields.add_child(Checkbox::new().with_name("new_keys_input"));
+
     fields.add_child(name_fields);
     fields.add_child(directory_fields);
     fields.add_child(keys_fields);
+    fields.add_child(
+        TextView::new(CATALOG.gettext("Store Members: ")).fixed_size((30_usize, 1_usize)),
+    );
+    for (i, recipient) in all_recipients.iter().enumerate() {
+        let mut row = LinearLayout::horizontal();
+        row.add_child(TextView::new(&recipient.name).fixed_size((30_usize, 1_usize)));
+        row.add_child(Checkbox::new().with_name(format!("new_recipient_{}", i)));
+        fields.add_child(row);
+    }
 
     let stores2 = stores.clone();
     let config_file_location = config_file_location.to_path_buf();
     let config_file_location2 = config_file_location.to_path_buf();
     let home = home.clone();
     let home2 = home.clone();
+    let all_recipients2 = all_recipients.clone();
 
     let d = Dialog::around(fields)
         .title(CATALOG.gettext("New store config"))
         .button(CATALOG.gettext("Save"), move |ui: &mut Cursive| {
-            save_new_config(ui, stores.clone(), &config_file_location, &home);
-            ui.pop_layer();
+            let res = save_new_config(
+                ui,
+                stores.clone(),
+                &config_file_location,
+                &home,
+                &all_recipients,
+            );
+            if let Err(err) = res {
+                helpers::errorbox(ui, &err);
+            } else {
+                ui.pop_layer();
+            }
         })
         .dismiss_button(CATALOG.gettext("Cancel"));
 
@@ -1360,11 +1430,23 @@ fn add_store_to_config(
             s.pop_layer();
         })
         .on_event(Key::Enter, move |ui: &mut Cursive| {
-            save_new_config(ui, stores2.clone(), &config_file_location2, &home2);
-            ui.pop_layer();
+            let res = save_new_config(
+                ui,
+                stores2.clone(),
+                &config_file_location2,
+                &home2,
+                &all_recipients2,
+            );
+            if let Err(err) = res {
+                helpers::errorbox(ui, &err);
+            } else {
+                ui.pop_layer();
+            }
         });
 
     ui.add_layer(ev);
+
+    Ok(())
 }
 
 fn show_manage_config_dialog(
@@ -1404,13 +1486,19 @@ fn show_manage_config_dialog(
 
     let recipients_event = OnEventView::new(ll)
         .on_event(Event::CtrlChar('e'), move |ui: &mut Cursive| {
-            edit_store_in_config(ui, stores.clone(), &config_file_location, &home)
+            let res = edit_store_in_config(ui, stores.clone(), &config_file_location, &home);
+            if let Err(err) = res {
+                helpers::errorbox(ui, &err);
+            }
         })
         .on_event(Key::Del, move |ui: &mut Cursive| {
             delete_store_from_config(ui, stores2.clone(), &config_file_location2)
         })
         .on_event(Key::Ins, move |ui: &mut Cursive| {
-            add_store_to_config(ui, stores3.clone(), &config_file_location3, &home2)
+            let res = add_store_to_config(ui, stores3.clone(), &config_file_location3, &home2);
+            if let Err(err) = res {
+                helpers::errorbox(ui, &err);
+            }
         })
         .on_event(Key::Esc, |s| {
             s.pop_layer();
@@ -1737,3 +1825,7 @@ fn main() {
 
     ui.run();
 }
+
+#[cfg(test)]
+#[path = "tests/main.rs"]
+mod cursive_tests;
