@@ -2259,6 +2259,7 @@ dependencies = [
 name = "ripasso-cursive"
 version = "0.6.0-alpha"
 dependencies = [
+ "chrono",
  "clipboard",
  "config",
  "cursive",
@@ -2269,6 +2270,7 @@ dependencies = [
  "locale_config",
  "man",
  "ripasso",
+ "tempfile",
  "term_size",
  "toml",
  "unic-langid",
