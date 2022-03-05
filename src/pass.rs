@@ -324,7 +324,10 @@ impl PasswordStore {
                     &self.root,
                     &append_extension(PathBuf::from(path_end), ".gpg"),
                 )?);
-                PasswordEntry::load_from_filesystem(&self.root, &append_extension(PathBuf::from(path_end), ".gpg"))
+                PasswordEntry::load_from_filesystem(
+                    &self.root,
+                    &append_extension(PathBuf::from(path_end), ".gpg"),
+                )
             }
             Ok(repo) => {
                 let message = format!("Add password for {} using ripasso", path_end);

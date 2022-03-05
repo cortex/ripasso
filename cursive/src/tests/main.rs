@@ -1,7 +1,7 @@
 use super::*;
+use chrono::Local;
 use ripasso::pass::{PasswordEntry, RepositoryStatus};
 use tempfile::tempdir;
-use chrono::Local;
 
 #[test]
 fn copy_name_none() {
@@ -20,9 +20,14 @@ fn do_delete_normal() {
 
     let td = tempdir().unwrap();
     std::fs::create_dir(&td.path().join(".password-store")).unwrap();
-    std::fs::write(&td.path().join(".password-store").join("file.gpg"), "pgp-data").unwrap();
+    std::fs::write(
+        &td.path().join(".password-store").join("file.gpg"),
+        "pgp-data",
+    )
+    .unwrap();
 
-    let mut store = PasswordStore::new("", &Some(td.path().to_path_buf()), &None, &None, &None).unwrap();
+    let mut store =
+        PasswordStore::new("", &Some(td.path().to_path_buf()), &None, &None, &None).unwrap();
     store.passwords.push(PasswordEntry::new(
         &td.path().join(".password-store"),
         &PathBuf::from("file.gpg"),
@@ -34,9 +39,15 @@ fn do_delete_normal() {
     let store: PasswordStoreType = Arc::new(Mutex::new(store));
 
     let mut entries = SelectView::<pass::PasswordEntry>::new();
-    entries.add_all(store.lock().unwrap().passwords.clone().into_iter().map(|p| {
-        (format!("{:?}", p), p)
-    }));
+    entries.add_all(
+        store
+            .lock()
+            .unwrap()
+            .passwords
+            .clone()
+            .into_iter()
+            .map(|p| (format!("{:?}", p), p)),
+    );
     entries.set_selection(0);
 
     siv.add_layer(entries.with_name("results"));
