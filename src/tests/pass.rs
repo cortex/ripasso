@@ -1534,6 +1534,7 @@ fn test_new_password_file() -> Result<()> {
     assert_eq!(false, result.committed_by.is_some());
     assert_eq!(false, result.updated.is_some());
     assert_eq!("test/file", result.name);
+    assert_eq!(td.path().join("test").join("file.gpg"), result.path);
 
     Ok(())
 }
