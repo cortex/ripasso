@@ -14,7 +14,7 @@ jobs:
           toolchain: stable
           override: true
       - name: Dependencies
-        run: sudo apt install libgpgme11-dev libgpg-error-dev -y
+        run: sudo apt update -y && sudo apt install libgpgme11-dev libgpg-error-dev -y
       - uses: actions-rs/cargo@v1
         with:
           command: check
@@ -30,7 +30,7 @@ jobs:
           toolchain: stable
           override: true
       - name: Dependencies
-        run: sudo apt install libgpgme11-dev libgpg-error-dev libgtk-3-dev qtdeclarative5-dev libqt5svg5-dev libxcb-shape0-dev libxcb-xfixes0-dev -y
+        run: sudo apt update -y && sudo apt install libgpgme11-dev libgpg-error-dev libgtk-3-dev qtdeclarative5-dev libqt5svg5-dev libxcb-shape0-dev libxcb-xfixes0-dev -y
       - uses: actions-rs/cargo@v1
         with:
           command: test
@@ -48,7 +48,7 @@ jobs:
           override: true
       - run: rustup component add rustfmt
       - name: Dependencies
-        run: sudo apt install libgpgme11-dev libgpg-error-dev -y
+        run: sudo apt update -y && sudo apt install libgpgme11-dev libgpg-error-dev -y
       - uses: actions-rs/cargo@v1
         with:
           command: fmt
@@ -66,7 +66,7 @@ jobs:
           override: true
       - run: rustup component add clippy
       - name: Dependencies
-        run: sudo apt install libgpgme11-dev libgpg-error-dev -y
+        run: sudo apt update -y && sudo apt install libgpgme11-dev libgpg-error-dev -y
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
