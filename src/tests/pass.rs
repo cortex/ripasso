@@ -2,10 +2,10 @@ use super::*;
 
 use std::fs::File;
 use std::path::PathBuf;
-
-use hex::FromHex;
 use std::env;
+
 use tempfile::tempdir;
+use hex::FromHex;
 
 use crate::test_helpers::{MockCrypto, UnpackedDir};
 
@@ -66,6 +66,8 @@ fn populate_password_list_small_repo() -> Result<()> {
         &None,
         &Some(dir.dir().to_path_buf()),
         &None,
+        &CryptoImpl::GpgMe,
+        &None,
     )?;
     let results = store.all_passwords().unwrap();
 
@@ -86,7 +88,9 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
         &None,
         &Some(dir.dir().to_path_buf()),
         &None,
-    )?;
+        &CryptoImpl::GpgMe,
+        &None,
+   )?;
     let results = store.all_passwords().unwrap();
 
     assert_eq!(results.len(), 1);
@@ -105,6 +109,8 @@ fn populate_password_list_directory_without_git() -> Result<()> {
         &Some(dir.dir().to_path_buf()),
         &None,
         &Some(dir.dir().to_path_buf()),
+        &None,
+        &CryptoImpl::GpgMe,
         &None,
     )?;
     let results = store.all_passwords().unwrap();
@@ -137,6 +143,8 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
         &None,
         &Some(dir.dir().to_path_buf()),
         &None,
+        &CryptoImpl::GpgMe,
+        &None,
     )?;
     let results = store.all_passwords().unwrap();
 
@@ -161,6 +169,8 @@ fn password_store_with_relative_path() -> Result<()> {
         &Some(dir.dir().to_path_buf()),
         &None,
         &Some(dir.dir().to_path_buf()),
+        &None,
+        &CryptoImpl::GpgMe,
         &None,
     )?;
 
@@ -192,6 +202,8 @@ fn password_store_with_shallow_checkout() -> Result<()> {
         &None,
         &Some(dir.dir().to_path_buf()),
         &None,
+        &CryptoImpl::GpgMe,
+        &None,
     )?;
     let results = store.all_passwords().unwrap();
 
@@ -212,6 +224,8 @@ fn password_store_with_sparse_checkout() -> Result<()> {
         &Some(dir.dir().to_path_buf()),
         &None,
         &Some(dir.dir().to_path_buf()),
+        &None,
+        &CryptoImpl::GpgMe,
         &None,
     )?;
     let results = store.all_passwords().unwrap();
@@ -247,6 +261,8 @@ fn password_store_with_symlink() -> Result<()> {
         &Some(link_dir.clone()),
         &None,
         &Some(link_dir.clone()),
+        &None,
+        &CryptoImpl::GpgMe,
         &None,
     )?;
     let results = store.all_passwords().unwrap();
@@ -700,6 +716,50 @@ fn read_config_default_path_in_env_var() -> Result<()> {
 }
 
 #[test]
+fn read_config_default_path_in_env_var_with_pgp_setting() -> Result<()> {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
+    writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
+    gpg_file.flush()?;
+
+    std::fs::create_dir_all(dir.path().join(".config").join("ripasso"))?;
+    let mut file = File::create(
+        dir.path()
+            .join(".config")
+            .join("ripasso")
+            .join("settings.toml"),
+    )?;
+
+    writeln!(
+        &file,
+        "[stores.default]\npath = \"{}\"\nvalid_signing_keys = \"7E068070D5EF794B00C8A9D91D108E6C07CBC406\"\npgp_implementation = 'gpg'\nown_fingerprint = \"7E068070D5EF794B00C8A9D91D108E6C07CBC406\"",
+        dir.path().join(".password-store").to_str().unwrap()
+    )?;
+    file.flush()?;
+
+    let (settings, _) = read_config(
+        &Some("/tmp/t2".to_owned()),
+        &None,
+        &Some(dir.into_path()),
+        &None,
+    )?;
+
+    let stores = settings.get_table("stores")?;
+
+    let work = stores["default"].clone().into_table()?;
+    let path = work["path"].clone().into_str()?;
+    let keys = work["valid_signing_keys"].clone().into_str()?;
+    assert_eq!("/tmp/t2/", path);
+    assert_eq!("-1", keys);
+    assert_eq!("gpg", work["pgp_implementation"].clone().into_str()?);
+    assert_eq!("7E068070D5EF794B00C8A9D91D108E6C07CBC406", work["own_fingerprint"].clone().into_str()?);
+
+    assert_eq!(false, stores.contains_key("work"));
+    Ok(())
+}
+
+#[test]
 fn save_config_one_store() {
     let config_file = tempfile::NamedTempFile::new().unwrap();
     let style_file = tempfile::NamedTempFile::new().unwrap();
@@ -712,6 +772,8 @@ fn save_config_one_store() {
         &None,
         &Some(home.path().to_path_buf()),
         &Some(style_file.path().to_path_buf()),
+        &CryptoImpl::Sequoia,
+        &Some([0; 20]),
     )
     .unwrap();
 
@@ -726,6 +788,55 @@ fn save_config_one_store() {
     assert!(config.contains("[stores.\"s1 name\"]\n"));
     assert!(config.contains(&format!("path = '{}'\n", passdir.path().display())));
     assert!(config.contains(&format!("style_path = '{}'\n", style_file.path().display())));
+    assert!(config.contains("pgp_implementation = 'sequoia'\n"));
+    assert!(config.contains("own_fingerprint = '0000000000000000000000000000000000000000'\n"));
+}
+
+#[test]
+fn save_config_one_store_with_pgp_impl() {
+    let dir = tempfile::tempdir().unwrap();
+
+    let store = PasswordStore::new(
+        "default",
+        &Some(dir.path().to_path_buf()),
+        &None,
+        &Some(dir.path().to_path_buf()),
+        &None,
+        &CryptoImpl::GpgMe,
+        &None,
+    ).unwrap();
+
+    save_config(Arc::new(Mutex::new(vec![Arc::new(Mutex::new(store))])), &dir.path().join("file.toml")).unwrap();
+
+    let data = fs::read_to_string(dir.path().join("file.toml")).unwrap();
+
+     assert!(data.contains("[stores.default]"));
+     assert!(data.contains("pgp_implementation = 'gpg'"));
+     assert!(data.contains(&format!("path = '{}'\n", &dir.path().display())));
+}
+
+#[test]
+fn save_config_one_store_with_fingerprint() {
+    let dir = tempfile::tempdir().unwrap();
+
+    let store = PasswordStore::new(
+        "default",
+        &Some(dir.path().to_path_buf()),
+        &None,
+        &Some(dir.path().to_path_buf()),
+        &None,
+        &CryptoImpl::Sequoia,
+        &Some(<[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap()),
+    ).unwrap();
+
+    save_config(Arc::new(Mutex::new(vec![Arc::new(Mutex::new(store))])), &dir.path().join("file.toml")).unwrap();
+
+    let data = fs::read_to_string(dir.path().join("file.toml")).unwrap();
+
+     assert!(data.contains("[stores.default]"));
+     assert!(data.contains("pgp_implementation = 'sequoia'"));
+     assert!(data.contains("own_fingerprint = '7E068070D5EF794B00C8A9D91D108E6C07CBC406'"));
+     assert!(data.contains(&format!("path = '{}'\n", &dir.path().display())));
 }
 
 #[test]
@@ -751,6 +862,8 @@ fn rename_file() -> Result<()> {
         &Some(dir.dir().to_path_buf()),
         &None,
         &Some(dir.dir().to_path_buf()),
+        &None,
+        &CryptoImpl::GpgMe,
         &None,
     )?;
     store.reload_password_list()?;
@@ -778,6 +891,8 @@ fn rename_file_absolute_path() -> Result<()> {
         &Some(dir.dir().to_path_buf()),
         &None,
         &Some(dir.dir().to_path_buf()),
+        &None,
+        &CryptoImpl::GpgMe,
         &None,
     )?;
     store.reload_password_list()?;
@@ -1162,6 +1277,8 @@ fn delete_file() -> Result<()> {
         &None,
         &None,
         &None,
+        &CryptoImpl::GpgMe,
+        &None,
     )?;
 
     let pe = PasswordEntry::new(
@@ -1199,6 +1316,8 @@ fn get_history_no_repo() -> Result<()> {
         &None,
         &None,
         &None,
+        &CryptoImpl::GpgMe,
+        &None,
     )?;
 
     let pe = PasswordEntry::new(
@@ -1226,6 +1345,8 @@ fn get_history_with_repo() -> Result<()> {
         &Some(dir.dir().to_path_buf()),
         &None,
         &Some(dir.dir().to_path_buf()),
+        &None,
+        &CryptoImpl::GpgMe,
         &None,
     )?;
     let results = store.all_passwords().unwrap();

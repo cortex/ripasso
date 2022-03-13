@@ -18,7 +18,7 @@
 use cursive::traits::*;
 use cursive::views::{
     Checkbox, CircularFocus, Dialog, EditView, LinearLayout, NamedView, OnEventView, ResizedView,
-    ScrollView, SelectView, TextArea, TextView,
+    ScrollView, SelectView, TextArea, TextView, RadioGroup, RadioButton,
 };
 
 use cursive::menu::Tree;
@@ -30,6 +30,7 @@ use cursive::event::{Event, Key};
 
 use ripasso::pass;
 use ripasso::pass::{all_recipients_from_stores, OwnerTrustLevel, PasswordStore, SignatureStatus};
+use ripasso::crypto::CryptoImpl;
 use std::path::{Path, PathBuf};
 use std::process;
 use std::rc::Rc;
@@ -38,6 +39,7 @@ use std::{thread, time};
 
 use std::collections::HashMap;
 use unic_langid::LanguageIdentifier;
+use hex::FromHex;
 
 use pass::Result;
 use ripasso::pass::Recipient;
@@ -521,6 +523,14 @@ fn get_value_from_input(s: &mut Cursive, input_name: &str) -> Option<std::rc::Rc
     password
 }
 
+fn is_radio_button_selected(s: &mut Cursive, button_name: &str) -> bool {
+    let mut selected = false;
+    s.call_on_name(button_name, |e: &mut RadioButton<CryptoImpl>| {
+        selected = e.is_selected();
+    });
+    selected
+}
+
 fn do_new_password_save(
     s: &mut Cursive,
     path: &str,
@@ -980,7 +990,8 @@ fn git_pull(ui: &mut Cursive, store: PasswordStoreType) {
     });
 }
 
-fn pgp_import(ui: &mut Cursive, store: PasswordStoreType) {
+fn pgp_import(ui: &mut Cursive, store: PasswordStoreType, config_path: &Path) {
+    let config_path = config_path.to_owned();
     let d = Dialog::around(
         TextArea::new()
             .with_name("gpg_import_text_area")
@@ -994,7 +1005,9 @@ fn pgp_import(ui: &mut Cursive, store: PasswordStoreType) {
 
         s.pop_layer();
 
-        let import_result = pass::pgp_import(&store.lock().unwrap().lock().unwrap(), text);
+        let store = store.lock().unwrap();
+        let mut store = store.lock().unwrap();
+        let import_result = pass::pgp_import(&mut store, text, &config_path);
         match import_result {
             Err(err) => helpers::errorbox(s, &err),
             Ok(result) => {
@@ -1018,14 +1031,17 @@ fn pgp_import(ui: &mut Cursive, store: PasswordStoreType) {
     ui.add_layer(ev);
 }
 
-fn pgp_pull(ui: &mut Cursive, store: PasswordStoreType) {
+fn pgp_pull(ui: &mut Cursive, store: PasswordStoreType, config_path: &Path) {
+    let config_path = config_path.to_owned();
     let d = Dialog::around(TextView::new(
         "Download pgp data from keys.openpgp.org and import them into your key ring?",
     ))
     .dismiss_button(CATALOG.gettext("Cancel"))
     .button(CATALOG.gettext("Download"), move |ui| {
         ui.pop_layer();
-        let pull_result = pass::pgp_pull(&store.lock().unwrap().lock().unwrap());
+        let store = store.lock().unwrap();
+        let mut store = store.lock().unwrap();
+        let pull_result = pass::pgp_pull(&mut store, &config_path);
         match pull_result {
             Err(err) => helpers::errorbox(ui, &err),
             Ok(result) => {
@@ -1141,12 +1157,33 @@ fn get_stores(config: &config::Config, home: &Option<PathBuf>) -> Result<Vec<Pas
                     None => None,
                 };
 
+                let pgp_impl = match store.get("pgp") {
+                    Some(pgp_str) => CryptoImpl::try_from(pgp_str.clone().into_str()?.as_str()),
+                    None => Ok(CryptoImpl::GpgMe),
+                }?;
+
+                let own_fingerprint = store.get("own_fingerprint");
+                let own_fingerprint = match own_fingerprint {
+                    None => None,
+                    Some(k) => match k.clone().into_str() {
+                        Err(_) => None,
+                        Ok(key) => {
+                            match <[u8; 20]>::from_hex(key) {
+                                Err(_) => None,
+                                Ok(fp) => Some(fp),
+                            }
+                        }
+                    },
+                };
+
                 final_stores.push(PasswordStore::new(
                     store_name,
                     &password_store_dir,
                     &valid_signing_keys,
                     home,
                     &style_path_opt,
+                    &pgp_impl,
+                    &own_fingerprint
                 )?);
             }
         }
@@ -1198,6 +1235,8 @@ fn save_edit_config(
     let e_n = &*get_value_from_input(ui, "edit_name_input").unwrap();
     let e_d = &*get_value_from_input(ui, "edit_directory_input").unwrap();
     let e_k_bool = is_checkbox_checked(ui, "edit_keys_input");
+    let e_sequoia_selected = &is_radio_button_selected(ui, "edit_sequoia_button_name");
+    let own_fingerprint = &*get_value_from_input(ui, "edit_own_fingerprint_input").unwrap();
 
     let e_k = if e_k_bool {
         let mut recipients: Vec<Recipient> = vec![];
@@ -1222,7 +1261,17 @@ fn save_edit_config(
         None
     };
 
-    let new_store = PasswordStore::new(e_n, &Some(PathBuf::from(e_d.clone())), &e_k, home, &None);
+    let pgp_impl = match e_sequoia_selected {
+        true => CryptoImpl::Sequoia,
+        false => CryptoImpl::GpgMe,
+    };
+
+    let own_fingerprint = match <[u8; 20]>::from_hex(own_fingerprint) {
+        Err(_) => None,
+        Ok(fp) => Some(fp),
+    };
+
+    let new_store = PasswordStore::new(e_n, &Some(PathBuf::from(e_d.clone())), &e_k, home, &None, &pgp_impl, &own_fingerprint);
     if let Err(err) = new_store {
         helpers::errorbox(ui, &err);
         return;
@@ -1344,6 +1393,8 @@ fn edit_store_in_config(
     let mut name_fields = LinearLayout::horizontal();
     let mut directory_fields = LinearLayout::horizontal();
     let mut keys_fields = LinearLayout::horizontal();
+    let mut pgp_fields = LinearLayout::horizontal();
+    let mut fingerprint_fields = LinearLayout::horizontal();
     name_fields.add_child(
         TextView::new(CATALOG.gettext("Name: "))
             .with_name("name_name")
@@ -1376,9 +1427,34 @@ fn edit_store_in_config(
         c_b.set_checked(true);
     }
     keys_fields.add_child(c_b.with_name("edit_keys_input"));
+
+    pgp_fields.add_child(
+        TextView::new(CATALOG.gettext("PGP Implementation: "))
+            .with_name("edit_pgp_name")
+            .fixed_size((10_usize, 1_usize)),
+    );
+    let mut pgp_radio = RadioGroup::new();
+    let gpg_me_button = pgp_radio.button(CryptoImpl::GpgMe, "GPG").with_name("edit_pgp_me_button_name");
+    let sequoia_button = pgp_radio.button(CryptoImpl::Sequoia, "Sequoia").with_name("edit_sequoia_button_name");
+    pgp_fields.add_child(gpg_me_button);
+    pgp_fields.add_child(sequoia_button);
+    fingerprint_fields.add_child(
+        TextView::new(CATALOG.gettext("Own key fingerprint: "))
+            .with_name("name_own_fingerprint")
+            .fixed_size((10_usize, 1_usize)),
+    );
+    fingerprint_fields.add_child(
+        EditView::new()
+            .content(hex::encode_upper(store.get_crypto().own_fingerprint().unwrap_or([0; 20])))
+            .with_name("edit_own_fingerprint_input")
+            .fixed_size((50_usize, 1_usize)),
+    );
+
     fields.add_child(name_fields);
     fields.add_child(directory_fields);
     fields.add_child(keys_fields);
+    fields.add_child(pgp_fields);
+    fields.add_child(fingerprint_fields);
 
     fields.add_child(
         TextView::new(CATALOG.gettext("Store Members: ")).fixed_size((30_usize, 1_usize)),
@@ -1470,6 +1546,7 @@ fn add_store_to_config(
     let mut name_fields = LinearLayout::horizontal();
     let mut directory_fields = LinearLayout::horizontal();
     let mut keys_fields = LinearLayout::horizontal();
+    let mut pgp_fields = LinearLayout::horizontal();
     name_fields.add_child(
         TextView::new(CATALOG.gettext("Name: "))
             .with_name("new_name_name")
@@ -1497,6 +1574,17 @@ fn add_store_to_config(
     );
     keys_fields.add_child(Checkbox::new().with_name("new_keys_input"));
 
+    pgp_fields.add_child(
+        TextView::new(CATALOG.gettext("PGP Implementation: "))
+            .with_name("new_pgp_name")
+            .fixed_size((10_usize, 1_usize)),
+    );
+    let mut pgp_radio = RadioGroup::new();
+    let gpg_me_button = pgp_radio.button(CryptoImpl::GpgMe, "GPG").with_name("new_pgp_me_button_name");
+    let sequoia_button = pgp_radio.button(CryptoImpl::Sequoia, "Sequoia").with_name("new_sequoia_button_name");
+    pgp_fields.add_child(gpg_me_button);
+    pgp_fields.add_child(sequoia_button);
+
     fields.add_child(name_fields);
     fields.add_child(directory_fields);
     fields.add_child(keys_fields);
@@ -1509,6 +1597,7 @@ fn add_store_to_config(
         row.add_child(Checkbox::new().with_name(format!("new_recipient_{}", i)));
         fields.add_child(row);
     }
+    fields.add_child(pgp_fields);
 
     let stores2 = stores.clone();
     #[allow(clippy::redundant_clone)]
@@ -1661,6 +1750,19 @@ fn main() {
     let home = match std::env::var("HOME") {
         Err(_) => None,
         Ok(home_path) => Some(PathBuf::from(home_path)),
+    };
+    let xdg_data_home = match std::env::var("XDG_DATA_HOME") {
+        Err(_) => {match &home {
+            Some(home_path) => home_path.join(".local"),
+            None => {
+                eprintln!(
+                    "{}",
+                    CATALOG.gettext("No home directory set")
+                );
+                process::exit(1);
+            }
+        }},
+        Ok(data_home_path) => PathBuf::from(data_home_path),
     };
 
     let config_res = {
@@ -1896,11 +1998,12 @@ fn main() {
             .delimiter()
             .leaf(CATALOG.gettext("Pull PGP Certificates"), {
                 let store = store.clone();
-                move |ui: &mut Cursive| pgp_pull(ui, store.clone())
+                let xdg_data_home = xdg_data_home.clone();
+                move |ui: &mut Cursive| pgp_pull(ui, store.clone(), &xdg_data_home)
             })
             .leaf(CATALOG.gettext("Import PGP Certificate from text"), {
                 let store = store.clone();
-                move |ui: &mut Cursive| pgp_import(ui, store.clone())
+                move |ui: &mut Cursive| pgp_import(ui, store.clone(), &xdg_data_home)
             })
             .delimiter()
             .leaf(CATALOG.gettext("Quit (esc)"), |s| s.quit()),

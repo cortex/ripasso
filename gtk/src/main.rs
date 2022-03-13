@@ -27,6 +27,7 @@ use glib::StaticType;
 
 use clipboard::{ClipboardContext, ClipboardProvider};
 use ripasso::pass;
+use ripasso::crypto::CryptoImpl;
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::process;
@@ -419,6 +420,8 @@ fn main() {
             &password_store_dir,
             &password_store_signing_key,
             &home,
+            &None,
+            &CryptoImpl::GpgMe,
             &None,
         )
         .unwrap(),
