@@ -109,6 +109,15 @@ The best way to install ripasso on pre-catalina mac right now is the nix package
 nix-env -iA nixpkgs.ripasso-cursive
 ```
 
+### Alpine
+
+Ripasso-cursive is currently in the testing repository for apk, so the testing repository needs to be added to the apk repositories file.
+
+TUI version
+```
+apk add ripasso-cursive
+```
+
 ## Build instructions
 
 [See here](https://github.com/cortex/ripasso/blob/master/BUILD_INSTRUCTIONS.md)
