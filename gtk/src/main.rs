@@ -33,9 +33,10 @@ use std::process;
 use std::sync::{atomic::Ordering, Arc, Mutex};
 use std::{thread, time};
 
-use pass::PasswordStoreType;
-
 use lazy_static::lazy_static;
+
+/// The 'pointer' to the current PasswordStore is of this type.
+type PasswordStoreType = Arc<Mutex<pass::PasswordStore>>;
 
 lazy_static! {
     static ref SHOWN_PASSWORDS: Arc<Mutex<Vec<pass::PasswordEntry>>> = Arc::new(Mutex::new(vec![]));
@@ -347,7 +348,7 @@ fn file_history_dialog(
     tree_view.append_column(&commit_msg_col);
     tree_view.append_column(&author_col);
 
-    let history = password.get_history(&store)?;
+    let history = password.get_history(&store.lock().unwrap())?;
 
     for (i, history_line) in history.iter().enumerate() {
         model.insert_with_values(
@@ -539,9 +540,9 @@ fn main() {
     gtk::main();
 }
 
-fn results(store: &pass::PasswordStoreType, query: &str) -> ListStore {
+fn results(store: &PasswordStoreType, query: &str) -> ListStore {
     let model = ListStore::new(&[String::static_type()]);
-    let filtered = pass::search(store, query).unwrap();
+    let filtered = pass::search(&store.lock().unwrap(), query).unwrap();
     let mut passwords = SHOWN_PASSWORDS.lock().unwrap();
     for (i, p) in filtered.iter().enumerate() {
         model.insert_with_values(Some(i as u32), &[0], &[&p.name]);
@@ -566,6 +567,6 @@ fn receive() -> glib::Continue {
 thread_local!(
     static GLOBAL: RefCell<Option<(gtk::SearchEntry,
         Arc<TreeView>,
-        pass::PasswordStoreType,
+        PasswordStoreType,
     )>> = RefCell::new(None)
 );

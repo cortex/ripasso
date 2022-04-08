@@ -1058,7 +1058,7 @@ fn get_history_no_repo() -> Result<()> {
         RepositoryStatus::NoRepo,
     );
 
-    let history = pe.get_history(&Arc::new(Mutex::new(store)))?;
+    let history = pe.get_history(&store)?;
 
     assert_eq!(0, history.len());
 
@@ -1084,7 +1084,7 @@ fn get_history_with_repo() -> Result<()> {
     assert_eq!(results[0].signature_status.is_none(), true);
 
     let pw = &results[0];
-    let history = pw.get_history(&Arc::new(Mutex::new(store)))?;
+    let history = pw.get_history(&store)?;
 
     assert_eq!(history.len(), 3);
     assert_eq!(history[0].message, "commit 3\n");
@@ -1325,7 +1325,7 @@ fn test_search() -> Result<()> {
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
     };
-    let store = Arc::new(Mutex::new(store));
+    let store = store;
 
     let result = search(&store, "test")?;
 
@@ -1721,7 +1721,7 @@ fn all_recipients_from_stores_plain() -> Result<()> {
         crypto: Box::new(MockCrypto::new()),
     };
 
-    let result = all_recipients_from_stores(Arc::new(Mutex::new(vec![s1])))?;
+    let result = all_recipients_from_stores(Arc::new(Mutex::new(vec![Arc::new(Mutex::new(s1))])))?;
 
     assert_eq!(1, result.len());
     assert_eq!("7E068070D5EF794B00C8A9D91D108E6C07CBC406", result[0].key_id);

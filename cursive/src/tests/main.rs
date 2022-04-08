@@ -36,11 +36,13 @@ fn do_delete_normal() {
         Ok(SignatureStatus::Good),
         RepositoryStatus::NoRepo,
     ));
-    let store: PasswordStoreType = Arc::new(Mutex::new(store));
+    let store: PasswordStoreType = Arc::new(Mutex::new(Arc::new(Mutex::new(store))));
 
     let mut entries = SelectView::<pass::PasswordEntry>::new();
     entries.add_all(
         store
+            .lock()
+            .unwrap()
             .lock()
             .unwrap()
             .passwords
@@ -55,7 +57,7 @@ fn do_delete_normal() {
     siv.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
         assert_eq!(1, l.len());
     });
-    do_delete(&mut siv, &store);
+    do_delete(&mut siv, store);
 
     siv.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
         assert_eq!(0, l.len());

@@ -34,9 +34,6 @@ pub use crate::signature::{
 use std::collections::HashMap;
 use std::fmt::Display;
 
-/// The global state of all passwords are an instance of this type.
-pub type PasswordStoreType = Arc<Mutex<PasswordStore>>;
-
 /// Represents a complete password store directory
 pub struct PasswordStore {
     /// Name given to the store in a config file
@@ -193,32 +190,6 @@ impl PasswordStore {
     /// returns the style file for the store
     pub fn get_style_file(&self) -> Option<PathBuf> {
         self.style_file.clone()
-    }
-
-    /// resets the store object, so that it points to a different directory.
-    pub fn reset(
-        &mut self,
-        password_store_dir: &Path,
-        valid_signing_keys: &[String],
-        home: &Option<PathBuf>,
-    ) -> Result<()> {
-        let pass_home = password_dir_raw(&Some(password_store_dir.to_path_buf()), home);
-        if !pass_home.exists() {
-            return Err(Error::Generic("failed to locate password directory"));
-        }
-
-        if !valid_signing_keys.is_empty() {
-            self.verify_gpg_id_file(&pass_home, valid_signing_keys)?;
-        }
-
-        self.root = pass_home;
-        self.valid_gpg_signing_keys = (*valid_signing_keys).to_vec();
-
-        let all_passwords = self.all_passwords()?;
-
-        self.passwords = all_passwords;
-
-        Ok(())
     }
 
     fn repo(&self) -> Result<git2::Repository> {
@@ -654,12 +625,13 @@ impl PasswordStore {
 }
 
 pub fn all_recipients_from_stores(
-    stores: Arc<Mutex<Vec<PasswordStore>>>,
+    stores: Arc<Mutex<Vec<Arc<Mutex<PasswordStore>>>>>,
 ) -> Result<Vec<Recipient>> {
     let all_recipients: Vec<Recipient> = {
         let mut ar: HashMap<String, Recipient> = HashMap::new();
         let stores = stores.lock().unwrap();
         for store in stores.iter() {
+            let store = store.lock().unwrap();
             for recipient in store.all_recipients()? {
                 let key = {
                     if recipient.fingerprint == None {
@@ -906,9 +878,9 @@ impl PasswordEntry {
 
     /// Returns a list of log lines for the password, one line for each commit that have changed
     /// that password in some way
-    pub fn get_history(&self, store: &PasswordStoreType) -> Result<Vec<GitLogLine>> {
+    pub fn get_history(&self, store: &PasswordStore) -> Result<Vec<GitLogLine>> {
         let repo = {
-            let repo_res = store.lock()?.repo();
+            let repo_res = store.repo();
             if repo_res.is_err() {
                 return Ok(vec![]);
             }
@@ -922,7 +894,7 @@ impl PasswordEntry {
 
         revwalk.push_head()?;
 
-        let p = self.path.strip_prefix(&store.lock()?.root)?;
+        let p = self.path.strip_prefix(&store.root)?;
         let ps = git2::Pathspec::new(vec![&p])?;
 
         let mut diffopts = git2::DiffOptions::new();
@@ -955,8 +927,7 @@ impl PasswordEntry {
                         let time = commit.time();
                         let dt = Local.timestamp(time.seconds(), 0);
 
-                        let store = store.lock().unwrap();
-                        let signature_status = verify_git_signature(&repo, &oid, &store);
+                        let signature_status = verify_git_signature(&repo, &oid, store);
                         Some(GitLogLine::new(
                             commit.message().unwrap_or("<no message>").to_owned(),
                             dt,
@@ -1382,8 +1353,8 @@ pub fn init_git_repo(base: &Path) -> Result<git2::Repository> {
 }
 
 /// Return a list of all passwords whose name contains `query`.
-pub fn search(store: &PasswordStoreType, query: &str) -> Result<Vec<PasswordEntry>> {
-    let passwords = &store.lock()?.passwords;
+pub fn search(store: &PasswordStore, query: &str) -> Result<Vec<PasswordEntry>> {
+    let passwords = &store.passwords;
     fn normalized(s: &str) -> String {
         s.to_lowercase()
     }
@@ -1585,12 +1556,13 @@ pub fn read_config(
 }
 
 pub fn save_config(
-    stores: Arc<Mutex<Vec<PasswordStore>>>,
+    stores: Arc<Mutex<Vec<Arc<Mutex<PasswordStore>>>>>,
     config_file_location: &Path,
 ) -> Result<()> {
     let mut stores_map = std::collections::HashMap::new();
-    let stores_borrowed = stores.lock()?;
+    let stores_borrowed = stores.lock().unwrap();
     for store in stores_borrowed.iter() {
+        let store = store.lock().unwrap();
         let mut store_map = std::collections::HashMap::new();
         store_map.insert(
             "path",
@@ -1606,7 +1578,7 @@ pub fn save_config(
                 store.get_valid_gpg_signing_keys().join(","),
             );
         }
-        stores_map.insert(store.get_name(), store_map);
+        stores_map.insert(store.get_name().clone(), store_map);
     }
 
     let mut settings = std::collections::HashMap::new();
