@@ -19,6 +19,7 @@ use qml::*;
 
 use pass::PasswordEntry;
 use ripasso::pass;
+use ripasso::pass::PasswordStore;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -28,9 +29,12 @@ use clipboard::{ClipboardContext, ClipboardProvider};
 
 use std::panic;
 
+/// The 'pointer' to the current PasswordStore is of this type.
+type PasswordStoreType = Arc<Mutex<PasswordStore>>;
+
 // UI state
 pub struct UI {
-    store: pass::PasswordStoreType,
+    store: PasswordStoreType,
     current_passwords: Vec<PasswordEntry>,
     password: Box<QPasswordView>,
     passwords: QPasswordEntry,
@@ -39,7 +43,7 @@ pub struct UI {
 impl UI {
     pub fn query(&mut self, query: String) -> Option<&QVariant> {
         println!("query");
-        let matching = pass::search(&self.store, &query).unwrap();
+        let matching = pass::search(&self.store.lock().unwrap(), &query).unwrap();
 
         // Save currently matched passwords
         self.current_passwords = matching;
