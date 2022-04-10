@@ -19,7 +19,7 @@ gettext = "0.4.0"
 lazy_static = "1.4.0"
 toml = "0.5.8"
 term_size = "0.3.2"
-wl-clipboard-rs = "0.4.1"
+wl-clipboard-rs = "0.6.0"
 hex = "0.4.3"
 
 [dependencies.config]
@@ -28,7 +28,7 @@ default-features = false
 features = ["toml"]
 
 [dev-dependencies]
-tempfile = "3.2.0"
+tempfile = "3.3.0"
 chrono = "0.4"
 
 [build-dependencies]
