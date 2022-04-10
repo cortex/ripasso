@@ -699,6 +699,35 @@ fn read_config_default_path_in_env_var() -> Result<()> {
 }
 
 #[test]
+fn save_config_one_store() {
+    let config_file = tempfile::NamedTempFile::new().unwrap();
+    let style_file = tempfile::NamedTempFile::new().unwrap();
+    let passdir = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+
+    let s1 = PasswordStore::new(
+        "s1 name",
+        &Some(passdir.path().to_path_buf()),
+        &None,
+        &Some(home.path().to_path_buf()),
+        &Some(style_file.path().to_path_buf()),
+    )
+    .unwrap();
+
+    save_config(
+        Arc::new(Mutex::new(vec![Arc::new(Mutex::new(s1))])),
+        config_file.path(),
+    )
+    .unwrap();
+
+    let config = std::fs::read_to_string(config_file.path()).unwrap();
+
+    assert!(config.contains("[stores.\"s1 name\"]\n"));
+    assert!(config.contains(&format!("path = '{}'\n", passdir.path().display())));
+    assert!(config.contains(&format!("style_path = '{}'\n", style_file.path().display())));
+}
+
+#[test]
 fn append_extension_with_dot() {
     let result = append_extension(PathBuf::from("foo.txt"), ".gpg");
     assert_eq!(result, PathBuf::from("foo.txt.gpg"));

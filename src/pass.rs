@@ -1578,6 +1578,9 @@ pub fn save_config(
                 store.get_valid_gpg_signing_keys().join(","),
             );
         }
+        if let Some(style_file) = store.get_style_file() {
+            store_map.insert("style_path", style_file.display().to_string());
+        }
         stores_map.insert(store.get_name().clone(), store_map);
     }
 
