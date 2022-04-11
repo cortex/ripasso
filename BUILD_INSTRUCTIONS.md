@@ -37,7 +37,7 @@ $ pacman -S qt5-base qt5-svg qt5-declarative
 ### Fedora
 #### All
 ```
-$ dnf install cargo gpgme-devel openssl-devel
+$ dnf install cargo gpgme-devel openssl-devel libxcb libxcb-devel
 ```
 #### GTK
 ```
