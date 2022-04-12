@@ -467,7 +467,8 @@ fn write_recipients_file_one_and_signed() {
     let recipients_file = dir.path().join(".gpg-id");
     let signature_file = dir.path().join(".gpg-id.sig");
 
-    let valid_gpg_signing_keys = vec![<[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap()];
+    let valid_gpg_signing_keys =
+        vec![<[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap()];
 
     let crypto = MockCrypto::new().with_sign_string_return("unit test sign string".to_owned());
 

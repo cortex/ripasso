@@ -127,7 +127,7 @@ impl PasswordStore {
                             r.name, r.key_id
                         )));
                     }
-                    fingerprints.push(r.fingerprint.unwrap().clone())
+                    fingerprints.push(r.fingerprint.unwrap())
                 }
                 fingerprints
             } else {
@@ -1575,9 +1575,10 @@ pub fn save_config(
         if !store.get_valid_gpg_signing_keys().is_empty() {
             store_map.insert(
                 "valid_signing_keys",
-                store.get_valid_gpg_signing_keys()
+                store
+                    .get_valid_gpg_signing_keys()
                     .iter()
-                    .map(|k| hex::encode_upper(k))
+                    .map(hex::encode_upper)
                     .collect::<Vec<String>>()
                     .join(","),
             );

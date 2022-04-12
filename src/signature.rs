@@ -1,9 +1,9 @@
 pub use crate::error::{Error, Result};
+use hex::FromHex;
 use std::cmp::PartialEq;
 use std::fs;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
-use hex::FromHex;
 
 use crate::crypto::FindSigningFingerprintStrategy;
 use std::collections::{HashMap, HashSet};

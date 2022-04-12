@@ -3,9 +3,9 @@ use super::*;
 use std::fs::File;
 use std::path::PathBuf;
 
+use hex::FromHex;
 use std::env;
 use tempfile::tempdir;
-use hex::FromHex;
 
 use crate::test_helpers::{MockCrypto, UnpackedDir};
 
@@ -1376,7 +1376,9 @@ fn test_verify_git_signature() -> Result<()> {
     let store = PasswordStore {
         name: "store_name".to_owned(),
         root: dir.dir().to_path_buf(),
-        valid_gpg_signing_keys: vec![<[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406")?],
+        valid_gpg_signing_keys: vec![<[u8; 20]>::from_hex(
+            "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
+        )?],
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
@@ -1432,7 +1434,9 @@ fn test_remove_and_commit() -> Result<()> {
     let store = PasswordStore {
         name: "store_name".to_owned(),
         root: dir.dir().to_path_buf(),
-        valid_gpg_signing_keys: vec![<[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406")?],
+        valid_gpg_signing_keys: vec![<[u8; 20]>::from_hex(
+            "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
+        )?],
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
@@ -1479,7 +1483,9 @@ fn test_verify_gpg_id_file_missing_sig_file() -> Result<()> {
     let store = PasswordStore {
         name: "store_name".to_owned(),
         root: td.path().to_path_buf(),
-        valid_gpg_signing_keys: vec![<[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406")?],
+        valid_gpg_signing_keys: vec![<[u8; 20]>::from_hex(
+            "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
+        )?],
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
@@ -1509,7 +1515,9 @@ fn test_verify_gpg_id_file() -> Result<()> {
     let store = PasswordStore {
         name: "store_name".to_owned(),
         root: td.path().to_path_buf(),
-        valid_gpg_signing_keys: vec![<[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406")?],
+        valid_gpg_signing_keys: vec![<[u8; 20]>::from_hex(
+            "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
+        )?],
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
