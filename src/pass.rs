@@ -40,9 +40,9 @@ pub struct PasswordStore {
     name: String,
     /// The absolute path to the root directory of the password store
     root: PathBuf,
-    /// A list of keys that are allowed to sign the .gpg-id file, obtained from the environmental
+    /// A list of fingerprints of keys that are allowed to sign the .gpg-id file, obtained from the environmental
     /// variable `PASSWORD_STORE_SIGNING_KEY` or from the configuration file
-    valid_gpg_signing_keys: Vec<String>,
+    valid_gpg_signing_keys: Vec<[u8; 20]>,
     /// a list of password files with meta data
     pub passwords: Vec<PasswordEntry>,
     /// A file that describes the style of the store
@@ -127,7 +127,7 @@ impl PasswordStore {
                             r.name, r.key_id
                         )));
                     }
-                    fingerprints.push(hex::encode_upper(r.fingerprint.unwrap()))
+                    fingerprints.push(r.fingerprint.unwrap().clone())
                 }
                 fingerprints
             } else {
@@ -178,7 +178,7 @@ impl PasswordStore {
     }
 
     /// Returns a vec with the keys that are allowed to sign the .gpg-id file
-    pub fn get_valid_gpg_signing_keys(&self) -> &Vec<String> {
+    pub fn get_valid_gpg_signing_keys(&self) -> &Vec<[u8; 20]> {
         &self.valid_gpg_signing_keys
     }
 
@@ -199,7 +199,7 @@ impl PasswordStore {
     fn verify_gpg_id_file(
         &self,
         pass_home: &Path,
-        signing_keys: &[String],
+        signing_keys: &[[u8; 20]],
     ) -> Result<SignatureStatus> {
         let mut gpg_id_file = pass_home.to_path_buf();
         gpg_id_file.push(".gpg-id");
@@ -1575,7 +1575,11 @@ pub fn save_config(
         if !store.get_valid_gpg_signing_keys().is_empty() {
             store_map.insert(
                 "valid_signing_keys",
-                store.get_valid_gpg_signing_keys().join(","),
+                store.get_valid_gpg_signing_keys()
+                    .iter()
+                    .map(|k| hex::encode_upper(k))
+                    .collect::<Vec<String>>()
+                    .join(","),
             );
         }
         if let Some(style_file) = store.get_style_file() {

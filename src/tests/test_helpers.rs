@@ -181,7 +181,7 @@ impl Crypto for MockCrypto {
     fn sign_string(
         &self,
         _: &str,
-        _: &[String],
+        _: &[[u8; 20]],
         _: &FindSigningFingerprintStrategy,
     ) -> Result<String> {
         self.sign_called.replace(true);
@@ -195,7 +195,7 @@ impl Crypto for MockCrypto {
         &self,
         _: &[u8],
         _: &[u8],
-        _: &[String],
+        _: &[[u8; 20]],
     ) -> std::result::Result<SignatureStatus, VerificationError> {
         self.verify_called.replace(true);
         Err(VerificationError::SignatureFromWrongRecipient)
