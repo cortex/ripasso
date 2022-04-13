@@ -70,7 +70,7 @@ pub trait Crypto {
     fn sign_string(
         &self,
         to_sign: &str,
-        valid_gpg_signing_keys: &[String],
+        valid_gpg_signing_keys: &[[u8; 20]],
         strategy: &FindSigningFingerprintStrategy,
     ) -> Result<String>;
 
@@ -79,7 +79,7 @@ pub trait Crypto {
         &self,
         data: &[u8],
         sig: &[u8],
-        valid_signing_keys: &[String],
+        valid_signing_keys: &[[u8; 20]],
     ) -> std::result::Result<SignatureStatus, VerificationError>;
 
     /// pull keys from the keyserver for those recipients.
@@ -130,7 +130,7 @@ impl Crypto for GpgMe {
     fn sign_string(
         &self,
         to_sign: &str,
-        valid_gpg_signing_keys: &[String],
+        valid_gpg_signing_keys: &[[u8; 20]],
         strategy: &FindSigningFingerprintStrategy,
     ) -> Result<String> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
@@ -143,7 +143,7 @@ impl Crypto for GpgMe {
                 let mut key_opt: Option<gpgme::Key> = None;
 
                 for key_id in valid_gpg_signing_keys {
-                    let key_res = ctx.get_key(key_id);
+                    let key_res = ctx.get_key(hex::encode_upper(key_id));
 
                     if let Ok(r) = key_res {
                         key_opt = Some(r);
@@ -176,7 +176,7 @@ impl Crypto for GpgMe {
         &self,
         data: &[u8],
         sig: &[u8],
-        valid_signing_keys: &[String],
+        valid_signing_keys: &[[u8; 20]],
     ) -> std::result::Result<SignatureStatus, VerificationError> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
             .map_err(|e| VerificationError::InfrastructureError(format!("{:?}", e)))?;
@@ -192,7 +192,10 @@ impl Crypto for GpgMe {
                 .fingerprint()
                 .map_err(|e| VerificationError::InfrastructureError(format!("{:?}", e)))?;
 
-            if !valid_signing_keys.contains(&fpr.to_string()) {
+            let fpr = <[u8; 20]>::from_hex(fpr)
+                .map_err(|e| VerificationError::InfrastructureError(format!("{:?}", e)))?;
+
+            if !valid_signing_keys.contains(&fpr) {
                 return Err(VerificationError::SignatureFromWrongRecipient);
             }
             if i == 0 {

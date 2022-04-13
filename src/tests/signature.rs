@@ -26,11 +26,11 @@ fn test_parse_signing_keys_two_keys() {
     assert_eq!(2, result.len());
     assert_eq!(
         true,
-        result.contains(&"7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_owned())
+        result.contains(&<[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap())
     );
     assert_eq!(
         true,
-        result.contains(&"E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_owned())
+        result.contains(&<[u8; 20]>::from_hex("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F").unwrap())
     );
 }
 
@@ -55,11 +55,11 @@ fn test_parse_signing_keys_two_keys_with_0x() {
     assert_eq!(2, result.len());
     assert_eq!(
         true,
-        result.contains(&"0x7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_owned())
+        result.contains(&<[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap())
     );
     assert_eq!(
         true,
-        result.contains(&"0xE6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_owned())
+        result.contains(&<[u8; 20]>::from_hex("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F").unwrap())
     );
 }
 
@@ -467,7 +467,8 @@ fn write_recipients_file_one_and_signed() {
     let recipients_file = dir.path().join(".gpg-id");
     let signature_file = dir.path().join(".gpg-id.sig");
 
-    let valid_gpg_signing_keys = vec!["7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_owned()];
+    let valid_gpg_signing_keys =
+        vec![<[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap()];
 
     let crypto = MockCrypto::new().with_sign_string_return("unit test sign string".to_owned());
 

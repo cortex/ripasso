@@ -1,4 +1,5 @@
 pub use crate::error::{Error, Result};
+use hex::FromHex;
 use std::cmp::PartialEq;
 use std::fs;
 use std::io::prelude::*;
@@ -37,7 +38,7 @@ impl From<gpgme::SignatureSummary> for SignatureStatus {
 pub fn parse_signing_keys(
     password_store_signing_key: &Option<String>,
     crypto: &(dyn crate::crypto::Crypto + Send),
-) -> Result<Vec<String>> {
+) -> Result<Vec<[u8; 20]>> {
     if password_store_signing_key.is_none() {
         return Ok(vec![]);
     }
@@ -60,7 +61,11 @@ pub fn parse_signing_keys(
             )));
         }
 
-        signing_keys.push(trimmed);
+        if trimmed.len() == 40 {
+            signing_keys.push(<[u8; 20]>::from_hex(trimmed)?);
+        } else {
+            signing_keys.push(<[u8; 20]>::from_hex(&trimmed[2..])?);
+        }
     }
     Ok(signing_keys)
 }
@@ -158,7 +163,7 @@ pub struct Recipient {
     /// Machine readable identity taken from the .gpg-id file, in the form of a gpg key id
     /// (16 hex chars) or a fingerprint (40 hex chars).
     pub key_id: String,
-    /// The fingerprint of the gpg key, as 40 hex characters, not prefixed by '0x',
+    /// The fingerprint of the gpg key, 20 bytes,
     /// if the fingerprint of the key is not known, this will be None.
     pub fingerprint: Option<[u8; 20]>,
     /// The status of the key in GPG's keyring
@@ -322,7 +327,7 @@ impl Recipient {
     pub fn write_recipients_file(
         recipients: &[Recipient],
         recipients_file: &Path,
-        valid_gpg_signing_keys: &[String],
+        valid_gpg_signing_keys: &[[u8; 20]],
         crypto: &(dyn crate::crypto::Crypto + Send),
     ) -> Result<()> {
         let mut file = std::fs::OpenOptions::new()
@@ -391,7 +396,7 @@ impl Recipient {
     pub fn remove_recipient_from_file(
         s: &Recipient,
         recipients_file: &Path,
-        valid_gpg_signing_keys: &[String],
+        valid_gpg_signing_keys: &[[u8; 20]],
         crypto: &(dyn crate::crypto::Crypto + Send),
     ) -> Result<()> {
         let mut recipients: Vec<Recipient> = Recipient::all_recipients(recipients_file, crypto)?;
@@ -420,7 +425,7 @@ impl Recipient {
     pub fn add_recipient_to_file(
         recipient: &Recipient,
         recipients_file: &Path,
-        valid_gpg_signing_keys: &[String],
+        valid_gpg_signing_keys: &[[u8; 20]],
         crypto: &(dyn crate::crypto::Crypto + Send),
     ) -> Result<()> {
         let mut recipients: Vec<Recipient> = Recipient::all_recipients(recipients_file, crypto)?;
