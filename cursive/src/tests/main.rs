@@ -26,8 +26,16 @@ fn do_delete_normal() {
     )
     .unwrap();
 
-    let mut store =
-        PasswordStore::new("", &Some(td.path().to_path_buf()), &None, &None, &None, &CryptoImpl::GpgMe, &None).unwrap();
+    let mut store = PasswordStore::new(
+        "",
+        &Some(td.path().to_path_buf()),
+        &None,
+        &None,
+        &None,
+        &CryptoImpl::GpgMe,
+        &None,
+    )
+    .unwrap();
     store.passwords.push(PasswordEntry::new(
         &td.path().join(".password-store"),
         &PathBuf::from("file.gpg"),

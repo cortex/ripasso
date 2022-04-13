@@ -1,18 +1,21 @@
 use crate::crypto::slice_to_20_bytes;
 use crate::crypto::{Crypto, CryptoImpl, Sequoia};
 use crate::signature::Recipient;
+use hex::FromHex;
 use sequoia_openpgp::cert::CertBuilder;
 use sequoia_openpgp::parse::Parse;
 use sequoia_openpgp::serialize::Serialize;
 use sequoia_openpgp::Cert;
 use std::collections::HashMap;
 use std::sync::Arc;
-use hex::FromHex;
 
 #[test]
 pub fn crypto_impl_from() {
     assert_eq!(CryptoImpl::GpgMe, CryptoImpl::try_from("gpg").unwrap());
-    assert_eq!(CryptoImpl::Sequoia, CryptoImpl::try_from("sequoia").unwrap());
+    assert_eq!(
+        CryptoImpl::Sequoia,
+        CryptoImpl::try_from("sequoia").unwrap()
+    );
 }
 
 #[test]
@@ -139,8 +142,8 @@ HRCObAfLxAb07QD9FxvNNG1SDh3jzbvQZdL59p1ehgEniMmzGSALeBYbdtQBAILa
 
 fn fingerprint() -> [u8; 20] {
     [
-        0x7E, 0x06, 0x80, 0x70, 0xD5, 0xEF, 0x79, 0x4B, 0x00, 0xC8, 0xA9, 0xD9, 0x1D, 0x10,
-        0x8E, 0x6C, 0x07, 0xCB, 0xC4, 0x06,
+        0x7E, 0x06, 0x80, 0x70, 0xD5, 0xEF, 0x79, 0x4B, 0x00, 0xC8, 0xA9, 0xD9, 0x1D, 0x10, 0x8E,
+        0x6C, 0x07, 0xCB, 0xC4, 0x06,
     ]
 }
 

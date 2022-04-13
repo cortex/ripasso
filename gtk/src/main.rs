@@ -26,8 +26,8 @@ use glib::Cast;
 use glib::StaticType;
 
 use clipboard::{ClipboardContext, ClipboardProvider};
-use ripasso::pass;
 use ripasso::crypto::CryptoImpl;
+use ripasso::pass;
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::process;

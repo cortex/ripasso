@@ -5,8 +5,8 @@ use crate::signature::{KeyRingStatus, Recipient, SignatureStatus};
 use hex::FromHex;
 use sequoia_openpgp::crypto::SessionKey;
 use sequoia_openpgp::parse::stream::{
-    DecryptionHelper, DecryptorBuilder, DetachedVerifierBuilder, MessageStructure,
-    MessageLayer, VerificationHelper,
+    DecryptionHelper, DecryptorBuilder, DetachedVerifierBuilder, MessageLayer, MessageStructure,
+    VerificationHelper,
 };
 use sequoia_openpgp::parse::Parse;
 use sequoia_openpgp::policy::Policy;
@@ -16,18 +16,18 @@ use sequoia_openpgp::types::{RevocationStatus, SymmetricAlgorithm};
 use sequoia_openpgp::Cert;
 use sequoia_openpgp::KeyHandle;
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter, Write as FmtWrite};
 use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::sync::Arc;
-use std::fmt::{Display, Formatter, Write as FmtWrite};
 
 /// The different pgp implementations we support
 #[derive(PartialEq, Debug)]
 pub enum CryptoImpl {
     GpgMe,
-    Sequoia
+    Sequoia,
 }
 
 impl std::convert::TryFrom<&str> for CryptoImpl {
@@ -37,7 +37,9 @@ impl std::convert::TryFrom<&str> for CryptoImpl {
         match value {
             "gpg" => Ok(CryptoImpl::GpgMe),
             "sequoia" => Ok(CryptoImpl::Sequoia),
-            _ => Err(Error::Generic("unknown pgp implementation value, valid values are 'gpg' and 'sequoia'")),
+            _ => Err(Error::Generic(
+                "unknown pgp implementation value, valid values are 'gpg' and 'sequoia'",
+            )),
         }
     }
 }
@@ -390,9 +392,8 @@ struct Helper<'a> {
     key_ring: &'a HashMap<[u8; 20], Arc<sequoia_openpgp::Cert>>,
     /// This is all the certificates that are allowed to sign something
     public_keys: Vec<Arc<sequoia_openpgp::Cert>>,
-    crypto: &'a Sequoia,
     ctx: Option<sequoia_ipc::gnupg::Context>,
-    do_signature_verification: bool
+    do_signature_verification: bool,
 }
 
 impl<'a> VerificationHelper for Helper<'a> {
@@ -434,7 +435,10 @@ impl<'a> VerificationHelper for Helper<'a> {
     }
 }
 
-fn find(key_ring: &HashMap<[u8; 20], Arc<sequoia_openpgp::Cert>>, recipient: &sequoia_openpgp::KeyID) -> Result<Arc<sequoia_openpgp::Cert>> {
+fn find(
+    key_ring: &HashMap<[u8; 20], Arc<sequoia_openpgp::Cert>>,
+    recipient: &sequoia_openpgp::KeyID,
+) -> Result<Arc<sequoia_openpgp::Cert>> {
     let bytes: &[u8; 8] = match recipient {
         sequoia_openpgp::KeyID::V4(bytes) => bytes,
         sequoia_openpgp::KeyID::Invalid(_) => return Err(Error::Generic("not an v4 keyid")),
@@ -447,7 +451,7 @@ fn find(key_ring: &HashMap<[u8; 20], Arc<sequoia_openpgp::Cert>>, recipient: &se
         }
     }
 
-    return Err(Error::Generic("key not found in keyring"))
+    return Err(Error::Generic("key not found in keyring"));
 }
 
 impl<'a> DecryptionHelper for Helper<'a> {
@@ -467,8 +471,10 @@ impl<'a> DecryptionHelper for Helper<'a> {
             for pkesk in pkesks {
                 if let Ok(cert) = find(self.key_ring, pkesk.recipient()) {
                     let key = cert.primary_key();
-                    let mut pair = sequoia_ipc::gnupg::KeyPair::new(self.ctx.as_ref().unwrap(), &*key)?;
-                    if pkesk.decrypt(&mut pair, sym_algo)
+                    let mut pair =
+                        sequoia_ipc::gnupg::KeyPair::new(self.ctx.as_ref().unwrap(), &*key)?;
+                    if pkesk
+                        .decrypt(&mut pair, sym_algo)
                         .map(|(algo, session_key)| decrypt(algo, &session_key))
                         .unwrap_or(false)
                     {
@@ -630,7 +636,8 @@ impl Crypto for Sequoia {
 
         let mut sink: Vec<u8> = vec![];
 
-        let decrypt_key = self.key_ring
+        let decrypt_key = self
+            .key_ring
             .get(&self.user_key_id)
             .ok_or(Error::Generic("no key for user found"))?;
 
@@ -642,7 +649,6 @@ impl Crypto for Sequoia {
                 secret: Some(decrypt_key),
                 key_ring: &self.key_ring,
                 public_keys: vec![],
-                crypto: self,
                 ctx: None,
                 do_signature_verification: false,
             };
@@ -663,7 +669,6 @@ impl Crypto for Sequoia {
                 secret: Some(decrypt_key),
                 key_ring: &self.key_ring,
                 public_keys: vec![],
-                crypto: self,
                 ctx: Some(sequoia_ipc::gnupg::Context::with_homedir("/home/capitol/")?),
                 do_signature_verification: false,
             };
@@ -721,8 +726,8 @@ impl Crypto for Sequoia {
     fn sign_string(
         &self,
         to_sign: &str,
-        valid_gpg_signing_keys: &[[u8; 20]],
-        strategy: &FindSigningFingerprintStrategy,
+        _valid_gpg_signing_keys: &[[u8; 20]],
+        _strategy: &FindSigningFingerprintStrategy,
     ) -> Result<String> {
         let p = sequoia_openpgp::policy::StandardPolicy::new();
 
@@ -777,14 +782,14 @@ impl Crypto for Sequoia {
 
         let recipients: Vec<Recipient> = if valid_signing_keys.len() == 0 {
             self.key_ring
-            .keys()
-            .map(|k| Recipient::from(&hex::encode(k), &[], None, self))
-            .collect::<Result<Vec<Recipient>>>()?
+                .keys()
+                .map(|k| Recipient::from(&hex::encode(k), &[], None, self))
+                .collect::<Result<Vec<Recipient>>>()?
         } else {
             valid_signing_keys
-            .iter()
-            .map(|k| Recipient::from(&hex::encode_upper(k), &[], None, self))
-            .collect::<Result<Vec<Recipient>>>()?
+                .iter()
+                .map(|k| Recipient::from(&hex::encode_upper(k), &[], None, self))
+                .collect::<Result<Vec<Recipient>>>()?
         };
         let senders = self.convert_recipients(&recipients)?;
 
@@ -795,7 +800,6 @@ impl Crypto for Sequoia {
             secret: None,
             key_ring: &self.key_ring,
             public_keys: senders,
-            crypto: self,
             ctx: None,
             do_signature_verification: true,
         };

@@ -17,8 +17,8 @@
 use qml::*;
 
 use pass::PasswordEntry;
-use ripasso::pass;
 use ripasso::crypto::CryptoImpl;
+use ripasso::pass;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread;

@@ -17,8 +17,8 @@
 
 use cursive::traits::*;
 use cursive::views::{
-    Checkbox, CircularFocus, Dialog, EditView, LinearLayout, NamedView, OnEventView, ResizedView,
-    ScrollView, SelectView, TextArea, TextView, RadioGroup, RadioButton,
+    Checkbox, CircularFocus, Dialog, EditView, LinearLayout, NamedView, OnEventView, RadioButton,
+    RadioGroup, ResizedView, ScrollView, SelectView, TextArea, TextView,
 };
 
 use cursive::menu::Tree;
@@ -28,18 +28,18 @@ use cursive::CursiveExt;
 use cursive::direction::Orientation;
 use cursive::event::{Event, Key};
 
+use ripasso::crypto::CryptoImpl;
 use ripasso::pass;
 use ripasso::pass::{all_recipients_from_stores, OwnerTrustLevel, PasswordStore, SignatureStatus};
-use ripasso::crypto::CryptoImpl;
 use std::path::{Path, PathBuf};
 use std::process;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::{thread, time};
 
+use hex::FromHex;
 use std::collections::HashMap;
 use unic_langid::LanguageIdentifier;
-use hex::FromHex;
 
 use pass::Result;
 use ripasso::pass::Recipient;
@@ -1167,12 +1167,10 @@ fn get_stores(config: &config::Config, home: &Option<PathBuf>) -> Result<Vec<Pas
                     None => None,
                     Some(k) => match k.clone().into_str() {
                         Err(_) => None,
-                        Ok(key) => {
-                            match <[u8; 20]>::from_hex(key) {
-                                Err(_) => None,
-                                Ok(fp) => Some(fp),
-                            }
-                        }
+                        Ok(key) => match <[u8; 20]>::from_hex(key) {
+                            Err(_) => None,
+                            Ok(fp) => Some(fp),
+                        },
                     },
                 };
 
@@ -1183,7 +1181,7 @@ fn get_stores(config: &config::Config, home: &Option<PathBuf>) -> Result<Vec<Pas
                     home,
                     &style_path_opt,
                     &pgp_impl,
-                    &own_fingerprint
+                    &own_fingerprint,
                 )?);
             }
         }
@@ -1271,7 +1269,15 @@ fn save_edit_config(
         Ok(fp) => Some(fp),
     };
 
-    let new_store = PasswordStore::new(e_n, &Some(PathBuf::from(e_d.clone())), &e_k, home, &None, &pgp_impl, &own_fingerprint);
+    let new_store = PasswordStore::new(
+        e_n,
+        &Some(PathBuf::from(e_d.clone())),
+        &e_k,
+        home,
+        &None,
+        &pgp_impl,
+        &own_fingerprint,
+    );
     if let Err(err) = new_store {
         helpers::errorbox(ui, &err);
         return;
@@ -1434,8 +1440,12 @@ fn edit_store_in_config(
             .fixed_size((10_usize, 1_usize)),
     );
     let mut pgp_radio = RadioGroup::new();
-    let gpg_me_button = pgp_radio.button(CryptoImpl::GpgMe, "GPG").with_name("edit_pgp_me_button_name");
-    let sequoia_button = pgp_radio.button(CryptoImpl::Sequoia, "Sequoia").with_name("edit_sequoia_button_name");
+    let gpg_me_button = pgp_radio
+        .button(CryptoImpl::GpgMe, "GPG")
+        .with_name("edit_pgp_me_button_name");
+    let sequoia_button = pgp_radio
+        .button(CryptoImpl::Sequoia, "Sequoia")
+        .with_name("edit_sequoia_button_name");
     pgp_fields.add_child(gpg_me_button);
     pgp_fields.add_child(sequoia_button);
     fingerprint_fields.add_child(
@@ -1445,7 +1455,9 @@ fn edit_store_in_config(
     );
     fingerprint_fields.add_child(
         EditView::new()
-            .content(hex::encode_upper(store.get_crypto().own_fingerprint().unwrap_or([0; 20])))
+            .content(hex::encode_upper(
+                store.get_crypto().own_fingerprint().unwrap_or([0; 20]),
+            ))
             .with_name("edit_own_fingerprint_input")
             .fixed_size((50_usize, 1_usize)),
     );
@@ -1580,8 +1592,12 @@ fn add_store_to_config(
             .fixed_size((10_usize, 1_usize)),
     );
     let mut pgp_radio = RadioGroup::new();
-    let gpg_me_button = pgp_radio.button(CryptoImpl::GpgMe, "GPG").with_name("new_pgp_me_button_name");
-    let sequoia_button = pgp_radio.button(CryptoImpl::Sequoia, "Sequoia").with_name("new_sequoia_button_name");
+    let gpg_me_button = pgp_radio
+        .button(CryptoImpl::GpgMe, "GPG")
+        .with_name("new_pgp_me_button_name");
+    let sequoia_button = pgp_radio
+        .button(CryptoImpl::Sequoia, "Sequoia")
+        .with_name("new_sequoia_button_name");
     pgp_fields.add_child(gpg_me_button);
     pgp_fields.add_child(sequoia_button);
 
@@ -1752,16 +1768,13 @@ fn main() {
         Ok(home_path) => Some(PathBuf::from(home_path)),
     };
     let xdg_data_home = match std::env::var("XDG_DATA_HOME") {
-        Err(_) => {match &home {
+        Err(_) => match &home {
             Some(home_path) => home_path.join(".local"),
             None => {
-                eprintln!(
-                    "{}",
-                    CATALOG.gettext("No home directory set")
-                );
+                eprintln!("{}", CATALOG.gettext("No home directory set"));
                 process::exit(1);
             }
-        }},
+        },
         Ok(data_home_path) => PathBuf::from(data_home_path),
     };
 

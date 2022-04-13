@@ -1,11 +1,11 @@
 use super::*;
 
+use std::env;
 use std::fs::File;
 use std::path::PathBuf;
-use std::env;
 
-use tempfile::tempdir;
 use hex::FromHex;
+use tempfile::tempdir;
 
 use crate::test_helpers::{MockCrypto, UnpackedDir};
 
@@ -90,7 +90,7 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
         &None,
         &CryptoImpl::GpgMe,
         &None,
-   )?;
+    )?;
     let results = store.all_passwords().unwrap();
 
     assert_eq!(results.len(), 1);
@@ -753,7 +753,10 @@ fn read_config_default_path_in_env_var_with_pgp_setting() -> Result<()> {
     assert_eq!("/tmp/t2/", path);
     assert_eq!("-1", keys);
     assert_eq!("gpg", work["pgp_implementation"].clone().into_str()?);
-    assert_eq!("7E068070D5EF794B00C8A9D91D108E6C07CBC406", work["own_fingerprint"].clone().into_str()?);
+    assert_eq!(
+        "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
+        work["own_fingerprint"].clone().into_str()?
+    );
 
     assert_eq!(false, stores.contains_key("work"));
     Ok(())
@@ -804,15 +807,20 @@ fn save_config_one_store_with_pgp_impl() {
         &None,
         &CryptoImpl::GpgMe,
         &None,
-    ).unwrap();
+    )
+    .unwrap();
 
-    save_config(Arc::new(Mutex::new(vec![Arc::new(Mutex::new(store))])), &dir.path().join("file.toml")).unwrap();
+    save_config(
+        Arc::new(Mutex::new(vec![Arc::new(Mutex::new(store))])),
+        &dir.path().join("file.toml"),
+    )
+    .unwrap();
 
     let data = fs::read_to_string(dir.path().join("file.toml")).unwrap();
 
-     assert!(data.contains("[stores.default]"));
-     assert!(data.contains("pgp_implementation = 'gpg'"));
-     assert!(data.contains(&format!("path = '{}'\n", &dir.path().display())));
+    assert!(data.contains("[stores.default]"));
+    assert!(data.contains("pgp_implementation = 'gpg'"));
+    assert!(data.contains(&format!("path = '{}'\n", &dir.path().display())));
 }
 
 #[test]
@@ -827,16 +835,21 @@ fn save_config_one_store_with_fingerprint() {
         &None,
         &CryptoImpl::Sequoia,
         &Some(<[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap()),
-    ).unwrap();
+    )
+    .unwrap();
 
-    save_config(Arc::new(Mutex::new(vec![Arc::new(Mutex::new(store))])), &dir.path().join("file.toml")).unwrap();
+    save_config(
+        Arc::new(Mutex::new(vec![Arc::new(Mutex::new(store))])),
+        &dir.path().join("file.toml"),
+    )
+    .unwrap();
 
     let data = fs::read_to_string(dir.path().join("file.toml")).unwrap();
 
-     assert!(data.contains("[stores.default]"));
-     assert!(data.contains("pgp_implementation = 'sequoia'"));
-     assert!(data.contains("own_fingerprint = '7E068070D5EF794B00C8A9D91D108E6C07CBC406'"));
-     assert!(data.contains(&format!("path = '{}'\n", &dir.path().display())));
+    assert!(data.contains("[stores.default]"));
+    assert!(data.contains("pgp_implementation = 'sequoia'"));
+    assert!(data.contains("own_fingerprint = '7E068070D5EF794B00C8A9D91D108E6C07CBC406'"));
+    assert!(data.contains(&format!("path = '{}'\n", &dir.path().display())));
 }
 
 #[test]

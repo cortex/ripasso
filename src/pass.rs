@@ -26,7 +26,9 @@ use std::sync::{Arc, Mutex};
 
 use git2::{Oid, Repository};
 
-use crate::crypto::{CryptoImpl, Crypto, FindSigningFingerprintStrategy, GpgMe, Sequoia, VerificationError};
+use crate::crypto::{
+    Crypto, CryptoImpl, FindSigningFingerprintStrategy, GpgMe, Sequoia, VerificationError,
+};
 pub use crate::error::{Error, Result};
 pub use crate::signature::{
     parse_signing_keys, Comment, KeyRingStatus, OwnerTrustLevel, Recipient, SignatureStatus,
@@ -76,10 +78,15 @@ impl PasswordStore {
                     return Err(Error::Generic("own_fingerprint is not configured, required for using Sequoia as pgp implementation"));
                 }
                 if home.is_none() {
-                    return Err(Error::Generic("no home, required for using Sequoia as pgp implementation"));
+                    return Err(Error::Generic(
+                        "no home, required for using Sequoia as pgp implementation",
+                    ));
                 }
                 let home: PathBuf = home.clone().unwrap();
-                Box::new(Sequoia::new(&home.join(".local"), own_fingerprint.unwrap())?)
+                Box::new(Sequoia::new(
+                    &home.join(".local"),
+                    own_fingerprint.unwrap(),
+                )?)
             }
         };
 
@@ -1633,7 +1640,10 @@ pub fn save_config(
             store_map.insert("style_path", style_file.display().to_string());
         }
 
-        store_map.insert("pgp_implementation", store.crypto.implementation().to_string());
+        store_map.insert(
+            "pgp_implementation",
+            store.crypto.implementation().to_string(),
+        );
         if let Some(fp) = store.crypto.own_fingerprint() {
             store_map.insert("own_fingerprint", hex::encode_upper(fp));
         }
