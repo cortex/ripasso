@@ -363,23 +363,19 @@ fn download_keys(recipient_key_id: &str) -> Result<String> {
         16 => format!(
             "https://keys.openpgp.org/vks/v1/by-keyid/{}",
             recipient_key_id
-        )
-        .to_string(),
+        ),
         18 if recipient_key_id.starts_with("0x") => format!(
             "https://keys.openpgp.org/vks/v1/by-keyid/{}",
             &recipient_key_id[2..]
-        )
-        .to_string(),
+        ),
         40 => format!(
             "https://keys.openpgp.org/vks/v1/by-fingerprint/{}",
             recipient_key_id
-        )
-        .to_string(),
+        ),
         42 if recipient_key_id.starts_with("0x") => format!(
             "https://keys.openpgp.org/vks/v1/by-fingerprint/{}",
             &recipient_key_id[2..]
-        )
-        .to_string(),
+        ),
         _ => return Err(Error::Generic("key id is not 16 or 40 hex chars")),
     };
 
@@ -422,13 +418,10 @@ impl<'a> VerificationHelper for Helper<'a> {
         }
 
         for layer in structure.into_iter() {
-            match layer {
-                MessageLayer::SignatureGroup { ref results } => {
-                    if results.iter().any(|r| r.is_ok()) {
-                        return Ok(());
-                    }
+            if let MessageLayer::SignatureGroup { results } = layer {
+                if results.iter().any(|r| r.is_ok()) {
+                    return Ok(());
                 }
-                _ => {}
             }
         }
         Err(anyhow::anyhow!("No valid signature"))
@@ -451,7 +444,7 @@ fn find(
         }
     }
 
-    return Err(Error::Generic("key not found in keyring"));
+    Err(Error::Generic("key not found in keyring"))
 }
 
 impl<'a> DecryptionHelper for Helper<'a> {
@@ -495,7 +488,7 @@ impl<'a> DecryptionHelper for Helper<'a> {
             .unencrypted_secret()
             .with_policy(self.policy, None)
             .for_transport_encryption()
-            .nth(0)
+            .next()
             .unwrap()
             .key()
             .clone();
@@ -534,7 +527,7 @@ impl Key for SequoiaKey {
     }
 
     fn fingerprint(&self) -> Result<[u8; 20]> {
-        Ok(slice_to_20_bytes(self.cert.fingerprint().as_bytes())?)
+        slice_to_20_bytes(self.cert.fingerprint().as_bytes())
     }
 
     fn is_not_usable(&self) -> bool {
@@ -610,7 +603,7 @@ impl Sequoia {
     }
 
     fn pull_and_write(&mut self, key_id: &str, keys_dir: &Path) -> Result<String> {
-        let response = download_keys(&key_id)?;
+        let response = download_keys(key_id)?;
 
         self.write_cert(&response, keys_dir)
     }
@@ -744,7 +737,7 @@ impl Crypto for Sequoia {
             .alive()
             .revoked(false)
             .for_signing()
-            .nth(0)
+            .next()
             .unwrap()
             .key()
             .clone()
@@ -780,7 +773,7 @@ impl Crypto for Sequoia {
     ) -> std::result::Result<SignatureStatus, VerificationError> {
         let p = sequoia_openpgp::policy::StandardPolicy::new();
 
-        let recipients: Vec<Recipient> = if valid_signing_keys.len() == 0 {
+        let recipients: Vec<Recipient> = if valid_signing_keys.is_empty() {
             self.key_ring
                 .keys()
                 .map(|k| Recipient::from(&hex::encode(k), &[], None, self))
@@ -822,12 +815,12 @@ impl Crypto for Sequoia {
         for recipient in recipients {
             let res = self.pull_and_write(&recipient.key_id, &p);
 
-            ret.extend(format!("{}: ", &recipient.key_id).chars());
+            ret.push_str(&format!("{}: ", &recipient.key_id));
             match res {
-                Ok(s) => ret.extend(s.chars()),
-                Err(err) => ret.extend(format!("{:?}", err).chars()),
+                Ok(s) => ret.push_str(&s),
+                Err(err) => ret.push_str(&format!("{:?}", err)),
             }
-            ret.extend("\n".chars());
+            ret.push('\n');
         }
 
         Ok(ret)
@@ -857,7 +850,7 @@ impl Crypto for Sequoia {
         let mut res: HashMap<[u8; 20], OwnerTrustLevel> = HashMap::new();
 
         for k in self.key_ring.keys() {
-            res.insert(k.clone(), OwnerTrustLevel::Ultimate);
+            res.insert(*k, OwnerTrustLevel::Ultimate);
         }
 
         Ok(res)

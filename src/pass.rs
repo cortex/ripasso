@@ -214,9 +214,9 @@ impl PasswordStore {
         self.style_file.clone()
     }
 
-    /// returns the style file for the store
-    pub fn get_crypto(&self) -> &Box<dyn Crypto + Send> {
-        &self.crypto
+    /// returns the crypto implementation for the store
+    pub fn get_crypto(&self) -> &(dyn Crypto + Send) {
+        &*self.crypto
     }
 
     fn repo(&self) -> Result<git2::Repository> {
