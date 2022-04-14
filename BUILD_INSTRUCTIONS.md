@@ -4,12 +4,12 @@
 
 Ripasso depends on a number of local libraries through it's dependencies:
 
- * ncurses
- * python3
- * openssl
- * libgpgerror
- * gpgme
- * xorg
+ * openssl - for git operations
+ * libgit2 - for git operations
+ * libgpgerror - for the gpgme encryption backend
+ * gpgme - for the gpgme encryption backend
+ * xorg - for the clippboard
+ * nettle-dev - for the sequoia encryption backend
 
 They are named different things on different platforms
 
@@ -26,7 +26,7 @@ $ cargo run
 
 ### Ubuntu
 ```
-$ apt install cargo libgtk-3-dev qtdeclarative5-dev libqt5svg5-dev cmake libncurses-dev libncursesw5-dev libssl-dev libgpgme-dev libxcb-xfixes0-dev libxcb-shape0-dev
+$ apt install cargo libgtk-3-dev qtdeclarative5-dev libqt5svg5-dev cmake libncurses-dev libncursesw5-dev libssl-dev libgpgme-dev libxcb-xfixes0-dev libxcb-shape0-dev nettle-dev
 $ cargo build --all
 ```
 
@@ -37,7 +37,7 @@ $ pacman -S qt5-base qt5-svg qt5-declarative
 ### Fedora
 #### All
 ```
-$ dnf install cargo gpgme-devel openssl-devel libxcb libxcb-devel
+$ dnf install cargo gpgme-devel openssl-devel libxcb libxcb-devel nettle-devel
 ```
 #### GTK
 ```
@@ -63,6 +63,7 @@ The build produces a number of artifacts:
  * `./target/release/ripasso-gtk` - the GTK application, still in an experimental phase and not really usable
  * `./target/release/ripasso-qt` - the QT application, still in an experimental phase and not really usable
  * `./target/man-page/cursive/ripasso-cursive.1` - The manual page for ripasso-cursive
+ * `./target/translations/cursive/de.mo` - german translation
  * `./target/translations/cursive/fr.mo` - french translation
  * `./target/translations/cursive/it.mo` - italian translation
  * `./target/translations/cursive/nb.mo` - norwegian bokmål translation
