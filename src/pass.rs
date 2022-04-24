@@ -102,7 +102,7 @@ impl PasswordStore {
         };
 
         if !store.valid_gpg_signing_keys.is_empty() {
-            store.verify_gpg_id_file(&pass_home, &store.valid_gpg_signing_keys)?;
+            store.verify_gpg_id_file()?;
         }
 
         Ok(store)
@@ -223,14 +223,10 @@ impl PasswordStore {
         git2::Repository::open(&self.root).map_err(Error::Git)
     }
 
-    fn verify_gpg_id_file(
-        &self,
-        pass_home: &Path,
-        signing_keys: &[[u8; 20]],
-    ) -> Result<SignatureStatus> {
-        let mut gpg_id_file = pass_home.to_path_buf();
+    fn verify_gpg_id_file(&self) -> Result<SignatureStatus> {
+        let mut gpg_id_file = self.root.to_path_buf();
         gpg_id_file.push(".gpg-id");
-        let mut gpg_id_sig_file = pass_home.to_path_buf();
+        let mut gpg_id_sig_file = self.root.to_path_buf();
         gpg_id_sig_file.push(".gpg-id.sig");
 
         let gpg_id = fs::read(gpg_id_file)?;
@@ -243,7 +239,7 @@ impl PasswordStore {
             }
         };
 
-        match self.crypto.verify_sign(&gpg_id, &gpg_id_sig, signing_keys) {
+        match self.crypto.verify_sign(&gpg_id, &gpg_id_sig, &self.valid_gpg_signing_keys) {
             Ok(r) => Ok(r),
             Err(VerificationError::InfrastructureError(message)) => Err(Error::GenericDyn(message)),
             Err(VerificationError::SignatureFromWrongRecipient) => Err(Error::Generic("the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY")),
@@ -305,7 +301,7 @@ impl PasswordStore {
         let mut file = File::create(&path)?;
 
         if !self.valid_gpg_signing_keys.is_empty() {
-            self.verify_gpg_id_file(&self.root, &self.valid_gpg_signing_keys)?;
+            self.verify_gpg_id_file()?;
         }
 
         let mut recipients_file = self.root.clone();
@@ -490,7 +486,7 @@ impl PasswordStore {
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
     pub fn all_recipients(&self) -> Result<Vec<Recipient>> {
         if !self.valid_gpg_signing_keys.is_empty() {
-            self.verify_gpg_id_file(&self.root, &self.valid_gpg_signing_keys)?;
+            self.verify_gpg_id_file()?;
         }
 
         Recipient::all_recipients(&self.recipients_file(), self.crypto.as_ref())
@@ -880,7 +876,7 @@ impl PasswordEntry {
 
     fn update_internal(&self, secret: String, store: &PasswordStore) -> Result<()> {
         if !store.valid_gpg_signing_keys.is_empty() {
-            store.verify_gpg_id_file(&store.root, &store.valid_gpg_signing_keys)?;
+            store.verify_gpg_id_file()?;
         }
 
         let recipients = store.all_recipients()?;

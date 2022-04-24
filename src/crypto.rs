@@ -506,7 +506,7 @@ impl<'a> DecryptionHelper for Helper<'a> {
     }
 }
 
-fn slice_to_20_bytes(b: &[u8]) -> Result<[u8; 20]> {
+pub fn slice_to_20_bytes(b: &[u8]) -> Result<[u8; 20]> {
     if b.len() != 20 {
         return Err(Error::Generic("slice isn't 20 bytes"));
     }

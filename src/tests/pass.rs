@@ -5,8 +5,12 @@ use std::fs::File;
 use std::path::PathBuf;
 
 use hex::FromHex;
+use sequoia_openpgp::cert::CertBuilder;
+use sequoia_openpgp::serialize::stream::{Armorer, Message, Signer};
+use sequoia_openpgp::serialize::Serialize;
 use tempfile::tempdir;
 
+use crate::crypto::slice_to_20_bytes;
 use crate::test_helpers::{MockCrypto, UnpackedDir};
 
 impl std::cmp::PartialEq for Error {
@@ -1752,7 +1756,7 @@ fn test_verify_gpg_id_file_missing_sig_file() -> Result<()> {
         "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
     )?;
 
-    let result = store.verify_gpg_id_file(&store.root, &store.valid_gpg_signing_keys);
+    let result = store.verify_gpg_id_file();
 
     assert_eq!(true, result.is_err());
 
@@ -1788,7 +1792,7 @@ fn test_verify_gpg_id_file() -> Result<()> {
         "here there should be gpg data",
     )?;
 
-    let result = store.verify_gpg_id_file(&store.root, &store.valid_gpg_signing_keys);
+    let result = store.verify_gpg_id_file();
 
     assert_eq!(true, result.is_err());
 
@@ -1796,6 +1800,99 @@ fn test_verify_gpg_id_file() -> Result<()> {
                result.err().unwrap());
 
     Ok(())
+}
+
+fn sign(to_sign: &str, tsk: &sequoia_openpgp::Cert) -> String {
+    let p = sequoia_openpgp::policy::StandardPolicy::new();
+
+    let keypair = tsk
+        .keys()
+        .unencrypted_secret()
+        .with_policy(&p, None)
+        .alive()
+        .revoked(false)
+        .for_signing()
+        .next()
+        .unwrap()
+        .key()
+        .clone()
+        .into_keypair()
+        .unwrap();
+
+    let mut sink: Vec<u8> = vec![];
+
+    // Start streaming an OpenPGP message.
+    let message = Message::new(&mut sink);
+
+    let message = Armorer::new(message)
+        .kind(sequoia_openpgp::armor::Kind::Signature)
+        .build()
+        .unwrap();
+
+    // We want to sign a literal data packet.
+    let mut message = Signer::new(message, keypair).detached().build().unwrap();
+
+    // Sign the data.
+    message.write_all(to_sign.as_bytes()).unwrap();
+
+    // Finalize the OpenPGP message to make sure that all data is
+    // written.
+    message.finalize().unwrap();
+
+    std::str::from_utf8(&sink).unwrap().to_owned()
+}
+
+#[test]
+fn test_verify_gpg_id_file_untrusted_key_in_keyring() {
+    let td = tempdir().unwrap();
+
+    let (store_owner, _) = CertBuilder::new()
+        .add_userid("store_owner@example.org")
+        .add_signing_subkey()
+        .generate()
+        .unwrap();
+    let sofp = slice_to_20_bytes(store_owner.fingerprint().as_bytes()).unwrap();
+    let (unrelated_user, _) = CertBuilder::new()
+        .add_userid("unrelated_user@example.org")
+        .add_signing_subkey()
+        .generate()
+        .unwrap();
+
+    let keys_dir = td.path().join("share").join("ripasso").join("keys");
+    std::fs::create_dir_all(&keys_dir).unwrap();
+    let password_store_dir = td.path().join(".password_store");
+    std::fs::create_dir_all(&password_store_dir).unwrap();
+    let mut file =
+        File::create(keys_dir.join(hex::encode(store_owner.fingerprint().as_bytes()))).unwrap();
+    store_owner.serialize(&mut file).unwrap();
+    let mut file =
+        File::create(keys_dir.join(hex::encode(unrelated_user.fingerprint().as_bytes()))).unwrap();
+    unrelated_user.serialize(&mut file).unwrap();
+
+    fs::write(password_store_dir.join(".gpg-id"), hex::encode_upper(sofp)).unwrap();
+    fs::write(
+        password_store_dir.join(".gpg-id.sig"),
+        sign(&hex::encode_upper(sofp), &unrelated_user),
+    )
+    .unwrap();
+
+    let store = PasswordStore {
+        name: "store_name".to_owned(),
+        root: password_store_dir.to_path_buf(),
+        valid_gpg_signing_keys: vec![sofp],
+        passwords: [].to_vec(),
+        style_file: None,
+        crypto: Box::new(Sequoia::new(td.path(), sofp).unwrap()),
+    };
+
+    let result = store.verify_gpg_id_file();
+
+    assert_eq!(true, result.is_err());
+
+    assert_eq!(
+        Error::GenericDyn("No valid signature".to_owned()),
+        result.err().unwrap()
+    );
 }
 
 #[test]

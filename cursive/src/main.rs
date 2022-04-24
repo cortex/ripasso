@@ -1033,9 +1033,9 @@ fn pgp_import(ui: &mut Cursive, store: PasswordStoreType, config_path: &Path) {
 
 fn pgp_pull(ui: &mut Cursive, store: PasswordStoreType, config_path: &Path) {
     let config_path = config_path.to_owned();
-    let d = Dialog::around(TextView::new(
+    let d = Dialog::around(TextView::new(CATALOG.gettext(
         "Download pgp data from keys.openpgp.org and import them into your key ring?",
-    ))
+    )))
     .dismiss_button(CATALOG.gettext("Cancel"))
     .button(CATALOG.gettext("Download"), move |ui| {
         ui.pop_layer();
