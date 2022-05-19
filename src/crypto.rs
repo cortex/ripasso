@@ -16,10 +16,10 @@ use sequoia_openpgp::types::{RevocationStatus, SymmetricAlgorithm};
 use sequoia_openpgp::Cert;
 use sequoia_openpgp::KeyHandle;
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter, Write as FmtWrite};
+use std::fmt::{Display, Formatter, Write};
 use std::fs;
 use std::fs::File;
-use std::io::Write;
+use std::io::Write as IoWrite;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -815,10 +815,10 @@ impl Crypto for Sequoia {
         for recipient in recipients {
             let res = self.pull_and_write(&recipient.key_id, &p);
 
-            ret.push_str(&format!("{}: ", &recipient.key_id));
+            write!(ret, "{}: ", &recipient.key_id)?;
             match res {
                 Ok(s) => ret.push_str(&s),
-                Err(err) => ret.push_str(&format!("{:?}", err)),
+                Err(err) => write!(ret, "{:?}", err)?,
             }
             ret.push('\n');
         }
