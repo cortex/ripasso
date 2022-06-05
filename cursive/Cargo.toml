@@ -10,14 +10,14 @@ edition = '2021'
 build = "build.rs"
 
 [dependencies]
-cursive = { version = "0.17.0", default-features = false, features = ["toml", "crossterm-backend"]}
+cursive = { version = "0.18.0", default-features = false, features = ["toml", "crossterm-backend"]}
 clipboard = "0.5"
 ripasso = { path = "../", version = "0.6.0-alpha" }
 locale_config = "0.3.0"
 unic-langid = "0.9.0"
 gettext = "0.4.0"
 lazy_static = "1.4.0"
-toml = "0.5.8"
+toml = "0.5.9"
 term_size = "0.3.2"
 wl-clipboard-rs = "0.6.0"
 hex = "0.4.3"
