@@ -10,7 +10,7 @@ use std::collections::{HashMap, HashSet};
 
 /// A git commit for a password might be signed by a gpg key, and this signature's verification
 /// state is one of these values.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SignatureStatus {
     /// Everything is fine with the signature, corresponds to the gpg status of VALID
     Good,
@@ -71,7 +71,7 @@ pub fn parse_signing_keys(
 }
 
 /// the GPG trust level for a key
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum OwnerTrustLevel {
     /// is only used for your own keys. You trust this key 'per se'. Any message signed with that key,
     /// will be trusted. This is also the reason why any key from a friend, that is signed by you, will
@@ -112,7 +112,7 @@ impl From<&gpgme::Validity> for OwnerTrustLevel {
 }
 
 /// A Recipient can either be in the GPG keyring, or not.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum KeyRingStatus {
     InKeyRing,
     NotInKeyRing,

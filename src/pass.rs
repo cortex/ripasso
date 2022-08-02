@@ -630,8 +630,10 @@ pub fn all_recipients_from_stores(
     let all_recipients: Vec<Recipient> = {
         let mut ar: HashMap<String, Recipient> = HashMap::new();
         let stores = stores.lock().unwrap();
+        #[allow(clippy::significant_drop_in_scrutinee)]
         for store in stores.iter() {
             let store = store.lock().unwrap();
+            #[allow(clippy::significant_drop_in_scrutinee)]
             for recipient in store.all_recipients()? {
                 let key = {
                     if recipient.fingerprint == None {
@@ -708,7 +710,7 @@ impl GitLogLine {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RepositoryStatus {
     InRepo,
     NotInRepo,
@@ -1561,6 +1563,7 @@ pub fn save_config(
 ) -> Result<()> {
     let mut stores_map = std::collections::HashMap::new();
     let stores_borrowed = stores.lock().unwrap();
+    #[allow(clippy::significant_drop_in_scrutinee)]
     for store in stores_borrowed.iter() {
         let store = store.lock().unwrap();
         let mut store_map = std::collections::HashMap::new();
