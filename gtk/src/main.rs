@@ -145,7 +145,7 @@ fn setup_menu_copy(
                 thread::spawn(|| {
                     thread::sleep(time::Duration::from_secs(40));
                     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-                    ctx.set_contents("".to_owned()).unwrap();
+                    ctx.set_contents(String::new()).unwrap();
                 });
             }
         }
@@ -193,7 +193,7 @@ fn setup_menu_copy_name(builder: &Builder, password_list: &TreeView, status_bar:
                 thread::spawn(|| {
                     thread::sleep(time::Duration::from_secs(40));
                     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-                    ctx.set_contents("".to_owned()).unwrap();
+                    ctx.set_contents(String::new()).unwrap();
                 });
             }
         }
@@ -489,7 +489,7 @@ fn main() {
                 thread::spawn(|| {
                     thread::sleep(time::Duration::from_secs(40));
                     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-                    ctx.set_contents("".to_owned()).unwrap();
+                    ctx.set_contents(String::new()).unwrap();
                 });
             }
         }

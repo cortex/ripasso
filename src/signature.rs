@@ -336,7 +336,7 @@ impl Recipient {
             .truncate(true)
             .open(recipients_file)?;
 
-        let mut file_content = "".to_owned();
+        let mut file_content = String::new();
         let mut sorted_recipients = recipients.to_owned();
         sorted_recipients.sort_by(|a, b| a.fingerprint.cmp(&b.fingerprint));
         for recipient in sorted_recipients {

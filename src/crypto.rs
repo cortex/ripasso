@@ -2,6 +2,7 @@ pub use crate::error::{Error, Result};
 use crate::signature::{KeyRingStatus, Recipient, SignatureStatus};
 use hex::FromHex;
 use std::collections::HashMap;
+use std::fmt::Write;
 
 /// The different types of errors that can occur when doing a signature verification
 pub enum VerificationError {
@@ -220,7 +221,7 @@ impl Crypto for GpgMe {
     fn pull_keys(&self, recipients: &[Recipient]) -> Result<String> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
-        let mut result_str = "".to_owned();
+        let mut result_str = String::new();
         for recipient in recipients {
             let url = match recipient.key_id.len() {
                 16 => format!(
@@ -249,10 +250,11 @@ impl Crypto for GpgMe {
 
             let result = ctx.import(response)?;
 
-            result_str.push_str(&format!(
+            write!(
+                result_str,
                 "{}: import result: {:?}\n\n",
                 recipient.key_id, result
-            ));
+            )?;
         }
 
         Ok(result_str)
@@ -280,7 +282,7 @@ impl Crypto for GpgMe {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
         ctx.set_key_list_mode(gpgme::KeyListMode::SIGS)?;
 
-        let keys = ctx.find_keys(vec!["".to_owned()])?;
+        let keys = ctx.find_keys(vec![String::new()])?;
 
         let mut trusts = HashMap::new();
         for key_res in keys {

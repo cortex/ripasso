@@ -52,7 +52,7 @@ impl UI {
             self.current_passwords
                 .clone()
                 .into_iter()
-                .map(|p| (p.name, "".to_owned()))
+                .map(|p| (p.name, String::new()))
                 .collect(),
         );
         None
@@ -90,7 +90,7 @@ impl UI {
             // Select notihng if passwords list is empty
             let pass = self.get_password(i);
             self.password.set_name(pass.name);
-            self.password.set_meta("".to_owned());
+            self.password.set_meta(String::new());
         }
         None
     }

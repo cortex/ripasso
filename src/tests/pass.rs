@@ -802,7 +802,7 @@ fn decrypt_secret_empty_file() -> Result<()> {
         &dir.path().join(".password-store"),
         &PathBuf::from("file.gpg"),
         Ok(Local::now()),
-        Ok("".to_owned()),
+        Ok(String::new()),
         Ok(SignatureStatus::Good),
         RepositoryStatus::NoRepo,
     );
@@ -836,7 +836,7 @@ fn decrypt_secret_missing_file() -> Result<()> {
         &dir.path().join(".password-store"),
         &PathBuf::from("file.gpg"),
         Ok(Local::now()),
-        Ok("".to_owned()),
+        Ok(String::new()),
         Ok(SignatureStatus::Good),
         RepositoryStatus::NoRepo,
     );
@@ -877,7 +877,7 @@ fn decrypt_secret() -> Result<()> {
         &dir.path().join(".password-store"),
         &PathBuf::from("file.gpg"),
         Ok(Local::now()),
-        Ok("".to_owned()),
+        Ok(String::new()),
         Ok(SignatureStatus::Good),
         RepositoryStatus::NoRepo,
     );
@@ -916,7 +916,7 @@ fn decrypt_password_empty_file() -> Result<()> {
         &dir.path().join(".password-store"),
         &PathBuf::from("file.gpg"),
         Ok(Local::now()),
-        Ok("".to_owned()),
+        Ok(String::new()),
         Ok(SignatureStatus::Good),
         RepositoryStatus::NoRepo,
     );
@@ -954,7 +954,7 @@ fn decrypt_password_multiline() -> Result<()> {
         &dir.path().join(".password-store"),
         &PathBuf::from("file.gpg"),
         Ok(Local::now()),
-        Ok("".to_owned()),
+        Ok(String::new()),
         Ok(SignatureStatus::Good),
         RepositoryStatus::NoRepo,
     );
@@ -994,7 +994,7 @@ fn update() -> Result<()> {
         &dir.path().join(".password-store"),
         &PathBuf::from("file.gpg"),
         Ok(Local::now()),
-        Ok("".to_owned()),
+        Ok(String::new()),
         Ok(SignatureStatus::Good),
         RepositoryStatus::NoRepo,
     );
@@ -1046,7 +1046,7 @@ fn delete_file() -> Result<()> {
         &dir.path().join(".password-store"),
         &PathBuf::from("file.gpg"),
         Ok(Local::now()),
-        Ok("".to_owned()),
+        Ok(String::new()),
         Ok(SignatureStatus::Good),
         RepositoryStatus::NoRepo,
     );
@@ -1083,7 +1083,7 @@ fn get_history_no_repo() -> Result<()> {
         &dir.path().join(".password-store"),
         &PathBuf::from("file.gpg"),
         Ok(Local::now()),
-        Ok("".to_owned()),
+        Ok(String::new()),
         Ok(SignatureStatus::Good),
         RepositoryStatus::NoRepo,
     );

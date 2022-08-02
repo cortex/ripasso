@@ -146,7 +146,7 @@ fn copy(ui: &mut Cursive, store: PasswordStoreType) {
 
     thread::spawn(|| {
         thread::sleep(time::Duration::from_secs(40));
-        helpers::set_clipboard("".to_owned()).unwrap();
+        helpers::set_clipboard(String::new()).unwrap();
     });
     ui.call_on_name("status_bar", |l: &mut TextView| {
         l.set_content(CATALOG.gettext("Copied password to copy buffer for 40 seconds"));
@@ -175,7 +175,7 @@ fn copy_first_line(ui: &mut Cursive, store: PasswordStoreType) {
 
     thread::spawn(|| {
         thread::sleep(time::Duration::from_secs(40));
-        helpers::set_clipboard("".to_owned()).unwrap();
+        helpers::set_clipboard(String::new()).unwrap();
     });
     ui.call_on_name("status_bar", |l: &mut TextView| {
         l.set_content(CATALOG.gettext("Copied password to copy buffer for 40 seconds"));
