@@ -32,7 +32,7 @@ fn do_delete_normal() {
         &td.path().join(".password-store"),
         &PathBuf::from("file.gpg"),
         Ok(Local::now()),
-        Ok("".to_owned()),
+        Ok(String::new()),
         Ok(SignatureStatus::Good),
         RepositoryStatus::NoRepo,
     ));

@@ -22,6 +22,7 @@ pub enum Error {
     ReqwestError(reqwest::Error),
     NoneError,
     HexError(FromHexError),
+    FmtError(std::fmt::Error),
 }
 
 impl From<io::Error> for Error {
@@ -141,9 +142,15 @@ impl From<FromHexError> for Error {
     }
 }
 
+impl From<std::fmt::Error> for Error {
+    fn from(err: std::fmt::Error) -> Error {
+        Error::FmtError(err)
+    }
+}
+
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match &*self {
+        match self {
             Error::Io(err) => write!(f, "{}", err),
             Error::Git(err) => write!(f, "{}", err),
             Error::Gpg(err) => write!(f, "{}", err),
@@ -160,6 +167,7 @@ impl std::fmt::Display for Error {
             Error::ReqwestError(err) => write!(f, "{}", err),
             Error::NoneError => write!(f, "NoneError"),
             Error::HexError(err) => write!(f, "{}", err),
+            Error::FmtError(err) => write!(f, "{}", err),
         }
     }
 }

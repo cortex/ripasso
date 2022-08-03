@@ -163,7 +163,7 @@ impl Crypto for MockCrypto {
 
         match &self.decrypt_string_return {
             Some(s) => Ok(s.clone()),
-            None => Ok("".to_owned()),
+            None => Ok(String::new()),
         }
     }
 
@@ -187,7 +187,7 @@ impl Crypto for MockCrypto {
         self.sign_called.replace(true);
         Ok(match self.sign_string_return.as_ref() {
             Some(s) => s.to_owned(),
-            None => "".to_owned(),
+            None => String::new(),
         })
     }
 

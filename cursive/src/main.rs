@@ -146,7 +146,7 @@ fn copy(ui: &mut Cursive, store: PasswordStoreType) {
 
     thread::spawn(|| {
         thread::sleep(time::Duration::from_secs(40));
-        helpers::set_clipboard("".to_owned()).unwrap();
+        helpers::set_clipboard(String::new()).unwrap();
     });
     ui.call_on_name("status_bar", |l: &mut TextView| {
         l.set_content(CATALOG.gettext("Copied password to copy buffer for 40 seconds"));
@@ -175,7 +175,7 @@ fn copy_first_line(ui: &mut Cursive, store: PasswordStoreType) {
 
     thread::spawn(|| {
         thread::sleep(time::Duration::from_secs(40));
-        helpers::set_clipboard("".to_owned()).unwrap();
+        helpers::set_clipboard(String::new()).unwrap();
     });
     ui.call_on_name("status_bar", |l: &mut TextView| {
         l.set_content(CATALOG.gettext("Copied password to copy buffer for 40 seconds"));
@@ -369,7 +369,7 @@ fn do_rename_file(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
         .unwrap()
         .lock()
         .unwrap()
-        .rename_file(old_name.source(), &*new_name);
+        .rename_file(old_name.source(), &new_name);
     match res {
         Err(err) => {
             helpers::errorbox(ui, &err);
@@ -588,13 +588,10 @@ fn delete_recipient(ui: &mut Cursive, store: PasswordStoreType) {
         return;
     }
 
-    match store
-        .lock()
-        .unwrap()
-        .lock()
-        .unwrap()
-        .remove_recipient(&sel.unwrap())
-    {
+    let store = store.lock().unwrap();
+    let store = store.lock().unwrap();
+    let remove_recipient_res = store.remove_recipient(&sel.unwrap());
+    match remove_recipient_res {
         Err(err) => helpers::errorbox(ui, &err),
         Ok(_) => {
             let delete_id = l.selected_id().unwrap();
@@ -624,7 +621,8 @@ fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) {
 
     let store = store.lock().unwrap();
     let store = store.lock().unwrap();
-    match store.recipient_from(l, &[], None) {
+    let recipient_from_res = store.recipient_from(l, &[], None);
+    match recipient_from_res {
         Err(err) => helpers::errorbox(ui, &err),
         Ok(recipient) => {
             if recipient.trust_level != OwnerTrustLevel::Ultimate {
@@ -635,34 +633,39 @@ fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) {
             let res = store.add_recipient(&recipient);
             match res {
                 Err(err) => helpers::errorbox(ui, &err),
-                Ok(_) => match store.all_recipients() {
-                    Err(err) => helpers::errorbox(ui, &err),
-                    Ok(recipients) => {
-                        let mut max_width_key = 0;
-                        let mut max_width_name = 0;
-                        for recipient in &recipients {
-                            if recipient.key_id.len() > max_width_key {
-                                max_width_key = recipient.key_id.len();
+                Ok(_) => {
+                    let all_recipients_res = store.all_recipients();
+                    match all_recipients_res {
+                        Err(err) => helpers::errorbox(ui, &err),
+                        Ok(recipients) => {
+                            let mut max_width_key = 0;
+                            let mut max_width_name = 0;
+                            for recipient in &recipients {
+                                if recipient.key_id.len() > max_width_key {
+                                    max_width_key = recipient.key_id.len();
+                                }
+                                if recipient.name.len() > max_width_name {
+                                    max_width_name = recipient.name.len();
+                                }
                             }
-                            if recipient.name.len() > max_width_name {
-                                max_width_name = recipient.name.len();
-                            }
+
+                            let mut recipients_view = ui
+                                .find_name::<SelectView<pass::Recipient>>("recipients")
+                                .unwrap();
+                            recipients_view.add_item(
+                                render_recipient_label(&recipient, max_width_key, max_width_name),
+                                recipient,
+                            );
+
+                            ui.pop_layer();
+                            ui.call_on_name("status_bar", |l: &mut TextView| {
+                                l.set_content(
+                                    CATALOG.gettext("Added team member to password store"),
+                                );
+                            });
                         }
-
-                        let mut recipients_view = ui
-                            .find_name::<SelectView<pass::Recipient>>("recipients")
-                            .unwrap();
-                        recipients_view.add_item(
-                            render_recipient_label(&recipient, max_width_key, max_width_name),
-                            recipient,
-                        );
-
-                        ui.pop_layer();
-                        ui.call_on_name("status_bar", |l: &mut TextView| {
-                            l.set_content(CATALOG.gettext("Added team member to password store"));
-                        });
                     }
-                },
+                }
             }
         }
     }
@@ -723,7 +726,8 @@ fn render_recipient_label(
         OwnerTrustLevel::Undefined => CATALOG.gettext("Undefined"),
         OwnerTrustLevel::Unknown => CATALOG.gettext("Unknown"),
     };
-    return format!(
+
+    format!(
         "{} {:width_key$} {:width_name$} {}  {}  ",
         symbol,
         &recipient.key_id,
@@ -736,7 +740,7 @@ fn render_recipient_label(
         },
         width_key = max_width_key,
         width_name = max_width_name
-    );
+    )
 }
 
 fn view_recipients(ui: &mut Cursive, store: PasswordStoreType) {
@@ -818,7 +822,8 @@ fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
             SignatureStatus::Bad => "⛔",
         }
     }
-    return format!(
+
+    format!(
         "{:4$} {} {} {}",
         p.name,
         verification_status,
@@ -828,7 +833,7 @@ fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
             None => CATALOG.gettext("n/a").to_string(),
         },
         col - 12 - 15 - 9, // Optimized for 80 cols
-    );
+    )
 }
 
 fn search(store: &PasswordStoreType, ui: &mut Cursive, query: &str) {
@@ -837,7 +842,8 @@ fn search(store: &PasswordStoreType, ui: &mut Cursive, query: &str) {
         .find_name::<SelectView<pass::PasswordEntry>>("results")
         .unwrap();
 
-    match pass::search(&store.lock().unwrap().lock().unwrap(), &String::from(query)) {
+    let search_result = pass::search(&store.lock().unwrap().lock().unwrap(), &String::from(query));
+    match search_result {
         Err(err) => {
             helpers::errorbox(ui, &err);
         }
@@ -856,7 +862,8 @@ fn help() {
 }
 
 fn git_push(ui: &mut Cursive, store: PasswordStoreType) {
-    match pass::push(&store.lock().unwrap().lock().unwrap()) {
+    let push_result = pass::push(&store.lock().unwrap().lock().unwrap());
+    match push_result {
         Err(err) => helpers::errorbox(ui, &err),
         Ok(_) => {
             ui.call_on_name("status_bar", |l: &mut TextView| {
@@ -881,6 +888,7 @@ fn git_pull(ui: &mut Cursive, store: PasswordStoreType) {
 
     ui.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
         l.clear();
+        #[allow(clippy::significant_drop_in_scrutinee)]
         for p in store.lock().unwrap().lock().unwrap().passwords.iter() {
             l.add_item(create_label(p, col), p.clone());
         }
@@ -904,7 +912,8 @@ fn pgp_import(ui: &mut Cursive, store: PasswordStoreType) {
 
         s.pop_layer();
 
-        match pass::pgp_import(&store.lock().unwrap().lock().unwrap(), text) {
+        let import_result = pass::pgp_import(&store.lock().unwrap().lock().unwrap(), text);
+        match import_result {
             Err(err) => helpers::errorbox(s, &err),
             Ok(result) => {
                 let d = Dialog::around(TextView::new(result))
@@ -934,7 +943,8 @@ fn pgp_pull(ui: &mut Cursive, store: PasswordStoreType) {
     .dismiss_button(CATALOG.gettext("Cancel"))
     .button(CATALOG.gettext("Download"), move |ui| {
         ui.pop_layer();
-        match pass::pgp_pull(&store.lock().unwrap().lock().unwrap()) {
+        let pull_result = pass::pgp_pull(&store.lock().unwrap().lock().unwrap());
+        match pull_result {
             Err(err) => helpers::errorbox(ui, &err),
             Ok(result) => {
                 let d = Dialog::around(TextView::new(result))
@@ -1143,6 +1153,7 @@ fn save_edit_config(
 
     if sel.is_some() {
         let mut stores_borrowed = stores.lock().unwrap();
+        #[allow(clippy::significant_drop_in_scrutinee)]
         for (i, store) in stores_borrowed.iter().enumerate() {
             if store.lock().unwrap().get_name() == name {
                 stores_borrowed[i] = Arc::new(Mutex::new(new_store));
@@ -1235,6 +1246,7 @@ fn edit_store_in_config(
 
     let mut store_opt: Option<&Arc<Mutex<PasswordStore>>> = None;
     let stores_borrowed = stores.lock().unwrap();
+    #[allow(clippy::significant_drop_in_scrutinee)]
     for store in stores_borrowed.iter() {
         if store.lock().unwrap().get_name() == name {
             store_opt = Some(store);
@@ -1305,7 +1317,9 @@ fn edit_store_in_config(
     let stores3 = stores.clone();
     let name2 = store.get_name().clone();
     let name3 = store.get_name().clone();
+    #[allow(clippy::redundant_clone)]
     let config_file_location = config_file_location.to_path_buf();
+    #[allow(clippy::redundant_clone)]
     let config_file_location2 = config_file_location.to_path_buf();
     let home = home.clone();
     let home2 = home.clone();
@@ -1415,7 +1429,9 @@ fn add_store_to_config(
     }
 
     let stores2 = stores.clone();
+    #[allow(clippy::redundant_clone)]
     let config_file_location = config_file_location.to_path_buf();
+    #[allow(clippy::redundant_clone)]
     let config_file_location2 = config_file_location.to_path_buf();
     let home = home.clone();
     let home2 = home.clone();
@@ -1473,6 +1489,7 @@ fn show_manage_config_dialog(
         .h_align(cursive::align::HAlign::Left)
         .with_name("stores");
 
+    #[allow(clippy::significant_drop_in_scrutinee)]
     for store in stores.lock().unwrap().iter() {
         stores_view.get_mut().add_item(
             store.lock().unwrap().get_name(),
@@ -1603,6 +1620,7 @@ fn main() {
     ));
 
     let store: PasswordStoreType = Arc::new(Mutex::new(stores.lock().unwrap()[0].clone()));
+    #[allow(clippy::significant_drop_in_scrutinee)]
     for ss in stores.lock().unwrap().iter() {
         if ss.lock().unwrap().get_name() == "default" {
             let mut s = store.lock().unwrap();
@@ -1799,6 +1817,7 @@ fn main() {
     );
 
     let mut tree = Tree::new();
+    #[allow(clippy::significant_drop_in_scrutinee)]
     for s in stores.lock().unwrap().iter() {
         let s = s.clone();
         let store_name = s.lock().unwrap().get_name().clone();
