@@ -24,7 +24,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 /// The different pgp implementations we support
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum CryptoImpl {
     GpgMe,
     Sequoia,
@@ -438,7 +438,7 @@ fn find(
         _ => return Err(Error::Generic("not an v4 keyid")),
     };
 
-    for (key, value) in &*key_ring {
+    for (key, value) in key_ring {
         if key[0..8] == *bytes {
             return Ok(value.clone());
         }
@@ -843,7 +843,7 @@ impl Crypto for Sequoia {
             }
         }
 
-        return Err(Error::GenericDyn(format!("no key found for {}", key_id)));
+        Err(Error::GenericDyn(format!("no key found for {}", key_id)))
     }
 
     fn get_all_trust_items(&self) -> Result<HashMap<[u8; 20], OwnerTrustLevel>> {
