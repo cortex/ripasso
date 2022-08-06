@@ -23,6 +23,8 @@ pub enum Error {
     NoneError,
     HexError(FromHexError),
     FmtError(std::fmt::Error),
+    TotpUrlError(totp_rs::TotpUrlError),
+    SystemTimeError(std::time::SystemTimeError),
 }
 
 impl From<io::Error> for Error {
@@ -148,6 +150,18 @@ impl From<std::fmt::Error> for Error {
     }
 }
 
+impl From<totp_rs::TotpUrlError> for Error {
+    fn from(err: totp_rs::TotpUrlError) -> Error {
+        Error::TotpUrlError(err)
+    }
+}
+
+impl From<std::time::SystemTimeError> for Error {
+    fn from(err: std::time::SystemTimeError) -> Error {
+        Error::SystemTimeError(err)
+    }
+}
+
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
@@ -168,6 +182,8 @@ impl std::fmt::Display for Error {
             Error::NoneError => write!(f, "NoneError"),
             Error::HexError(err) => write!(f, "{}", err),
             Error::FmtError(err) => write!(f, "{}", err),
+            Error::TotpUrlError(_err) => write!(f, "TOTP url error"),
+            Error::SystemTimeError(err) => write!(f, "{}", err),
         }
     }
 }

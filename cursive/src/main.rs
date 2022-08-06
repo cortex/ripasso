@@ -182,6 +182,28 @@ fn copy_first_line(ui: &mut Cursive, store: PasswordStoreType) {
     });
 }
 
+fn copy_mfa(ui: &mut Cursive, store: PasswordStoreType) {
+    let sel = ui
+        .find_name::<SelectView<pass::PasswordEntry>>("results")
+        .unwrap()
+        .selection();
+
+    if sel.is_none() {
+        return;
+    }
+    if let Err(err) = || -> pass::Result<()> {
+        helpers::set_clipboard(sel.unwrap().mfa(&store.lock().unwrap().lock().unwrap())?)?;
+        Ok(())
+    }() {
+        helpers::errorbox(ui, &err);
+        return;
+    }
+
+    ui.call_on_name("status_bar", |l: &mut TextView| {
+        l.set_content(CATALOG.gettext("Copied MFA code to copy buffer"));
+    });
+}
+
 fn copy_name(ui: &mut Cursive) {
     let sel = ui
         .find_name::<SelectView<pass::PasswordEntry>>("results")
@@ -1663,6 +1685,10 @@ fn main() {
         let store = store.clone();
         move |ui: &mut Cursive| copy_first_line(ui, store.clone())
     });
+    ui.add_global_callback(Event::CtrlChar('b'), {
+        let store = store.clone();
+        move |ui: &mut Cursive| copy_mfa(ui, store.clone())
+    });
     ui.add_global_callback(Key::Del, {
         let store = store.clone();
         move |ui: &mut Cursive| delete(ui, store.clone())
@@ -1770,6 +1796,10 @@ fn main() {
                 move |ui: &mut Cursive| copy(ui, store.clone())
             })
             .leaf(CATALOG.gettext("Copy Name (ctrl-u)"), copy_name)
+            .leaf(CATALOG.gettext("Copy MFA Code (ctrl-b)"), {
+                let store = store.clone();
+                move |ui: &mut Cursive| copy_mfa(ui, store.clone())
+            })
             .leaf(CATALOG.gettext("Open (ctrl-o)"), {
                 let store = store.clone();
                 move |ui: &mut Cursive| open(ui, store.clone())
