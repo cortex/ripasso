@@ -87,7 +87,7 @@ impl PasswordStore {
         Ok(store)
     }
 
-    /// Creates a `PasswordStore`
+    /// Creates a `PasswordStore`, including creating directories and initializing the .gpg-id file
     pub fn create(
         store_name: &str,
         password_store_dir: &Option<PathBuf>,

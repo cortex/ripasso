@@ -330,6 +330,30 @@ fn show_file_history(ui: &mut Cursive, store: PasswordStoreType) {
     }
 }
 
+fn do_password_save(ui: &mut Cursive, password: &str, store: PasswordStoreType, do_pop: bool) {
+    let password_entry_opt = get_selected_password_entry(ui);
+    if password_entry_opt.is_none() {
+        return;
+    }
+
+    let password_entry = password_entry_opt.unwrap();
+
+    let r = password_entry.update(password.to_string(), &store.lock().unwrap().lock().unwrap());
+
+    if let Err(err) = r {
+        helpers::errorbox(ui, &err)
+    } else {
+        if do_pop {
+            ui.pop_layer();
+        }
+        ui.call_on_name("status_bar", |l: &mut TextView| {
+            l.set_content(CATALOG.gettext("Updated password entry"));
+        });
+
+        ui.pop_layer();
+    }
+}
+
 fn open(ui: &mut Cursive, store: PasswordStoreType) {
     let password_entry_opt = get_selected_password_entry(ui);
     if password_entry_opt.is_none() {
@@ -349,16 +373,24 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) {
             let new_password = s
                 .call_on_name("editbox", |e: &mut TextArea| e.get_content().to_string())
                 .unwrap();
-            let r = password_entry.update(new_password, &store.lock().unwrap().lock().unwrap());
-            if let Err(err) = r {
-                helpers::errorbox(s, &err)
-            } else {
-                s.call_on_name("status_bar", |l: &mut TextView| {
-                    l.set_content(CATALOG.gettext("Updated password entry"));
+
+            if new_password.contains("otpauth://") {
+                let store = store.clone();
+                let d = Dialog::around(TextView::new(CATALOG.gettext("It seems like you are trying to save a TOTP code to the password store. This will reduce your 2FA solution to just 1FA, do you want to proceed?")))
+                    .button(CATALOG.gettext("Save"), move |s| {
+                        do_password_save(s, &new_password, store.clone(), true);
+                    })
+                    .dismiss_button(CATALOG.gettext("Close"));
+
+                let ev = OnEventView::new(d).on_event(Key::Esc, |s| {
+                    s.pop_layer();
                 });
 
-                s.pop_layer();
-            }
+                s.add_layer(ev);
+            } else {
+                do_password_save(s, &new_password, store.clone(), false);
+            };
+
         })
         .button(CATALOG.gettext("Generate"), move |s| {
             let new_password = ripasso::words::generate_password(6);
@@ -489,6 +521,42 @@ fn get_value_from_input(s: &mut Cursive, input_name: &str) -> Option<std::rc::Rc
     password
 }
 
+fn do_new_password_save(
+    s: &mut Cursive,
+    path: &str,
+    password: &str,
+    store: PasswordStoreType,
+    do_pop: bool,
+) {
+    let entry = store
+        .lock()
+        .unwrap()
+        .lock()
+        .unwrap()
+        .new_password_file(path.as_ref(), password.as_ref());
+
+    if do_pop {
+        s.pop_layer();
+    }
+
+    match entry {
+        Err(err) => helpers::errorbox(s, &err),
+        Ok(entry) => {
+            let col = screen_width(s);
+            s.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
+                l.add_item(create_label(&entry, col), entry);
+                l.sort_by_label();
+            });
+
+            s.pop_layer();
+
+            s.call_on_name("status_bar", |l: &mut TextView| {
+                l.set_content(CATALOG.gettext("Created new password"));
+            });
+        }
+    }
+}
+
 fn create_save(s: &mut Cursive, store: PasswordStoreType) {
     let password = get_value_from_input(s, "new_password_input");
     if password.is_none() {
@@ -513,28 +581,20 @@ fn create_save(s: &mut Cursive, store: PasswordStoreType) {
         password = Rc::from(format!("{}\n{}", password, note));
     }
 
-    let entry = store
-        .lock()
-        .unwrap()
-        .lock()
-        .unwrap()
-        .new_password_file(path.as_ref(), password.as_ref());
+    if password.contains("otpauth://") {
+        let d = Dialog::around(TextView::new(CATALOG.gettext("It seems like you are trying to save a TOTP code to the password store. This will reduce your 2FA solution to just 1FA, do you want to proceed?")))
+            .button(CATALOG.gettext("Save"), move |s| {
+                do_new_password_save(s, path.as_ref(), password.as_ref(), store.clone(), true);
+            })
+            .dismiss_button(CATALOG.gettext("Close"));
 
-    match entry {
-        Err(err) => helpers::errorbox(s, &err),
-        Ok(entry) => {
-            let col = screen_width(s);
-            s.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
-                l.add_item(create_label(&entry, col), entry);
-                l.sort_by_label();
-            });
-
+        let ev = OnEventView::new(d).on_event(Key::Esc, |s| {
             s.pop_layer();
+        });
 
-            s.call_on_name("status_bar", |l: &mut TextView| {
-                l.set_content(CATALOG.gettext("Created new password"));
-            });
-        }
+        s.add_layer(ev);
+    } else {
+        do_new_password_save(s, path.as_ref(), password.as_ref(), store, false);
     }
 }
 

@@ -11,15 +11,16 @@ fn generate_man_page() -> String {
                   .long("--help")
                   .help("Print a help text"),
         )
-        .description("ripasso-cursive is an ncurses application that lets you manage your or your teams passwords.\
-The passwords are encrypted with gpg and optionally stored in an gpg repository. The list of team members are stored \
-in the file .gpg-id, one gpg key id per line.")
+        .description("ripasso-cursive is an curses application that lets you manage your or your teams passwords.\
+The passwords are encrypted with pgp and optionally stored in an git repository. The list of team members are stored \
+in the file .gpg-id, one pgp key id per line.")
 
         .custom(man::prelude::Section::new("Keyboard shortcuts")
             .paragraph("Enter : Copy the current selected password to the copy buffer for 40 seconds")
             .paragraph("Delete : Delete the marked password")
             .paragraph("Insert : Create a new password entry")
             .paragraph("Control + y : same as Enter")
+            .paragraph("Control + b : if the password have an otpauth:// url in it, generate a code and store it in the copy buffer")
             .paragraph("Control + n : move marker down")
             .paragraph("Control + p : move marker up")
             .paragraph("Control + r : rename the password without changing it's content")
@@ -34,7 +35,7 @@ in the file .gpg-id, one gpg key id per line.")
             .paragraph("ripasso-cursive reads $HOME/.password-store/ by default, override this by setting
 the PASSWORD_STORE_DIR environmental variable.")
             .paragraph("If you specify the PASSWORD_STORE_SIGNING_KEY environmental variable, then
-ripasso will verify that the .gpg-id file is correctly signed. Valid values are one or more 40 character gpg key ids,
+ripasso will verify that the .gpg-id file is correctly signed. Valid values are one or more 40 character pgp fingerprints,
 separated by commas."))
         .custom(man::prelude::Section::new("config file")
             .paragraph("ripasso reads configuration from $XDG_CONFIG_HOME/ripasso/settings.toml")
