@@ -53,6 +53,8 @@ separated by commas."))
             .paragraph("valid_signing_keys : this setting corresponds to the PASSWORD_STORE_SIGNING_KEY environmental variable")
             .paragraph("style_path : color and style information for the store, different stores can have different styles and they will
 change when you switch store. Documentation on the format can be found here https://docs.rs/cursive_core/0.1.1/cursive_core/theme/index.html")
+            .paragraph("pgp : the pgp implementation to use for the store, valid values are gpg or sequoia")
+            .paragraph("own_fingerprint : if the pgp option is set to sequoia, ripasso needs to know the fingerprint of your own key in order to communicate with gpg-agent")
         )
         .render()
 }
