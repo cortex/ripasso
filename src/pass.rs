@@ -33,6 +33,7 @@ pub use crate::signature::{
 };
 use std::collections::HashMap;
 use std::fmt::Display;
+use totp_rs::TOTP;
 
 /// Represents a complete password store directory
 pub struct PasswordStore {
@@ -86,7 +87,7 @@ impl PasswordStore {
         Ok(store)
     }
 
-    /// Creates a `PasswordStore`
+    /// Creates a `PasswordStore`, including creating directories and initializing the .gpg-id file
     pub fn create(
         store_name: &str,
         password_store_dir: &Option<PathBuf>,
@@ -827,6 +828,28 @@ impl PasswordEntry {
     /// Decrypts and returns the first line of the PasswordEntry
     pub fn password(&self, store: &PasswordStore) -> Result<String> {
         Ok(self.secret(store)?.split('\n').take(1).collect())
+    }
+
+    /// decrypts and returns a TOTP code if the entry contains a otpauth:// url
+    pub fn mfa(&self, store: &PasswordStore) -> Result<String> {
+        let secret = self.secret(store)?;
+
+        if let Some(start_pos) = secret.find("otpauth://") {
+            let end_pos = {
+                let mut end_pos = secret.len();
+                for (pos, c) in secret.chars().skip(start_pos).enumerate() {
+                    if c.is_whitespace() {
+                        end_pos = pos;
+                        break;
+                    }
+                }
+                end_pos
+            };
+            let totp = TOTP::<&str>::from_url(&secret[start_pos..end_pos])?;
+            Ok(totp.generate_current()?)
+        } else {
+            Err(Error::Generic("No otpauth:// url in secret"))
+        }
     }
 
     fn update_internal(&self, secret: String, store: &PasswordStore) -> Result<()> {
