@@ -2040,6 +2040,13 @@ fn main() {
                 }
             }
 
+            if let Err(err) = ui.load_toml(&get_style(
+                &store.lock().unwrap().lock().unwrap().get_style_file(),
+            )) {
+                eprintln!("Error {:?}", err);
+                process::exit(1);
+            }
+
             ui.call_on_name("search_box", |e: &mut EditView| {
                 e.set_content("");
             });
