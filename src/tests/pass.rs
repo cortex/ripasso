@@ -1132,7 +1132,7 @@ fn mfa_example1() -> Result<()> {
     );
 
     let crypto = MockCrypto::new().with_decrypt_string_return(
-        "otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXP&issuer=Example".to_owned(),
+        "otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example".to_owned(),
     );
 
     let store = PasswordStore {
@@ -1174,7 +1174,7 @@ fn mfa_example2() -> Result<()> {
     );
 
     let crypto =
-        MockCrypto::new().with_decrypt_string_return("some text\n otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXP&issuer=Example\nmore txt\n\n".to_owned());
+        MockCrypto::new().with_decrypt_string_return("some text\n otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example\nmore txt\n\n".to_owned());
 
     let store = PasswordStore {
         name: "store_name".to_owned(),
