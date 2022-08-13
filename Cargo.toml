@@ -12,16 +12,16 @@ edition = '2021'
 glob = "0.3.0"
 gpgme = "0.10.0"
 chrono = "0.4"
-git2 = "0.14.2"
+git2 = "0.15.0"
 rand = "0.8.5"
-whoami = "1.2.0"
-toml = "0.5.8"
-reqwest = { version = "0.11.10", features = ["blocking"] }
+whoami = "1.2.1"
+toml = "0.5.9"
+reqwest = { version = "0.11.11", features = ["blocking"] }
 hex = "0.4.3"
 totp-rs = { version = "2.0.1", features = ["otpauth"] }
-sequoia-openpgp = "1.8.0"
-anyhow = "1.0.42"
-sequoia-ipc = "0.27.0"
+sequoia-openpgp = "1.10.0"
+anyhow = "1.0.61"
+sequoia-ipc = "0.28.0"
 
 [dependencies.config]
 version = "0.11.0"
