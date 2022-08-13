@@ -163,7 +163,7 @@ pub struct Recipient {
     /// Machine readable identity taken from the .gpg-id file, in the form of a gpg key id
     /// (16 hex chars) or a fingerprint (40 hex chars).
     pub key_id: String,
-    /// The fingerprint of the gpg key, 20 bytes,
+    /// The fingerprint of the pgp key, as 20 bytes,
     /// if the fingerprint of the key is not known, this will be None.
     pub fingerprint: Option<[u8; 20]>,
     /// The status of the key in GPG's keyring

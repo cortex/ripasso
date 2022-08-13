@@ -1,4 +1,4 @@
-use crate::crypto::{Crypto, FindSigningFingerprintStrategy, Key, VerificationError};
+use crate::crypto::{Crypto, CryptoImpl, FindSigningFingerprintStrategy, Key, VerificationError};
 use crate::error::Error;
 use crate::error::Result;
 use crate::pass::{KeyRingStatus, OwnerTrustLevel, SignatureStatus};
@@ -201,11 +201,11 @@ impl Crypto for MockCrypto {
         Err(VerificationError::SignatureFromWrongRecipient)
     }
 
-    fn pull_keys(&self, _recipients: &[Recipient]) -> Result<String> {
+    fn pull_keys(&mut self, _recipients: &[Recipient], _config_path: &Path) -> Result<String> {
         Ok("dummy implementation".to_owned())
     }
 
-    fn import_key(&self, _key: &str) -> Result<String> {
+    fn import_key(&mut self, _key: &str, _config_path: &Path) -> Result<String> {
         Ok("dummy implementation".to_owned())
     }
 
@@ -225,6 +225,14 @@ impl Crypto for MockCrypto {
 
     fn get_all_trust_items(&self) -> Result<HashMap<[u8; 20], OwnerTrustLevel>> {
         Ok(HashMap::new())
+    }
+
+    fn implementation(&self) -> CryptoImpl {
+        CryptoImpl::GpgMe
+    }
+
+    fn own_fingerprint(&self) -> Option<[u8; 20]> {
+        None
     }
 }
 

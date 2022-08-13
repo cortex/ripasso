@@ -17,8 +17,8 @@
 use qml::*;
 
 use pass::PasswordEntry;
+use ripasso::crypto::CryptoImpl;
 use ripasso::pass;
-use ripasso::pass::PasswordStore;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -29,7 +29,7 @@ use clipboard::{ClipboardContext, ClipboardProvider};
 use std::panic;
 
 /// The 'pointer' to the current PasswordStore is of this type.
-type PasswordStoreType = Arc<Mutex<PasswordStore>>;
+type PasswordStoreType = Arc<Mutex<pass::PasswordStore>>;
 
 // UI state
 pub struct UI {
@@ -189,6 +189,8 @@ fn main() {
             &password_store_dir,
             &password_store_signing_key,
             &home,
+            &None,
+            &CryptoImpl::GpgMe,
             &None,
         )
         .unwrap(),

@@ -20,6 +20,7 @@ pub enum Error {
     ConfigError(config::ConfigError),
     SerError(toml::ser::Error),
     ReqwestError(reqwest::Error),
+    AnyhowError(anyhow::Error),
     NoneError,
     HexError(FromHexError),
     FmtError(std::fmt::Error),
@@ -122,6 +123,12 @@ impl From<reqwest::Error> for Error {
     }
 }
 
+impl From<anyhow::Error> for Error {
+    fn from(err: anyhow::Error) -> Error {
+        Error::AnyhowError(err)
+    }
+}
+
 impl
     From<
         std::sync::PoisonError<
@@ -179,6 +186,7 @@ impl std::fmt::Display for Error {
             Error::ConfigError(err) => write!(f, "{}", err),
             Error::SerError(err) => write!(f, "{}", err),
             Error::ReqwestError(err) => write!(f, "{}", err),
+            Error::AnyhowError(err) => write!(f, "{}", err),
             Error::NoneError => write!(f, "NoneError"),
             Error::HexError(err) => write!(f, "{}", err),
             Error::FmtError(err) => write!(f, "{}", err),

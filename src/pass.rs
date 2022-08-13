@@ -26,7 +26,9 @@ use std::sync::{Arc, Mutex};
 
 use git2::{Oid, Repository};
 
-use crate::crypto::{Crypto, FindSigningFingerprintStrategy, GpgMe, VerificationError};
+use crate::crypto::{
+    Crypto, CryptoImpl, FindSigningFingerprintStrategy, GpgMe, Sequoia, VerificationError,
+};
 pub use crate::error::{Error, Result};
 pub use crate::signature::{
     parse_signing_keys, Comment, KeyRingStatus, OwnerTrustLevel, Recipient, SignatureStatus,
@@ -61,13 +63,32 @@ impl PasswordStore {
         password_store_signing_key: &Option<String>,
         home: &Option<PathBuf>,
         style_file: &Option<PathBuf>,
+        crypto_impl: &CryptoImpl,
+        own_fingerprint: &Option<[u8; 20]>,
     ) -> Result<PasswordStore> {
         let pass_home = password_dir_raw(password_store_dir, home);
         if !pass_home.exists() {
             return Err(Error::Generic("failed to locate password directory"));
         }
 
-        let crypto = Box::new(GpgMe {});
+        let crypto: Box<dyn Crypto + Send> = match crypto_impl {
+            CryptoImpl::GpgMe => Box::new(GpgMe {}),
+            CryptoImpl::Sequoia => {
+                if own_fingerprint.is_none() {
+                    return Err(Error::Generic("own_fingerprint is not configured, required for using Sequoia as pgp implementation"));
+                }
+                if home.is_none() {
+                    return Err(Error::Generic(
+                        "no home, required for using Sequoia as pgp implementation",
+                    ));
+                }
+                let home: PathBuf = home.clone().unwrap();
+                Box::new(Sequoia::new(
+                    &home.join(".local"),
+                    own_fingerprint.unwrap(),
+                )?)
+            }
+        };
 
         let signing_keys = parse_signing_keys(password_store_signing_key, crypto.as_ref())?;
 
@@ -81,7 +102,7 @@ impl PasswordStore {
         };
 
         if !store.valid_gpg_signing_keys.is_empty() {
-            store.verify_gpg_id_file(&pass_home, &store.valid_gpg_signing_keys)?;
+            store.verify_gpg_id_file()?;
         }
 
         Ok(store)
@@ -193,18 +214,19 @@ impl PasswordStore {
         self.style_file.clone()
     }
 
+    /// returns the crypto implementation for the store
+    pub fn get_crypto(&self) -> &(dyn Crypto + Send) {
+        &*self.crypto
+    }
+
     fn repo(&self) -> Result<git2::Repository> {
         git2::Repository::open(&self.root).map_err(Error::Git)
     }
 
-    fn verify_gpg_id_file(
-        &self,
-        pass_home: &Path,
-        signing_keys: &[[u8; 20]],
-    ) -> Result<SignatureStatus> {
-        let mut gpg_id_file = pass_home.to_path_buf();
+    fn verify_gpg_id_file(&self) -> Result<SignatureStatus> {
+        let mut gpg_id_file = self.root.to_path_buf();
         gpg_id_file.push(".gpg-id");
-        let mut gpg_id_sig_file = pass_home.to_path_buf();
+        let mut gpg_id_sig_file = self.root.to_path_buf();
         gpg_id_sig_file.push(".gpg-id.sig");
 
         let gpg_id = fs::read(gpg_id_file)?;
@@ -217,7 +239,7 @@ impl PasswordStore {
             }
         };
 
-        match self.crypto.verify_sign(&gpg_id, &gpg_id_sig, signing_keys) {
+        match self.crypto.verify_sign(&gpg_id, &gpg_id_sig, &self.valid_gpg_signing_keys) {
             Ok(r) => Ok(r),
             Err(VerificationError::InfrastructureError(message)) => Err(Error::GenericDyn(message)),
             Err(VerificationError::SignatureFromWrongRecipient) => Err(Error::Generic("the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY")),
@@ -279,7 +301,7 @@ impl PasswordStore {
         let mut file = File::create(&path)?;
 
         if !self.valid_gpg_signing_keys.is_empty() {
-            self.verify_gpg_id_file(&self.root, &self.valid_gpg_signing_keys)?;
+            self.verify_gpg_id_file()?;
         }
 
         let mut recipients_file = self.root.clone();
@@ -464,7 +486,7 @@ impl PasswordStore {
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
     pub fn all_recipients(&self) -> Result<Vec<Recipient>> {
         if !self.valid_gpg_signing_keys.is_empty() {
-            self.verify_gpg_id_file(&self.root, &self.valid_gpg_signing_keys)?;
+            self.verify_gpg_id_file()?;
         }
 
         Recipient::all_recipients(&self.recipients_file(), self.crypto.as_ref())
@@ -854,7 +876,7 @@ impl PasswordEntry {
 
     fn update_internal(&self, secret: String, store: &PasswordStore) -> Result<()> {
         if !store.valid_gpg_signing_keys.is_empty() {
-            store.verify_gpg_id_file(&store.root, &store.valid_gpg_signing_keys)?;
+            store.verify_gpg_id_file()?;
         }
 
         let recipients = store.all_recipients()?;
@@ -1276,16 +1298,16 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
 }
 
 /// Import the key_ids from the signature file from a keyserver.
-pub fn pgp_pull(store: &PasswordStore) -> Result<String> {
+pub fn pgp_pull(store: &mut PasswordStore, config_path: &Path) -> Result<String> {
     let recipients = store.all_recipients()?;
 
-    let result = store.crypto.pull_keys(&recipients)?;
+    let result = store.crypto.pull_keys(&recipients, config_path)?;
 
     Ok(result)
 }
 
-pub fn pgp_import(store: &PasswordStore, text: &str) -> Result<String> {
-    store.crypto.import_key(text)
+pub fn pgp_import(store: &mut PasswordStore, text: &str, config_path: &Path) -> Result<String> {
+    store.crypto.import_key(text, config_path)
 }
 
 fn triple<T: Display>(
@@ -1609,8 +1631,17 @@ pub fn save_config(
                     .join(","),
             );
         }
+
         if let Some(style_file) = store.get_style_file() {
             store_map.insert("style_path", style_file.display().to_string());
+        }
+
+        store_map.insert(
+            "pgp_implementation",
+            store.crypto.implementation().to_string(),
+        );
+        if let Some(fp) = store.crypto.own_fingerprint() {
+            store_map.insert("own_fingerprint", hex::encode_upper(fp));
         }
         stores_map.insert(store.get_name().clone(), store_map);
     }
