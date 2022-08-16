@@ -17,8 +17,8 @@
 
 use cursive::traits::*;
 use cursive::views::{
-    Checkbox, CircularFocus, Dialog, EditView, LinearLayout, NamedView, OnEventView, RadioButton,
-    RadioGroup, ResizedView, ScrollView, SelectView, TextArea, TextView,
+    Checkbox, CircularFocus, Dialog, EditView, LinearLayout, NamedView, OnEventView, RadioGroup,
+    ResizedView, ScrollView, SelectView, TextArea, TextView,
 };
 
 use cursive::menu::Tree;
@@ -48,6 +48,8 @@ mod helpers;
 mod wizard;
 
 use lazy_static::lazy_static;
+
+use crate::helpers::{get_value_from_input, is_checkbox_checked, is_radio_button_selected};
 
 /// The 'pointer' to the current PasswordStore is of this convoluted type.
 type PasswordStoreType = Arc<Mutex<Arc<Mutex<PasswordStore>>>>;
@@ -513,22 +515,6 @@ fn rename_file_dialog(ui: &mut Cursive, store: PasswordStoreType) {
         });
 
     ui.add_layer(ev);
-}
-
-fn get_value_from_input(s: &mut Cursive, input_name: &str) -> Option<std::rc::Rc<String>> {
-    let mut password = None;
-    s.call_on_name(input_name, |e: &mut EditView| {
-        password = Some(e.get_content());
-    });
-    password
-}
-
-fn is_radio_button_selected(s: &mut Cursive, button_name: &str) -> bool {
-    let mut selected = false;
-    s.call_on_name(button_name, |e: &mut RadioButton<CryptoImpl>| {
-        selected = e.is_selected();
-    });
-    selected
 }
 
 fn do_new_password_save(
@@ -1352,15 +1338,6 @@ fn save_new_config(
     });
 
     Ok(())
-}
-
-fn is_checkbox_checked(ui: &mut Cursive, name: &str) -> bool {
-    let mut checked = false;
-    ui.call_on_name(name, |l: &mut Checkbox| {
-        checked = l.is_checked();
-    });
-
-    checked
 }
 
 fn edit_store_in_config(

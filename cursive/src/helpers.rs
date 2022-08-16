@@ -15,11 +15,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use cursive::views::{Dialog, OnEventView, TextView};
+use cursive::views::{Checkbox, Dialog, EditView, OnEventView, RadioButton, TextView};
 
 use cursive::event::Key;
 use cursive::Cursive;
 
+use ripasso::crypto::CryptoImpl;
 use ripasso::pass;
 
 use clipboard::ClipboardProvider;
@@ -63,3 +64,32 @@ pub fn set_clipboard(content: String) -> Result<()> {
     }
     Ok(())
 }
+
+pub fn get_value_from_input(s: &mut Cursive, input_name: &str) -> Option<std::rc::Rc<String>> {
+    let mut password = None;
+    s.call_on_name(input_name, |e: &mut EditView| {
+        password = Some(e.get_content());
+    });
+    password
+}
+
+pub fn is_checkbox_checked(ui: &mut Cursive, name: &str) -> bool {
+    let mut checked = false;
+    ui.call_on_name(name, |l: &mut Checkbox| {
+        checked = l.is_checked();
+    });
+
+    checked
+}
+
+pub fn is_radio_button_selected(s: &mut Cursive, button_name: &str) -> bool {
+    let mut selected = false;
+    s.call_on_name(button_name, |e: &mut RadioButton<CryptoImpl>| {
+        selected = e.is_selected();
+    });
+    selected
+}
+
+#[cfg(test)]
+#[path = "tests/helpers.rs"]
+mod helpers_tests;
