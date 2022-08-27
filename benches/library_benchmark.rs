@@ -3,6 +3,7 @@ use std::fs::File;
 use std::path::PathBuf;
 use tar::Archive;
 
+use ripasso::crypto::CryptoImpl;
 use ripasso::pass;
 
 use criterion::{criterion_group, criterion_main, Criterion};
@@ -30,7 +31,15 @@ fn cleanup(mut base_path: PathBuf, path_name: &str) -> Result<(), std::io::Error
 }
 
 fn pop_list(password_dir: PathBuf) -> pass::Result<()> {
-    let store = pass::PasswordStore::new("", &Some(password_dir), &None, &None, &None)?;
+    let store = pass::PasswordStore::new(
+        "",
+        &Some(password_dir),
+        &None,
+        &None,
+        &None,
+        &CryptoImpl::GpgMe,
+        &None,
+    )?;
     let results = store.all_passwords().unwrap();
 
     assert_eq!(results.len(), 4);
