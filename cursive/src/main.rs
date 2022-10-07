@@ -15,34 +15,36 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use cursive::traits::*;
-use cursive::views::{
-    Checkbox, CircularFocus, Dialog, EditView, LinearLayout, NamedView, OnEventView, RadioGroup,
-    ResizedView, ScrollView, SelectView, TextArea, TextView,
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+    process,
+    rc::Rc,
+    sync::{Arc, Mutex},
+    thread, time,
 };
 
-use cursive::menu::Tree;
-use cursive::Cursive;
-use cursive::CursiveExt;
-
-use cursive::direction::Orientation;
-use cursive::event::{Event, Key};
-
-use ripasso::crypto::CryptoImpl;
-use ripasso::pass;
-use ripasso::pass::{all_recipients_from_stores, OwnerTrustLevel, PasswordStore, SignatureStatus};
-use std::path::{Path, PathBuf};
-use std::process;
-use std::rc::Rc;
-use std::sync::{Arc, Mutex};
-use std::{thread, time};
-
+use cursive::{
+    direction::Orientation,
+    event::{Event, Key},
+    menu::Tree,
+    traits::*,
+    views::{
+        Checkbox, CircularFocus, Dialog, EditView, LinearLayout, NamedView, OnEventView,
+        RadioGroup, ResizedView, ScrollView, SelectView, TextArea, TextView,
+    },
+    Cursive, CursiveExt,
+};
 use hex::FromHex;
-use std::collections::HashMap;
-use unic_langid::LanguageIdentifier;
-
 use pass::Result;
-use ripasso::pass::Recipient;
+use ripasso::{
+    crypto::CryptoImpl,
+    pass,
+    pass::{
+        all_recipients_from_stores, OwnerTrustLevel, PasswordStore, Recipient, SignatureStatus,
+    },
+};
+use unic_langid::LanguageIdentifier;
 
 mod helpers;
 mod wizard;

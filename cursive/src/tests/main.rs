@@ -1,9 +1,10 @@
-use super::*;
+use std::{fs::File, io::Write};
+
 use chrono::Local;
 use ripasso::pass::{PasswordEntry, RepositoryStatus};
-use std::fs::File;
-use std::io::Write;
 use tempfile::tempdir;
+
+use super::*;
 
 #[test]
 fn copy_name_none() {

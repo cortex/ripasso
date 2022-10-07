@@ -14,19 +14,18 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-use qml::*;
-
-use pass::PasswordEntry;
-use ripasso::crypto::CryptoImpl;
-use ripasso::pass;
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::Duration;
+use std::{
+    panic,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+    thread,
+    time::Duration,
+};
 
 use clipboard::{ClipboardContext, ClipboardProvider};
-
-use std::panic;
+use pass::PasswordEntry;
+use qml::*;
+use ripasso::{crypto::CryptoImpl, pass};
 
 /// The 'pointer' to the current PasswordStore is of this type.
 type PasswordStoreType = Arc<Mutex<pass::PasswordStore>>;

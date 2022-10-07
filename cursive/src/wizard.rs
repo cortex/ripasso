@@ -15,20 +15,18 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use cursive::event::Key;
-use cursive::traits::*;
-use cursive::views::{Dialog, EditView, LinearLayout, OnEventView, SelectView, TextView};
+use std::path::PathBuf;
 
-use cursive::Cursive;
-use cursive::CursiveExt;
-
-use cursive::direction::Orientation;
+use cursive::{
+    direction::Orientation,
+    event::Key,
+    traits::*,
+    views::{Dialog, EditView, LinearLayout, OnEventView, SelectView, TextView},
+    Cursive, CursiveExt,
+};
+use ripasso::{crypto::CryptoImpl, pass};
 
 use crate::helpers;
-use ripasso::crypto::CryptoImpl;
-use ripasso::pass;
-
-use std::path::PathBuf;
 
 fn create_git_repo(ui: &mut Cursive, password_store_dir: &Option<PathBuf>, home: &Option<PathBuf>) {
     let init_res = pass::init_git_repo(&pass::password_dir(password_store_dir, home).unwrap());

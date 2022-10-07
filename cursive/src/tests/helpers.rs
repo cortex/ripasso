@@ -1,9 +1,10 @@
-use cursive::view::Nameable;
-use cursive::views::{Checkbox, EditView, LinearLayout, RadioButton, RadioGroup};
-
-use ripasso::crypto::CryptoImpl;
-
 use std::rc::Rc;
+
+use cursive::{
+    view::Nameable,
+    views::{Checkbox, EditView, LinearLayout, RadioButton, RadioGroup},
+};
+use ripasso::crypto::CryptoImpl;
 
 use crate::helpers::{get_value_from_input, is_checkbox_checked, is_radio_button_selected};
 

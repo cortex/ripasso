@@ -1,5 +1,4 @@
-use std::io::prelude::*;
-use std::process::Command;
+use std::{io::prelude::*, process::Command};
 
 fn generate_man_page() -> String {
     man::prelude::Manual::new("ripasso-cursive")

@@ -1,12 +1,15 @@
-pub use crate::error::{Error, Result};
+use std::{
+    cmp::PartialEq,
+    collections::{HashMap, HashSet},
+    fs,
+    io::prelude::*,
+    path::{Path, PathBuf},
+};
+
 use hex::FromHex;
-use std::cmp::PartialEq;
-use std::fs;
-use std::io::prelude::*;
-use std::path::{Path, PathBuf};
 
 use crate::crypto::FindSigningFingerprintStrategy;
-use std::collections::{HashMap, HashSet};
+pub use crate::error::{Error, Result};
 
 /// A git commit for a password might be signed by a gpg key, and this signature's verification
 /// state is one of these values.
