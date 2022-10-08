@@ -1,7 +1,6 @@
+use std::{io, path, string};
+
 use hex::FromHexError;
-use std::io;
-use std::path;
-use std::string;
 
 /// A enum that contains the different types of errors that the library returns as part of Result's.
 #[derive(Debug)]

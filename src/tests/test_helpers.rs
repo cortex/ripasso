@@ -1,16 +1,20 @@
-use crate::crypto::{Crypto, CryptoImpl, FindSigningFingerprintStrategy, Key, VerificationError};
-use crate::error::Error;
-use crate::error::Result;
-use crate::pass::{KeyRingStatus, OwnerTrustLevel, SignatureStatus};
-use crate::signature::{Comment, Recipient};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    fs::File,
+    path::{Path, PathBuf},
+};
+
 use flate2::read::GzDecoder;
 use hex::FromHex;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::fs::File;
-use std::path::Path;
-use std::path::PathBuf;
 use tar::Archive;
+
+use crate::{
+    crypto::{Crypto, CryptoImpl, FindSigningFingerprintStrategy, Key, VerificationError},
+    error::{Error, Result},
+    pass::{KeyRingStatus, OwnerTrustLevel, SignatureStatus},
+    signature::{Comment, Recipient},
+};
 
 pub struct UnpackedDir {
     dir: PathBuf,

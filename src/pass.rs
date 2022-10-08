@@ -15,27 +15,30 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::fs;
-use std::fs::{create_dir_all, File};
-use std::path::{Path, PathBuf};
-use std::str;
+use std::{
+    collections::HashMap,
+    fmt::Display,
+    fs,
+    fs::{create_dir_all, File},
+    io::prelude::*,
+    path::{Path, PathBuf},
+    str,
+    sync::{Arc, Mutex},
+};
 
 use chrono::prelude::*;
-use std::io::prelude::*;
-use std::sync::{Arc, Mutex};
-
 use git2::{Oid, Repository};
+use totp_rs::TOTP;
 
 use crate::crypto::{
     Crypto, CryptoImpl, FindSigningFingerprintStrategy, GpgMe, Sequoia, VerificationError,
 };
-pub use crate::error::{Error, Result};
-pub use crate::signature::{
-    parse_signing_keys, Comment, KeyRingStatus, OwnerTrustLevel, Recipient, SignatureStatus,
+pub use crate::{
+    error::{Error, Result},
+    signature::{
+        parse_signing_keys, Comment, KeyRingStatus, OwnerTrustLevel, Recipient, SignatureStatus,
+    },
 };
-use std::collections::HashMap;
-use std::fmt::Display;
-use totp_rs::TOTP;
 
 /// Represents a complete password store directory
 pub struct PasswordStore {
