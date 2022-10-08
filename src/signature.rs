@@ -453,7 +453,7 @@ impl Recipient {
 
 impl PartialEq for Recipient {
     fn eq(&self, other: &Self) -> bool {
-        if self.fingerprint == None || other.fingerprint == None {
+        if self.fingerprint.is_none() || other.fingerprint.is_none() {
             return false;
         }
 

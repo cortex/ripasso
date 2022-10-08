@@ -301,7 +301,7 @@ impl PasswordStore {
         path_end: &str,
         content: &str,
     ) -> Result<PasswordEntry> {
-        let mut file = File::create(&path)?;
+        let mut file = File::create(path)?;
 
         if !self.valid_gpg_signing_keys.is_empty() {
             self.verify_gpg_id_file()?;
@@ -662,7 +662,7 @@ pub fn all_recipients_from_stores(
             #[allow(clippy::significant_drop_in_scrutinee)]
             for recipient in store.all_recipients()? {
                 let key = {
-                    if recipient.fingerprint == None {
+                    if recipient.fingerprint.is_none() {
                         recipient.key_id.clone()
                     } else {
                         hex::encode_upper(recipient.fingerprint.as_ref().unwrap())
@@ -671,7 +671,7 @@ pub fn all_recipients_from_stores(
                 ar.insert(key, recipient);
             }
         }
-        ar.into_iter().map(|(_id, r)| r).collect()
+        ar.into_values().collect()
     };
 
     Ok(all_recipients)
@@ -814,7 +814,7 @@ impl PasswordEntry {
             read_git_meta_data(base, path, repo, store);
 
         let relpath = path
-            .strip_prefix(&base)
+            .strip_prefix(base)
             .expect("base was not a prefix of path")
             .to_path_buf();
         PasswordEntry::new(
@@ -948,7 +948,7 @@ impl PasswordEntry {
         let ps = git2::Pathspec::new(vec![&p])?;
 
         let mut diffopts = git2::DiffOptions::new();
-        diffopts.pathspec(&p);
+        diffopts.pathspec(p);
 
         let walk_res: Vec<GitLogLine> = revwalk
             .filter_map(|id| {
