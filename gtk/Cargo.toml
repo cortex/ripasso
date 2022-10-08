@@ -6,8 +6,8 @@ edition = '2021'
 
 [dependencies]
 ripasso = { path = "../", version = "0.6.0-alpha" }
-gtk = { version = "0.9.0", features = ["v3_22"] }
-gdk = "0.13.0"
-glib = "0.10.0"
+gtk = { version = "0.15.5", features = ["v3_22"] }
+gdk = "0.15.4"
+glib = "0.15.12"
 lazy_static = "1.4.0"
 clipboard = "0.5"
