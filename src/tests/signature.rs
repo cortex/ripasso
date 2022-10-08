@@ -1,9 +1,10 @@
-use crate::pass::{KeyRingStatus, OwnerTrustLevel, Recipient};
-use crate::signature::{parse_signing_keys, Comment};
-use crate::test_helpers::{
-    append_file_name, recipient_alex, recipient_alex_old, MockCrypto, MockKey,
-};
 use hex::FromHex;
+
+use crate::{
+    pass::{KeyRingStatus, OwnerTrustLevel, Recipient},
+    signature::{parse_signing_keys, Comment},
+    test_helpers::{append_file_name, recipient_alex, recipient_alex_old, MockCrypto, MockKey},
+};
 
 #[test]
 fn test_parse_signing_keys_two_keys() {

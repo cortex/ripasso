@@ -1,13 +1,12 @@
-use crate::crypto::slice_to_20_bytes;
-use crate::crypto::{Crypto, CryptoImpl, Sequoia};
-use crate::signature::Recipient;
+use std::{collections::HashMap, sync::Arc};
+
 use hex::FromHex;
-use sequoia_openpgp::cert::CertBuilder;
-use sequoia_openpgp::parse::Parse;
-use sequoia_openpgp::serialize::Serialize;
-use sequoia_openpgp::Cert;
-use std::collections::HashMap;
-use std::sync::Arc;
+use sequoia_openpgp::{cert::CertBuilder, parse::Parse, serialize::Serialize, Cert};
+
+use crate::{
+    crypto::{slice_to_20_bytes, Crypto, CryptoImpl, Sequoia},
+    signature::Recipient,
+};
 
 #[test]
 pub fn crypto_impl_from() {

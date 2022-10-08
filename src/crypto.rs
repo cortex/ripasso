@@ -1,27 +1,38 @@
-use crate::crypto::VerificationError::InfrastructureError;
-pub use crate::error::{Error, Result};
-use crate::pass::OwnerTrustLevel;
-use crate::signature::{KeyRingStatus, Recipient, SignatureStatus};
-use hex::FromHex;
-use sequoia_openpgp::crypto::SessionKey;
-use sequoia_openpgp::parse::stream::{
-    DecryptionHelper, DecryptorBuilder, DetachedVerifierBuilder, MessageLayer, MessageStructure,
-    VerificationHelper,
+use std::{
+    collections::HashMap,
+    fmt::{Display, Formatter, Write},
+    fs,
+    fs::File,
+    io::Write as IoWrite,
+    path::Path,
+    sync::Arc,
 };
-use sequoia_openpgp::parse::Parse;
-use sequoia_openpgp::policy::Policy;
-use sequoia_openpgp::serialize::stream::{Armorer, Encryptor, LiteralWriter, Message, Signer};
-use sequoia_openpgp::serialize::Serialize;
-use sequoia_openpgp::types::{RevocationStatus, SymmetricAlgorithm};
-use sequoia_openpgp::Cert;
-use sequoia_openpgp::KeyHandle;
-use std::collections::HashMap;
-use std::fmt::{Display, Formatter, Write};
-use std::fs;
-use std::fs::File;
-use std::io::Write as IoWrite;
-use std::path::Path;
-use std::sync::Arc;
+
+use hex::FromHex;
+use sequoia_openpgp::{
+    crypto::SessionKey,
+    parse::{
+        stream::{
+            DecryptionHelper, DecryptorBuilder, DetachedVerifierBuilder, MessageLayer,
+            MessageStructure, VerificationHelper,
+        },
+        Parse,
+    },
+    policy::Policy,
+    serialize::{
+        stream::{Armorer, Encryptor, LiteralWriter, Message, Signer},
+        Serialize,
+    },
+    types::{RevocationStatus, SymmetricAlgorithm},
+    Cert, KeyHandle,
+};
+
+pub use crate::error::{Error, Result};
+use crate::{
+    crypto::VerificationError::InfrastructureError,
+    pass::OwnerTrustLevel,
+    signature::{KeyRingStatus, Recipient, SignatureStatus},
+};
 
 /// The different pgp implementations we support
 #[derive(PartialEq, Eq, Debug)]

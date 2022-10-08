@@ -15,26 +15,23 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use gdk::keys::constants;
-use gdk::ModifierType;
-use glib::ObjectExt;
-use gtk::prelude::BuilderExtManual;
-use gtk::prelude::GtkListStoreExtManual;
-use gtk::*;
-
-use glib::Cast;
-use glib::StaticType;
+use std::{
+    cell::RefCell,
+    path::PathBuf,
+    process,
+    sync::{atomic::Ordering, Arc, Mutex},
+    thread, time,
+};
 
 use clipboard::{ClipboardContext, ClipboardProvider};
-use ripasso::crypto::CryptoImpl;
-use ripasso::pass;
-use std::cell::RefCell;
-use std::path::PathBuf;
-use std::process;
-use std::sync::{atomic::Ordering, Arc, Mutex};
-use std::{thread, time};
-
+use gdk::{keys::constants, ModifierType};
+use glib::{Cast, ObjectExt, StaticType};
+use gtk::{
+    prelude::{BuilderExtManual, GtkListStoreExtManual},
+    *,
+};
 use lazy_static::lazy_static;
+use ripasso::{crypto::CryptoImpl, pass};
 
 /// The 'pointer' to the current PasswordStore is of this type.
 type PasswordStoreType = Arc<Mutex<pass::PasswordStore>>;

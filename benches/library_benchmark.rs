@@ -1,12 +1,9 @@
-use flate2::read::GzDecoder;
-use std::fs::File;
-use std::path::PathBuf;
-use tar::Archive;
-
-use ripasso::crypto::CryptoImpl;
-use ripasso::pass;
+use std::{fs::File, path::PathBuf};
 
 use criterion::{criterion_group, criterion_main, Criterion};
+use flate2::read::GzDecoder;
+use ripasso::{crypto::CryptoImpl, pass};
+use tar::Archive;
 
 fn unpack_tar_gz(mut base_path: PathBuf, tar_gz_name: &str) -> Result<(), std::io::Error> {
     let target = format!("{}", base_path.as_path().display());

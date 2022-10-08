@@ -15,18 +15,15 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use cursive::views::{Checkbox, Dialog, EditView, OnEventView, RadioButton, TextView};
-
-use cursive::event::Key;
-use cursive::Cursive;
-
-use ripasso::crypto::CryptoImpl;
-use ripasso::pass;
-
 use clipboard::ClipboardProvider;
-use wl_clipboard_rs::copy::{MimeType, Options, Source};
-
+use cursive::{
+    event::Key,
+    views::{Checkbox, Dialog, EditView, OnEventView, RadioButton, TextView},
+    Cursive,
+};
 use pass::Result;
+use ripasso::{crypto::CryptoImpl, pass};
+use wl_clipboard_rs::copy::{MimeType, Options, Source};
 
 /// Displays an error in a cursive dialog
 pub fn errorbox(ui: &mut Cursive, err: &pass::Error) {

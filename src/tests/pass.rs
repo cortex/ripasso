@@ -1,17 +1,20 @@
-use super::*;
-
-use std::env;
-use std::fs::File;
-use std::path::PathBuf;
+use std::{env, fs::File, path::PathBuf};
 
 use hex::FromHex;
-use sequoia_openpgp::cert::CertBuilder;
-use sequoia_openpgp::serialize::stream::{Armorer, Message, Signer};
-use sequoia_openpgp::serialize::Serialize;
+use sequoia_openpgp::{
+    cert::CertBuilder,
+    serialize::{
+        stream::{Armorer, Message, Signer},
+        Serialize,
+    },
+};
 use tempfile::tempdir;
 
-use crate::crypto::slice_to_20_bytes;
-use crate::test_helpers::{MockCrypto, UnpackedDir};
+use super::*;
+use crate::{
+    crypto::slice_to_20_bytes,
+    test_helpers::{MockCrypto, UnpackedDir},
+};
 
 impl std::cmp::PartialEq for Error {
     fn eq(&self, other: &Error) -> bool {
