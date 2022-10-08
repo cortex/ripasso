@@ -60,6 +60,8 @@ pub struct PasswordStore {
 impl PasswordStore {
     /// Constructs a `PasswordStore` object. If `password_store_signing_key` is present,
     /// the function verifies that the .gpg-id file is signed correctly
+    /// # Errors
+    /// If the configuration or the on disk setup is incorrect
     pub fn new(
         store_name: &str,
         password_store_dir: &Option<PathBuf>,
@@ -68,7 +70,7 @@ impl PasswordStore {
         style_file: &Option<PathBuf>,
         crypto_impl: &CryptoImpl,
         own_fingerprint: &Option<[u8; 20]>,
-    ) -> Result<PasswordStore> {
+    ) -> Result<Self> {
         let pass_home = password_dir_raw(password_store_dir, home);
         if !pass_home.exists() {
             return Err(Error::Generic("failed to locate password directory"));
@@ -77,25 +79,19 @@ impl PasswordStore {
         let crypto: Box<dyn Crypto + Send> = match crypto_impl {
             CryptoImpl::GpgMe => Box::new(GpgMe {}),
             CryptoImpl::Sequoia => {
-                if own_fingerprint.is_none() {
-                    return Err(Error::Generic("own_fingerprint is not configured, required for using Sequoia as pgp implementation"));
-                }
-                if home.is_none() {
-                    return Err(Error::Generic(
-                        "no home, required for using Sequoia as pgp implementation",
-                    ));
-                }
-                let home: PathBuf = home.clone().unwrap();
+                let home: PathBuf = home.clone().ok_or(Error::Generic(
+                    "no home, required for using Sequoia as pgp implementation",
+                ))?;
                 Box::new(Sequoia::new(
                     &home.join(".local"),
-                    own_fingerprint.unwrap(),
+                    own_fingerprint.ok_or_else(|| Error::Generic("own_fingerprint is not configured, required for using Sequoia as pgp implementation"))?,
                 )?)
             }
         };
 
         let signing_keys = parse_signing_keys(password_store_signing_key, crypto.as_ref())?;
 
-        let store = PasswordStore {
+        let store = Self {
             name: store_name.to_owned(),
             root: pass_home.canonicalize()?,
             valid_gpg_signing_keys: signing_keys,
@@ -112,6 +108,9 @@ impl PasswordStore {
     }
 
     /// Creates a `PasswordStore`, including creating directories and initializing the .gpg-id file
+    /// # Errors
+    /// Returns an `Err` if the directory exists, no recipients are empty or a full fingerprint
+    /// wasn't specified.
     pub fn create(
         store_name: &str,
         password_store_dir: &Option<PathBuf>,
@@ -119,7 +118,7 @@ impl PasswordStore {
         recipients_as_signers: bool,
         home: &Option<PathBuf>,
         style_file: &Option<PathBuf>,
-    ) -> Result<PasswordStore> {
+    ) -> Result<Self> {
         let pass_home = password_dir_raw(password_store_dir, home);
         if pass_home.exists() {
             return Err(Error::Generic(
@@ -146,13 +145,12 @@ impl PasswordStore {
             if recipients_as_signers {
                 let mut fingerprints = vec![];
                 for r in recipients {
-                    if r.fingerprint.is_none() {
-                        return Err(Error::GenericDyn(format!(
+                    fingerprints.push(r.fingerprint.ok_or_else(|| {
+                        Error::GenericDyn(format!(
                             "recipient {} ({}) doesn't have a fingerprint",
                             r.name, r.key_id
-                        )));
-                    }
-                    fingerprints.push(r.fingerprint.unwrap())
+                        ))
+                    })?);
                 }
                 fingerprints
             } else {
@@ -185,7 +183,7 @@ impl PasswordStore {
             )?;
         }
 
-        let store = PasswordStore {
+        let store = Self {
             name: store_name.to_owned(),
             root: pass_home.canonicalize()?,
             valid_gpg_signing_keys: signing_keys,
@@ -227,9 +225,9 @@ impl PasswordStore {
     }
 
     fn verify_gpg_id_file(&self) -> Result<SignatureStatus> {
-        let mut gpg_id_file = self.root.to_path_buf();
+        let mut gpg_id_file = self.root.clone();
         gpg_id_file.push(".gpg-id");
-        let mut gpg_id_sig_file = self.root.to_path_buf();
+        let mut gpg_id_sig_file = self.root.clone();
         gpg_id_sig_file.push(".gpg-id.sig");
 
         let gpg_id = fs::read(gpg_id_file)?;
@@ -253,6 +251,8 @@ impl PasswordStore {
     }
 
     /// Creates a new password file in the store.
+    /// # Errors
+    /// Returns an `Err` if the path points to an file outside of the password store or the file already exists.
     pub fn new_password_file(&mut self, path_end: &str, content: &str) -> Result<PasswordEntry> {
         let mut path = self.root.clone();
 
@@ -320,11 +320,11 @@ impl PasswordStore {
                 self.passwords.push(PasswordEntry::load_from_filesystem(
                     &self.root,
                     &append_extension(PathBuf::from(path_end), ".gpg"),
-                )?);
-                PasswordEntry::load_from_filesystem(
+                ));
+                Ok(PasswordEntry::load_from_filesystem(
                     &self.root,
                     &append_extension(PathBuf::from(path_end), ".gpg"),
-                )
+                ))
             }
             Ok(repo) => {
                 let message = format!("Add password for {} using ripasso", path_end);
@@ -345,6 +345,8 @@ impl PasswordStore {
     }
 
     /// loads the list of passwords from disk again
+    /// # Errors
+    /// Returns an error if any of the passwords contain non-utf8 bytes
     pub fn reload_password_list(&mut self) -> Result<()> {
         let mut new_passwords = self.all_passwords()?;
 
@@ -375,6 +377,8 @@ impl PasswordStore {
     }
 
     /// Read the password store directory and return a list of all the password files.
+    /// # Errors
+    /// Returns an error if any of the passwords contain non-utf8 bytes
     pub fn all_passwords(&self) -> Result<Vec<PasswordEntry>> {
         let mut passwords = vec![];
         let repo = self.repo();
@@ -386,7 +390,7 @@ impl PasswordStore {
 
             for existing_file in existing_iter {
                 let relpath = existing_file?.strip_prefix(&self.root)?.to_path_buf();
-                passwords.push(PasswordEntry::load_from_filesystem(&self.root, &relpath)?);
+                passwords.push(PasswordEntry::load_from_filesystem(&self.root, &relpath));
             }
 
             return Ok(passwords);
@@ -475,7 +479,7 @@ impl PasswordStore {
         for not_found in files_to_find {
             passwords.push(PasswordEntry::new(
                 &self.root,
-                &not_found.to_path_buf(),
+                &not_found.clone(),
                 Err(Error::Generic("")),
                 Err(Error::Generic("")),
                 Err(Error::Generic("")),
@@ -487,6 +491,8 @@ impl PasswordStore {
     }
 
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
+    /// # Errors
+    /// Returns an `Err` if the gpg_id file should be verified and it can't be
     pub fn all_recipients(&self) -> Result<Vec<Recipient>> {
         if !self.valid_gpg_signing_keys.is_empty() {
             self.verify_gpg_id_file()?;
@@ -502,6 +508,8 @@ impl PasswordStore {
     }
 
     /// Removes a key from the .gpg-id file and re-encrypts all the passwords
+    /// # Errors
+    /// Returns an `Err` if the gpg_id file should be verified and it can't be or if the recipient is the last one.
     pub fn remove_recipient(&self, r: &Recipient) -> Result<()> {
         Recipient::remove_recipient_from_file(
             r,
@@ -513,6 +521,9 @@ impl PasswordStore {
     }
 
     /// Adds a key to the .gpg-id file and re-encrypts all the passwords
+    /// # Errors
+    /// Returns an `Err` if the gpg_id file should be verified and it can't be or there is some problem with
+    /// the encryption.
     pub fn add_recipient(&self, r: &Recipient) -> Result<()> {
         Recipient::add_recipient_to_file(
             r,
@@ -525,10 +536,13 @@ impl PasswordStore {
 
     /// Reencrypt all the entries in the store, for example when a new collaborator is added
     /// to the team.
+    /// # Errors
+    /// Returns an `Err` if the gpg_id file should be verified and it can't be or there is some problem with
+    /// the encryption.
     fn reencrypt_all_password_entries(&self) -> Result<()> {
         let mut names: Vec<PathBuf> = Vec::new();
         for entry in self.all_passwords()? {
-            entry.update_internal(entry.secret(self)?, self)?;
+            entry.update_internal(&entry.secret(self)?, self)?;
             names.push(append_extension(PathBuf::from(&entry.name), ".gpg"));
         }
         names.push(PathBuf::from(".gpg-id"));
@@ -550,6 +564,8 @@ impl PasswordStore {
     }
 
     /// Add a file to the store, and commit it to the supplied git repository.
+    /// # Errors
+    /// Returns an `Err` if there is any problems with git.
     pub fn add_and_commit(&self, paths: &[PathBuf], message: &str) -> Result<git2::Oid> {
         let repo = self.repo();
         if repo.is_err() {
@@ -587,7 +603,9 @@ impl PasswordStore {
     }
 
     ///Renames a password file to a new name
-    ///returns the index in the password vec of the renamed PasswordEntry
+    ///returns the index in the password vec of the renamed `PasswordEntry`
+    /// # Errors
+    /// Returns an `Err` if the file is missing, or the target already exists.
     pub fn rename_file(&mut self, old_name: &str, new_name: &str) -> Result<usize> {
         if new_name.starts_with('/') || new_name.contains("..") {
             return Err(Error::Generic("directory traversal not allowed"));
@@ -629,10 +647,7 @@ impl PasswordStore {
         }
         if index != usize::MAX {
             let old_entry = passwords.swap_remove(index);
-            let relpath = new_path
-                .strip_prefix(&self.root)
-                .expect("base was not a prefix of path")
-                .to_path_buf();
+            let relpath = new_path.strip_prefix(&self.root)?.to_path_buf();
             let new_entry = PasswordEntry::with_new_name(old_entry, &self.root, &relpath);
             passwords.push(new_entry);
         }
@@ -640,6 +655,9 @@ impl PasswordStore {
         Ok(passwords.len() - 1)
     }
 
+    /// Creates a `Recipient` their key_id.
+    /// # Errors
+    /// Returns an `Err` if there is anything wrong with the `Recipient`
     pub fn recipient_from(
         &self,
         key_id: &str,
@@ -650,23 +668,27 @@ impl PasswordStore {
     }
 }
 
+/// Return all `Recipient` across all different stores in the list.
+/// # Errors
+/// Returns an `Err` if there is a problem locking the mutex
 pub fn all_recipients_from_stores(
     stores: Arc<Mutex<Vec<Arc<Mutex<PasswordStore>>>>>,
 ) -> Result<Vec<Recipient>> {
     let all_recipients: Vec<Recipient> = {
         let mut ar: HashMap<String, Recipient> = HashMap::new();
-        let stores = stores.lock().unwrap();
+        let stores = stores
+            .lock()
+            .map_err(|_e| Error::Generic("problem locking the mutex"))?;
         #[allow(clippy::significant_drop_in_scrutinee)]
         for store in stores.iter() {
-            let store = store.lock().unwrap();
+            let store = store
+                .lock()
+                .map_err(|_e| Error::Generic("problem locking the mutex"))?;
             #[allow(clippy::significant_drop_in_scrutinee)]
             for recipient in store.all_recipients()? {
-                let key = {
-                    if recipient.fingerprint.is_none() {
-                        recipient.key_id.clone()
-                    } else {
-                        hex::encode_upper(recipient.fingerprint.as_ref().unwrap())
-                    }
+                let key = match recipient.fingerprint.as_ref() {
+                    None => recipient.key_id.clone(),
+                    Some(fingerprint) => hex::encode_upper(fingerprint),
                 };
                 ar.insert(key, recipient);
             }
@@ -709,26 +731,33 @@ fn push_password_if_match(
 
 /// Find the name of the committer, or an error message
 fn name_from_commit(commit: &git2::Commit) -> Result<String> {
-    match commit.committer().name() {
-        Some(s) => Ok(s.to_owned()),
-        None => Err(Error::Generic("missing committer name")),
-    }
+    commit
+        .committer()
+        .name()
+        .map_or(Err(Error::Generic("missing committer name")), |s| {
+            Ok(s.to_owned())
+        })
 }
 
 /// Describes one log line in the history of a file
+#[non_exhaustive]
 pub struct GitLogLine {
+    /// the git commit message
     pub message: String,
+    /// the timestamp of the commit
     pub commit_time: DateTime<Local>,
+    /// the commit signature status
     pub signature_status: Option<SignatureStatus>,
 }
 
 impl GitLogLine {
+    /// creates a `GitLogLine`
     pub fn new(
         message: String,
         commit_time: DateTime<Local>,
         signature_status: Option<SignatureStatus>,
-    ) -> GitLogLine {
-        GitLogLine {
+    ) -> Self {
+        Self {
             message,
             commit_time,
             signature_status,
@@ -736,10 +765,15 @@ impl GitLogLine {
     }
 }
 
+/// The state of a password, with regards to git
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum RepositoryStatus {
+    /// The password is in git
     InRepo,
+    /// The password isn't in git
     NotInRepo,
+    /// The passwordstore isn't backed by a git repo
     NoRepo,
 }
 
@@ -762,12 +796,14 @@ pub struct PasswordEntry {
 
 fn to_name(relpath: &Path) -> String {
     let mut s = relpath.to_string_lossy().to_string();
-    match s.ends_with(".gpg") {
-        true => {
-            s.truncate(s.len() - 4);
-            s
-        }
-        false => s,
+    if relpath
+        .extension()
+        .map_or(false, |ext| ext.eq_ignore_ascii_case("gpg"))
+    {
+        s.truncate(s.len() - 4);
+        s
+    } else {
+        s
     }
 }
 
@@ -780,8 +816,8 @@ impl PasswordEntry {
         committed_by: Result<String>,
         signature_status: Result<SignatureStatus>,
         is_in_git: RepositoryStatus,
-    ) -> PasswordEntry {
-        PasswordEntry {
+    ) -> Self {
+        Self {
             name: to_name(relpath),
             path: base.join(relpath),
             updated: update_time.ok(),
@@ -791,9 +827,9 @@ impl PasswordEntry {
         }
     }
 
-    /// Consumes an PasswordEntry, and returns a new one with a new name
-    pub fn with_new_name(old: PasswordEntry, base: &Path, relpath: &Path) -> PasswordEntry {
-        PasswordEntry {
+    /// Consumes an `PasswordEntry`, and returns a new one with a new name
+    pub fn with_new_name(old: Self, base: &Path, relpath: &Path) -> Self {
+        Self {
             name: to_name(relpath),
             path: base.join(relpath),
             updated: old.updated,
@@ -809,7 +845,7 @@ impl PasswordEntry {
         path: &Path,
         repo: &git2::Repository,
         store: &PasswordStore,
-    ) -> PasswordEntry {
+    ) -> Self {
         let (update_time, committed_by, signature_status) =
             read_git_meta_data(base, path, repo, store);
 
@@ -817,7 +853,7 @@ impl PasswordEntry {
             .strip_prefix(base)
             .expect("base was not a prefix of path")
             .to_path_buf();
-        PasswordEntry::new(
+        Self::new(
             base,
             &relpath,
             update_time,
@@ -828,18 +864,20 @@ impl PasswordEntry {
     }
 
     /// creates a `PasswordEntry` based on data in the filesystem
-    pub fn load_from_filesystem(base: &Path, relpath: &Path) -> Result<PasswordEntry> {
-        Ok(PasswordEntry {
+    pub fn load_from_filesystem(base: &Path, relpath: &Path) -> Self {
+        Self {
             name: to_name(relpath),
             path: base.join(relpath),
             updated: None,
             committed_by: None,
             signature_status: None,
             is_in_git: RepositoryStatus::NoRepo,
-        })
+        }
     }
 
-    /// Decrypts and returns the full content of the PasswordEntry
+    /// Decrypts and returns the full content of the `PasswordEntry`
+    /// # Errors
+    /// Returns an `Err` if the path is empty
     pub fn secret(&self, store: &PasswordStore) -> Result<String> {
         let s = fs::metadata(&self.path)?;
         if s.len() == 0 {
@@ -850,12 +888,16 @@ impl PasswordEntry {
         store.crypto.decrypt_string(&content)
     }
 
-    /// Decrypts and returns the first line of the PasswordEntry
+    /// Decrypts and returns the first line of the `PasswordEntry`
+    /// # Errors
+    /// Returns an `Err` if the decryption fails
     pub fn password(&self, store: &PasswordStore) -> Result<String> {
         Ok(self.secret(store)?.split('\n').take(1).collect())
     }
 
     /// decrypts and returns a TOTP code if the entry contains a otpauth:// url
+    /// # Errors
+    /// Returns an `Err` if the code generation fails
     pub fn mfa(&self, store: &PasswordStore) -> Result<String> {
         let secret = self.secret(store)?;
 
@@ -877,13 +919,13 @@ impl PasswordEntry {
         }
     }
 
-    fn update_internal(&self, secret: String, store: &PasswordStore) -> Result<()> {
+    fn update_internal(&self, secret: &str, store: &PasswordStore) -> Result<()> {
         if !store.valid_gpg_signing_keys.is_empty() {
             store.verify_gpg_id_file()?;
         }
 
         let recipients = store.all_recipients()?;
-        let ciphertext = store.crypto.encrypt_string(&secret, &recipients)?;
+        let ciphertext = store.crypto.encrypt_string(secret, &recipients)?;
 
         let mut output = File::create(&self.path)?;
         output.write_all(&ciphertext)?;
@@ -892,8 +934,10 @@ impl PasswordEntry {
 
     /// Updates the password store entry with new content, and commits those to git if a repository
     /// is supplied.
+    /// # Errors
+    /// Returns an `Err` if the update fails.
     pub fn update(&self, secret: String, store: &PasswordStore) -> Result<()> {
-        self.update_internal(secret, store)?;
+        self.update_internal(&secret, store)?;
 
         if store.repo().is_err() {
             return Ok(());
@@ -910,6 +954,8 @@ impl PasswordEntry {
     }
 
     /// Removes this entry from the filesystem and commit that to git if a repository is supplied.
+    /// # Errors
+    /// Returns an `Err` if the remove fails.
     pub fn delete_file(&self, store: &PasswordStore) -> Result<()> {
         std::fs::remove_file(&self.path)?;
 
@@ -928,6 +974,8 @@ impl PasswordEntry {
 
     /// Returns a list of log lines for the password, one line for each commit that have changed
     /// that password in some way
+    /// # Errors
+    /// Returns an `Err` if any of the git operation fails.
     pub fn get_history(&self, store: &PasswordStore) -> Result<Vec<GitLogLine>> {
         let repo = {
             let repo_res = store.repo();
@@ -954,23 +1002,20 @@ impl PasswordEntry {
             .filter_map(|id| {
                 if let Ok(oid) = id {
                     if let Ok(commit) = repo.find_commit(oid) {
-                        match commit.parents().len() {
-                            0 => {
-                                if let Ok(tree) = commit.tree() {
-                                    let flags = git2::PathspecFlags::NO_MATCH_ERROR;
-                                    ps.match_tree(&tree, flags).ok()?;
-                                } else {
-                                    return None;
-                                }
+                        if commit.parents().len() == 0 {
+                            if let Ok(tree) = commit.tree() {
+                                let flags = git2::PathspecFlags::NO_MATCH_ERROR;
+                                ps.match_tree(&tree, flags).ok()?;
+                            } else {
+                                return None;
                             }
-                            _ => {
-                                let m = commit.parents().all(|parent| {
-                                    match_with_parent(&repo, &commit, &parent, &mut diffopts)
-                                        .unwrap_or(false)
-                                });
-                                if !m {
-                                    return None;
-                                }
+                        } else {
+                            let m = commit.parents().all(|parent| {
+                                match_with_parent(&repo, &commit, &parent, &mut diffopts)
+                                    .unwrap_or(false)
+                            });
+                            if !m {
+                                return None;
                             }
                         }
 
@@ -1018,10 +1063,9 @@ fn find_last_commit(repo: &git2::Repository) -> Result<git2::Commit> {
 
 /// Returns if a git commit should be gpg signed or not.
 fn should_sign(repo: &git2::Repository) -> bool {
-    match repo.config() {
-        Err(_) => false,
-        Ok(config) => config.get_bool("commit.gpgsign").unwrap_or(false),
-    }
+    repo.config().map_or(false, |config| {
+        config.get_bool("commit.gpgsign").unwrap_or(false)
+    })
 }
 
 /// Apply the changes to the git repository.
@@ -1200,10 +1244,7 @@ fn cred(
     allowed: git2::CredentialType,
 ) -> std::result::Result<git2::Cred, git2::Error> {
     let sys_username = whoami::username();
-    let user = match username {
-        Some(name) => name,
-        None => &sys_username,
-    };
+    let user: &str = username.map_or(&sys_username, |name| name);
 
     if allowed.contains(git2::CredentialType::USERNAME) {
         return git2::Cred::username(user);
@@ -1218,6 +1259,8 @@ fn cred(
 }
 
 /// Push your changes to the remote git repository.
+/// # Errors
+/// Returns an `Err` if the repository doesn't exist or if an git operation fails
 pub fn push(store: &PasswordStore) -> Result<()> {
     let repo = store
         .repo()
@@ -1231,9 +1274,8 @@ pub fn push(store: &PasswordStore) -> Result<()> {
         callbacks.credentials(|_url, username, allowed| {
             cred(&mut tried_ssh_key, _url, username, allowed)
         });
-        callbacks.push_update_reference(|refname, status| {
-            assert_eq!(refname, format!("refs/heads/{}", branch_name));
-            ref_status = status.map(|s| s.to_owned());
+        callbacks.push_update_reference(|_refname, status| {
+            ref_status = status.map(std::borrow::ToOwned::to_owned);
             Ok(())
         });
         let mut opts = git2::PushOptions::new();
@@ -1251,6 +1293,8 @@ pub fn push(store: &PasswordStore) -> Result<()> {
 }
 
 /// Pull new changes from the remote git repository.
+/// # Errors
+/// Returns an `Err` if the repository doesn't exist or if an git operation fails
 pub fn pull(store: &PasswordStore) -> Result<()> {
     let repo = store
         .repo()
@@ -1301,6 +1345,8 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
 }
 
 /// Import the key_ids from the signature file from a keyserver.
+/// # Errors
+/// Returns an `Err` if the download fails
 pub fn pgp_pull(store: &mut PasswordStore, config_path: &Path) -> Result<String> {
     let recipients = store.all_recipients()?;
 
@@ -1309,6 +1355,9 @@ pub fn pgp_pull(store: &mut PasswordStore, config_path: &Path) -> Result<String>
     Ok(result)
 }
 
+/// Import a key from a string.
+/// # Errors
+/// Returns an `Err` if the import fails
 pub fn pgp_import(store: &mut PasswordStore, text: &str, config_path: &Path) -> Result<String> {
     store.crypto.import_key(text, config_path)
 }
@@ -1398,12 +1447,14 @@ fn verify_git_signature(
 }
 
 /// Initialize a git repository for the store.
+/// # Errors
+/// Returns an `Err` if the git init fails
 pub fn init_git_repo(base: &Path) -> Result<git2::Repository> {
     Ok(git2::Repository::init(base)?)
 }
 
 /// Return a list of all passwords whose name contains `query`.
-pub fn search(store: &PasswordStore, query: &str) -> Result<Vec<PasswordEntry>> {
+pub fn search(store: &PasswordStore, query: &str) -> Vec<PasswordEntry> {
     let passwords = &store.passwords;
     fn normalized(s: &str) -> String {
         s.to_lowercase()
@@ -1412,7 +1463,7 @@ pub fn search(store: &PasswordStore, query: &str) -> Result<Vec<PasswordEntry>> 
         normalized(s).as_str().contains(normalized(q).as_str())
     }
     let matching = passwords.iter().filter(|p| matches(&p.name, query));
-    Ok(matching.cloned().collect())
+    matching.cloned().collect()
 }
 
 /// Determine password directory
@@ -1456,12 +1507,8 @@ fn home_exists(home: &Option<PathBuf>, settings: &config::Config) -> bool {
             let stores: HashMap<String, config::Value> = stores;
 
             for store_name in stores.keys() {
-                let store: HashMap<String, config::Value> = stores
-                    .get(store_name)
-                    .unwrap()
-                    .clone()
-                    .into_table()
-                    .unwrap();
+                let store: HashMap<String, config::Value> =
+                    stores[store_name].clone().into_table().unwrap();
 
                 let password_store_dir_opt = store.get("path");
                 if let Some(p) = password_store_dir_opt {
@@ -1498,10 +1545,8 @@ fn settings_file_exists(home: &Option<PathBuf>, xdg_config_home: &Option<PathBuf
 
     let xdg_config_file_dir = Path::new(&xdg_config_file);
     if xdg_config_file_dir.exists() {
-        return match fs::metadata(xdg_config_file_dir) {
-            Err(_) => false,
-            Ok(config_file) => config_file.len() != 0,
-        };
+        return fs::metadata(xdg_config_file_dir)
+            .map_or(false, |config_file| config_file.len() != 0);
     }
 
     false
@@ -1610,10 +1655,14 @@ pub fn save_config(
     config_file_location: &Path,
 ) -> Result<()> {
     let mut stores_map = std::collections::HashMap::new();
-    let stores_borrowed = stores.lock().unwrap();
+    let stores_borrowed = stores
+        .lock()
+        .map_err(|_e| Error::Generic("problem locking the mutex"))?;
     #[allow(clippy::significant_drop_in_scrutinee)]
     for store in stores_borrowed.iter() {
-        let store = store.lock().unwrap();
+        let store = store
+            .lock()
+            .map_err(|_e| Error::Generic("problem locking the mutex"))?;
         let mut store_map = std::collections::HashMap::new();
         store_map.insert(
             "path",

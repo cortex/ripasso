@@ -1620,7 +1620,7 @@ fn test_search() -> Result<()> {
     };
     let store = store;
 
-    let result = search(&store, "test")?;
+    let result = search(&store, "test");
 
     assert_eq!(2, result.len());
     assert_eq!("dir/test/middle", result[0].name);

@@ -35,9 +35,12 @@ use crate::{
 };
 
 /// The different pgp implementations we support
+#[non_exhaustive]
 #[derive(PartialEq, Eq, Debug)]
 pub enum CryptoImpl {
+    /// Implemented with the help of the gpgme crate
     GpgMe,
+    /// Implemented with the help of the sequoia crate
     Sequoia,
 }
 
@@ -46,8 +49,8 @@ impl std::convert::TryFrom<&str> for CryptoImpl {
 
     fn try_from(value: &str) -> Result<Self> {
         match value {
-            "gpg" => Ok(CryptoImpl::GpgMe),
-            "sequoia" => Ok(CryptoImpl::Sequoia),
+            "gpg" => Ok(Self::GpgMe),
+            "sequoia" => Ok(Self::Sequoia),
             _ => Err(Error::Generic(
                 "unknown pgp implementation value, valid values are 'gpg' and 'sequoia'",
             )),
@@ -58,14 +61,15 @@ impl std::convert::TryFrom<&str> for CryptoImpl {
 impl Display for CryptoImpl {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         match self {
-            CryptoImpl::GpgMe => write!(f, "gpg"),
-            CryptoImpl::Sequoia => write!(f, "sequoia"),
+            Self::GpgMe => write!(f, "gpg"),
+            Self::Sequoia => write!(f, "sequoia"),
         }?;
         Ok(())
     }
 }
 
 /// The different types of errors that can occur when doing a signature verification
+#[non_exhaustive]
 #[derive(Debug)]
 pub enum VerificationError {
     /// Error message from the pgp library.
@@ -82,39 +86,48 @@ pub enum VerificationError {
 }
 
 impl From<std::io::Error> for VerificationError {
-    fn from(err: std::io::Error) -> VerificationError {
+    fn from(err: std::io::Error) -> Self {
         InfrastructureError(format!("{:?}", err))
     }
 }
 
 impl From<crate::error::Error> for VerificationError {
-    fn from(err: crate::error::Error) -> VerificationError {
+    fn from(err: crate::error::Error) -> Self {
         InfrastructureError(format!("{:?}", err))
     }
 }
 
 impl From<anyhow::Error> for VerificationError {
-    fn from(err: anyhow::Error) -> VerificationError {
+    fn from(err: anyhow::Error) -> Self {
         InfrastructureError(format!("{:?}", err))
     }
 }
 
 /// The strategy for finding the gpg key to sign with can either be to look at the git
 /// config, or ask gpg.
+#[non_exhaustive]
 pub enum FindSigningFingerprintStrategy {
+    /// Will look at the git configuration to find the users fingerprint
     GIT,
+    /// Will ask gpg to find the users fingerprint
     GPG,
 }
 
+/// Models the interactions that can be done on a pgp key
 pub trait Key {
+    /// returns a list of names associated with the key
     fn user_id_names(&self) -> Vec<String>;
 
+    /// returns the keys fingerprint
     fn fingerprint(&self) -> Result<[u8; 20]>;
 
+    /// returns if the key isn't usable
     fn is_not_usable(&self) -> bool;
 }
 
+/// A key gotten from gpgme
 pub struct GpgMeKey {
+    /// The key, gotten from gpgme.
     key: gpgme::Key,
 }
 
@@ -141,13 +154,23 @@ impl Key for GpgMeKey {
     }
 }
 
+/// All operations that can be done through pgp, either with gpgme or sequoia.
 pub trait Crypto {
     /// Reads a file and decrypts it
+    /// # Errors
+    /// Will return `Err` if decryption fails, for example if the current user isn't the
+    /// recipient of the message.
     fn decrypt_string(&self, ciphertext: &[u8]) -> Result<String>;
     /// Encrypts a string
+    /// # Errors
+    /// Will return `Err` if encryption fails, for example if the current users key
+    /// isn't capable of encrypting.
     fn encrypt_string(&self, plaintext: &str, recipients: &[Recipient]) -> Result<Vec<u8>>;
 
     /// Returns a gpg signature for the supplied string. Suitable to add to a gpg commit.
+    /// # Errors
+    /// Will return `Err` if signing fails, for example if the current users key
+    /// isn't capable of signing.
     fn sign_string(
         &self,
         to_sign: &str,
@@ -156,6 +179,8 @@ pub trait Crypto {
     ) -> Result<String>;
 
     /// Verifies is a signature is valid
+    /// # Errors
+    /// Will return `Err` if the verifican fails.
     fn verify_sign(
         &self,
         data: &[u8],
@@ -164,24 +189,34 @@ pub trait Crypto {
     ) -> std::result::Result<SignatureStatus, VerificationError>;
 
     /// Pull keys from the keyserver for those recipients.
+    /// # Errors
+    /// Will return `Err` on network errors and similar.
     fn pull_keys(&mut self, recipients: &[Recipient], config_path: &Path) -> Result<String>;
 
     /// Import a key from text.
+    /// # Errors
+    /// Will return `Err` if the text wasn't able to be imported as a key.
     fn import_key(&mut self, key: &str, config_path: &Path) -> Result<String>;
 
     /// Return a key corresponding to the given key id.
+    /// # Errors
+    /// Will return `Err` if `key_id` didn't correspond to a key.
     fn get_key(&self, key_id: &str) -> Result<Box<dyn crate::crypto::Key>>;
 
     /// Returns a map from key fingerprints to OwnerTrustLevel's
+    /// # Errors
+    /// Will return `Err` on failure to obtain trust levels.
     fn get_all_trust_items(&self) -> Result<HashMap<[u8; 20], crate::signature::OwnerTrustLevel>>;
 
-    /// Returns the type of this CryptoImpl, useful for serializing the store config
+    /// Returns the type of this `CryptoImpl`, useful for serializing the store config
     fn implementation(&self) -> CryptoImpl;
 
     /// Returns the fingerprint of the user using ripasso
     fn own_fingerprint(&self) -> Option<[u8; 20]>;
 }
 
+/// Used when the user configures gpgme to be used as a pgp backend.
+#[non_exhaustive]
 pub struct GpgMe {}
 
 impl Crypto for GpgMe {
@@ -275,8 +310,8 @@ impl Crypto for GpgMe {
 
         let mut sig_sum = None;
 
-        for (i, sig) in result.signatures().enumerate() {
-            let fpr = sig
+        for (i, s) in result.signatures().enumerate() {
+            let fpr = s
                 .fingerprint()
                 .map_err(|e| VerificationError::InfrastructureError(format!("{:?}", e)))?;
 
@@ -287,7 +322,7 @@ impl Crypto for GpgMe {
                 return Err(VerificationError::SignatureFromWrongRecipient);
             }
             if i == 0 {
-                sig_sum = Some(sig.summary());
+                sig_sum = Some(s.summary());
             } else {
                 return Err(VerificationError::TooManySignatures);
             }
@@ -299,7 +334,7 @@ impl Crypto for GpgMe {
                 let sig_status: SignatureStatus = sig_sum.into();
                 match sig_status {
                     SignatureStatus::Bad => Err(VerificationError::BadSignature),
-                    _ => Ok(sig_status),
+                    SignatureStatus::Good | SignatureStatus::AlmostGood => Ok(sig_status),
                 }
             }
         }
@@ -369,6 +404,7 @@ impl Crypto for GpgMe {
     }
 }
 
+/// Tries to download keys from keys.openpgp.org
 fn download_keys(recipient_key_id: &str) -> Result<String> {
     let url = match recipient_key_id.len() {
         16 => format!(
@@ -393,13 +429,19 @@ fn download_keys(recipient_key_id: &str) -> Result<String> {
     Ok(reqwest::blocking::get(url)?.text()?)
 }
 
+/// Internal helper struct for sequoia implementation.
 struct Helper<'a> {
+    /// A sequoia policy to use in various operations
     policy: &'a dyn Policy,
+    /// the users cert
     secret: Option<&'a sequoia_openpgp::Cert>,
+    /// all certs
     key_ring: &'a HashMap<[u8; 20], Arc<sequoia_openpgp::Cert>>,
     /// This is all the certificates that are allowed to sign something
     public_keys: Vec<Arc<sequoia_openpgp::Cert>>,
+    /// context if talking to gpg_agent for example
     ctx: Option<sequoia_ipc::gnupg::Context>,
+    /// to do verification or not
     do_signature_verification: bool,
 }
 
@@ -428,9 +470,9 @@ impl<'a> VerificationHelper for Helper<'a> {
             return Ok(());
         }
 
-        for layer in structure.into_iter() {
+        for layer in structure {
             if let MessageLayer::SignatureGroup { results } = layer {
-                if results.iter().any(|r| r.is_ok()) {
+                if results.iter().any(std::result::Result::is_ok) {
                     return Ok(());
                 }
             }
@@ -445,7 +487,6 @@ fn find(
 ) -> Result<Arc<sequoia_openpgp::Cert>> {
     let bytes: &[u8; 8] = match recipient {
         sequoia_openpgp::KeyID::V4(bytes) => bytes,
-        sequoia_openpgp::KeyID::Invalid(_) => return Err(Error::Generic("not an v4 keyid")),
         _ => return Err(Error::Generic("not an v4 keyid")),
     };
 
@@ -475,12 +516,15 @@ impl<'a> DecryptionHelper for Helper<'a> {
             for pkesk in pkesks {
                 if let Ok(cert) = find(self.key_ring, pkesk.recipient()) {
                     let key = cert.primary_key();
-                    let mut pair =
-                        sequoia_ipc::gnupg::KeyPair::new(self.ctx.as_ref().unwrap(), &*key)?;
+                    let mut pair = sequoia_ipc::gnupg::KeyPair::new(
+                        self.ctx
+                            .as_ref()
+                            .ok_or_else(|| anyhow::anyhow!("no context configured"))?,
+                        &*key,
+                    )?;
                     if pkesk
                         .decrypt(&mut pair, sym_algo)
-                        .map(|(algo, session_key)| decrypt(algo, &session_key))
-                        .unwrap_or(false)
+                        .map_or(false, |(algo, session_key)| decrypt(algo, &session_key))
                     {
                         break;
                     }
@@ -494,18 +538,18 @@ impl<'a> DecryptionHelper for Helper<'a> {
         // The encryption key is the first and only subkey.
         let key = self
             .secret
-            .unwrap()
+            .ok_or_else(|| anyhow::anyhow!("no user secret"))?
             .keys()
             .unencrypted_secret()
             .with_policy(self.policy, None)
             .for_transport_encryption()
             .next()
-            .unwrap()
+            .ok_or_else(|| anyhow::anyhow!("no keys capable of encryption"))?
             .key()
             .clone();
 
         // The secret key is not encrypted.
-        let mut pair = key.into_keypair().unwrap();
+        let mut pair = key.into_keypair()?;
 
         pkesks[0]
             .decrypt(&mut pair, sym_algo)
@@ -517,6 +561,7 @@ impl<'a> DecryptionHelper for Helper<'a> {
     }
 }
 
+/// Intended for usage with slices containing a v4 fingerprint.
 pub fn slice_to_20_bytes(b: &[u8]) -> Result<[u8; 20]> {
     if b.len() != 20 {
         return Err(Error::Generic("slice isn't 20 bytes"));
@@ -528,7 +573,9 @@ pub fn slice_to_20_bytes(b: &[u8]) -> Result<[u8; 20]> {
     Ok(f)
 }
 
+/// A pgp key produced with sequoia.
 pub struct SequoiaKey {
+    /// The pgp key
     cert: sequoia_openpgp::Cert,
 }
 
@@ -554,12 +601,18 @@ impl Key for SequoiaKey {
     }
 }
 
+/// If the users configures to use sequoia as their pgp implementation.
 pub struct Sequoia {
+    /// key id of the user.
     user_key_id: [u8; 20],
+    /// All certs in the keys directory
     key_ring: HashMap<[u8; 20], Arc<sequoia_openpgp::Cert>>,
 }
 
 impl Sequoia {
+    /// creates the sequoia object
+    /// # Errors
+    /// If there is any problems reading the keys directory
     pub fn new(config_path: &Path, own_fingerprint: [u8; 20]) -> Result<Self> {
         let mut key_ring: HashMap<[u8; 20], Arc<sequoia_openpgp::Cert>> = HashMap::new();
 
@@ -578,12 +631,15 @@ impl Sequoia {
             }
         }
 
-        Ok(Sequoia {
+        Ok(Self {
             user_key_id: own_fingerprint,
             key_ring,
         })
     }
 
+    /// Converts a list of recipients to their sequoia certs
+    /// # Errors
+    /// errors if not all recipients have certs
     fn convert_recipients(&self, input: &[Recipient]) -> Result<Vec<Arc<sequoia_openpgp::Cert>>> {
         let mut result = vec![];
 
@@ -603,7 +659,7 @@ impl Sequoia {
 
                     for cert in self.key_ring.values() {
                         if cert.key_handle().aliases(&kh) {
-                            result.push(cert.clone())
+                            result.push(cert.clone());
                         }
                     }
                 }
@@ -613,12 +669,18 @@ impl Sequoia {
         Ok(result)
     }
 
+    /// Download keys from the internet and write them to the keys dir.
+    /// # Errors
+    /// Errors on download problems
     fn pull_and_write(&mut self, key_id: &str, keys_dir: &Path) -> Result<String> {
         let response = download_keys(key_id)?;
 
         self.write_cert(&response, keys_dir)
     }
 
+    /// Writes a key to the keys directory, imported from a string.
+    /// # Errors
+    /// Errors if the string can't be parsed as a cert.
     fn write_cert(&mut self, cert_str: &str, keys_dir: &Path) -> Result<String> {
         let cert = Cert::from_bytes(cert_str.as_bytes())?;
 
@@ -749,7 +811,7 @@ impl Crypto for Sequoia {
             .revoked(false)
             .for_signing()
             .next()
-            .unwrap()
+            .ok_or_else(|| anyhow::anyhow!("no cert valid for signing"))?
             .key()
             .clone()
             .into_keypair()?;
@@ -822,7 +884,7 @@ impl Crypto for Sequoia {
         let p = config_path.join("share").join("ripasso").join("keys");
         std::fs::create_dir_all(&p)?;
 
-        let mut ret = "".to_owned();
+        let mut ret = String::new();
         for recipient in recipients {
             let res = self.pull_and_write(&recipient.key_id, &p);
 

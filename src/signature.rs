@@ -14,6 +14,7 @@ pub use crate::error::{Error, Result};
 /// A git commit for a password might be signed by a gpg key, and this signature's verification
 /// state is one of these values.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum SignatureStatus {
     /// Everything is fine with the signature, corresponds to the gpg status of VALID
     Good,
@@ -24,13 +25,13 @@ pub enum SignatureStatus {
 }
 
 impl From<gpgme::SignatureSummary> for SignatureStatus {
-    fn from(s: gpgme::SignatureSummary) -> SignatureStatus {
+    fn from(s: gpgme::SignatureSummary) -> Self {
         if s.contains(gpgme::SignatureSummary::VALID) {
-            SignatureStatus::Good
+            Self::Good
         } else if s.contains(gpgme::SignatureSummary::GREEN) {
-            SignatureStatus::AlmostGood
+            Self::AlmostGood
         } else {
-            SignatureStatus::Bad
+            Self::Bad
         }
     }
 }
@@ -57,10 +58,10 @@ pub fn parse_signing_keys(
         }
 
         let key_res = crypto.get_key(&trimmed);
-        if key_res.is_err() {
+        if let Some(err) = key_res.err() {
             return Err(Error::GenericDyn(format!(
                 "signing key not found in keyring, error: {}",
-                key_res.err().unwrap()
+                err
             )));
         }
 
@@ -75,6 +76,7 @@ pub fn parse_signing_keys(
 
 /// the GPG trust level for a key
 #[derive(Clone, PartialEq, Eq, Debug)]
+#[non_exhaustive]
 pub enum OwnerTrustLevel {
     /// is only used for your own keys. You trust this key 'per se'. Any message signed with that key,
     /// will be trusted. This is also the reason why any key from a friend, that is signed by you, will
@@ -102,29 +104,35 @@ pub enum OwnerTrustLevel {
 }
 
 impl From<&gpgme::Validity> for OwnerTrustLevel {
-    fn from(level: &gpgme::Validity) -> OwnerTrustLevel {
+    fn from(level: &gpgme::Validity) -> Self {
         match level {
-            gpgme::Validity::Unknown => OwnerTrustLevel::Unknown,
-            gpgme::Validity::Undefined => OwnerTrustLevel::Undefined,
-            gpgme::Validity::Never => OwnerTrustLevel::Never,
-            gpgme::Validity::Marginal => OwnerTrustLevel::Marginal,
-            gpgme::Validity::Full => OwnerTrustLevel::Full,
-            gpgme::Validity::Ultimate => OwnerTrustLevel::Ultimate,
+            gpgme::Validity::Unknown => Self::Unknown,
+            gpgme::Validity::Undefined => Self::Undefined,
+            gpgme::Validity::Never => Self::Never,
+            gpgme::Validity::Marginal => Self::Marginal,
+            gpgme::Validity::Full => Self::Full,
+            gpgme::Validity::Ultimate => Self::Ultimate,
         }
     }
 }
 
 /// A Recipient can either be in the GPG keyring, or not.
 #[derive(Clone, PartialEq, Eq, Debug)]
+#[non_exhaustive]
 pub enum KeyRingStatus {
+    /// it's in the ring
     InKeyRing,
+    /// it's not in the ring
     NotInKeyRing,
 }
 
 /// internal holder of a user id row and the comments that belong to it
 struct IdComment {
+    /// the id string
     pub id: String,
+    /// an optional comment before the id string
     pub pre_comment: Vec<String>,
+    /// an optional comment after the id string
     pub post_comment: Option<String>,
 }
 
@@ -143,7 +151,7 @@ impl std::cmp::PartialEq for IdComment {
 impl std::cmp::Eq for IdComment {}
 
 /// Describes a comment around a gpg id / fingerprint. See this commit for source:
-/// https://git.zx2c4.com/password-store/commit/?id=a271b43cbd76cc30406202c49041b552656538bd
+/// <https://git.zx2c4.com/password-store/commit/?id=a271b43cbd76cc30406202c49041b552656538bd>
 #[derive(Clone, Debug)]
 pub struct Comment {
     /// The comment field from the .gpg-id file, above the user fingerprint
@@ -179,7 +187,7 @@ pub struct Recipient {
 }
 
 impl Recipient {
-    /// Constructs a Recipient object.
+    /// Constructs a `Recipient` object.
     fn new(
         name: String,
         comment: Comment,
@@ -188,8 +196,8 @@ impl Recipient {
         key_ring_status: KeyRingStatus,
         trust_level: OwnerTrustLevel,
         not_usable: bool,
-    ) -> Recipient {
-        Recipient {
+    ) -> Self {
+        Self {
             name,
             comment,
             key_id,
@@ -200,13 +208,15 @@ impl Recipient {
         }
     }
 
-    /// Creates a Recipient from a gpg key id string
+    /// Creates a `Recipient` from a gpg key id string
+    /// # Errors
+    /// Returns an `Err` if the trust levels can't be retrieved or there is something wrong with the fingerprint.
     pub fn from(
         key_id: &str,
         pre_comment: &[String],
         post_comment: Option<String>,
         crypto: &(dyn crate::crypto::Crypto + Send),
-    ) -> Result<Recipient> {
+    ) -> Result<Self> {
         let comment_opt = match pre_comment.len() {
             0 => None,
             _ => Some(pre_comment.join("\n")),
@@ -242,7 +252,7 @@ impl Recipient {
 
         let fingerprint = real_key.fingerprint()?;
 
-        Ok(Recipient::new(
+        Ok(Self::new(
             name,
             comment,
             key_id.to_owned(),
@@ -257,10 +267,12 @@ impl Recipient {
     }
 
     /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
+    /// # Errors
+    /// Returns an `Err` if there is a problem reading the gpg_id file
     pub fn all_recipients(
         recipients_file: &Path,
         crypto: &(dyn crate::crypto::Crypto + Send),
-    ) -> Result<Vec<Recipient>> {
+    ) -> Result<Vec<Self>> {
         let contents = fs::read_to_string(recipients_file)?;
 
         let mut recipients: Vec<Recipient> = Vec::new();
@@ -293,33 +305,29 @@ impl Recipient {
         }
 
         for key in unique_recipients_keys {
-            let recipient = match Recipient::from(
-                &key.id,
-                &key.pre_comment,
-                key.post_comment.clone(),
-                crypto,
-            ) {
-                Ok(r) => r,
-                Err(err) => {
-                    let comment_opt = match key.pre_comment.len() {
-                        0 => None,
-                        _ => Some(key.pre_comment.join("\n")),
-                    };
+            let recipient =
+                match Self::from(&key.id, &key.pre_comment, key.post_comment.clone(), crypto) {
+                    Ok(r) => r,
+                    Err(err) => {
+                        let comment_opt = match key.pre_comment.len() {
+                            0 => None,
+                            _ => Some(key.pre_comment.join("\n")),
+                        };
 
-                    Recipient::new(
-                        err.to_string(),
-                        Comment {
-                            pre_comment: comment_opt,
-                            post_comment: key.post_comment,
-                        },
-                        key.id.clone(),
-                        None,
-                        KeyRingStatus::NotInKeyRing,
-                        OwnerTrustLevel::Unknown,
-                        true,
-                    )
-                }
-            };
+                        Self::new(
+                            err.to_string(),
+                            Comment {
+                                pre_comment: comment_opt,
+                                post_comment: key.post_comment,
+                            },
+                            key.id.clone(),
+                            None,
+                            KeyRingStatus::NotInKeyRing,
+                            OwnerTrustLevel::Unknown,
+                            true,
+                        )
+                    }
+                };
             recipients.push(recipient)
         }
 
@@ -327,8 +335,10 @@ impl Recipient {
     }
 
     /// write the .gpg-id.sig file
+    /// # Errors
+    /// Returns an `Err` if the file writing fails
     pub fn write_recipients_file(
-        recipients: &[Recipient],
+        recipients: &[Self],
         recipients_file: &Path,
         valid_gpg_signing_keys: &[[u8; 20]],
         crypto: &(dyn crate::crypto::Crypto + Send),
@@ -396,13 +406,15 @@ impl Recipient {
     }
 
     /// Delete one of the persons from the list of team members to encrypt the passwords for.
+    /// # Errors
+    /// Return an `Err` if there is an error reading the gpg_id file
     pub fn remove_recipient_from_file(
-        s: &Recipient,
+        s: &Self,
         recipients_file: &Path,
         valid_gpg_signing_keys: &[[u8; 20]],
         crypto: &(dyn crate::crypto::Crypto + Send),
     ) -> Result<()> {
-        let mut recipients: Vec<Recipient> = Recipient::all_recipients(recipients_file, crypto)?;
+        let mut recipients: Vec<Recipient> = Self::all_recipients(recipients_file, crypto)?;
 
         recipients.retain(|vs| {
             if vs.fingerprint.is_some() && s.fingerprint.is_some() {
@@ -425,13 +437,15 @@ impl Recipient {
     }
 
     /// Add a new person to the list of team members to encrypt the passwords for.
+    /// # Errors
+    /// Return an `Err` if there is an error reading the gpg_id file
     pub fn add_recipient_to_file(
-        recipient: &Recipient,
+        recipient: &Self,
         recipients_file: &Path,
         valid_gpg_signing_keys: &[[u8; 20]],
         crypto: &(dyn crate::crypto::Crypto + Send),
     ) -> Result<()> {
-        let mut recipients: Vec<Recipient> = Recipient::all_recipients(recipients_file, crypto)?;
+        let mut recipients: Vec<Self> = Self::all_recipients(recipients_file, crypto)?;
 
         for r in &recipients {
             if r == recipient {
