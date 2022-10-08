@@ -20,14 +20,20 @@ use std::{
     path::PathBuf,
     process,
     sync::{atomic::Ordering, Arc, Mutex},
-    thread, time,
+    thread,
+    time::Duration,
 };
 
 use clipboard::{ClipboardContext, ClipboardProvider};
 use gdk::{keys::constants, ModifierType};
 use glib::{Cast, ObjectExt, StaticType};
 use gtk::{
-    prelude::{BuilderExtManual, GtkListStoreExtManual},
+    prelude::{
+        BuilderExtManual, ContainerExt, DialogExt, EntryExt, GtkListStoreExtManual, GtkMenuItemExt,
+        GtkWindowExt, SearchEntryExt, TextBufferExt, TextViewExt, TreeSelectionExt, TreeViewExt,
+        WidgetExt,
+    },
+    traits::SettingsExt,
     *,
 };
 use lazy_static::lazy_static;
@@ -48,15 +54,12 @@ fn setup_menu(
     status_bar: Arc<TextView>,
     store: PasswordStoreType,
 ) {
-    let file_menu_item: Arc<MenuItem> = Arc::new(
-        builder
-            .get_object("fileMenu")
-            .expect("Couldn't get fileMenu"),
-    );
+    let file_menu_item: Arc<MenuItem> =
+        Arc::new(builder.object("fileMenu").expect("Couldn't get fileMenu"));
 
     let stores_menu_item: Arc<MenuItem> = Arc::new(
         builder
-            .get_object("storesMenu")
+            .object("storesMenu")
             .expect("Couldn't get storesMenu"),
     );
 
@@ -65,15 +68,15 @@ fn setup_menu(
     let alt_just_pressed2 = alt_just_pressed.clone();
 
     window.connect_key_press_event(move |_, key| {
-        if key.get_keyval() == constants::Alt_L && menu_bar.is_visible() {
+        if key.keyval() == constants::Alt_L && menu_bar.is_visible() {
             menu_bar.hide();
             alt_just_pressed.store(true, Ordering::Relaxed);
         }
-        if key.get_keyval() == constants::f && key.get_state().intersects(ModifierType::MOD1_MASK) {
+        if key.keyval() == constants::f && key.state().intersects(ModifierType::MOD1_MASK) {
             menu_bar.show();
             file_menu_item.activate();
         }
-        if key.get_keyval() == constants::s && key.get_state().intersects(ModifierType::MOD1_MASK) {
+        if key.keyval() == constants::s && key.state().intersects(ModifierType::MOD1_MASK) {
             menu_bar.show();
             stores_menu_item.activate();
         }
@@ -82,7 +85,7 @@ fn setup_menu(
     });
 
     window.connect_key_release_event(move |_, key| {
-        if key.get_keyval() == constants::Alt_L {
+        if key.keyval() == constants::Alt_L {
             if !menu_bar2.is_visible() && !alt_just_pressed2.load(Ordering::Relaxed) {
                 menu_bar2.show();
             }
@@ -106,13 +109,13 @@ fn setup_menu_copy(
     store: PasswordStoreType,
 ) {
     let copy_menu_item: MenuItem = builder
-        .get_object("menuItemCopy")
+        .object("menuItemCopy")
         .expect("Couldn't get menuItemCopy");
 
     let password_list = password_list.clone();
     copy_menu_item.connect_activate(move |_| {
         let password_list = password_list.clone();
-        let (path, _) = password_list.get_selection().get_selected_rows();
+        let (path, _) = password_list.selection().selected_rows();
 
         if path.is_empty() {
             return;
@@ -123,7 +126,7 @@ fn setup_menu_copy(
         let mut ctx = clipboard::ClipboardContext::new().unwrap();
 
         let store = store.lock().unwrap();
-        let password_res = passwords[path[0].get_indices()[0] as usize].password(&store);
+        let password_res = passwords[path[0].indices()[0] as usize].password(&store);
 
         match password_res {
             Err(err) => {
@@ -135,13 +138,13 @@ fn setup_menu_copy(
                     error_box(pass::Error::from(err));
                 }
 
-                let buf_opt = status_bar.get_buffer();
+                let buf_opt = status_bar.buffer();
                 if let Some(buf) = buf_opt {
                     buf.set_text("Copied password to copy buffer for 40 seconds");
                 }
 
                 thread::spawn(|| {
-                    thread::sleep(time::Duration::from_secs(40));
+                    thread::sleep(Duration::from_secs(40));
                     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
                     ctx.set_contents(String::new()).unwrap();
                 });
@@ -152,13 +155,13 @@ fn setup_menu_copy(
 
 fn setup_menu_copy_name(builder: &Builder, password_list: &TreeView, status_bar: Arc<TextView>) {
     let copy_menu_item: MenuItem = builder
-        .get_object("menuItemCopyName")
+        .object("menuItemCopyName")
         .expect("Couldn't get menuItemCopyName");
 
     let password_list = password_list.clone();
     copy_menu_item.connect_activate(move |_| {
         let password_list = password_list.clone();
-        let (path, _) = password_list.get_selection().get_selected_rows();
+        let (path, _) = password_list.selection().selected_rows();
 
         if path.is_empty() {
             return;
@@ -168,7 +171,7 @@ fn setup_menu_copy_name(builder: &Builder, password_list: &TreeView, status_bar:
 
         let mut ctx = clipboard::ClipboardContext::new().unwrap();
 
-        let name_res = passwords[path[0].get_indices()[0] as usize]
+        let name_res = passwords[path[0].indices()[0] as usize]
             .name
             .split('/')
             .next_back();
@@ -183,13 +186,13 @@ fn setup_menu_copy_name(builder: &Builder, password_list: &TreeView, status_bar:
                     error_box(pass::Error::from(err));
                 }
 
-                let buf_opt = status_bar.get_buffer();
+                let buf_opt = status_bar.buffer();
                 if let Some(buf) = buf_opt {
                     buf.set_text("Copied name of password to copy buffer");
                 }
 
                 thread::spawn(|| {
-                    thread::sleep(time::Duration::from_secs(40));
+                    thread::sleep(Duration::from_secs(40));
                     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
                     ctx.set_contents(String::new()).unwrap();
                 });
@@ -200,13 +203,13 @@ fn setup_menu_copy_name(builder: &Builder, password_list: &TreeView, status_bar:
 
 fn setup_menu_open(builder: &Builder, password_list: &TreeView, store: PasswordStoreType) {
     let open_menu_item: MenuItem = builder
-        .get_object("menuItemOpen")
+        .object("menuItemOpen")
         .expect("Couldn't get menuItemCopyName");
 
     let password_list = password_list.clone();
     open_menu_item.connect_activate(move |_| {
         let password_list = password_list.clone();
-        let (path, _) = password_list.get_selection().get_selected_rows();
+        let (path, _) = password_list.selection().selected_rows();
 
         if path.is_empty() {
             return;
@@ -214,7 +217,7 @@ fn setup_menu_open(builder: &Builder, password_list: &TreeView, store: PasswordS
 
         let passwords = SHOWN_PASSWORDS.lock().unwrap();
 
-        let password = &passwords[path[0].get_indices()[0] as usize];
+        let password = &passwords[path[0].indices()[0] as usize];
 
         if let Err(err) = open_dialog(password, store.clone()) {
             error_box(err);
@@ -231,28 +234,26 @@ fn open_dialog(password: &pass::PasswordEntry, store: PasswordStoreType) -> pass
     let dialog = Dialog::with_buttons(None, None::<&Window>, DialogFlags::empty(), &buttons);
 
     let text_view = TextView::new();
-    let buf = text_view.get_buffer().unwrap();
+    let buf = text_view.buffer().unwrap();
     {
         let store = store.lock().unwrap();
-        buf.insert(&mut buf.get_start_iter(), &password.password(&store)?);
+        buf.insert(&mut buf.start_iter(), &password.password(&store)?);
     }
-    let content = dialog.get_content_area();
+    let content = dialog.content_area();
     content.add(&text_view);
 
     let password = password.clone();
-    let c_res = dialog.connect("response", true, move |arg| {
-        let dialog = arg[0].get::<Dialog>().unwrap().unwrap();
-        let content = dialog.get_content_area();
-        let t = &content.get_children()[0];
+    let c_res = dialog.try_connect("response", true, move |arg| {
+        let dialog = arg[0].get::<Dialog>().unwrap();
+        let content = dialog.content_area();
+        let t = &content.children()[0];
         let text_view = t.downcast_ref::<TextView>().unwrap();
-        let buf = text_view.get_buffer().unwrap();
-        let signal = arg[1].get::<i32>().unwrap().unwrap();
+        let buf = text_view.buffer().unwrap();
+        let signal = arg[1].get::<i32>().unwrap();
 
         match ResponseType::from(signal) {
             ResponseType::Apply => {
-                let new_password = buf
-                    .get_text(&buf.get_start_iter(), &buf.get_end_iter(), true)
-                    .unwrap();
+                let new_password = buf.text(&buf.start_iter(), &buf.end_iter(), true).unwrap();
                 let res = password.update(new_password.to_string(), &store.lock().unwrap());
 
                 if let Err(err) = res {
@@ -261,11 +262,11 @@ fn open_dialog(password: &pass::PasswordEntry, store: PasswordStoreType) -> pass
             }
             ResponseType::Other(_) => {
                 let new_password = ripasso::words::generate_password(6);
-                buf.delete(&mut buf.get_start_iter(), &mut buf.get_end_iter());
-                buf.insert(&mut buf.get_start_iter(), &new_password);
+                buf.delete(&mut buf.start_iter(), &mut buf.end_iter());
+                buf.insert(&mut buf.start_iter(), &new_password);
             }
             ResponseType::Close | ResponseType::DeleteEvent => {
-                arg[0].get::<Dialog>().unwrap().unwrap().close();
+                arg[0].get::<Dialog>().unwrap().close();
             }
             _ => {
                 eprintln!("unknown signal: {}", signal);
@@ -284,13 +285,13 @@ fn open_dialog(password: &pass::PasswordEntry, store: PasswordStoreType) -> pass
 
 fn setup_menu_file_history(builder: &Builder, password_list: &TreeView, store: PasswordStoreType) {
     let file_history_menu_item: MenuItem = builder
-        .get_object("menuItemFileHistory")
+        .object("menuItemFileHistory")
         .expect("Couldn't get menuItemCopyName");
 
     let password_list = password_list.clone();
     file_history_menu_item.connect_activate(move |_| {
         let password_list = password_list.clone();
-        let (path, _) = password_list.get_selection().get_selected_rows();
+        let (path, _) = password_list.selection().selected_rows();
 
         if path.is_empty() {
             return;
@@ -298,7 +299,7 @@ fn setup_menu_file_history(builder: &Builder, password_list: &TreeView, store: P
 
         let passwords = SHOWN_PASSWORDS.lock().unwrap();
 
-        let password = &passwords[path[0].get_indices()[0] as usize];
+        let password = &passwords[path[0].indices()[0] as usize];
 
         if let Err(err) = file_history_dialog(password, store.clone()) {
             error_box(err);
@@ -319,8 +320,8 @@ fn file_history_dialog(
         &buttons,
     );
 
-    let c_res = dialog.connect("response", true, move |arg| {
-        arg[0].get::<Dialog>().unwrap().unwrap().close();
+    let c_res = dialog.try_connect("response", true, move |arg| {
+        arg[0].get::<Dialog>().unwrap().close();
         None
     });
     if let Err(err) = c_res {
@@ -351,14 +352,16 @@ fn file_history_dialog(
     for (i, history_line) in history.iter().enumerate() {
         model.insert_with_values(
             Some(i as u32),
-            &[0, 1],
-            &[&history_line.message, &history_line.commit_time.to_string()],
+            &[
+                (0, &history_line.message),
+                (1, &history_line.commit_time.to_string()),
+            ],
         );
     }
 
     tree_view.set_model(Some(&model));
 
-    let content = dialog.get_content_area();
+    let content = dialog.content_area();
     content.add(&tree_view);
 
     dialog.show_all();
@@ -368,7 +371,7 @@ fn file_history_dialog(
 
 fn setup_menu_quit(builder: &Builder, window: &Window) {
     let quit_menu_item: MenuItem = builder
-        .get_object("menuItemQuit")
+        .object("menuItemQuit")
         .expect("Couldn't get menuItemQuit");
 
     let window2 = window.clone();
@@ -386,8 +389,8 @@ fn error_box(err: pass::Error) {
         &format!("{}", err),
     );
 
-    let c_res = dialog.connect("response", true, move |arg| {
-        arg[0].get::<MessageDialog>().unwrap().unwrap().close();
+    let c_res = dialog.try_connect("response", true, move |arg| {
+        arg[0].get::<MessageDialog>().unwrap().close();
         None
     });
     if let Err(err) = c_res {
@@ -435,29 +438,21 @@ fn main() {
         process::exit(0x01);
     }
 
-    let settings = gtk::Settings::get_default();
+    let settings = gtk::Settings::default();
     settings
         .unwrap()
-        .set_property_gtk_application_prefer_dark_theme(true);
+        .set_gtk_application_prefer_dark_theme(true);
 
     let glade_src = include_str!("../res/ripasso.ui.xml");
     let builder = Builder::from_string(glade_src);
 
-    let window: Window = builder
-        .get_object("mainWindow")
-        .expect("Couldn't get window1");
+    let window: Window = builder.object("mainWindow").expect("Couldn't get window1");
 
-    let password_list: Arc<TreeView> = Arc::new(
-        builder
-            .get_object("passwordList")
-            .expect("Couldn't get list"),
-    );
+    let password_list: Arc<TreeView> =
+        Arc::new(builder.object("passwordList").expect("Couldn't get list"));
 
-    let status_bar: Arc<TextView> = Arc::new(
-        builder
-            .get_object("statusBar")
-            .expect("Couldn't get statusBar"),
-    );
+    let status_bar: Arc<TextView> =
+        Arc::new(builder.object("statusBar").expect("Couldn't get statusBar"));
 
     let status_bar_clone = status_bar.clone();
     let store2 = store.clone();
@@ -468,7 +463,7 @@ fn main() {
 
         let password_res = {
             let store = store2.lock().unwrap();
-            passwords[path.get_indices()[0] as usize].password(&store)
+            passwords[path.indices()[0] as usize].password(&store)
         };
 
         match password_res {
@@ -481,13 +476,13 @@ fn main() {
                     error_box(pass::Error::from(err));
                 }
 
-                let buf_opt = status_bar_clone.get_buffer();
+                let buf_opt = status_bar_clone.buffer();
                 if let Some(buf) = buf_opt {
                     buf.set_text("Copied password to copy buffer for 40 seconds");
                 }
 
                 thread::spawn(|| {
-                    thread::sleep(time::Duration::from_secs(40));
+                    thread::sleep(Duration::from_secs(40));
                     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
                     ctx.set_contents(String::new()).unwrap();
                 });
@@ -495,11 +490,10 @@ fn main() {
         }
     });
 
-    let menu_bar: Arc<MenuBar> =
-        Arc::new(builder.get_object("menuBar").expect("Couldn't get menuBar"));
+    let menu_bar: Arc<MenuBar> = Arc::new(builder.object("menuBar").expect("Couldn't get menuBar"));
 
     let password_search: gtk::SearchEntry = builder
-        .get_object("passwordSearchBox")
+        .object("passwordSearchBox")
         .expect("Couldn't get passwordSearchBox");
 
     let name_column = TreeViewColumn::new();
@@ -545,7 +539,7 @@ fn results(store: &PasswordStoreType, query: &str) -> ListStore {
     let filtered = pass::search(&store.lock().unwrap(), query).unwrap();
     let mut passwords = SHOWN_PASSWORDS.lock().unwrap();
     for (i, p) in filtered.iter().enumerate() {
-        model.insert_with_values(Some(i as u32), &[0], &[&p.name]);
+        model.insert_with_values(Some(i as u32), &[(0, &p.name)]);
     }
     passwords.clear();
     for p in filtered {
@@ -557,7 +551,7 @@ fn results(store: &PasswordStoreType, query: &str) -> ListStore {
 fn receive() -> glib::Continue {
     GLOBAL.with(|global| {
         if let Some((ref password_search, ref password_list, ref store)) = *global.borrow() {
-            let query = password_search.get_text();
+            let query = password_search.text();
             password_list.set_model(Some(&results(store, &query)));
         }
     });
