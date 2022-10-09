@@ -41,7 +41,7 @@ pub struct UI {
 impl UI {
     pub fn query(&mut self, query: String) -> Option<&QVariant> {
         println!("query");
-        let matching = pass::search(&self.store.lock().unwrap(), &query).unwrap();
+        let matching = pass::search(&self.store.lock().unwrap(), &query);
 
         // Save currently matched passwords
         self.current_passwords = matching;

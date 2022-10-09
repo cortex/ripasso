@@ -310,6 +310,7 @@ fn show_file_history(ui: &mut Cursive, store: PasswordStoreType) {
                         SignatureStatus::Good => "🔒",
                         SignatureStatus::AlmostGood => "🔓",
                         SignatureStatus::Bad => "⛔",
+                        _ => "?",
                     }
                 }
 
@@ -795,7 +796,7 @@ fn render_recipient_label(
 ) -> String {
     let symbol = match &recipient.key_ring_status {
         pass::KeyRingStatus::NotInKeyRing => "⚠️ ",
-        pass::KeyRingStatus::InKeyRing => "  ️",
+        _ => "  ️",
     };
 
     let trust = match &recipient.trust_level {
@@ -804,7 +805,7 @@ fn render_recipient_label(
         OwnerTrustLevel::Marginal => CATALOG.gettext("Marginal"),
         OwnerTrustLevel::Never => CATALOG.gettext("Never"),
         OwnerTrustLevel::Undefined => CATALOG.gettext("Undefined"),
-        OwnerTrustLevel::Unknown => CATALOG.gettext("Unknown"),
+        _ => CATALOG.gettext("Unknown"),
     };
 
     format!(
@@ -900,6 +901,7 @@ fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
             SignatureStatus::Good => "🔒",
             SignatureStatus::AlmostGood => "🔓",
             SignatureStatus::Bad => "⛔",
+            _ => "?",
         }
     }
 
@@ -922,19 +924,13 @@ fn search(store: &PasswordStoreType, ui: &mut Cursive, query: &str) {
         .find_name::<SelectView<pass::PasswordEntry>>("results")
         .unwrap();
 
-    let search_result = pass::search(&store.lock().unwrap().lock().unwrap(), &String::from(query));
-    match search_result {
-        Err(err) => {
-            helpers::errorbox(ui, &err);
-        }
-        Ok(r) => {
-            l.clear();
-            for p in &r {
-                l.add_item(create_label(p, col), p.clone());
-            }
-            l.sort_by_label();
-        }
+    let r = pass::search(&store.lock().unwrap().lock().unwrap(), &String::from(query));
+
+    l.clear();
+    for p in &r {
+        l.add_item(create_label(p, col), p.clone());
     }
+    l.sort_by_label();
 }
 
 fn help() {

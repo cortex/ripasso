@@ -12,6 +12,8 @@ pub fn generate_password(number_of_words: isize) -> String {
     rand_words.join(" ")
 }
 
+/// The large wordlist from
+/// <https://www.eff.org/sv/deeplinks/2016/07/new-wordlists-random-passphrases>
 const WORDS: &[&str] = &[
     "abacus",
     "abdomen",

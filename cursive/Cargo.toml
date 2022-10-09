@@ -3,6 +3,7 @@ name = "ripasso-cursive"
 description = "A password manager that uses the file format of the standard unix password manager 'pass', this is the ncurses frontend application"
 repository = "https://github.com/cortex/ripasso/"
 keywords = ["password-manager", "pass"]
+categories = ["command-line-utilities"]
 version = "0.6.0-alpha"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>", "Alexander Kjäll <alexander.kjall@gmail.com>"]
 license = "GPL-3.0-only"

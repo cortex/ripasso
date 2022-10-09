@@ -536,7 +536,7 @@ fn main() {
 
 fn results(store: &PasswordStoreType, query: &str) -> ListStore {
     let model = ListStore::new(&[String::static_type()]);
-    let filtered = pass::search(&store.lock().unwrap(), query).unwrap();
+    let filtered = pass::search(&store.lock().unwrap(), query);
     let mut passwords = SHOWN_PASSWORDS.lock().unwrap();
     for (i, p) in filtered.iter().enumerate() {
         model.insert_with_values(Some(i as u32), &[(0, &p.name)]);
