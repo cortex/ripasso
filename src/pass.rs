@@ -1083,8 +1083,8 @@ fn commit(
             signature, // committer
             message,   // commit message
             tree,      // tree
-            parents,
-        )?; // parents
+            parents,   // parents
+        )?;
 
         let commit_as_str = str::from_utf8(&commit_buf)?;
 
@@ -1095,7 +1095,7 @@ fn commit(
         if let Ok(mut head) = repo.head() {
             head.set_target(commit, "added a signed commit using ripasso")?;
         } else {
-            repo.branch("master", &repo.find_commit(commit)?, false)?;
+            repo.branch(&git_branch_name(repo)?, &repo.find_commit(commit)?, false)?;
         }
 
         Ok(commit)
@@ -1106,11 +1106,27 @@ fn commit(
             signature,    // committer
             message,      // commit message
             tree,         // tree
-            parents,
-        )?; // parents
+            parents,      // parents
+        )?;
 
         Ok(commit)
     }
+}
+
+fn git_branch_name(repo: &git2::Repository) -> Result<String> {
+    let head = repo.find_reference("HEAD")?;
+    let symbolic = head
+        .symbolic_target()
+        .ok_or(Error::Generic("no symbolic target"))?;
+
+    let mut parts = symbolic.split('/');
+
+    Ok(parts
+        .nth(2)
+        .ok_or(Error::Generic(
+            "symbolic target name should be on format 'refs/heads/main'",
+        ))?
+        .to_owned())
 }
 
 /// Add a file to the store, and commit it to the supplied git repository.
@@ -1125,16 +1141,15 @@ fn add_and_commit_internal(
         index.add_path(path)?;
         index.write()?;
     }
-    let oid = index.write_tree()?;
     let signature = repo.signature()?;
-    let parent_commit_res = find_last_commit(repo);
+
     let mut parents = vec![];
     let parent_commit;
-    if parent_commit_res.is_ok() {
-        parent_commit = parent_commit_res?;
+    if let Ok(pc) = find_last_commit(repo) {
+        parent_commit = pc;
         parents.push(&parent_commit);
     }
-    index.write_tree()?;
+    let oid = index.write_tree()?;
     let tree = repo.find_tree(oid)?;
 
     let oid = commit(repo, &signature, message, &tree, &parents, crypto)?;
