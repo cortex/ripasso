@@ -2648,7 +2648,7 @@ dependencies = [
 
 [[package]]
 name = "ripasso"
-version = "0.6.0-alpha"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2672,7 +2672,7 @@ dependencies = [
 
 [[package]]
 name = "ripasso-cursive"
-version = "0.6.0-alpha"
+version = "0.6.0"
 dependencies = [
  "chrono",
  "clipboard",
@@ -2694,7 +2694,7 @@ dependencies = [
 
 [[package]]
 name = "ripasso-gtk"
-version = "0.6.0-alpha"
+version = "0.6.0"
 dependencies = [
  "clipboard",
  "gdk",
@@ -2706,7 +2706,7 @@ dependencies = [
 
 [[package]]
 name = "ripasso-qt"
-version = "0.6.0-alpha"
+version = "0.6.0"
 dependencies = [
  "clipboard",
  "qml",
