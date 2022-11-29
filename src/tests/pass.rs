@@ -923,6 +923,37 @@ fn rename_file_absolute_path() -> Result<()> {
 }
 
 #[test]
+fn rename_file_git_index_clean() -> Result<()> {
+    let dir = UnpackedDir::new("rename_file_git_index_clean")?;
+
+    let mut config_location = dir.dir().to_path_buf();
+    config_location.push(".git");
+    config_location.push("config");
+    let mut config = git2::Config::open(&config_location)?;
+    config.set_str("user.name", "default")?;
+    config.set_str("user.email", "default@example.com")?;
+    config.set_str("commit.gpgsign", "false")?;
+
+    let mut store = PasswordStore::new(
+        "default",
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &Some(dir.dir().to_path_buf()),
+        &None,
+        &CryptoImpl::GpgMe,
+        &None,
+    )?;
+    store.reload_password_list()?;
+    store.rename_file("1/test", "2/test")?;
+
+    let repo = git2::Repository::open(dir.dir().to_path_buf())?;
+
+    assert!(repo.statuses(None)?.is_empty());
+
+    Ok(())
+}
+
+#[test]
 fn decrypt_secret_empty_file() -> Result<()> {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join(".password-store"))?;
