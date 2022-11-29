@@ -4,7 +4,7 @@ description = "A password manager that uses the file format of the standard unix
 repository = "https://github.com/cortex/ripasso/"
 keywords = ["password-manager", "pass"]
 categories = ["command-line-utilities"]
-version = "0.6.0-alpha"
+version = "0.7.0-alpha"
 authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>", "Alexander Kjäll <alexander.kjall@gmail.com>"]
 license = "GPL-3.0-only"
 edition = '2021'
@@ -13,7 +13,7 @@ build = "build.rs"
 [dependencies]
 cursive = { version = "0.20.0", default-features = false, features = ["toml", "crossterm-backend"]}
 clipboard = "0.5"
-ripasso = { path = "../", version = "0.6.0-alpha" }
+ripasso = { path = "../", version = "0.7.0-alpha" }
 locale_config = "0.3.0"
 unic-langid = "0.9.1"
 gettext = "0.4.0"
