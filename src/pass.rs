@@ -1206,6 +1206,7 @@ fn move_and_commit(
     let mut index = repo.index()?;
     index.remove_path(old_name)?;
     index.add_path(new_name)?;
+    index.write()?;
     let oid = index.write_tree()?;
     let signature = repo.signature()?;
     let parent_commit_res = find_last_commit(&repo);
