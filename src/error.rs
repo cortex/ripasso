@@ -198,3 +198,13 @@ impl std::fmt::Display for Error {
 
 /// Convenience type for Results
 pub type Result<T> = std::result::Result<T, Error>;
+
+pub fn to_result<T: chrono::TimeZone>(
+    res: chrono::LocalResult<chrono::DateTime<T>>,
+) -> Result<chrono::DateTime<T>> {
+    match res {
+        chrono::LocalResult::None => Err(Error::Generic("no timezone")),
+        chrono::LocalResult::Single(t) => Ok(t),
+        chrono::LocalResult::Ambiguous(_, _) => Err(Error::Generic("too many timezones")),
+    }
+}

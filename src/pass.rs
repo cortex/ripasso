@@ -34,7 +34,7 @@ use crate::crypto::{
     Crypto, CryptoImpl, FindSigningFingerprintStrategy, GpgMe, Sequoia, VerificationError,
 };
 pub use crate::{
-    error::{Error, Result},
+    error::{to_result, Error, Result},
     signature::{
         parse_signing_keys, Comment, KeyRingStatus, OwnerTrustLevel, Recipient, SignatureStatus,
     },
@@ -710,7 +710,7 @@ fn push_password_if_match(
 ) -> bool {
     if *target == *found {
         let time = commit.time();
-        let time_return = Ok(Local.timestamp(time.seconds(), 0));
+        let time_return = to_result(Local.timestamp_opt(time.seconds(), 0));
 
         let name_return = name_from_commit(commit);
 
@@ -1020,7 +1020,7 @@ impl PasswordEntry {
                         }
 
                         let time = commit.time();
-                        let dt = Local.timestamp(time.seconds(), 0);
+                        let dt = to_result(Local.timestamp_opt(time.seconds(), 0)).ok()?;
 
                         let signature_status = verify_git_signature(&repo, &oid, store);
                         Some(GitLogLine::new(
@@ -1428,7 +1428,7 @@ fn read_git_meta_data(
     let commit = commit_res.unwrap();
 
     let time = commit.time();
-    let time_return = Ok(Local.timestamp(time.seconds(), 0));
+    let time_return = to_result(Local.timestamp_opt(time.seconds(), 0));
 
     let name_return = name_from_commit(&commit);
 
