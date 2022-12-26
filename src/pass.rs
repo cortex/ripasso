@@ -906,7 +906,7 @@ impl PasswordEntry {
                 let mut end_pos = secret.len();
                 for (pos, c) in secret.chars().skip(start_pos).enumerate() {
                     if c.is_whitespace() {
-                        end_pos = pos;
+                        end_pos = pos + start_pos;
                         break;
                     }
                 }
