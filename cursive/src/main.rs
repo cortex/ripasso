@@ -1651,11 +1651,11 @@ fn show_manage_config_dialog(
         .h_align(cursive::align::HAlign::Left)
         .with_name("stores");
 
-    #[allow(clippy::significant_drop_in_scrutinee)]
     for store in stores.lock().unwrap().iter() {
+        let store = store.lock().unwrap();
         stores_view.get_mut().add_item(
-            store.lock().unwrap().get_name(),
-            store.lock().unwrap().get_name().clone(),
+            store.get_name(),
+            store.get_name().clone(),
         );
     }
 
