@@ -1144,8 +1144,7 @@ fn decrypt_password_multiline() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn mfa_example1() -> Result<()> {
+fn mfa_setup(payload: String) -> Result<(tempfile::TempDir, PasswordEntry, PasswordStore)> {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
@@ -1165,9 +1164,7 @@ fn mfa_example1() -> Result<()> {
         RepositoryStatus::NoRepo,
     );
 
-    let crypto = MockCrypto::new().with_decrypt_string_return(
-        "otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example".to_owned(),
-    );
+    let crypto = MockCrypto::new().with_decrypt_string_return(payload);
 
     let store = PasswordStore {
         name: "store_name".to_owned(),
@@ -1177,6 +1174,13 @@ fn mfa_example1() -> Result<()> {
         style_file: None,
         crypto: Box::new(crypto),
     };
+
+    Ok((dir, pe, store))
+}
+
+#[test]
+fn mfa_example1() -> Result<()> {
+    let (_dir, pe, store) = mfa_setup("otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example".to_owned())?;
 
     let res = pe.mfa(&store).unwrap();
 
@@ -1188,36 +1192,19 @@ fn mfa_example1() -> Result<()> {
 
 #[test]
 fn mfa_example2() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".password-store"))?;
-    let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
-    writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
-    gpg_file.flush()?;
+    let (_dir, pe, store) = mfa_setup("some text\n otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example\nmore txt\n\n".to_owned())?;
 
-    let mut pass_file = File::create(dir.path().join(".password-store").join("file.gpg"))?;
-    pass_file.write_all("dummy data".as_bytes()).unwrap();
-    pass_file.flush()?;
+    let res = pe.mfa(&store).unwrap();
 
-    let pe = PasswordEntry::new(
-        &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
-        Ok(Local::now()),
-        Ok(String::new()),
-        Ok(SignatureStatus::Good),
-        RepositoryStatus::NoRepo,
-    );
+    assert_eq!(6, res.len());
+    assert_eq!(6, res.chars().filter(|c| c.is_digit(10)).count());
 
-    let crypto =
-        MockCrypto::new().with_decrypt_string_return("some text\n otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example\nmore txt\n\n".to_owned());
+    Ok(())
+}
 
-    let store = PasswordStore {
-        name: "store_name".to_owned(),
-        root: dir.path().join(".password-store"),
-        valid_gpg_signing_keys: vec![],
-        passwords: vec![],
-        style_file: None,
-        crypto: Box::new(crypto),
-    };
+#[test]
+fn mfa_example3() -> Result<()> {
+    let (_dir, pe, store) = mfa_setup("lots and lots and lots and lots and lots and lots and lots and lots and lots and lots of text\n otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example\nmore txt\n\n".to_owned())?;
 
     let res = pe.mfa(&store).unwrap();
 
@@ -1229,35 +1216,7 @@ fn mfa_example2() -> Result<()> {
 
 #[test]
 fn mfa_no_otpauth_url() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".password-store"))?;
-    let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
-    writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
-    gpg_file.flush()?;
-
-    let mut pass_file = File::create(dir.path().join(".password-store").join("file.gpg"))?;
-    pass_file.write_all("dummy data".as_bytes()).unwrap();
-    pass_file.flush()?;
-
-    let pe = PasswordEntry::new(
-        &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
-        Ok(Local::now()),
-        Ok(String::new()),
-        Ok(SignatureStatus::Good),
-        RepositoryStatus::NoRepo,
-    );
-
-    let crypto = MockCrypto::new().with_decrypt_string_return("password".to_owned());
-
-    let store = PasswordStore {
-        name: "store_name".to_owned(),
-        root: dir.path().join(".password-store"),
-        valid_gpg_signing_keys: vec![],
-        passwords: vec![],
-        style_file: None,
-        crypto: Box::new(crypto),
-    };
+    let (_dir, pe, store) = mfa_setup("password".to_owned())?;
 
     let res = pe.mfa(&store);
 
