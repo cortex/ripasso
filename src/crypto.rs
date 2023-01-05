@@ -507,6 +507,7 @@ impl<'a> DecryptionHelper for Helper<'a> {
         if self.secret.is_none() {
             // we don't know which key is the users own key, so lets try them all
 
+            let mut selected_fingerprint: Option<sequoia_openpgp::Fingerprint> = None;
             for pkesk in pkesks {
                 if let Ok(cert) = find(self.key_ring, pkesk.recipient()) {
                     let key = cert.primary_key();
@@ -520,14 +521,13 @@ impl<'a> DecryptionHelper for Helper<'a> {
                         .decrypt(&mut pair, sym_algo)
                         .map_or(false, |(algo, session_key)| decrypt(algo, &session_key))
                     {
+                        selected_fingerprint = Some(cert.fingerprint());
                         break;
                     }
                 }
             }
 
-            // XXX: In production code, return the Fingerprint of the
-            // recipient's Cert here
-            return Ok(None);
+            return Ok(selected_fingerprint);
         }
         // The encryption key is the first and only subkey.
         let key = self
@@ -545,13 +545,16 @@ impl<'a> DecryptionHelper for Helper<'a> {
         // The secret key is not encrypted.
         let mut pair = key.into_keypair()?;
 
-        pkesks[0]
-            .decrypt(&mut pair, sym_algo)
-            .map(|(algo, session_key)| decrypt(algo, &session_key));
+        for pkesk in pkesks {
+            if pkesk.decrypt(&mut pair, sym_algo)
+                .map(|(algo, sk)| decrypt(algo, &sk))
+                .unwrap_or(false)
+            {
+                return Ok(Some(self.secret.ok_or_else(|| anyhow::anyhow!("no user secret"))?.fingerprint()));
+            }
+        }
 
-        // XXX: In production code, return the Fingerprint of the
-        // recipient's Cert here
-        Ok(None)
+        Err(anyhow::anyhow!("no pkesks managed to descrypt ciphertext"))
     }
 }
 
@@ -629,6 +632,16 @@ impl Sequoia {
             user_key_id: own_fingerprint,
             key_ring,
         })
+    }
+
+    pub fn from_values(
+        user_key_id: [u8; 20],
+        key_ring: HashMap<[u8; 20], Arc<sequoia_openpgp::Cert>>,
+    ) -> Self {
+        Sequoia {
+            user_key_id,
+            key_ring,
+        }
     }
 
     /// Converts a list of recipients to their sequoia certs
@@ -715,12 +728,13 @@ impl Crypto for Sequoia {
 
             // Now, create a decryptor with a helper using the given Certs.
             let mut decryptor =
-                DecryptorBuilder::from_bytes(ciphertext)?.with_policy(&p, None, helper)?;
+                DecryptorBuilder::from_bytes(ciphertext)?
+                .with_policy(&p, None, helper).unwrap();
 
             // Decrypt the data.
-            std::io::copy(&mut decryptor, &mut sink)?;
+            std::io::copy(&mut decryptor, &mut sink).unwrap();
 
-            Ok(std::str::from_utf8(&sink)?.to_owned())
+            Ok(std::str::from_utf8(&sink).unwrap().to_owned())
         } else {
             // Make a helper that that feeds the recipient's secret key to the
             // decryptor.
