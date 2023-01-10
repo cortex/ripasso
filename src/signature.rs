@@ -265,9 +265,9 @@ impl Recipient {
         ))
     }
 
-    /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
+    /// Return a list of all the Recipients in the supplied file.
     /// # Errors
-    /// Returns an `Err` if there is a problem reading the gpg_id file
+    /// Returns an `Err` if there is a problem reading the .gpg_id file
     pub fn all_recipients(
         recipients_file: &Path,
         crypto: &(dyn crate::crypto::Crypto + Send),
@@ -410,6 +410,7 @@ impl Recipient {
     pub fn remove_recipient_from_file(
         s: &Self,
         recipients_file: &Path,
+        store_root_path: &Path,
         valid_gpg_signing_keys: &[[u8; 20]],
         crypto: &(dyn crate::crypto::Crypto + Send),
     ) -> Result<()> {
@@ -424,15 +425,19 @@ impl Recipient {
         });
 
         if recipients.is_empty() {
-            return Err(Error::Generic("Can't delete the last encryption key"));
+            if recipients_file == store_root_path.join(".gpg_id") {
+                Err(Error::Generic("Can't delete the last encryption key"))
+            } else {
+                Ok(std::fs::remove_file(recipients_file)?)
+            }
+        } else {
+            Recipient::write_recipients_file(
+                &recipients,
+                recipients_file,
+                valid_gpg_signing_keys,
+                crypto,
+            )
         }
-
-        Recipient::write_recipients_file(
-            &recipients,
-            recipients_file,
-            valid_gpg_signing_keys,
-            crypto,
-        )
     }
 
     /// Add a new person to the list of team members to encrypt the passwords for.

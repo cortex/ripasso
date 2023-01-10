@@ -10,13 +10,11 @@ use hex::FromHex;
 use sequoia_openpgp::{
     cert::CertBuilder,
     parse::{
-        stream::{DecryptorBuilder, DecryptionHelper, MessageStructure, VerificationHelper},
+        stream::{DecryptionHelper, DecryptorBuilder, MessageStructure, VerificationHelper},
         Parse,
     },
     policy::StandardPolicy,
-    Cert,
-    KeyHandle,
-    KeyID,
+    Cert, KeyHandle, KeyID,
 };
 use tar::Archive;
 
@@ -216,7 +214,11 @@ impl Crypto for MockCrypto {
         Err(VerificationError::SignatureFromWrongRecipient)
     }
 
-    fn pull_keys(&mut self, _recipients: &[Recipient], _config_path: &Path) -> Result<String> {
+    fn is_key_in_keyring(&self, _recipient: &Recipient) -> Result<bool> {
+        Ok(true)
+    }
+
+    fn pull_keys(&mut self, _recipients: &[&Recipient], _config_path: &Path) -> Result<String> {
         Ok("dummy implementation".to_owned())
     }
 
@@ -291,9 +293,7 @@ pub fn recipient_from_cert(cert: &sequoia_openpgp::Cert) -> Recipient {
             post_comment: None,
         },
         key_id: cert.fingerprint().to_hex(),
-        fingerprint: Some(
-            <[u8; 20]>::from_hex(cert.fingerprint().to_hex()).unwrap(),
-        ),
+        fingerprint: Some(<[u8; 20]>::from_hex(cert.fingerprint().to_hex()).unwrap()),
         key_ring_status: KeyRingStatus::InKeyRing,
         trust_level: OwnerTrustLevel::Ultimate,
         not_usable: false,
@@ -313,6 +313,14 @@ pub fn generate_sequoia_cert(email: &str) -> sequoia_openpgp::Cert {
         .unwrap();
 
     cert
+}
+
+pub fn generate_sequoia_cert_without_private_key(email: &str) -> sequoia_openpgp::Cert {
+    let (cert, _) = CertBuilder::general_purpose(None, Some(email))
+        .generate()
+        .unwrap();
+
+    cert.strip_secret_key_material()
 }
 
 struct KeyLister {

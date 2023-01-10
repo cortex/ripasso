@@ -89,6 +89,7 @@ impl PasswordStore {
                 Box::new(Sequoia::new(
                     &home.join(".local"),
                     own_fingerprint.ok_or_else(|| Error::Generic("own_fingerprint is not configured, required for using Sequoia as pgp implementation"))?,
+                    &home,
                 )?)
             }
         };
@@ -231,7 +232,7 @@ impl PasswordStore {
     }
 
     pub fn repo(&self) -> Result<git2::Repository> {
-        git2::Repository::open(&self.root).map_err(Error::Git)
+        Ok(git2::Repository::open(&self.root)?)
     }
 
     fn verify_gpg_id_files(&self) -> Result<SignatureStatus> {
@@ -241,14 +242,13 @@ impl PasswordStore {
             gpg_id_sig_file.push(".gpg-id.sig");
 
             let gpg_id = fs::read(gpg_id_file)?;
-            let gpg_id_sig = match fs::read(gpg_id_sig_file) {
-                Ok(c) => c,
-                Err(_) => {
-                    return Err(Error::Generic(
+            let gpg_id_sig =
+                match fs::read(gpg_id_sig_file) {
+                    Ok(c) => c,
+                    Err(_) => return Err(Error::Generic(
                         "problem reading .gpg-id.sig, and strict signature checking was asked for",
-                    ))
-                }
-            };
+                    )),
+                };
 
             match self.crypto.verify_sign(&gpg_id, &gpg_id_sig, &self.valid_gpg_signing_keys) {
                 Ok(r) => {
@@ -269,7 +269,7 @@ impl PasswordStore {
     }
 
     fn verify_gpg_id_file_for_path(&self, path: &Path) -> Result<SignatureStatus> {
-        let gpg_id_file = self.recipients_file_for_path(path)?;
+        let gpg_id_file = self.recipients_file_for_dir(path)?;
         let gpg_id_sig_file = {
             let mut sig = gpg_id_file.clone();
             sig.pop();
@@ -542,10 +542,19 @@ impl PasswordStore {
             self.verify_gpg_id_files()?;
         }
 
-        Recipient::all_recipients(&self.recipients_file(), self.crypto.as_ref())
+        let mut recipients = vec![];
+        for file in self.recipients_files()? {
+            for r in Recipient::all_recipients(&file, self.crypto.as_ref())? {
+                if !recipients.contains(&r) {
+                    recipients.push(r);
+                }
+            }
+        }
+        Ok(recipients)
     }
 
-    /// Return a list of all the Recipients in the `$PASSWORD_STORE_DIR/.gpg-id` file.
+    /// Return a list of all the Recipients in the `.gpg-id` file that is the
+    /// closest parent to `path`.
     /// # Errors
     /// Returns an `Err` if the gpg_id file should be verified and it can't be
     pub fn recipients_for_path(&self, path: &Path) -> Result<Vec<Recipient>> {
@@ -553,11 +562,28 @@ impl PasswordStore {
             self.verify_gpg_id_file_for_path(path)?;
         }
 
-        Recipient::all_recipients(&self.recipients_file_for_path(path)?, self.crypto.as_ref())
+        Recipient::all_recipients(&self.recipients_file_for_dir(path)?, self.crypto.as_ref())
     }
 
-    fn recipients_file(&self) -> PathBuf {
-        self.root.join(".gpg-id")
+    fn recipients_file_for_dir(&self, path: &Path) -> Result<PathBuf> {
+        let mut new_dir = std::fs::canonicalize(self.root.join(path))?;
+
+        let root = std::fs::canonicalize(&self.root)?;
+
+        if !new_dir.starts_with(&root) {
+            return Err(Error::Generic("path traversal is not allowed"));
+        }
+
+        while new_dir.starts_with(&root) {
+            let f = new_dir.join(".gpg-id");
+
+            if f.exists() {
+                return Ok(f);
+            }
+            new_dir.pop();
+        }
+
+        Err(Error::Generic("No .gpg-id file found"))
     }
 
     fn visit_dirs(dir: &Path, result: &mut Vec<PathBuf>) -> Result<()> {
@@ -581,38 +607,63 @@ impl PasswordStore {
         Ok(results)
     }
 
-    fn recipients_file_for_path(&self, path: &Path) -> Result<PathBuf> {
-        let mut p = path.to_path_buf();
-        while p.starts_with(&self.root) {
-            if p.join(".gpg-id").exists() {
-                return Ok(p.join(".gpg-id"));
-            }
-            p.pop();
-        }
-        Err(Error::Generic("No .gpg-id file found"))
-    }
-
-    /// Removes a key from the .gpg-id file and re-encrypts all the passwords
-    /// # Errors
-    /// Returns an `Err` if the gpg_id file should be verified and it can't be or if the recipient is the last one.
-    pub fn remove_recipient(&self, r: &Recipient) -> Result<()> {
+    fn remove_recipient_inner(&self, r: &Recipient, path: &Path) -> Result<()> {
         Recipient::remove_recipient_from_file(
             r,
-            &self.recipients_file(),
+            &self.recipients_file_for_dir(path)?,
+            &self.root,
             &self.valid_gpg_signing_keys,
             self.crypto.as_ref(),
         )?;
         self.reencrypt_all_password_entries()
     }
 
-    /// Adds a key to the .gpg-id file and re-encrypts all the passwords
+    /// Removes a key from the .gpg-id file and re-encrypts all the passwords
+    /// # Errors
+    /// Returns an `Err` if the gpg_id file should be verified and it can't be or if the recipient is the last one.
+    pub fn remove_recipient(&self, r: &Recipient, path: &Path) -> Result<()> {
+        let gpg_id_file = &self.recipients_file_for_dir(path)?;
+        let gpg_id_file_content = std::fs::read_to_string(gpg_id_file)?;
+
+        let res = self.remove_recipient_inner(r, path);
+
+        if res.is_err() {
+            std::fs::write(gpg_id_file, gpg_id_file_content)?;
+        }
+        res
+    }
+
+    /// Adds a key to the .gpg-id file in the path directory and re-encrypts all the passwords
     /// # Errors
     /// Returns an `Err` if the gpg_id file should be verified and it can't be or there is some problem with
     /// the encryption.
-    pub fn add_recipient(&self, r: &Recipient) -> Result<()> {
+    pub fn add_recipient(&mut self, r: &Recipient, path: &Path, config_path: &Path) -> Result<()> {
+        if !self.crypto.is_key_in_keyring(r)? {
+            self.crypto.pull_keys(&[r], config_path)?;
+        }
+        if !self.crypto.is_key_in_keyring(r)? {
+            return Err(Error::Generic(
+                "Key isn't in keyring and couldn't be downloaded from keyservers",
+            ));
+        }
+
+        let dir = self.root.join(path);
+        if !dir.exists() {
+            return Err(Error::Generic("path doesn't exist"));
+        }
+        let dir = std::fs::canonicalize(self.root.join(path))?;
+        let root = std::fs::canonicalize(&self.root)?;
+
+        if !dir.starts_with(root) {
+            return Err(Error::Generic("path traversal not allowed"));
+        }
+        if !dir.join(".gpg-id").exists() {
+            std::fs::File::create(dir.join(".gpg-id"))?;
+        }
+
         Recipient::add_recipient_to_file(
             r,
-            &self.recipients_file(),
+            &self.recipients_file_for_dir(path)?,
             &self.valid_gpg_signing_keys,
             self.crypto.as_ref(),
         )?;
@@ -718,7 +769,7 @@ impl PasswordStore {
         let mut file = std::fs::File::create(&new_path)?;
         let secret = self.crypto.decrypt_string(&std::fs::read(&old_path)?)?;
         let new_recipients = Recipient::all_recipients(
-            &self.recipients_file_for_path(&new_path)?,
+            &self.recipients_file_for_dir(&new_path)?,
             self.crypto.as_ref(),
         )?;
         file.write_all(&self.crypto.encrypt_string(&secret, &new_recipients)?)?;
@@ -1098,8 +1149,9 @@ impl PasswordEntry {
 /// Returns an `Err` if the download fails
 pub fn pgp_pull(store: &mut PasswordStore, config_path: &Path) -> Result<String> {
     let recipients = store.all_recipients()?;
+    let recipients_refs: Vec<&Recipient> = recipients.iter().collect();
 
-    let result = store.crypto.pull_keys(&recipients, config_path)?;
+    let result = store.crypto.pull_keys(&recipients_refs, config_path)?;
 
     Ok(result)
 }

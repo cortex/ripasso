@@ -188,10 +188,13 @@ pub trait Crypto {
         valid_signing_keys: &[[u8; 20]],
     ) -> std::result::Result<SignatureStatus, VerificationError>;
 
+    /// Returns true if a recipient is in the users keyring.
+    fn is_key_in_keyring(&self, recipient: &Recipient) -> Result<bool>;
+
     /// Pull keys from the keyserver for those recipients.
     /// # Errors
     /// Will return `Err` on network errors and similar.
-    fn pull_keys(&mut self, recipients: &[Recipient], config_path: &Path) -> Result<String>;
+    fn pull_keys(&mut self, recipients: &[&Recipient], config_path: &Path) -> Result<String>;
 
     /// Import a key from text.
     /// # Errors
@@ -340,7 +343,17 @@ impl Crypto for GpgMe {
         }
     }
 
-    fn pull_keys(&mut self, recipients: &[Recipient], _config_path: &Path) -> Result<String> {
+    fn is_key_in_keyring(&self, recipient: &Recipient) -> Result<bool> {
+        let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+
+        if let Some(fingerprint) = recipient.fingerprint {
+            Ok(ctx.get_key(hex::encode(fingerprint)).is_ok())
+        } else {
+            Ok(false)
+        }
+    }
+
+    fn pull_keys(&mut self, recipients: &[&Recipient], _config_path: &Path) -> Result<String> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
         let mut result_str = String::new();
@@ -546,11 +559,16 @@ impl<'a> DecryptionHelper for Helper<'a> {
         let mut pair = key.into_keypair()?;
 
         for pkesk in pkesks {
-            if pkesk.decrypt(&mut pair, sym_algo)
+            if pkesk
+                .decrypt(&mut pair, sym_algo)
                 .map(|(algo, sk)| decrypt(algo, &sk))
                 .unwrap_or(false)
             {
-                return Ok(Some(self.secret.ok_or_else(|| anyhow::anyhow!("no user secret"))?.fingerprint()));
+                return Ok(Some(
+                    self.secret
+                        .ok_or_else(|| anyhow::anyhow!("no user secret"))?
+                        .fingerprint(),
+                ));
             }
         }
 
@@ -604,13 +622,15 @@ pub struct Sequoia {
     user_key_id: [u8; 20],
     /// All certs in the keys directory
     key_ring: HashMap<[u8; 20], Arc<sequoia_openpgp::Cert>>,
+    /// The home directory of the user, for gnupg context
+    user_home: std::path::PathBuf,
 }
 
 impl Sequoia {
     /// creates the sequoia object
     /// # Errors
     /// If there is any problems reading the keys directory
-    pub fn new(config_path: &Path, own_fingerprint: [u8; 20]) -> Result<Self> {
+    pub fn new(config_path: &Path, own_fingerprint: [u8; 20], user_home: &Path) -> Result<Self> {
         let mut key_ring: HashMap<[u8; 20], Arc<sequoia_openpgp::Cert>> = HashMap::new();
 
         let dir = config_path.join("share").join("ripasso").join("keys");
@@ -631,16 +651,19 @@ impl Sequoia {
         Ok(Self {
             user_key_id: own_fingerprint,
             key_ring,
+            user_home: user_home.to_path_buf(),
         })
     }
 
     pub fn from_values(
         user_key_id: [u8; 20],
         key_ring: HashMap<[u8; 20], Arc<sequoia_openpgp::Cert>>,
+        user_home: &Path
     ) -> Self {
-        Sequoia {
+        Self {
             user_key_id,
             key_ring,
+            user_home: user_home.to_path_buf(),
         }
     }
 
@@ -727,9 +750,9 @@ impl Crypto for Sequoia {
             };
 
             // Now, create a decryptor with a helper using the given Certs.
-            let mut decryptor =
-                DecryptorBuilder::from_bytes(ciphertext)?
-                .with_policy(&p, None, helper).unwrap();
+            let mut decryptor = DecryptorBuilder::from_bytes(ciphertext)?
+                .with_policy(&p, None, helper)
+                .unwrap();
 
             // Decrypt the data.
             std::io::copy(&mut decryptor, &mut sink).unwrap();
@@ -743,7 +766,7 @@ impl Crypto for Sequoia {
                 secret: Some(decrypt_key),
                 key_ring: &self.key_ring,
                 public_keys: vec![],
-                ctx: Some(sequoia_ipc::gnupg::Context::with_homedir("/home/capitol/")?),
+                ctx: Some(sequoia_ipc::gnupg::Context::with_homedir(&self.user_home)?),
                 do_signature_verification: false,
             };
 
@@ -888,7 +911,15 @@ impl Crypto for Sequoia {
         Ok(SignatureStatus::Good)
     }
 
-    fn pull_keys(&mut self, recipients: &[Recipient], config_path: &Path) -> Result<String> {
+    fn is_key_in_keyring(&self, recipient: &Recipient) -> Result<bool> {
+        if let Some(fingerprint) = recipient.fingerprint {
+            Ok(self.key_ring.contains_key(&fingerprint))
+        } else {
+            Ok(false)
+        }
+    }
+
+    fn pull_keys(&mut self, recipients: &[&Recipient], config_path: &Path) -> Result<String> {
         let p = config_path.join("share").join("ripasso").join("keys");
         std::fs::create_dir_all(&p)?;
 
