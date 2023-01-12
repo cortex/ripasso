@@ -39,6 +39,7 @@ use hex::FromHex;
 use pass::Result;
 use ripasso::{
     crypto::CryptoImpl,
+    git::{pull, push},
     pass,
     pass::{
         all_recipients_from_stores, OwnerTrustLevel, PasswordStore, Recipient, SignatureStatus,
@@ -577,7 +578,7 @@ fn create_save(s: &mut Cursive, store: PasswordStoreType) {
 
     let note = s.call_on_name("note_input", |e: &mut TextArea| e.get_content().to_string());
     if let Some(note) = note {
-        password = Rc::from(format!("{}\n{}", password, note));
+        password = Rc::from(format!("{password}\n{note}"));
     }
 
     if password.contains("otpauth://") {
@@ -938,7 +939,7 @@ fn help() {
 }
 
 fn git_push(ui: &mut Cursive, store: PasswordStoreType) {
-    let push_result = pass::push(&store.lock().unwrap().lock().unwrap());
+    let push_result = push(&store.lock().unwrap().lock().unwrap());
     match push_result {
         Err(err) => helpers::errorbox(ui, &err),
         Ok(_) => {
@@ -950,8 +951,7 @@ fn git_push(ui: &mut Cursive, store: PasswordStoreType) {
 }
 
 fn git_pull(ui: &mut Cursive, store: PasswordStoreType) {
-    let _ = pass::pull(&store.lock().unwrap().lock().unwrap())
-        .map_err(|err| helpers::errorbox(ui, &err));
+    let _ = pull(&store.lock().unwrap().lock().unwrap()).map_err(|err| helpers::errorbox(ui, &err));
     let _ = store
         .lock()
         .unwrap()
@@ -1084,7 +1084,7 @@ fn get_translation_catalog() -> gettext::Catalog {
     for preferred in locale.tags_for("messages") {
         for loc in &translation_locations {
             let langid_res: std::result::Result<LanguageIdentifier, _> =
-                format!("{}", preferred).parse();
+                format!("{preferred}").parse();
 
             if let Ok(langid) = langid_res {
                 let file = std::fs::File::open(format!("{}/{}.mo", loc, langid.language));
@@ -1227,8 +1227,7 @@ fn save_edit_config(
             .iter()
             .enumerate()
         {
-            if is_checkbox_checked(ui, &format!("edit_recipient_{}", i)) && r.fingerprint.is_some()
-            {
+            if is_checkbox_checked(ui, &format!("edit_recipient_{i}")) && r.fingerprint.is_some() {
                 recipients.push(r.clone());
             }
         }
@@ -1306,7 +1305,7 @@ fn save_new_config(
 
     let mut recipients = vec![];
     for (i, r) in all_recipients.iter().enumerate() {
-        if is_checkbox_checked(ui, &format!("new_recipient_{}", i)) {
+        if is_checkbox_checked(ui, &format!("new_recipient_{i}")) {
             recipients.push(r.clone());
         }
     }
@@ -1454,7 +1453,7 @@ fn edit_store_in_config(
         if store_recipients.contains(recipient) {
             c.set_checked(true);
         }
-        row.add_child(c.with_name(format!("new_recipient_{}", i)));
+        row.add_child(c.with_name(format!("new_recipient_{i}")));
         fields.add_child(row);
     }
 
@@ -1585,7 +1584,7 @@ fn add_store_to_config(
     for (i, recipient) in all_recipients.iter().enumerate() {
         let mut row = LinearLayout::horizontal();
         row.add_child(TextView::new(&recipient.name).fixed_size((30_usize, 1_usize)));
-        row.add_child(Checkbox::new().with_name(format!("new_recipient_{}", i)));
+        row.add_child(Checkbox::new().with_name(format!("new_recipient_{i}")));
         fields.add_child(row);
     }
     fields.add_child(pgp_fields);
@@ -1769,7 +1768,7 @@ fn main() {
         )
     };
     if let Err(err) = config_res {
-        eprintln!("Error {}", err);
+        eprintln!("Error {err}");
         process::exit(1);
     }
     let (config, config_file_location) = config_res.unwrap();
@@ -1780,7 +1779,7 @@ fn main() {
 
     let stores = get_stores(&config, &home);
     if let Err(err) = stores {
-        eprintln!("Error {}", err);
+        eprintln!("Error {err}");
         process::exit(1);
     }
     let stores: StoreListType = Arc::new(Mutex::new(
@@ -1801,7 +1800,7 @@ fn main() {
     }
     let res = store.lock().unwrap().lock().unwrap().reload_password_list();
     if let Err(err) = res {
-        eprintln!("Error {}", err);
+        eprintln!("Error {err}");
         process::exit(1);
     }
 
@@ -1897,7 +1896,7 @@ fn main() {
     if let Err(err) = ui.load_toml(&get_style(
         &store.lock().unwrap().lock().unwrap().get_style_file(),
     )) {
-        eprintln!("Error {:?}", err);
+        eprintln!("Error {err:?}");
         process::exit(1);
     }
     let search_box = EditView::new()
@@ -2010,7 +2009,7 @@ fn main() {
 
                 let res = to_store.lock().unwrap().reload_password_list();
                 if let Err(err) = res {
-                    eprintln!("Error {}", err);
+                    eprintln!("Error {err}");
                     process::exit(1);
                 }
             }
@@ -2018,7 +2017,7 @@ fn main() {
             if let Err(err) = ui.load_toml(&get_style(
                 &store.lock().unwrap().lock().unwrap().get_style_file(),
             )) {
-                eprintln!("Error {:?}", err);
+                eprintln!("Error {err:?}");
                 process::exit(1);
             }
 

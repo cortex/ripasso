@@ -172,29 +172,39 @@ impl From<std::time::SystemTimeError> for Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Self::Io(err) => write!(f, "{}", err),
-            Self::Git(err) => write!(f, "{}", err),
-            Self::Gpg(err) => write!(f, "{}", err),
-            Self::Utf8(err) => write!(f, "{}", err),
-            Self::Generic(err) => write!(f, "{}", err),
-            Self::GenericDyn(err) => write!(f, "{}", err),
-            Self::PathError(err) => write!(f, "{}", err),
-            Self::PatternError(err) => write!(f, "{}", err),
-            Self::GlobError(err) => write!(f, "{}", err),
-            Self::Utf8Error(err) => write!(f, "{}", err),
-            Self::RecipientNotInKeyRing(err) => write!(f, "{}", err),
-            Self::ConfigError(err) => write!(f, "{}", err),
-            Self::SerError(err) => write!(f, "{}", err),
-            Self::ReqwestError(err) => write!(f, "{}", err),
-            Self::AnyhowError(err) => write!(f, "{}", err),
+            Self::Io(err) => write!(f, "{err}"),
+            Self::Git(err) => write!(f, "{err}"),
+            Self::Gpg(err) => write!(f, "{err}"),
+            Self::Utf8(err) => write!(f, "{err}"),
+            Self::Generic(err) => write!(f, "{err}"),
+            Self::GenericDyn(err) => write!(f, "{err}"),
+            Self::PathError(err) => write!(f, "{err}"),
+            Self::PatternError(err) => write!(f, "{err}"),
+            Self::GlobError(err) => write!(f, "{err}"),
+            Self::Utf8Error(err) => write!(f, "{err}"),
+            Self::RecipientNotInKeyRing(err) => write!(f, "{err}"),
+            Self::ConfigError(err) => write!(f, "{err}"),
+            Self::SerError(err) => write!(f, "{err}"),
+            Self::ReqwestError(err) => write!(f, "{err}"),
+            Self::AnyhowError(err) => write!(f, "{err}"),
             Self::NoneError => write!(f, "NoneError"),
-            Self::HexError(err) => write!(f, "{}", err),
-            Self::FmtError(err) => write!(f, "{}", err),
+            Self::HexError(err) => write!(f, "{err}"),
+            Self::FmtError(err) => write!(f, "{err}"),
             Self::TotpUrlError(_err) => write!(f, "TOTP url error"),
-            Self::SystemTimeError(err) => write!(f, "{}", err),
+            Self::SystemTimeError(err) => write!(f, "{err}"),
         }
     }
 }
 
 /// Convenience type for Results
 pub type Result<T> = std::result::Result<T, Error>;
+
+pub fn to_result<T: chrono::TimeZone>(
+    res: chrono::LocalResult<chrono::DateTime<T>>,
+) -> Result<chrono::DateTime<T>> {
+    match res {
+        chrono::LocalResult::None => Err(Error::Generic("no timezone")),
+        chrono::LocalResult::Single(t) => Ok(t),
+        chrono::LocalResult::Ambiguous(_, _) => Err(Error::Generic("too many timezones")),
+    }
+}

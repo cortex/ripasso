@@ -24,12 +24,12 @@ use cursive::{
     views::{Dialog, EditView, LinearLayout, OnEventView, SelectView, TextView},
     Cursive, CursiveExt,
 };
-use ripasso::{crypto::CryptoImpl, pass};
+use ripasso::{crypto::CryptoImpl, git::init_git_repo, pass};
 
 use crate::helpers;
 
 fn create_git_repo(ui: &mut Cursive, password_store_dir: &Option<PathBuf>, home: &Option<PathBuf>) {
-    let init_res = pass::init_git_repo(&pass::password_dir(password_store_dir, home).unwrap());
+    let init_res = init_git_repo(&pass::password_dir(password_store_dir, home).unwrap());
     if init_res.is_err() {
         helpers::errorbox(ui, &init_res.err().unwrap());
     } else {
