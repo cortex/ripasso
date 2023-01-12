@@ -1,5 +1,6 @@
 use std::{env, fs::File, path::PathBuf};
 
+use git2::Repository;
 use hex::FromHex;
 use sequoia_openpgp::{
     cert::CertBuilder,
@@ -980,6 +981,7 @@ fn decrypt_secret_empty_file() -> Result<()> {
         passwords: vec![],
         style_file: None,
         crypto: Box::new(GpgMe {}),
+        user_home: None,
     };
 
     let res = pe.secret(&store);
@@ -1014,6 +1016,7 @@ fn decrypt_secret_missing_file() -> Result<()> {
         passwords: vec![],
         style_file: None,
         crypto: Box::new(GpgMe {}),
+        user_home: None,
     };
 
     let res = pe.secret(&store);
@@ -1058,6 +1061,7 @@ fn decrypt_secret() -> Result<()> {
         passwords: vec![],
         style_file: None,
         crypto: Box::new(crypto),
+        user_home: None,
     };
 
     let res = pe.secret(&store).unwrap();
@@ -1094,6 +1098,7 @@ fn decrypt_password_empty_file() -> Result<()> {
         passwords: vec![],
         style_file: None,
         crypto: Box::new(GpgMe {}),
+        user_home: None,
     };
 
     let res = pe.password(&store);
@@ -1135,6 +1140,7 @@ fn decrypt_password_multiline() -> Result<()> {
         passwords: vec![],
         style_file: None,
         crypto: Box::new(crypto),
+        user_home: None,
     };
 
     let res = pe.password(&store).unwrap();
@@ -1173,6 +1179,7 @@ fn mfa_setup(payload: String) -> Result<(tempfile::TempDir, PasswordEntry, Passw
         passwords: vec![],
         style_file: None,
         crypto: Box::new(crypto),
+        user_home: None,
     };
 
     Ok((dir, pe, store))
@@ -1255,6 +1262,7 @@ fn update() -> Result<()> {
         passwords: vec![],
         style_file: None,
         crypto: Box::new(crypto),
+        user_home: None,
     };
 
     let res = pe.update("new content".to_owned(), &store);
@@ -1446,32 +1454,6 @@ fn test_format_error() {
 }
 
 #[test]
-fn test_should_sign_true() -> Result<()> {
-    let dir = UnpackedDir::new("test_should_sign_true")?;
-
-    let repo = git2::Repository::open(dir.dir()).unwrap();
-
-    let result = should_sign(&repo);
-
-    assert_eq!(true, result);
-
-    Ok(())
-}
-
-#[test]
-fn test_should_sign_false() -> Result<()> {
-    let dir = UnpackedDir::new("test_should_sign_false")?;
-
-    let repo = git2::Repository::open(dir.dir()).unwrap();
-
-    let result = should_sign(&repo);
-
-    assert_eq!(false, result);
-
-    Ok(())
-}
-
-#[test]
 fn test_commit_unsigned() -> Result<()> {
     let td = tempdir()?;
     let repo = Repository::init(td.path())?;
@@ -1558,6 +1540,7 @@ fn test_move_and_commit_signed() -> Result<()> {
         passwords: vec![],
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
+        user_home: None,
     };
     let c_oid = move_and_commit(
         &store,
@@ -1607,6 +1590,7 @@ fn test_search() -> Result<()> {
         passwords: vec![p1, p2, p3],
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
+        user_home: None,
     };
     let store = store;
 
@@ -1635,6 +1619,7 @@ fn test_verify_git_signature() -> Result<()> {
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
+        user_home: None,
     };
 
     let result = verify_git_signature(&repo, &oid, &store);
@@ -1693,6 +1678,7 @@ fn test_remove_and_commit() -> Result<()> {
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
+        user_home: None,
     };
 
     let repo = git2::Repository::open(dir.dir()).unwrap();
@@ -1742,6 +1728,7 @@ fn test_verify_gpg_id_file_missing_sig_file() -> Result<()> {
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
+        user_home: None,
     };
 
     fs::write(
@@ -1774,6 +1761,7 @@ fn test_verify_gpg_id_file() -> Result<()> {
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
+        user_home: None,
     };
 
     fs::write(
@@ -1876,6 +1864,7 @@ fn test_verify_gpg_id_file_untrusted_key_in_keyring() {
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(Sequoia::new(td.path(), sofp).unwrap()),
+        user_home: None,
     };
 
     let result = store.verify_gpg_id_file();
@@ -1899,6 +1888,7 @@ fn test_new_password_file() -> Result<()> {
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
+        user_home: None,
     };
 
     fs::write(
@@ -1934,6 +1924,7 @@ fn test_new_password_file_in_git_repo() -> Result<()> {
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new().with_encrypt_string_return(vec![32, 32, 32, 32])),
+        user_home: None,
     };
 
     fs::write(
@@ -1973,6 +1964,7 @@ fn test_new_password_file_encryption_failure() -> Result<()> {
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new().with_encrypt_error("unit test error".to_owned())),
+        user_home: None,
     };
 
     fs::write(
@@ -2009,6 +2001,7 @@ fn test_new_password_file_twice() -> Result<()> {
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new().with_encrypt_string_return(vec![32, 32, 32, 32])),
+        user_home: None,
     };
 
     fs::write(
@@ -2056,6 +2049,7 @@ fn test_new_password_file_outside_pass_dir() -> Result<()> {
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
+        user_home: None,
     };
 
     fs::write(
@@ -2103,6 +2097,7 @@ fn all_recipients_from_stores_plain() -> Result<()> {
         passwords: vec![],
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
+        user_home: None,
     };
 
     let result = all_recipients_from_stores(Arc::new(Mutex::new(vec![Arc::new(Mutex::new(s1))])))?;
