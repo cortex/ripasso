@@ -84,7 +84,7 @@ impl UI {
         None
     }
     pub fn select(&mut self, i: i32) -> Option<&QVariant> {
-        println!("select: {}", i);
+        println!("select: {i}");
         if !self.current_passwords.is_empty() {
             // Select notihng if passwords list is empty
             let pass = self.get_password(i);
@@ -119,6 +119,7 @@ pub UI as QUI{
 
 // The currently shown password
 pub struct PasswordView;
+
 Q_OBJECT!(
 pub PasswordView as QPasswordView{
      signals:

@@ -60,8 +60,7 @@ pub fn parse_signing_keys(
         let key_res = crypto.get_key(&trimmed);
         if let Some(err) = key_res.err() {
             return Err(Error::GenericDyn(format!(
-                "signing key not found in keyring, error: {}",
-                err
+                "signing key not found in keyring, error: {err}",
             )));
         }
 
