@@ -87,19 +87,19 @@ pub enum VerificationError {
 
 impl From<std::io::Error> for VerificationError {
     fn from(err: std::io::Error) -> Self {
-        InfrastructureError(format!("{:?}", err))
+        InfrastructureError(format!("{err:?}"))
     }
 }
 
 impl From<crate::error::Error> for VerificationError {
     fn from(err: crate::error::Error) -> Self {
-        InfrastructureError(format!("{:?}", err))
+        InfrastructureError(format!("{err:?}"))
     }
 }
 
 impl From<anyhow::Error> for VerificationError {
     fn from(err: anyhow::Error) -> Self {
-        InfrastructureError(format!("{:?}", err))
+        InfrastructureError(format!("{err:?}"))
     }
 }
 
@@ -302,21 +302,21 @@ impl Crypto for GpgMe {
         valid_signing_keys: &[[u8; 20]],
     ) -> std::result::Result<SignatureStatus, VerificationError> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
-            .map_err(|e| VerificationError::InfrastructureError(format!("{:?}", e)))?;
+            .map_err(|e| VerificationError::InfrastructureError(format!("{e:?}")))?;
 
         let result = ctx
             .verify_detached(sig, data)
-            .map_err(|e| VerificationError::InfrastructureError(format!("{:?}", e)))?;
+            .map_err(|e| VerificationError::InfrastructureError(format!("{e:?}")))?;
 
         let mut sig_sum = None;
 
         for (i, s) in result.signatures().enumerate() {
             let fpr = s
                 .fingerprint()
-                .map_err(|e| VerificationError::InfrastructureError(format!("{:?}", e)))?;
+                .map_err(|e| VerificationError::InfrastructureError(format!("{e:?}")))?;
 
             let fpr = <[u8; 20]>::from_hex(fpr)
-                .map_err(|e| VerificationError::InfrastructureError(format!("{:?}", e)))?;
+                .map_err(|e| VerificationError::InfrastructureError(format!("{e:?}")))?;
 
             if !valid_signing_keys.contains(&fpr) {
                 return Err(VerificationError::SignatureFromWrongRecipient);
@@ -364,7 +364,7 @@ impl Crypto for GpgMe {
 
         let result = ctx.import(key)?;
 
-        let result_str = format!("Import result: {:?}\n\n", result);
+        let result_str = format!("Import result: {result:?}\n\n");
 
         Ok(result_str)
     }
@@ -407,18 +407,12 @@ impl Crypto for GpgMe {
 /// Tries to download keys from keys.openpgp.org
 fn download_keys(recipient_key_id: &str) -> Result<String> {
     let url = match recipient_key_id.len() {
-        16 => format!(
-            "https://keys.openpgp.org/vks/v1/by-keyid/{}",
-            recipient_key_id
-        ),
+        16 => format!("https://keys.openpgp.org/vks/v1/by-keyid/{recipient_key_id}"),
         18 if recipient_key_id.starts_with("0x") => format!(
             "https://keys.openpgp.org/vks/v1/by-keyid/{}",
             &recipient_key_id[2..]
         ),
-        40 => format!(
-            "https://keys.openpgp.org/vks/v1/by-fingerprint/{}",
-            recipient_key_id
-        ),
+        40 => format!("https://keys.openpgp.org/vks/v1/by-fingerprint/{recipient_key_id}"),
         42 if recipient_key_id.starts_with("0x") => format!(
             "https://keys.openpgp.org/vks/v1/by-fingerprint/{}",
             &recipient_key_id[2..]
@@ -891,7 +885,7 @@ impl Crypto for Sequoia {
             write!(ret, "{}: ", &recipient.key_id)?;
             match res {
                 Ok(s) => ret.push_str(&s),
-                Err(err) => write!(ret, "{:?}", err)?,
+                Err(err) => write!(ret, "{err:?}")?,
             }
             ret.push('\n');
         }
@@ -916,7 +910,7 @@ impl Crypto for Sequoia {
             }
         }
 
-        Err(Error::GenericDyn(format!("no key found for {}", key_id)))
+        Err(Error::GenericDyn(format!("no key found for {key_id}")))
     }
 
     fn get_all_trust_items(&self) -> Result<HashMap<[u8; 20], OwnerTrustLevel>> {

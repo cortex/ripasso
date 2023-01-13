@@ -269,13 +269,13 @@ fn open_dialog(password: &pass::PasswordEntry, store: PasswordStoreType) -> pass
                 arg[0].get::<Dialog>().unwrap().close();
             }
             _ => {
-                eprintln!("unknown signal: {}", signal);
+                eprintln!("unknown signal: {signal}");
             }
         }
         None
     });
     if let Err(err) = c_res {
-        eprintln!("{}", err);
+        eprintln!("{err}");
         process::exit(0x01);
     }
     dialog.show_all();
@@ -325,7 +325,7 @@ fn file_history_dialog(
         None
     });
     if let Err(err) = c_res {
-        eprintln!("{}", err);
+        eprintln!("{err}");
         process::exit(0x01);
     }
 
@@ -386,7 +386,7 @@ fn error_box(err: pass::Error) {
         DialogFlags::empty(),
         MessageType::Info,
         ButtonsType::Close,
-        &format!("{}", err),
+        &format!("{err}"),
     );
 
     let c_res = dialog.try_connect("response", true, move |arg| {
@@ -394,7 +394,7 @@ fn error_box(err: pass::Error) {
         None
     });
     if let Err(err) = c_res {
-        eprintln!("{}", err);
+        eprintln!("{err}");
         process::exit(0x01);
     }
     dialog.run();
@@ -429,12 +429,12 @@ fn main() {
 
     let reload_res = store.lock().unwrap().reload_password_list();
     if let Err(e) = reload_res {
-        eprintln!("Error: {}", e);
+        eprintln!("Error: {e}");
         process::exit(0x01);
     }
 
     if let Err(e) = gtk::init() {
-        eprintln!("Error: {}", e);
+        eprintln!("Error: {e}");
         process::exit(0x01);
     }
 
