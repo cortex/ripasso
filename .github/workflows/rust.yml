@@ -20,7 +20,7 @@ jobs:
           command: check
 
   test:
-    name: Test Suite
+    name: Test Suite on Ubuntu
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -35,6 +35,25 @@ jobs:
         with:
           command: test
           args: --all
+
+  test-macos:
+    name: Test Suite on MacOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Install dependencies
+        run: |
+          brew update || true
+          brew install gpgme nettle || true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -p ripasso-cursive
 
   fmt:
     name: Rustfmt
