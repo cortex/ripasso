@@ -883,7 +883,7 @@ impl PasswordEntry {
                 }
                 end_pos
             };
-            let totp = TOTP::<&str>::from_url(&secret[start_pos..end_pos])?;
+            let totp = TOTP::from_url(&secret[start_pos..end_pos])?;
             Ok(totp.generate_current()?)
         } else {
             Err(Error::Generic("No otpauth:// url in secret"))
