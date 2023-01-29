@@ -15,7 +15,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use clipboard::ClipboardProvider;
+use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use cursive::{
     event::Key,
     views::{Checkbox, Dialog, EditView, OnEventView, RadioButton, TextView},
@@ -23,7 +23,6 @@ use cursive::{
 };
 use pass::Result;
 use ripasso::{crypto::CryptoImpl, pass};
-use wl_clipboard_rs::copy::{MimeType, Options, Source};
 
 /// Displays an error in a cursive dialog
 pub fn errorbox(ui: &mut Cursive, err: &pass::Error) {
@@ -50,15 +49,9 @@ pub fn errorbox(ui: &mut Cursive, err: &pass::Error) {
 /// It first tries to copy to a wayland clipboard, and if that's not availible due to that the
 /// user runs x11/mac/windows we instead try the more generic clipboard crate.
 pub fn set_clipboard(content: String) -> Result<()> {
-    let opts = Options::new();
-    let result = opts.copy(
-        Source::Bytes(content.clone().into_bytes().into()),
-        MimeType::Autodetect,
-    );
-    if result.is_err() {
-        let mut ctx = clipboard::ClipboardContext::new()?;
-        ctx.set_contents(content)?;
-    }
+    let mut ctx = ClipboardContext::new()?;
+    ctx.set_contents(content)?;
+
     Ok(())
 }
 
