@@ -1169,6 +1169,19 @@ fn get_stores(config: &config::Config, home: &Option<PathBuf>) -> Result<Vec<Pas
                 )?);
             }
         }
+    } else if final_stores.len() == 0 && home.is_some() {
+        let default_path = home.clone().unwrap().join(".password_store");
+        if default_path.exists() {
+            final_stores.push(PasswordStore::new(
+                "default",
+                &Some(default_path),
+                &None,
+                home,
+                &None,
+                &CryptoImpl::GpgMe,
+                &None,
+            )?);
+        }
     }
 
     Ok(final_stores)
@@ -1176,7 +1189,7 @@ fn get_stores(config: &config::Config, home: &Option<PathBuf>) -> Result<Vec<Pas
 
 /// Validates the config for password stores.
 /// Returns a list of paths that the new store wizard should be run for
-fn validate_stores_config(settings: &config::Config) -> Vec<PathBuf> {
+fn validate_stores_config(settings: &config::Config, home: &Option<PathBuf>) -> Vec<PathBuf> {
     let mut incomplete_stores: Vec<PathBuf> = vec![];
 
     let stores_res = settings.get("stores");
@@ -1202,6 +1215,8 @@ fn validate_stores_config(settings: &config::Config) -> Vec<PathBuf> {
                 }
             }
         }
+    } else if incomplete_stores.len() == 0 && home.is_some() {
+        incomplete_stores.push(home.clone().unwrap().join(".password_store"));
     }
 
     incomplete_stores
@@ -1757,7 +1772,7 @@ fn main() {
         let password_store_signing_key = std::env::var("PASSWORD_STORE_SIGNING_KEY").ok();
         let xdg_config_home = match std::env::var("XDG_CONFIG_HOME") {
             Err(_) => None,
-            Ok(home_path) => Some(PathBuf::from(home_path)),
+            Ok(config_home_path) => Some(PathBuf::from(config_home_path)),
         };
 
         pass::read_config(
@@ -1773,7 +1788,7 @@ fn main() {
     }
     let (config, config_file_location) = config_res.unwrap();
 
-    for path in validate_stores_config(&config) {
+    for path in validate_stores_config(&config, &home) {
         wizard::show_init_menu(&Some(path), &home);
     }
 
@@ -1782,6 +1797,7 @@ fn main() {
         eprintln!("Error {err}");
         process::exit(1);
     }
+
     let stores: StoreListType = Arc::new(Mutex::new(
         stores
             .unwrap()
@@ -1789,6 +1805,19 @@ fn main() {
             .map(|s| Arc::new(Mutex::new(s)))
             .collect(),
     ));
+
+    if !config_file_location.exists() && stores.lock().unwrap().len() == 1 {
+        let mut config_file_dir = config_file_location.clone();
+        config_file_dir.pop();
+        if let Err(err) = std::fs::create_dir_all(config_file_dir) {
+            eprintln!("Error {err}");
+            process::exit(1);
+        }
+        if let Err(err) = pass::save_config(stores.clone(), &config_file_location) {
+            eprintln!("Error {err}");
+            process::exit(1);
+        }
+    }
 
     let store: PasswordStoreType = Arc::new(Mutex::new(stores.lock().unwrap()[0].clone()));
     #[allow(clippy::significant_drop_in_scrutinee)]
