@@ -24,7 +24,7 @@ jobs:
         with:
           command: check
 
-  test:
+  ubuntutest:
     name: Test Suite on Ubuntu
     runs-on: ubuntu-latest
     steps:
@@ -41,7 +41,7 @@ jobs:
           command: test
           args: --all
 
-  test-macos:
+  macostest:
     name: Test Suite on MacOS
     runs-on: macos-latest
     steps:
