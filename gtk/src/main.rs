@@ -23,7 +23,7 @@ use std::{
     time::Duration,
 };
 
-use clipboard::{ClipboardContext, ClipboardProvider};
+use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use gdk::{keys::constants, ModifierType};
 use glib::{Cast, ObjectExt, StaticType};
 use gtk::{
@@ -122,7 +122,7 @@ fn setup_menu_copy(
 
         let passwords = SHOWN_PASSWORDS.lock().unwrap();
 
-        let mut ctx = clipboard::ClipboardContext::new().unwrap();
+        let mut ctx = cli_clipboard::ClipboardContext::new().unwrap();
 
         let store = store.lock().unwrap();
         let password_res = passwords[path[0].indices()[0] as usize].password(&store);
@@ -168,7 +168,7 @@ fn setup_menu_copy_name(builder: &Builder, password_list: &TreeView, status_bar:
 
         let passwords = SHOWN_PASSWORDS.lock().unwrap();
 
-        let mut ctx = clipboard::ClipboardContext::new().unwrap();
+        let mut ctx = cli_clipboard::ClipboardContext::new().unwrap();
 
         let name_res = passwords[path[0].indices()[0] as usize]
             .name
@@ -458,7 +458,7 @@ fn main() {
     password_list.connect_row_activated(move |_, path, _column| {
         let passwords = SHOWN_PASSWORDS.lock().unwrap();
 
-        let mut ctx = clipboard::ClipboardContext::new().unwrap();
+        let mut ctx = cli_clipboard::ClipboardContext::new().unwrap();
 
         let password_res = {
             let store = store2.lock().unwrap();
