@@ -21,7 +21,7 @@ use std::{
     time::Duration,
 };
 
-use clipboard::{ClipboardContext, ClipboardProvider};
+use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use pass::PasswordEntry;
 use qml::*;
 use ripasso::{crypto::CryptoImpl, pass};

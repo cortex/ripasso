@@ -1,0 +1,5 @@
+[advisories]
+### motivations:
+### RUSTSEC-2022-0040: We don't use the reexported OwningHandle type in cursive
+### see https://github.com/gyscos/cursive/issues/678
+ignore = ["RUSTSEC-2022-0040"]
