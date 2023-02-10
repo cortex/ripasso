@@ -5,6 +5,6 @@ authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>"]
 edition = '2021'
 
 [dependencies]
-clipboard = "0.5"
+cli-clipboard = "0.4.0"
 ripasso = { path = "../", version = "0.7.0-alpha" }
 qml = { git = "https://github.com/White-Oak/qml-rust" }
