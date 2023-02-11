@@ -1073,7 +1073,7 @@ fn do_delete_last_word(ui: &mut Cursive, store: PasswordStoreType) {
 fn get_translation_catalog() -> gettext::Catalog {
     let locale = locale_config::Locale::current();
 
-    let mut translation_locations = vec!["/usr/share/ripasso"];
+    let mut translation_locations = vec![];
     if let Some(path) = option_env!("TRANSLATION_INPUT_PATH") {
         translation_locations.insert(0, path);
     }
@@ -1092,6 +1092,22 @@ fn get_translation_catalog() -> gettext::Catalog {
                     if let Ok(catalog) = gettext::Catalog::parse(file) {
                         return catalog;
                     }
+                }
+            }
+        }
+    }
+
+    for preferred in locale.tags_for("messages") {
+        let langid_res: std::result::Result<LanguageIdentifier, _> = format!("{preferred}").parse();
+
+        if let Ok(langid) = langid_res {
+            let file = std::fs::File::open(format!(
+                "/usr/share/locale/{}/LC_MESSAGES/ripasso-cursive.mo",
+                langid.language
+            ));
+            if let Ok(file) = file {
+                if let Ok(catalog) = gettext::Catalog::parse(file) {
+                    return catalog;
                 }
             }
         }
