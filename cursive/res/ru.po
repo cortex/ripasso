@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2022-11-09 17:54+0100\n"
-"PO-Revision-Date: 2023-02-09 15:07+0100\n"
+"PO-Revision-Date: 2023-02-16 14:28+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: ru_RU\n"
@@ -71,19 +71,16 @@ msgid "Close"
 msgstr "Закрыть"
 
 #: cursive/src/main.rs:209
-#, fuzzy
 msgid "Copied MFA code to copy buffer"
-msgstr "Скопированный код MFA для копирования буфера"
+msgstr "Скопированный код MFA успешно копирован в буфер"
 
 #: cursive/src/main.rs:234
-#, fuzzy
 msgid "Copied file name to copy buffer"
-msgstr "Копирование кода MFA в буфер"
+msgstr "Скопированное имя файла успешно копирован в буфер"
 
 #: cursive/src/main.rs:158 cursive/src/main.rs:187
-#, fuzzy
 msgid "Copied password to copy buffer for 40 seconds"
-msgstr "Копирование пароля MFA в буфер на 40 секунд"
+msgstr "Скопирован пароль в буфер на 40 секунд"
 
 #: cursive/src/main.rs:1944
 msgid "Copy (ctrl-y)"
@@ -103,7 +100,7 @@ msgstr "Создать"
 
 #: cursive/src/main.rs:1961
 msgid "Create (ins) "
-msgstr "Создать (ins)"
+msgstr "Создать (ins) "
 
 #: cursive/src/main.rs:553
 msgid "Created new password"
@@ -119,7 +116,7 @@ msgstr "Удалить члена команды из хранилища пар�
 
 #: cursive/src/main.rs:1391 cursive/src/main.rs:1548
 msgid "Directory: "
-msgstr "Каталог:"
+msgstr "Каталог: "
 
 #: cursive/src/main.rs:1024
 msgid "Download"
@@ -142,7 +139,7 @@ msgstr "Изменить конфигурацию хранилища"
 
 #: cursive/src/main.rs:1402 cursive/src/main.rs:1558
 msgid "Enforce signing of .gpg-id file: "
-msgstr "Принудительно подписать файл .gpg-id:"
+msgstr "Принудительно подписать файл .gpg-id: "
 
 #: cursive/src/helpers.rs:40
 msgid "Error"
@@ -150,7 +147,7 @@ msgstr "Ошибка"
 
 #: cursive/src/main.rs:1935 cursive/src/wizard.rs:135
 msgid "F1: Menu | "
-msgstr "F1: Меню |"
+msgstr "F1: Меню | "
 
 #: cursive/src/main.rs:327
 msgid "File History"
@@ -161,18 +158,16 @@ msgid "File History (ctrl-h)"
 msgstr "История файла"
 
 #: cursive/src/main.rs:804
-#, fuzzy
 msgid "Full"
-msgstr "Полное хранилище"
+msgstr "Полное доверие"
 
 #: cursive/src/main.rs:1044
-#, fuzzy
 msgid "GPG Download"
-msgstr "Загрузка GPG"
+msgstr "Загрузить GPG"
 
 #: cursive/src/main.rs:759
 msgid "GPG Key ID: "
-msgstr "Идентификатор ключа GPG:"
+msgstr "Идентификатор ключа GPG: "
 
 #: cursive/src/main.rs:402 cursive/src/main.rs:640
 msgid "Generate"
@@ -183,14 +178,12 @@ msgid "Git Init"
 msgstr "Git-инициализация"
 
 #: cursive/src/main.rs:1978
-#, fuzzy
 msgid "Git Pull (ctrl-f)"
-msgstr "Git Pull (ctrl-f)"
+msgstr "Git Скачивали (ctrl-f)"
 
 #: cursive/src/main.rs:1982
-#, fuzzy
 msgid "Git Push (ctrl-g)"
-msgstr "Git Push (ctrl-g)"
+msgstr "Git Загрузка (ctrl-g)"
 
 #: cursive/src/main.rs:986
 msgid "Import"
@@ -230,11 +223,11 @@ msgstr "Ручной импорт GPG"
 
 #: cursive/src/main.rs:805
 msgid "Marginal"
-msgstr ""
+msgstr "Частичное доверие"
 
 #: cursive/src/main.rs:1380 cursive/src/main.rs:1538
 msgid "Name: "
-msgstr "Имя:"
+msgstr "Имя: "
 
 #: cursive/src/main.rs:806
 msgid "Never"
@@ -242,7 +235,7 @@ msgstr "Никогда"
 
 #: cursive/src/main.rs:487
 msgid "New file name: "
-msgstr "Новое имя файла:"
+msgstr "Новое имя файла: "
 
 #: cursive/src/main.rs:1603
 msgid "New store config"
@@ -262,7 +255,7 @@ msgstr "Не может быть использован"
 
 #: cursive/src/main.rs:627
 msgid "Note: "
-msgstr "Примечание:"
+msgstr "Примечание: "
 
 #: cursive/src/helpers.rs:39 cursive/src/main.rs:328 cursive/src/main.rs:859
 #: cursive/src/main.rs:999 cursive/src/main.rs:1033 cursive/src/main.rs:1664
@@ -271,7 +264,7 @@ msgstr "Окей"
 
 #: cursive/src/main.rs:477
 msgid "Old file name: "
-msgstr "Старое имя файла:"
+msgstr "Старое имя файла: "
 
 #: cursive/src/main.rs:1953
 msgid "Open (ctrl-o)"
@@ -283,11 +276,11 @@ msgstr "Операции"
 
 #: cursive/src/main.rs:1427
 msgid "Own key fingerprint: "
-msgstr "Отпечаток собственного ключа:"
+msgstr "Отпечаток собственного ключа: "
 
 #: cursive/src/main.rs:1413 cursive/src/main.rs:1565
 msgid "PGP Implementation: "
-msgstr "Имплементрация PGP:"
+msgstr "Имплементрация PGP: "
 
 #: cursive/src/main.rs:269
 msgid "Password deleted"
@@ -295,11 +288,11 @@ msgstr "Пароль удален"
 
 #: cursive/src/main.rs:616
 msgid "Password: "
-msgstr "Пароль:"
+msgstr "Пароль: "
 
 #: cursive/src/main.rs:606
 msgid "Path: "
-msgstr "Путь:"
+msgstr "Путь: "
 
 #: cursive/src/main.rs:1987
 msgid "Pull PGP Certificates"
@@ -344,7 +337,7 @@ msgstr "Сохранить"
 
 #: cursive/src/main.rs:1447 cursive/src/main.rs:1583
 msgid "Store Members: "
-msgstr "Члены хранилища:"
+msgstr "Члены хранилища: "
 
 #: cursive/src/main.rs:2035
 msgid "Stores"
@@ -374,7 +367,7 @@ msgstr ""
 
 #: cursive/src/main.rs:803
 msgid "Ultimate"
-msgstr ""
+msgstr "Максимальное доверие"
 
 #: cursive/src/wizard.rs:70
 msgid "Unable to write file"
@@ -443,7 +436,7 @@ msgstr ""
 
 #: cursive/src/main.rs:1668
 msgid "ctrl-e: Edit | "
-msgstr "ctrl-e: Редактировать |"
+msgstr "ctrl-e: Редактировать | "
 
 #: cursive/src/main.rs:864 cursive/src/main.rs:1670
 msgid "del: Remove"
