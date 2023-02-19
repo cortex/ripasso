@@ -1877,7 +1877,12 @@ fn test_verify_gpg_id_files_untrusted_key_in_keyring() {
         .generate()
         .unwrap();
 
-    let keys_dir = td.path().join("local").join("share").join("ripasso").join("keys");
+    let keys_dir = td
+        .path()
+        .join("local")
+        .join("share")
+        .join("ripasso")
+        .join("keys");
     std::fs::create_dir_all(&keys_dir).unwrap();
     let password_store_dir = td.path().join(".password_store");
     std::fs::create_dir_all(&password_store_dir).unwrap();

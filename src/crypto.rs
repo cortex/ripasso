@@ -658,7 +658,7 @@ impl Sequoia {
     pub fn from_values(
         user_key_id: [u8; 20],
         key_ring: HashMap<[u8; 20], Arc<sequoia_openpgp::Cert>>,
-        user_home: &Path
+        user_home: &Path,
     ) -> Self {
         Self {
             user_key_id,

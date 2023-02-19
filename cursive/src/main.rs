@@ -678,8 +678,8 @@ fn delete_recipient(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
 
     let store = store.lock().unwrap();
     let store = store.lock().unwrap();
-    let remove_recipient_res = store.remove_recipient(&recipient, &path);
-    if let Ok(_) = remove_recipient_res {
+    let remove_recipient_res = store.remove_recipient(recipient, path);
+    if remove_recipient_res.is_ok() {
         let delete_id = l.selected_id().unwrap();
         l.remove_item(delete_id);
         ui.call_on_name("status_bar", |l: &mut TextView| {
@@ -744,7 +744,9 @@ fn add_recipient(ui: &mut Cursive, store: PasswordStoreType, config_path: &Path)
                             }
 
                             let mut recipients_view = ui
-                                .find_name::<SelectView<Option<(PathBuf, pass::Recipient)>>>("recipients")
+                                .find_name::<SelectView<Option<(PathBuf, pass::Recipient)>>>(
+                                    "recipients",
+                                )
                                 .unwrap();
                             recipients_view.add_item(
                                 render_recipient_label(&recipient, max_width_key, max_width_name),
@@ -879,7 +881,12 @@ fn view_recipients(ui: &mut Cursive, store: PasswordStoreType, config_path: &Pat
             let mut path_to_recipients: HashMap<PathBuf, Vec<Recipient>> = HashMap::new();
 
             for dir in sub_dirs {
-                let recipients_res = store.lock().unwrap().lock().unwrap().recipients_for_path(&dir);
+                let recipients_res = store
+                    .lock()
+                    .unwrap()
+                    .lock()
+                    .unwrap()
+                    .recipients_for_path(&dir);
                 if let Err(err) = recipients_res {
                     helpers::errorbox(ui, &err);
                     return;
@@ -888,7 +895,7 @@ fn view_recipients(ui: &mut Cursive, store: PasswordStoreType, config_path: &Pat
                 path_to_recipients.insert(dir.clone(), recipients_res.unwrap());
             }
 
-            view_recipients_for_many_dirs(ui, store.clone(), path_to_recipients, &config_path);
+            view_recipients_for_many_dirs(ui, store, path_to_recipients, config_path);
         }
         std::cmp::Ordering::Equal => {
             view_recipients_for_dir(ui, store, sub_dirs[0].clone(), config_path);
@@ -909,9 +916,10 @@ fn view_recipients_for_many_dirs(
         .h_align(cursive::align::HAlign::Left)
         .with_name("recipients");
 
-
     for (path, recipients) in &path_to_recipients {
-        recipients_view.get_mut().add_item(path.to_string_lossy(), None);
+        recipients_view
+            .get_mut()
+            .add_item(path.to_string_lossy(), None);
         let mut max_width_key = 0;
         let mut max_width_name = 0;
         for recipient in recipients {
@@ -924,7 +932,7 @@ fn view_recipients_for_many_dirs(
         }
         for recipient in recipients {
             recipients_view.get_mut().add_item(
-                render_recipient_label(&recipient, max_width_key, max_width_name),
+                render_recipient_label(recipient, max_width_key, max_width_name),
                 Some((path.to_path_buf(), recipient.clone())),
             );
         }
