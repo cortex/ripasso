@@ -11,6 +11,7 @@ use base64::{
 use chrono::{DateTime, Local, TimeZone};
 use git2::{cert::Cert, CertificateCheckStatus, Oid, Repository};
 use hmac::Mac;
+use sha2::{Digest, Sha256};
 
 use crate::{
     crypto::{Crypto, FindSigningFingerprintStrategy, VerificationError},
@@ -736,7 +737,11 @@ fn check_ssh_known_hosts(
     // Older versions of OpenSSH (before 6.8, March 2015) showed MD5
     // fingerprints (see FingerprintHash ssh config option). Here we only
     // support SHA256.
-    let remote_fingerprint = sha256::digest(remote_host_key);
+    let remote_fingerprint = {
+        let mut hasher = Sha256::new();
+        hasher.update(remote_host_key);
+        hasher.finalize()
+    };
     let remote_fingerprint = STANDARD_NO_PAD.encode(remote_fingerprint);
     let remote_host_key = STANDARD.encode(remote_host_key);
     // FIXME: Ideally the error message should include the IP address of the

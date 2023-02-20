@@ -15,15 +15,15 @@ chrono = { version = "0.4", default_features = false, features = ["clock"] }
 git2 = "0.16.1"
 rand = "0.8.5"
 whoami = "1.3.0"
-toml = "0.5.11"
+toml = "0.7.2"
 reqwest = { version = "0.11.14", features = ["blocking"] }
 hex = "0.4.3"
 totp-rs = { version = "4.2.0", features = ["otpauth"] }
 sequoia-openpgp = "1.13.0"
-anyhow = "1.0.68"
+anyhow = "1.0.69"
 sequoia-ipc = "0.30.1"
 base64 = "0.21.0"
-sha256 = "1.1.1"
+sha2 = "0.10.6"
 sha1 = "0.10.5"
 hmac = "0.12.1"
 
