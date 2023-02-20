@@ -2,6 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use hex::FromHex;
 use sequoia_openpgp::{cert::CertBuilder, parse::Parse, serialize::Serialize, Cert};
+use tempfile::tempdir;
 
 use crate::{
     crypto::{slice_to_20_bytes, Crypto, CryptoImpl, Sequoia},
@@ -48,7 +49,8 @@ pub fn slice_to_20_bytes_success() {
 
 #[test]
 pub fn new_one_cert() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempdir().unwrap();
+    let user_home = tempdir().unwrap();
 
     let (cert, _) = CertBuilder::new()
         .add_userid("someone@example.org")
@@ -65,7 +67,7 @@ pub fn new_one_cert() {
 
     cert.serialize(&mut file).unwrap();
 
-    let sequoia = Sequoia::new(&dir.path(), f).unwrap();
+    let sequoia = Sequoia::new(&dir.path(), f, user_home.path()).unwrap();
 
     assert_eq!(1, sequoia.key_ring.len());
     assert_eq!(
@@ -148,9 +150,12 @@ fn fingerprint() -> [u8; 20] {
 
 #[test]
 pub fn verify_sign_sequoia_git_commit() {
+    let user_home = tempdir().unwrap();
+
     let mut c = Sequoia {
         user_key_id: fingerprint(),
         key_ring: HashMap::new(),
+        user_home: user_home.path().to_path_buf(),
     };
     c.key_ring.insert(fingerprint(), cert());
 
@@ -177,9 +182,12 @@ pub fn verify_sign_sequoia_git_commit() {
 
 #[test]
 pub fn verify_sign_sequoia_git_commit_invalid_signing_key() {
+    let user_home = tempdir().unwrap();
+
     let mut c = Sequoia {
         user_key_id: fingerprint(),
         key_ring: HashMap::new(),
+        user_home: user_home.path().to_path_buf(),
     };
     c.key_ring.insert(fingerprint(), cert());
 
@@ -206,6 +214,8 @@ pub fn verify_sign_sequoia_git_commit_invalid_signing_key() {
 
 #[test]
 pub fn sign_string_sequoia() {
+    let user_home = tempdir().unwrap();
+
     let (cert, _) = CertBuilder::new()
         .add_userid("someone@example.org")
         .add_signing_subkey()
@@ -217,6 +227,7 @@ pub fn sign_string_sequoia() {
     let mut c = Sequoia {
         user_key_id: f,
         key_ring: HashMap::new(),
+        user_home: user_home.path().to_path_buf(),
     };
 
     c.key_ring.insert(f, Arc::new(cert));
@@ -234,6 +245,8 @@ pub fn sign_string_sequoia() {
 
 #[test]
 pub fn sign_then_verify_sequoia_with_signing_keys() {
+    let user_home = tempdir().unwrap();
+
     let (cert, _) = CertBuilder::new()
         .add_userid("someone@example.org")
         .add_signing_subkey()
@@ -245,6 +258,7 @@ pub fn sign_then_verify_sequoia_with_signing_keys() {
     let mut c = Sequoia {
         user_key_id: f,
         key_ring: HashMap::new(),
+        user_home: user_home.path().to_path_buf(),
     };
 
     c.key_ring.insert(f, Arc::new(cert));
@@ -264,6 +278,8 @@ pub fn sign_then_verify_sequoia_with_signing_keys() {
 
 #[test]
 pub fn sign_then_verify_sequoia_without_signing_keys() {
+    let user_home = tempdir().unwrap();
+
     let (cert, _) = CertBuilder::new()
         .add_userid("someone@example.org")
         .add_signing_subkey()
@@ -275,6 +291,7 @@ pub fn sign_then_verify_sequoia_without_signing_keys() {
     let mut c = Sequoia {
         user_key_id: f,
         key_ring: HashMap::new(),
+        user_home: user_home.path().to_path_buf(),
     };
 
     c.key_ring.insert(f, Arc::new(cert));
@@ -294,6 +311,8 @@ pub fn sign_then_verify_sequoia_without_signing_keys() {
 
 #[test]
 pub fn encrypt_then_decrypt_sequoia() {
+    let user_home = tempdir().unwrap();
+
     let (cert, _) = CertBuilder::new()
         .add_userid("someone@example.org")
         .add_transport_encryption_subkey()
@@ -305,6 +324,7 @@ pub fn encrypt_then_decrypt_sequoia() {
     let mut c = Sequoia {
         user_key_id: f,
         key_ring: HashMap::new(),
+        user_home: user_home.path().to_path_buf(),
     };
 
     c.key_ring.insert(f, Arc::new(cert));

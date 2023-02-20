@@ -373,7 +373,10 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) {
     let password = {
         match password_entry.secret(&store.lock().unwrap().lock().unwrap()) {
             Ok(p) => p,
-            Err(_e) => return,
+            Err(err) => {
+                helpers::errorbox(ui, &err);
+                return;
+            }
         }
     };
     let d = Dialog::around(TextArea::new().content(password).with_name("editbox"))
@@ -660,28 +663,31 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
     ui.add_layer(ev);
 }
 
-fn delete_recipient(ui: &mut Cursive, store: PasswordStoreType) {
+fn delete_recipient(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
     let mut l = ui
-        .find_name::<SelectView<pass::Recipient>>("recipients")
+        .find_name::<SelectView<Option<(PathBuf, pass::Recipient)>>>("recipients")
         .unwrap();
     let sel = l.selection();
 
-    if sel.is_none() {
-        return;
+    if sel.is_none() || sel.as_ref().unwrap().is_none() {
+        return Err(crate::pass::Error::Generic("Selection is empty"));
     }
+
+    let binding = sel.unwrap();
+    let (path, recipient): &(PathBuf, Recipient) = binding.as_ref().as_ref().unwrap();
 
     let store = store.lock().unwrap();
     let store = store.lock().unwrap();
-    let remove_recipient_res = store.remove_recipient(&sel.unwrap());
-    match remove_recipient_res {
-        Err(err) => helpers::errorbox(ui, &err),
-        Ok(_) => {
-            let delete_id = l.selected_id().unwrap();
-            l.remove_item(delete_id);
-            ui.call_on_name("status_bar", |l: &mut TextView| {
-                l.set_content(CATALOG.gettext("Deleted team member from password store"));
-            });
-        }
+    let remove_recipient_res = store.remove_recipient(recipient, path);
+    if remove_recipient_res.is_ok() {
+        let delete_id = l.selected_id().unwrap();
+        l.remove_item(delete_id);
+        ui.call_on_name("status_bar", |l: &mut TextView| {
+            l.set_content(CATALOG.gettext("Deleted team member from password store"));
+        });
+        Ok(())
+    } else {
+        Err(remove_recipient_res.err().unwrap())
     }
 }
 
@@ -691,18 +697,23 @@ fn delete_recipient_verification(ui: &mut Cursive, store: PasswordStoreType) {
             CATALOG.gettext("Are you sure you want to remove this person?"),
         ))
         .button(CATALOG.gettext("Yes"), move |ui: &mut Cursive| {
-            delete_recipient(ui, store.clone());
-            ui.pop_layer();
+            let res = delete_recipient(ui, store.clone());
+            if let Err(err) = res {
+                helpers::errorbox(ui, &err)
+            } else {
+                ui.pop_layer();
+            }
         })
         .dismiss_button(CATALOG.gettext("Cancel")),
     ));
 }
 
-fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) {
+fn add_recipient(ui: &mut Cursive, store: PasswordStoreType, config_path: &Path) {
     let l = &*get_value_from_input(ui, "key_id_input").unwrap();
+    let dir = &*get_value_from_input(ui, "dir_id_input").unwrap();
 
     let store = store.lock().unwrap();
-    let store = store.lock().unwrap();
+    let mut store = store.lock().unwrap();
     let recipient_from_res = store.recipient_from(l, &[], None);
     match recipient_from_res {
         Err(err) => helpers::errorbox(ui, &err),
@@ -712,11 +723,12 @@ fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) {
                 return;
             }
 
-            let res = store.add_recipient(&recipient);
+            let dir_path = std::path::PathBuf::from(dir);
+            let res = store.add_recipient(&recipient, &dir_path, config_path);
             match res {
                 Err(err) => helpers::errorbox(ui, &err),
                 Ok(_) => {
-                    let all_recipients_res = store.all_recipients();
+                    let all_recipients_res = store.recipients_for_path(&dir_path);
                     match all_recipients_res {
                         Err(err) => helpers::errorbox(ui, &err),
                         Ok(recipients) => {
@@ -732,11 +744,13 @@ fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) {
                             }
 
                             let mut recipients_view = ui
-                                .find_name::<SelectView<pass::Recipient>>("recipients")
+                                .find_name::<SelectView<Option<(PathBuf, pass::Recipient)>>>(
+                                    "recipients",
+                                )
                                 .unwrap();
                             recipients_view.add_item(
                                 render_recipient_label(&recipient, max_width_key, max_width_name),
-                                recipient,
+                                Some((dir_path, recipient)),
                             );
 
                             ui.pop_layer();
@@ -753,32 +767,41 @@ fn add_recipient(ui: &mut Cursive, store: PasswordStoreType) {
     }
 }
 
-fn add_recipient_dialog(ui: &mut Cursive, store: PasswordStoreType) {
+fn add_recipient_dialog(ui: &mut Cursive, store: PasswordStoreType, config_path: &Path) {
+    let mut all_fields = LinearLayout::vertical();
     let mut recipient_fields = LinearLayout::horizontal();
+    let mut dir_fields = LinearLayout::horizontal();
 
     recipient_fields.add_child(
         TextView::new(CATALOG.gettext("GPG Key ID: "))
             .with_name("key_id")
             .fixed_size((16_usize, 1_usize)),
     );
-
-    let store2 = store.clone();
-
-    let gpg_key_edit_view = OnEventView::new(
+    recipient_fields.add_child(
         EditView::new()
             .with_name("key_id_input")
             .fixed_size((50_usize, 1_usize)),
-    )
-    .on_event(Key::Enter, move |ui: &mut Cursive| {
-        add_recipient(ui, store.clone())
-    });
+    );
 
-    recipient_fields.add_child(gpg_key_edit_view);
+    dir_fields.add_child(
+        TextView::new(CATALOG.gettext("Directory: "))
+            .with_name("dir_id")
+            .fixed_size((16_usize, 1_usize)),
+    );
+    dir_fields.add_child(
+        EditView::new()
+            .with_name("dir_id_input")
+            .fixed_size((50_usize, 1_usize)),
+    );
 
+    all_fields.add_child(recipient_fields);
+    all_fields.add_child(dir_fields);
+
+    let config_path = config_path.to_path_buf();
     let cf = CircularFocus::new(
-        Dialog::around(recipient_fields)
+        Dialog::around(all_fields)
             .button(CATALOG.gettext("Yes"), move |ui: &mut Cursive| {
-                add_recipient(ui, store2.clone())
+                add_recipient(ui, store.clone(), &config_path)
             })
             .dismiss_button(CATALOG.gettext("Cancel")),
     );
@@ -825,8 +848,141 @@ fn render_recipient_label(
     )
 }
 
-fn view_recipients(ui: &mut Cursive, store: PasswordStoreType) {
-    let recipients_res = store.lock().unwrap().lock().unwrap().all_recipients();
+fn get_sub_dirs(dir: &PathBuf) -> Result<Vec<PathBuf>> {
+    let mut to_visit = vec![dir.clone()];
+    let mut all = vec![PathBuf::from("./")];
+    while !to_visit.is_empty() {
+        let d = to_visit.pop().unwrap();
+        for entry in std::fs::read_dir(d)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() && path.file_name() != Some(std::ffi::OsStr::new(".git")) {
+                to_visit.push(path.clone());
+                if path.join(".gpg-id").exists() {
+                    all.push(path.strip_prefix(dir)?.to_path_buf());
+                }
+            }
+        }
+    }
+
+    Ok(all)
+}
+
+fn view_recipients(ui: &mut Cursive, store: PasswordStoreType, config_path: &Path) {
+    let sub_dirs = get_sub_dirs(&store.lock().unwrap().lock().unwrap().get_store_path());
+    if let Err(err) = sub_dirs {
+        helpers::errorbox(ui, &err);
+        return;
+    }
+    let sub_dirs = sub_dirs.unwrap();
+
+    match sub_dirs.len().cmp(&1) {
+        std::cmp::Ordering::Greater => {
+            let mut path_to_recipients: HashMap<PathBuf, Vec<Recipient>> = HashMap::new();
+
+            for dir in sub_dirs {
+                let recipients_res = store
+                    .lock()
+                    .unwrap()
+                    .lock()
+                    .unwrap()
+                    .recipients_for_path(&dir);
+                if let Err(err) = recipients_res {
+                    helpers::errorbox(ui, &err);
+                    return;
+                }
+
+                path_to_recipients.insert(dir.clone(), recipients_res.unwrap());
+            }
+
+            view_recipients_for_many_dirs(ui, store, path_to_recipients, config_path);
+        }
+        std::cmp::Ordering::Equal => {
+            view_recipients_for_dir(ui, store, sub_dirs[0].clone(), config_path);
+        }
+        std::cmp::Ordering::Less => {
+            helpers::errorbox(ui, &pass::Error::Generic("no subdirectories found"));
+        }
+    }
+}
+
+fn view_recipients_for_many_dirs(
+    ui: &mut Cursive,
+    store: PasswordStoreType,
+    path_to_recipients: HashMap<PathBuf, Vec<Recipient>>,
+    config_path: &Path,
+) {
+    let mut recipients_view = SelectView::<Option<(PathBuf, pass::Recipient)>>::new()
+        .h_align(cursive::align::HAlign::Left)
+        .with_name("recipients");
+
+    for (path, recipients) in &path_to_recipients {
+        recipients_view
+            .get_mut()
+            .add_item(path.to_string_lossy(), None);
+        let mut max_width_key = 0;
+        let mut max_width_name = 0;
+        for recipient in recipients {
+            if recipient.key_id.len() > max_width_key {
+                max_width_key = recipient.key_id.len();
+            }
+            if recipient.name.len() > max_width_name {
+                max_width_name = recipient.name.len();
+            }
+        }
+        for recipient in recipients {
+            recipients_view.get_mut().add_item(
+                render_recipient_label(recipient, max_width_key, max_width_name),
+                Some((path.to_path_buf(), recipient.clone())),
+            );
+        }
+    }
+    let d = Dialog::around(recipients_view)
+        .title(CATALOG.gettext("Team Members"))
+        .dismiss_button(CATALOG.gettext("Ok"));
+
+    let ll = LinearLayout::new(Orientation::Vertical).child(d).child(
+        LinearLayout::new(Orientation::Horizontal)
+            .child(TextView::new(CATALOG.gettext("ins: Add | ")))
+            .child(TextView::new(CATALOG.gettext("del: Remove"))),
+    );
+
+    let store2 = store.clone();
+    let config_path = config_path.to_path_buf();
+
+    let recipients_event = OnEventView::new(ll)
+        .on_event(Key::Del, move |ui: &mut Cursive| {
+            delete_recipient_verification(ui, store.clone())
+        })
+        .on_event(Key::Ins, move |ui: &mut Cursive| {
+            add_recipient_dialog(ui, store2.clone(), &config_path)
+        })
+        .on_event(Key::Esc, |s| {
+            s.pop_layer();
+        });
+
+    ui.add_layer(recipients_event);
+}
+
+fn view_recipients_for_dir(
+    ui: &mut Cursive,
+    store: PasswordStoreType,
+    dir: PathBuf,
+    config_path: &Path,
+) {
+    let path = store
+        .lock()
+        .unwrap()
+        .lock()
+        .unwrap()
+        .get_store_path()
+        .join(dir.clone());
+    let recipients_res = store
+        .lock()
+        .unwrap()
+        .lock()
+        .unwrap()
+        .recipients_for_path(&path);
 
     if let Err(err) = recipients_res {
         helpers::errorbox(ui, &err);
@@ -834,7 +990,7 @@ fn view_recipients(ui: &mut Cursive, store: PasswordStoreType) {
     }
     let recipients = recipients_res.unwrap();
 
-    let mut recipients_view = SelectView::<pass::Recipient>::new()
+    let mut recipients_view = SelectView::<Option<(PathBuf, pass::Recipient)>>::new()
         .h_align(cursive::align::HAlign::Left)
         .with_name("recipients");
 
@@ -851,7 +1007,7 @@ fn view_recipients(ui: &mut Cursive, store: PasswordStoreType) {
     for recipient in recipients {
         recipients_view.get_mut().add_item(
             render_recipient_label(&recipient, max_width_key, max_width_name),
-            recipient,
+            Some((dir.clone(), recipient)),
         );
     }
 
@@ -866,13 +1022,14 @@ fn view_recipients(ui: &mut Cursive, store: PasswordStoreType) {
     );
 
     let store2 = store.clone();
+    let config_path = config_path.to_path_buf();
 
     let recipients_event = OnEventView::new(ll)
         .on_event(Key::Del, move |ui: &mut Cursive| {
             delete_recipient_verification(ui, store.clone())
         })
         .on_event(Key::Ins, move |ui: &mut Cursive| {
-            add_recipient_dialog(ui, store2.clone())
+            add_recipient_dialog(ui, store2.clone(), &config_path)
         })
         .on_event(Key::Esc, |s| {
             s.pop_layer();
@@ -1896,7 +2053,8 @@ fn main() {
     // View list of persons that have access
     ui.add_global_callback(Event::CtrlChar('v'), {
         let store = store.clone();
-        move |ui: &mut Cursive| view_recipients(ui, store.clone())
+        let xdg_data_home = xdg_data_home.clone();
+        move |ui: &mut Cursive| view_recipients(ui, store.clone(), &xdg_data_home)
     });
 
     // Show git history of a file
@@ -2015,7 +2173,8 @@ fn main() {
             })
             .leaf(CATALOG.gettext("Team Members (ctrl-v)"), {
                 let store = store.clone();
-                move |ui: &mut Cursive| view_recipients(ui, store.clone())
+                let xdg_data_home = xdg_data_home.clone();
+                move |ui: &mut Cursive| view_recipients(ui, store.clone(), &xdg_data_home)
             })
             .delimiter()
             .leaf(CATALOG.gettext("Git Pull (ctrl-f)"), {

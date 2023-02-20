@@ -83,7 +83,6 @@ impl UI {
         None
     }
     pub fn select(&mut self, i: i32) -> Option<&QVariant> {
-        println!("select: {i}");
         if !self.current_passwords.is_empty() {
             // Select notihng if passwords list is empty
             let pass = self.get_password(i);

@@ -14,13 +14,50 @@ use tempfile::tempdir;
 use super::*;
 use crate::{
     crypto::slice_to_20_bytes,
-    test_helpers::{MockCrypto, UnpackedDir},
+    test_helpers::{
+        count_recipients, generate_sequoia_cert, generate_sequoia_cert_without_private_key,
+        MockCrypto, UnpackedDir,
+    },
 };
 
 impl std::cmp::PartialEq for Error {
     fn eq(&self, other: &Error) -> bool {
         format!("{:?}", self) == format!("{:?}", *other)
     }
+}
+
+pub fn setup_store(
+    td: &tempfile::TempDir,
+    user_home: &Path,
+) -> Result<(PasswordStore, Vec<Arc<sequoia_openpgp::Cert>>)> {
+    let users = vec![
+        Arc::new(generate_sequoia_cert("alice@example.org")),
+        Arc::new(generate_sequoia_cert("bob@example.org")),
+        Arc::new(generate_sequoia_cert("carlos@example.org")),
+        Arc::new(generate_sequoia_cert_without_private_key(
+            "daniel@example.com",
+        )),
+    ];
+    let mut key_ring = HashMap::new();
+    for u in &users {
+        key_ring.insert(slice_to_20_bytes(u.fingerprint().as_bytes())?, u.clone());
+    }
+
+    let store = PasswordStore {
+        name: "store_name".to_owned(),
+        root: td.path().to_path_buf(),
+        valid_gpg_signing_keys: vec![],
+        passwords: [].to_vec(),
+        style_file: None,
+        crypto: Box::new(Sequoia::from_values(
+            slice_to_20_bytes(users[0].fingerprint().as_bytes())?,
+            key_ring,
+            user_home,
+        )),
+        user_home: None,
+    };
+
+    Ok((store, users))
 }
 
 #[test]
@@ -878,15 +915,16 @@ fn rename_file() -> Result<()> {
     config.set_str("user.email", "default@example.com")?;
     config.set_str("commit.gpgsign", "false")?;
 
-    let mut store = PasswordStore::new(
-        "default",
-        &Some(dir.dir().to_path_buf()),
-        &None,
-        &Some(dir.dir().to_path_buf()),
-        &None,
-        &CryptoImpl::GpgMe,
-        &None,
-    )?;
+    let mut store = PasswordStore {
+        name: "default".to_owned(),
+        root: dir.dir().to_path_buf(),
+        valid_gpg_signing_keys: vec![],
+        passwords: vec![],
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+        user_home: None,
+    };
+
     store.reload_password_list()?;
     let index = store.rename_file("1/test", "2/test")?;
 
@@ -935,15 +973,15 @@ fn rename_file_git_index_clean() -> Result<()> {
     config.set_str("user.email", "default@example.com")?;
     config.set_str("commit.gpgsign", "false")?;
 
-    let mut store = PasswordStore::new(
-        "default",
-        &Some(dir.dir().to_path_buf()),
-        &None,
-        &Some(dir.dir().to_path_buf()),
-        &None,
-        &CryptoImpl::GpgMe,
-        &None,
-    )?;
+    let mut store = PasswordStore {
+        name: "default".to_owned(),
+        root: dir.dir().to_path_buf(),
+        valid_gpg_signing_keys: vec![],
+        passwords: vec![],
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+        user_home: None,
+    };
     store.reload_password_list()?;
     store.rename_file("1/test", "2/test")?;
 
@@ -1716,7 +1754,7 @@ fn test_to_name() {
 }
 
 #[test]
-fn test_verify_gpg_id_file_missing_sig_file() -> Result<()> {
+fn test_verify_gpg_id_files_missing_sig_file() -> Result<()> {
     let td = tempdir()?;
 
     let store = PasswordStore {
@@ -1736,7 +1774,7 @@ fn test_verify_gpg_id_file_missing_sig_file() -> Result<()> {
         "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
     )?;
 
-    let result = store.verify_gpg_id_file();
+    let result = store.verify_gpg_id_files();
 
     assert_eq!(true, result.is_err());
 
@@ -1749,7 +1787,7 @@ fn test_verify_gpg_id_file_missing_sig_file() -> Result<()> {
 }
 
 #[test]
-fn test_verify_gpg_id_file() -> Result<()> {
+fn test_verify_gpg_id_files() -> Result<()> {
     let td = tempdir()?;
 
     let store = PasswordStore {
@@ -1773,7 +1811,7 @@ fn test_verify_gpg_id_file() -> Result<()> {
         "here there should be gpg data",
     )?;
 
-    let result = store.verify_gpg_id_file();
+    let result = store.verify_gpg_id_files();
 
     assert_eq!(true, result.is_err());
 
@@ -1824,7 +1862,7 @@ fn sign(to_sign: &str, tsk: &sequoia_openpgp::Cert) -> String {
 }
 
 #[test]
-fn test_verify_gpg_id_file_untrusted_key_in_keyring() {
+fn test_verify_gpg_id_files_untrusted_key_in_keyring() {
     let td = tempdir().unwrap();
 
     let (store_owner, _) = CertBuilder::new()
@@ -1839,7 +1877,12 @@ fn test_verify_gpg_id_file_untrusted_key_in_keyring() {
         .generate()
         .unwrap();
 
-    let keys_dir = td.path().join("share").join("ripasso").join("keys");
+    let keys_dir = td
+        .path()
+        .join("local")
+        .join("share")
+        .join("ripasso")
+        .join("keys");
     std::fs::create_dir_all(&keys_dir).unwrap();
     let password_store_dir = td.path().join(".password_store");
     std::fs::create_dir_all(&password_store_dir).unwrap();
@@ -1863,11 +1906,11 @@ fn test_verify_gpg_id_file_untrusted_key_in_keyring() {
         valid_gpg_signing_keys: vec![sofp],
         passwords: [].to_vec(),
         style_file: None,
-        crypto: Box::new(Sequoia::new(td.path(), sofp).unwrap()),
+        crypto: Box::new(Sequoia::new(&td.path().join("local"), sofp, td.path()).unwrap()),
         user_home: None,
     };
 
-    let result = store.verify_gpg_id_file();
+    let result = store.verify_gpg_id_files();
 
     assert_eq!(true, result.is_err());
 
@@ -2065,6 +2108,419 @@ fn test_new_password_file_outside_pass_dir() -> Result<()> {
 
     assert_eq!(true, result.is_err());
 
+    Ok(())
+}
+
+#[test]
+fn test_new_password_file_different_sub_permissions() -> Result<()> {
+    let td = tempdir()?;
+    let user_home = tempdir()?;
+
+    let (mut store, users) = setup_store(&td, user_home.path())?;
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        hex::encode(users[0].fingerprint().as_bytes())
+            + "\n"
+            + &hex::encode(users[1].fingerprint().as_bytes())
+            + "\n",
+    )?;
+
+    fs::create_dir(td.path().join("dir")).unwrap();
+    fs::write(
+        td.path().join("dir").join(".gpg-id"),
+        hex::encode(users[1].fingerprint().as_bytes()),
+    )?;
+
+    assert_eq!(0, store.passwords.len());
+
+    store.new_password_file("dir/file", "password")?;
+
+    assert_eq!(1, store.passwords.len());
+
+    let content = fs::read(td.path().join("dir").join("file.gpg"))?;
+    assert_eq!(1, count_recipients(&content));
+
+    Ok(())
+}
+
+#[test]
+fn test_rename_file_different_sub_permissions() -> Result<()> {
+    let td = tempdir()?;
+    let user_home = tempdir()?;
+
+    let (mut store, users) = setup_store(&td, user_home.path())?;
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        hex::encode(users[0].fingerprint().as_bytes())
+            + "\n"
+            + &hex::encode(users[1].fingerprint().as_bytes())
+            + "\n",
+    )?;
+
+    fs::create_dir(td.path().join("dir")).unwrap();
+    fs::write(
+        td.path().join("dir").join(".gpg-id"),
+        hex::encode(users[0].fingerprint().as_bytes()),
+    )?;
+
+    assert_eq!(0, store.passwords.len());
+
+    store.new_password_file("dir/file", "password")?;
+
+    store.rename_file("dir/file", "file")?;
+
+    assert_eq!(1, store.passwords.len());
+
+    let content = fs::read(td.path().join("file.gpg"))?;
+    assert_eq!(2, count_recipients(&content));
+
+    Ok(())
+}
+
+#[test]
+fn test_add_recipient_different_sub_permissions() -> Result<()> {
+    let td = tempdir()?;
+    let config_path = tempdir()?;
+    let user_home = tempdir()?;
+
+    let (mut store, users) = setup_store(&td, user_home.path())?;
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        hex::encode(users[0].fingerprint().as_bytes())
+            + "\n"
+            + &hex::encode(users[1].fingerprint().as_bytes())
+            + "\n",
+    )?;
+
+    fs::create_dir(td.path().join("dir")).unwrap();
+    fs::write(
+        td.path().join("dir").join(".gpg-id"),
+        hex::encode(users[0].fingerprint().as_bytes()) + "\n",
+    )?;
+
+    assert_eq!(0, store.passwords.len());
+
+    store.new_password_file("file", "password")?;
+    store.new_password_file("dir/file", "password")?;
+
+    store
+        .add_recipient(
+            &crate::test_helpers::recipient_from_cert(&users[2]),
+            &PathBuf::from("./"),
+            &config_path.path(),
+        )
+        .unwrap();
+
+    assert_eq!(2, store.passwords.len());
+
+    let content = fs::read(td.path().join("file.gpg")).unwrap();
+    assert_eq!(3, count_recipients(&content));
+
+    let content = fs::read(td.path().join("dir/file.gpg")).unwrap();
+    assert_eq!(1, count_recipients(&content));
+
+    Ok(())
+}
+
+#[test]
+fn test_add_recipient_to_sub_dir() -> Result<()> {
+    let td = tempdir()?;
+    let config_path = tempdir()?;
+    let user_home = tempdir()?;
+
+    let (mut store, users) = setup_store(&td, user_home.path())?;
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        hex::encode(users[0].fingerprint().as_bytes())
+            + "\n"
+            + &hex::encode(users[1].fingerprint().as_bytes())
+            + "\n",
+    )?;
+
+    fs::create_dir(td.path().join("dir")).unwrap();
+
+    assert_eq!(0, store.passwords.len());
+
+    store.new_password_file("file", "password")?;
+    store.new_password_file("dir/file", "password")?;
+
+    store.add_recipient(
+        &crate::test_helpers::recipient_from_cert(&users[2]),
+        &PathBuf::from("dir/"),
+        &config_path.path(),
+    )?;
+
+    assert_eq!(2, store.passwords.len());
+
+    let content = fs::read(td.path().join("file.gpg")).unwrap();
+    assert_eq!(2, count_recipients(&content));
+
+    let content = fs::read(td.path().join("dir/file.gpg")).unwrap();
+    assert_eq!(1, count_recipients(&content));
+
+    Ok(())
+}
+
+#[test]
+fn test_add_recipient_to_sub_dir_path_traversal() -> Result<()> {
+    let td = tempdir()?;
+    let config_path = tempdir()?;
+    let user_home = tempdir()?;
+
+    let (mut store, users) = setup_store(&td, user_home.path())?;
+
+    let res = store.add_recipient(
+        &crate::test_helpers::recipient_from_cert(&users[2]),
+        &PathBuf::from("/tmp/"),
+        &config_path.path(),
+    );
+
+    assert!(res.is_err());
+    assert_eq!(
+        "Generic(\"path traversal not allowed\")",
+        format!("{:?}", res.err().unwrap())
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_add_recipient_to_sub_dir_unknown_path() -> Result<()> {
+    let td = tempdir()?;
+    let config_path = tempdir()?;
+    let user_home = tempdir()?;
+
+    let (mut store, users) = setup_store(&td, user_home.path())?;
+
+    let res = store.add_recipient(
+        &crate::test_helpers::recipient_from_cert(&users[2]),
+        &PathBuf::from("path_that_doesnt_exist/"),
+        &config_path.path(),
+    );
+
+    assert!(res.is_err());
+    assert_eq!(
+        "Generic(\"path doesn't exist\")",
+        format!("{:?}", res.err().unwrap())
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_add_recipient_not_in_key_ring() -> Result<()> {
+    let td = tempdir()?;
+    let config_path = tempdir()?;
+    let user_home = tempdir()?;
+
+    let (mut store, users) = setup_store(&td, user_home.path())?;
+
+    let external_user = generate_sequoia_cert_without_private_key("bob@example.com");
+    let external_user_recipient = crate::test_helpers::recipient_from_cert(&external_user);
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        hex::encode(users[0].fingerprint().as_bytes()) + "\n",
+    )?;
+
+    assert_eq!(0, store.passwords.len());
+
+    store.new_password_file("file", "password")?;
+    let gpg_id_file_pre = std::fs::read_to_string(td.path().join(".gpg-id"))?;
+    let res = store.add_recipient(
+        &external_user_recipient,
+        &PathBuf::from("./"),
+        &config_path.path(),
+    );
+    let gpg_id_file_post = std::fs::read_to_string(td.path().join(".gpg-id"))?;
+
+    assert!(res.is_err());
+
+    assert_eq!(gpg_id_file_pre, gpg_id_file_post);
+
+    Ok(())
+}
+
+#[test]
+fn test_remove_last_recipient_with_decryption_rights() -> Result<()> {
+    let td = tempdir()?;
+    let config_path = tempdir()?;
+    let user_home = tempdir()?;
+
+    let (mut store, users) = setup_store(&td, user_home.path())?;
+
+    let user0_recipient = crate::test_helpers::recipient_from_cert(&users[0]);
+    let user3_recipient = crate::test_helpers::recipient_from_cert(&users[3]);
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        hex::encode(users[0].fingerprint().as_bytes()) + "\n",
+    )?;
+
+    assert_eq!(0, store.passwords.len());
+
+    store.new_password_file("file", "password")?;
+    store.add_recipient(&user3_recipient, &PathBuf::from("./"), &config_path.path())?;
+
+    let gpg_id_file_pre = std::fs::read_to_string(td.path().join(".gpg-id"))?;
+    let res = store.remove_recipient(&user0_recipient, &PathBuf::from("./"));
+    let gpg_id_file_post = std::fs::read_to_string(td.path().join(".gpg-id"))?;
+
+    assert!(res.is_ok());
+
+    assert_ne!(gpg_id_file_pre, gpg_id_file_post);
+
+    Ok(())
+}
+
+#[test]
+fn test_remove_last_recipient_from_sub_folder() -> Result<()> {
+    let td = tempdir()?;
+    let user_home = tempdir()?;
+
+    let (mut store, users) = setup_store(&td, user_home.path())?;
+
+    let user0_recipient = crate::test_helpers::recipient_from_cert(&users[0]);
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        hex::encode(users[0].fingerprint().as_bytes()) + "\n",
+    )?;
+
+    std::fs::create_dir(td.path().join("dir"))?;
+
+    fs::write(
+        td.path().join("dir").join(".gpg-id"),
+        hex::encode(users[0].fingerprint().as_bytes()) + "\n",
+    )?;
+
+    assert_eq!(0, store.passwords.len());
+
+    store.new_password_file("file", "password")?;
+    store.new_password_file("dir/file", "password")?;
+
+    let gpg_id_file_pre = std::fs::read_to_string(td.path().join(".gpg-id"))?;
+    let res = store.remove_recipient(&user0_recipient, &PathBuf::from("dir"));
+    let gpg_id_file_post = std::fs::read_to_string(td.path().join(".gpg-id"))?;
+
+    assert!(res.is_ok());
+    assert!(!td.path().join("dir").join(".gpg-id").exists());
+
+    assert_eq!(gpg_id_file_pre, gpg_id_file_post);
+
+    Ok(())
+}
+
+#[test]
+fn test_add_password_without_decryption_rights() -> Result<()> {
+    let td = tempdir()?;
+    let user_home = tempdir()?;
+
+    let (mut store, users) = setup_store(&td, user_home.path())?;
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        hex::encode(&users[3].fingerprint().as_bytes()) + "\n",
+    )?;
+
+    assert_eq!(0, store.passwords.len());
+
+    store.new_password_file("file", "password")?;
+
+    assert_eq!(1, store.passwords.len());
+
+    Ok(())
+}
+
+#[test]
+fn test_remove_recipient_root() -> Result<()> {
+    let td = tempdir()?;
+    let user_home = tempdir()?;
+
+    let (mut store, users) = setup_store(&td, user_home.path())?;
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        hex::encode(users[0].fingerprint().as_bytes())
+            + "\n"
+            + &hex::encode(users[1].fingerprint().as_bytes())
+            + "\n",
+    )?;
+
+    fs::create_dir(td.path().join("dir")).unwrap();
+    fs::write(
+        td.path().join("dir").join(".gpg-id"),
+        hex::encode(users[0].fingerprint().as_bytes()) + "\n",
+    )?;
+
+    assert_eq!(0, store.passwords.len());
+
+    store.new_password_file("file", "password")?;
+    store.new_password_file("dir/file", "password")?;
+
+    store
+        .remove_recipient(
+            &crate::test_helpers::recipient_from_cert(&users[1]),
+            &PathBuf::from("./"),
+        )
+        .unwrap();
+
+    assert_eq!(2, store.passwords.len());
+
+    let content = fs::read(td.path().join("file.gpg")).unwrap();
+    assert_eq!(1, count_recipients(&content));
+
+    let content = fs::read(td.path().join("dir/file.gpg")).unwrap();
+    assert_eq!(1, count_recipients(&content));
+
+    Ok(())
+}
+
+#[test]
+fn test_recipients_file_for_dir() -> Result<()> {
+    let td = tempdir()?;
+    let user_home = tempdir()?;
+
+    let (store, _) = setup_store(&td, user_home.path())?;
+
+    std::fs::File::create(td.path().join(".gpg-id"))?;
+
+    assert_eq!(
+        td.path().join(".gpg-id"),
+        store.recipients_file_for_dir(&store.get_store_path())?
+    );
+    Ok(())
+}
+
+#[test]
+fn test_recipient_files() -> Result<()> {
+    let td = tempdir()?;
+    let user_home = tempdir()?;
+
+    let (store, users) = setup_store(&td, user_home.path())?;
+
+    fs::write(
+        td.path().join(".gpg-id"),
+        hex::encode(users[0].fingerprint().as_bytes())
+            + "\n"
+            + &hex::encode(users[1].fingerprint().as_bytes())
+            + "\n",
+    )?;
+
+    fs::create_dir(td.path().join("dir")).unwrap();
+    fs::write(
+        td.path().join("dir").join(".gpg-id"),
+        hex::encode(users[0].fingerprint().as_bytes()),
+    )?;
+
+    let result = store.recipients_files()?;
+    assert_eq!(2, result.len());
+    assert!(result.contains(&td.path().join(".gpg-id")));
+    assert!(result.contains(&td.path().join("dir").join(".gpg-id")));
     Ok(())
 }
 
