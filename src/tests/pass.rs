@@ -835,7 +835,10 @@ fn save_config_one_store() {
 
     assert!(config.contains("[stores.\"s1 name\"]\n"));
     assert!(config.contains(&format!("path = \"{}\"\n", passdir.path().display())));
-    assert!(config.contains(&format!("style_path = \"{}\"\n", style_file.path().display())));
+    assert!(config.contains(&format!(
+        "style_path = \"{}\"\n",
+        style_file.path().display()
+    )));
     assert!(config.contains("pgp_implementation = \"sequoia\"\n"));
     assert!(config.contains("own_fingerprint = \"0000000000000000000000000000000000000000\"\n"));
 }
@@ -1481,7 +1484,10 @@ fn test_format_error() {
         "configuration is frozen"
     );
     assert_eq!(
-        format!("{}", Error::from(toml::ser::to_string_pretty(&None::<String>).err().unwrap())),
+        format!(
+            "{}",
+            Error::from(toml::ser::to_string_pretty(&None::<String>).err().unwrap())
+        ),
         "unsupported None value"
     );
     assert_eq!(
