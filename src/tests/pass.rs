@@ -834,10 +834,13 @@ fn save_config_one_store() {
     let config = std::fs::read_to_string(config_file.path()).unwrap();
 
     assert!(config.contains("[stores.\"s1 name\"]\n"));
-    assert!(config.contains(&format!("path = '{}'\n", passdir.path().display())));
-    assert!(config.contains(&format!("style_path = '{}'\n", style_file.path().display())));
-    assert!(config.contains("pgp_implementation = 'sequoia'\n"));
-    assert!(config.contains("own_fingerprint = '0000000000000000000000000000000000000000'\n"));
+    assert!(config.contains(&format!("path = \"{}\"\n", passdir.path().display())));
+    assert!(config.contains(&format!(
+        "style_path = \"{}\"\n",
+        style_file.path().display()
+    )));
+    assert!(config.contains("pgp_implementation = \"sequoia\"\n"));
+    assert!(config.contains("own_fingerprint = \"0000000000000000000000000000000000000000\"\n"));
 }
 
 #[test]
@@ -864,8 +867,8 @@ fn save_config_one_store_with_pgp_impl() {
     let data = fs::read_to_string(dir.path().join("file.toml")).unwrap();
 
     assert!(data.contains("[stores.default]"));
-    assert!(data.contains("pgp_implementation = 'gpg'"));
-    assert!(data.contains(&format!("path = '{}'\n", &dir.path().display())));
+    assert!(data.contains("pgp_implementation = \"gpg\""));
+    assert!(data.contains(&format!("path = \"{}\"\n", &dir.path().display())));
 }
 
 #[test]
@@ -892,9 +895,9 @@ fn save_config_one_store_with_fingerprint() {
     let data = fs::read_to_string(dir.path().join("file.toml")).unwrap();
 
     assert!(data.contains("[stores.default]"));
-    assert!(data.contains("pgp_implementation = 'sequoia'"));
-    assert!(data.contains("own_fingerprint = '7E068070D5EF794B00C8A9D91D108E6C07CBC406'"));
-    assert!(data.contains(&format!("path = '{}'\n", &dir.path().display())));
+    assert!(data.contains("pgp_implementation = \"sequoia\""));
+    assert!(data.contains("own_fingerprint = \"7E068070D5EF794B00C8A9D91D108E6C07CBC406\""));
+    assert!(data.contains(&format!("path = \"{}\"\n", &dir.path().display())));
 }
 
 #[test]
@@ -1481,8 +1484,11 @@ fn test_format_error() {
         "configuration is frozen"
     );
     assert_eq!(
-        format!("{}", Error::from(toml::ser::Error::DateInvalid)),
-        "a serialized date was invalid"
+        format!(
+            "{}",
+            Error::from(toml::ser::to_string_pretty(&None::<String>).err().unwrap())
+        ),
+        "unsupported None value"
     );
     assert_eq!(
         format!("{}", Error::from("custom error message")),
