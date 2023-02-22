@@ -1683,10 +1683,9 @@ fn show_manage_config_dialog(
 
     for store in stores.lock().unwrap().iter() {
         let store = store.lock().unwrap();
-        stores_view.get_mut().add_item(
-            store.get_name(),
-            store.get_name().clone(),
-        );
+        stores_view
+            .get_mut()
+            .add_item(store.get_name(), store.get_name().clone());
     }
 
     let d = Dialog::around(stores_view)

@@ -23,8 +23,8 @@ sequoia-openpgp = "1.13.0"
 anyhow = "1.0.66"
 sequoia-ipc = "0.28.0"
 base64 = "0.21.0"
-sha256 = "1.1.1"
 sha1 = "0.10.5"
+sha2 = "0.10.6"
 hmac = "0.12.1"
 
 [dependencies.config]
