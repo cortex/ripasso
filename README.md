@@ -1,5 +1,5 @@
 # ripasso
-[![Build Status](https://travis-ci.org/cortex/ripasso.svg?branch=master)](https://travis-ci.org/cortex/ripasso)
+[![Build Status](https://github.com/cortex/ripasso/actions/workflows/rust.yml/badge.svg)](https://github.com/cortex/ripasso/actions/workflows/rust.yml)
 [![Crates Version](https://meritbadge.herokuapp.com/ripasso)](https://crates.io/crates/ripasso)
 [![Documentation Status](https://docs.rs/ripasso/badge.svg)](https://docs.rs/ripasso/)
 [![Packaging Status](https://repology.org/badge/tiny-repos/ripasso-cursive.svg)](https://repology.org/project/ripasso-cursive/versions)
