@@ -35,7 +35,7 @@ default-features = false
 features = ["toml"]
 
 [dev-dependencies]
-tempfile = "3.3.0"
+tempfile = "3.4.0"
 chrono = "0.4"
 
 [build-dependencies]
