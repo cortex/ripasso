@@ -15,7 +15,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use clipboard::ClipboardProvider;
 use cursive::{
     event::Key,
     views::{Checkbox, Dialog, EditView, OnEventView, RadioButton, TextView},
@@ -23,7 +22,12 @@ use cursive::{
 };
 use pass::Result;
 use ripasso::{crypto::CryptoImpl, pass};
+#[cfg(target_os = "linux")]
 use wl_clipboard_rs::copy::{MimeType, Options, Source};
+#[cfg(target_os = "linux")]
+use clipboard::ClipboardProvider;
+#[cfg(not(target_os = "linux"))]
+use cli_clipboard::ClipboardProvider;
 
 /// Displays an error in a cursive dialog
 pub fn errorbox(ui: &mut Cursive, err: &pass::Error) {
@@ -46,6 +50,7 @@ pub fn errorbox(ui: &mut Cursive, err: &pass::Error) {
     ui.add_layer(ev);
 }
 
+#[cfg(target_os = "linux")]
 /// Copies content to the clipboard.
 /// It first tries to copy to a wayland clipboard, and if that's not availible due to that the
 /// user runs x11/mac/windows we instead try the more generic clipboard crate.
@@ -59,6 +64,14 @@ pub fn set_clipboard(content: String) -> Result<()> {
         let mut ctx = clipboard::ClipboardContext::new()?;
         ctx.set_contents(content)?;
     }
+    Ok(())
+}
+
+#[cfg(not(target_os = "linux"))]
+/// Copies content to the clipboard. With the more generic clipboard crate.
+pub fn set_clipboard(content: String) -> Result<()> {
+    let mut ctx = cli_clipboard::ClipboardContext::new()?;
+    ctx.set_contents(content)?;
     Ok(())
 }
 
