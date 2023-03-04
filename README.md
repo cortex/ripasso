@@ -7,7 +7,8 @@
 A simple password manager written in Rust.
 
 The root crate `ripasso` is a library for accessing and decrypting passwords
-stored in pass format (GPG-encrypted files), with a file-watcher event emitter.
+stored in [pass](https://www.passwordstore.org/) format, that means
+PGP-encrypted files optionally stored in a git repository.
 
 Multiple UI's in different stages of development are available in subcrates.
 
@@ -17,8 +18,6 @@ cargo build --all
 ```
 
 PR's are very welcome!
-
-If you want to talk to the developers, please join our matrix room [here](https://riot.im/app/#/room/#ripasso:matrix.org).
 
 ## History
 This is a reimplementation of https://github.com/cortex/gopass in Rust. I started it mainly because https://github.com/go-qml/qml
@@ -103,7 +102,7 @@ nix-env -iA nixpkgs.ripasso-cursive
 
 ### Mac OS X
 
-The best way to install ripasso on pre-catalina mac right now is the nix package system, first [install that](https://nixos.org/nix/download.html) and then
+The best way to install ripasso on mac right now is the nix package system, first [install that](https://nixos.org/nix/download.html) and then
 
 ```
 nix-env -iA nixpkgs.ripasso-cursive
