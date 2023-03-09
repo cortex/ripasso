@@ -3,8 +3,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    the Free Software Foundation, version 3 of the License.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -22,7 +21,7 @@ use std::{
     time::Duration,
 };
 
-use clipboard::{ClipboardContext, ClipboardProvider};
+use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use pass::PasswordEntry;
 use qml::*;
 use ripasso::{crypto::CryptoImpl, pass};
@@ -84,7 +83,6 @@ impl UI {
         None
     }
     pub fn select(&mut self, i: i32) -> Option<&QVariant> {
-        println!("select: {i}");
         if !self.current_passwords.is_empty() {
             // Select notihng if passwords list is empty
             let pass = self.get_password(i);

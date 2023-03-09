@@ -209,3 +209,37 @@ fn create_label_basic() {
 
     assert_eq!(String::from("file 🔒  2022-08-14"), result);
 }
+
+#[test]
+fn get_sub_dirs_empty() {
+    let dir = tempfile::tempdir().unwrap();
+
+    let dirs = get_sub_dirs(&dir.path().to_path_buf()).unwrap();
+
+    assert_eq!(1, dirs.len());
+    assert_eq!(PathBuf::from("./"), dirs[0]);
+}
+
+#[test]
+fn get_sub_dirs_one_dir() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dir.path().join("one_dir")).unwrap();
+
+    let dirs = get_sub_dirs(&dir.path().to_path_buf()).unwrap();
+
+    assert_eq!(1, dirs.len());
+    assert_eq!(PathBuf::from("./"), dirs[0]);
+}
+
+#[test]
+fn get_sub_dirs_one_dir_with_pgpid() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dir.path().join("one_dir")).unwrap();
+    std::fs::File::create(dir.path().join("one_dir").join(".gpg-id")).unwrap();
+
+    let dirs = get_sub_dirs(&dir.path().to_path_buf()).unwrap();
+
+    assert_eq!(2, dirs.len());
+    assert_eq!(PathBuf::from("./"), dirs[0]);
+    assert_eq!(PathBuf::from("one_dir"), dirs[1]);
+}

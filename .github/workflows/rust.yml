@@ -95,3 +95,13 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
+
+  audit:
+    name: Audit
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rust-lang/audit@v1
+        name: Audit Rust Dependencies

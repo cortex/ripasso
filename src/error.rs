@@ -1,6 +1,11 @@
-use std::{io, path, string};
+use std::{
+    io, path, string,
+    sync::{Arc, Mutex, MutexGuard, PoisonError},
+};
 
 use hex::FromHexError;
+
+use crate::pass::PasswordStore;
 
 /// A enum that contains the different types of errors that the library returns as part of Result's.
 #[non_exhaustive]
@@ -166,6 +171,18 @@ impl From<totp_rs::TotpUrlError> for Error {
 impl From<std::time::SystemTimeError> for Error {
     fn from(err: std::time::SystemTimeError) -> Self {
         Self::SystemTimeError(err)
+    }
+}
+
+impl From<PoisonError<MutexGuard<'_, Vec<Arc<Mutex<PasswordStore>>>>>> for Error {
+    fn from(_err: PoisonError<MutexGuard<'_, Vec<Arc<Mutex<PasswordStore>>>>>) -> Self {
+        Self::Generic("Error obtaining lock")
+    }
+}
+
+impl From<PoisonError<MutexGuard<'_, Arc<Mutex<PasswordStore>>>>> for Error {
+    fn from(_err: PoisonError<MutexGuard<'_, Arc<Mutex<PasswordStore>>>>) -> Self {
+        Self::Generic("Error obtaining lock")
     }
 }
 

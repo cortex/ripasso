@@ -7,6 +7,15 @@ use std::{
 
 use flate2::read::GzDecoder;
 use hex::FromHex;
+use sequoia_openpgp::{
+    cert::CertBuilder,
+    parse::{
+        stream::{DecryptionHelper, DecryptorBuilder, MessageStructure, VerificationHelper},
+        Parse,
+    },
+    policy::StandardPolicy,
+    Cert, KeyHandle, KeyID,
+};
 use tar::Archive;
 
 use crate::{
@@ -205,7 +214,11 @@ impl Crypto for MockCrypto {
         Err(VerificationError::SignatureFromWrongRecipient)
     }
 
-    fn pull_keys(&mut self, _recipients: &[Recipient], _config_path: &Path) -> Result<String> {
+    fn is_key_in_keyring(&self, _recipient: &Recipient) -> Result<bool> {
+        Ok(true)
+    }
+
+    fn pull_keys(&mut self, _recipients: &[&Recipient], _config_path: &Path) -> Result<String> {
         Ok("dummy implementation".to_owned())
     }
 
@@ -272,10 +285,88 @@ pub fn recipient_alex_old() -> Recipient {
         not_usable: false,
     }
 }
+pub fn recipient_from_cert(cert: &sequoia_openpgp::Cert) -> Recipient {
+    Recipient {
+        name: String::from_utf8(cert.userids().next().unwrap().value().to_vec()).unwrap(),
+        comment: Comment {
+            pre_comment: None,
+            post_comment: None,
+        },
+        key_id: cert.fingerprint().to_hex(),
+        fingerprint: Some(<[u8; 20]>::from_hex(cert.fingerprint().to_hex()).unwrap()),
+        key_ring_status: KeyRingStatus::InKeyRing,
+        trust_level: OwnerTrustLevel::Ultimate,
+        not_usable: false,
+    }
+}
 
 pub fn append_file_name(file: &Path) -> PathBuf {
     let rf = file.to_path_buf();
     let mut sig = rf.into_os_string();
     sig.push(".sig");
     sig.into()
+}
+
+pub fn generate_sequoia_cert(email: &str) -> sequoia_openpgp::Cert {
+    let (cert, _) = CertBuilder::general_purpose(None, Some(email))
+        .generate()
+        .unwrap();
+
+    cert
+}
+
+pub fn generate_sequoia_cert_without_private_key(email: &str) -> sequoia_openpgp::Cert {
+    let (cert, _) = CertBuilder::general_purpose(None, Some(email))
+        .generate()
+        .unwrap();
+
+    cert.strip_secret_key_material()
+}
+
+struct KeyLister {
+    pub ids: Vec<KeyID>,
+}
+
+impl VerificationHelper for &mut KeyLister {
+    fn get_certs(&mut self, _: &[KeyHandle]) -> std::result::Result<Vec<Cert>, anyhow::Error> {
+        Ok(vec![])
+    }
+
+    fn check(&mut self, _structure: MessageStructure) -> std::result::Result<(), anyhow::Error> {
+        Ok(())
+    }
+}
+
+impl DecryptionHelper for &mut KeyLister {
+    fn decrypt<D>(
+        &mut self,
+        pkesks: &[sequoia_openpgp::packet::PKESK],
+        _: &[sequoia_openpgp::packet::SKESK],
+        _: Option<sequoia_openpgp::types::SymmetricAlgorithm>,
+        _: D,
+    ) -> std::result::Result<Option<sequoia_openpgp::Fingerprint>, anyhow::Error>
+    where
+        D: FnMut(
+            sequoia_openpgp::types::SymmetricAlgorithm,
+            &sequoia_openpgp::crypto::SessionKey,
+        ) -> bool,
+    {
+        self.ids.extend(
+            pkesks
+                .iter()
+                .map(|p| p.recipient().clone())
+                .collect::<Vec<KeyID>>(),
+        );
+        Ok(None)
+    }
+}
+
+pub fn count_recipients(data: &[u8]) -> usize {
+    let p = StandardPolicy::new();
+    let mut h = KeyLister { ids: vec![] };
+    let _ = DecryptorBuilder::from_bytes(&data)
+        .unwrap()
+        .with_policy(&p, None, &mut h);
+
+    h.ids.len()
 }

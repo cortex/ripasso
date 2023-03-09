@@ -3,8 +3,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    the Free Software Foundation, version 3 of the License.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -24,7 +23,7 @@ use std::{
     time::Duration,
 };
 
-use clipboard::{ClipboardContext, ClipboardProvider};
+use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use gdk::{keys::constants, ModifierType};
 use glib::{Cast, ObjectExt, StaticType};
 use gtk::{
@@ -123,7 +122,7 @@ fn setup_menu_copy(
 
         let passwords = SHOWN_PASSWORDS.lock().unwrap();
 
-        let mut ctx = clipboard::ClipboardContext::new().unwrap();
+        let mut ctx = cli_clipboard::ClipboardContext::new().unwrap();
 
         let store = store.lock().unwrap();
         let password_res = passwords[path[0].indices()[0] as usize].password(&store);
@@ -169,7 +168,7 @@ fn setup_menu_copy_name(builder: &Builder, password_list: &TreeView, status_bar:
 
         let passwords = SHOWN_PASSWORDS.lock().unwrap();
 
-        let mut ctx = clipboard::ClipboardContext::new().unwrap();
+        let mut ctx = cli_clipboard::ClipboardContext::new().unwrap();
 
         let name_res = passwords[path[0].indices()[0] as usize]
             .name
@@ -459,7 +458,7 @@ fn main() {
     password_list.connect_row_activated(move |_, path, _column| {
         let passwords = SHOWN_PASSWORDS.lock().unwrap();
 
-        let mut ctx = clipboard::ClipboardContext::new().unwrap();
+        let mut ctx = cli_clipboard::ClipboardContext::new().unwrap();
 
         let password_res = {
             let store = store2.lock().unwrap();

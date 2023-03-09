@@ -11,19 +11,19 @@ edition = '2021'
 [dependencies]
 glob = "0.3.1"
 gpgme = "0.11.0"
-chrono = "0.4"
+chrono = { version = "0.4", default_features = false, features = ["clock"] }
 git2 = "0.16.1"
 rand = "0.8.5"
 whoami = "1.3.0"
-toml = "0.5.11"
+toml = "0.7.2"
 reqwest = { version = "0.11.14", features = ["blocking"] }
 hex = "0.4.3"
 totp-rs = { version = "4.2.0", features = ["otpauth"] }
 sequoia-openpgp = "1.13.0"
-anyhow = "1.0.68"
-sequoia-ipc = "0.29.0"
+anyhow = "1.0.69"
+sequoia-ipc = "0.30.1"
 base64 = "0.21.0"
-sha256 = "1.1.1"
+sha2 = "0.10.6"
 sha1 = "0.10.5"
 hmac = "0.12.1"
 
@@ -33,7 +33,7 @@ default-features = false
 features = ["toml"]
 
 [dev-dependencies]
-tempfile = "3.3.0"
+tempfile = "3.4.0"
 flate2 = "1.0.25"
 tar = "0.4.38"
 criterion = "0.4.0"
@@ -48,3 +48,8 @@ members = [
 name = "library_benchmark"
 harness = false
 
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+debug = false

@@ -527,6 +527,7 @@ fn remove_recipient_from_file_last() {
     let result = Recipient::remove_recipient_from_file(
         &r,
         &recipients_file,
+        dir.path(),
         &valid_gpg_signing_keys,
         &crypto,
     );
@@ -578,6 +579,7 @@ fn remove_recipient_from_file_two() {
     let result = Recipient::remove_recipient_from_file(
         &r,
         &recipients_file,
+        dir.path(),
         &valid_gpg_signing_keys,
         &crypto,
     );
@@ -670,6 +672,7 @@ fn remove_recipient_from_file_same_key_id_different_fingerprint() {
     let result = Recipient::remove_recipient_from_file(
         &r,
         &recipients_file,
+        dir.path(),
         &valid_gpg_signing_keys,
         &crypto,
     );
@@ -730,6 +733,7 @@ fn add_recipient_from_file_one_plus_one() {
     let result = Recipient::remove_recipient_from_file(
         &r,
         &recipients_file,
+        dir.path(),
         &valid_gpg_signing_keys,
         &crypto,
     );
