@@ -45,8 +45,6 @@ pub fn errorbox(ui: &mut Cursive, err: &pass::Error) {
 }
 
 /// Copies content to the clipboard.
-/// It first tries to copy to a wayland clipboard, and if that's not availible due to that the
-/// user runs x11/mac/windows we instead try the more generic clipboard crate.
 pub fn set_clipboard(content: String) -> Result<()> {
     let mut ctx = ClipboardContext::new()?;
     ctx.set_contents(content)?;
