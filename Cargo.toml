@@ -19,7 +19,7 @@ toml = "0.7.3"
 reqwest = { version = "0.11.14", features = ["blocking"] }
 hex = "0.4.3"
 totp-rs = { version = "4.2.0", features = ["otpauth"] }
-sequoia-openpgp = "1.13.0"
+sequoia-openpgp = "1.14.0"
 anyhow = "1.0.69"
 sequoia-ipc = "0.30.1"
 base64 = "0.21.0"
