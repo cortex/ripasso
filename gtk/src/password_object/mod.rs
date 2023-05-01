@@ -9,10 +9,9 @@ use adw::subclass::prelude::*;
 use chrono::{DateTime, Local};
 use glib::Object;
 use gtk::glib;
-use ripasso::pass::{PasswordEntry, PasswordStore, Error};
+use ripasso::pass::{Error, PasswordEntry, PasswordStore};
 
-use crate::utils::PasswordStoreBoxed;
-use crate::utils::error_dialog_standalone;
+use crate::utils::{error_dialog_standalone, PasswordStoreBoxed};
 
 glib::wrapper! {
     pub struct PasswordObject(ObjectSubclass<imp::PasswordObject>);
@@ -44,40 +43,26 @@ impl PasswordObject {
     pub fn from_password_entry(p_e: PasswordEntry, store: Arc<Mutex<PasswordStore>>) -> Self {
         let file_date: DateTime<Local> = match p_e.updated {
             Some(d) => d,
-            None => {
-                match std::fs::metadata(&p_e.path) {
-                    Ok(md) => {
-                        match md.modified() {
-                            Ok(st) => {
-                                st.into()
-                            },
-                            Err(e) => {
-                                error_dialog_standalone(&Error::Io(e));
-                                DateTime::<Local>::default()
-                            }
-                        }
-                    },
+            None => match std::fs::metadata(&p_e.path) {
+                Ok(md) => match md.modified() {
+                    Ok(st) => st.into(),
                     Err(e) => {
                         error_dialog_standalone(&Error::Io(e));
                         DateTime::<Local>::default()
                     }
+                },
+                Err(e) => {
+                    error_dialog_standalone(&Error::Io(e));
+                    DateTime::<Local>::default()
                 }
-            }
+            },
         };
 
         let commit_name = match p_e.committed_by {
             Some(n) => n,
-            None => {
-                "".into()
-            }
+            None => "".into(),
         };
 
-        Self::new(
-            p_e.name,
-            p_e.path,
-            file_date,
-            commit_name,
-            store,
-        )
+        Self::new(p_e.name, p_e.path, file_date, commit_name, store)
     }
 }
