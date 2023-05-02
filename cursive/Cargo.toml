@@ -19,7 +19,7 @@ unic-langid = "0.9.1"
 gettext = "0.4.0"
 lazy_static = "1.4.0"
 toml = "0.7.3"
-terminal_size = "0.2.5"
+terminal_size = "0.2.6"
 hex = "0.4.3"
 
 [dependencies.config]
@@ -28,7 +28,7 @@ default-features = false
 features = ["toml"]
 
 [dev-dependencies]
-tempfile = "3.4.0"
+tempfile = "3.5.0"
 chrono = { version = "0.4", default_features = false, features = ["clock"] }
 
 [build-dependencies]
