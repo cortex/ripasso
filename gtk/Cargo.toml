@@ -1,13 +1,19 @@
 [package]
 name = "ripasso-gtk"
 version = "0.7.0-alpha"
-authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>"]
-edition = '2021'
+authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>", "Alexander Kjäll <alexander.kjall@gmail.com>"]
+edition = "2021"
+
 
 [dependencies]
 ripasso = { path = "../", version = "0.7.0-alpha" }
-gtk = { version = "0.15.5", features = ["v3_22"] }
-gdk = "0.15.4"
-glib = "0.15.12"
-lazy_static = "1.4.0"
-cli-clipboard = "0.4.0"
+gtk = { version = "0.6.6", package = "gtk4", features = ["v4_6"] }
+adw = { version = "0.4.1", package = "libadwaita" }
+glib = "0.17.9"
+once_cell = "1.0"
+hex = "0.4.3"
+config = "0.11.0"
+chrono = { version = "0.4", default_features = false, features = ["clock"] }
+
+[build-dependencies]
+glib-build-tools = "0.17"

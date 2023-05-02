@@ -61,6 +61,20 @@ pub struct PasswordStore {
     user_home: Option<PathBuf>,
 }
 
+impl Default for PasswordStore {
+    fn default() -> Self {
+        Self {
+            name: "default".to_owned(),
+            root: PathBuf::from("/tmp/"),
+            valid_gpg_signing_keys: vec![],
+            passwords: vec![],
+            style_file: None,
+            crypto: Box::new(GpgMe {}),
+            user_home: None,
+        }
+    }
+}
+
 impl PasswordStore {
     /// Constructs a `PasswordStore` object. If `password_store_signing_key` is present,
     /// the function verifies that the .gpg-id file is signed correctly
@@ -869,7 +883,7 @@ impl GitLogLine {
 }
 
 /// The state of a password, with regards to git
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 #[non_exhaustive]
 pub enum RepositoryStatus {
     /// The password is in git
@@ -877,16 +891,17 @@ pub enum RepositoryStatus {
     /// The password isn't in git
     NotInRepo,
     /// The passwordstore isn't backed by a git repo
+    #[default]
     NoRepo,
 }
 
 /// One password in the password store
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PasswordEntry {
     /// Name of the entry, (from relative path to password)
     pub name: String,
     /// Absolute path to the password file
-    path: PathBuf,
+    pub path: PathBuf,
     /// if we have a git repo, then commit time
     pub updated: Option<DateTime<Local>>,
     /// if we have a git repo, then the name of the committer
