@@ -35,7 +35,7 @@ jobs:
           toolchain: stable
           override: true
       - name: Dependencies
-        run: sudo apt update -y && sudo apt install libssl-dev libclang-dev libadwaita-1-dev libgpgme11-dev libgpg-error-dev libgtk-4-dev qtdeclarative5-dev libqt5svg5-dev libxcb-shape0-dev libxcb-xfixes0-dev nettle-dev -y
+        run: sudo apt update -y && sudo apt install libssl-dev libclang-dev libadwaita-1-dev libgpgme11-dev libgpg-error-dev libgtk-4-dev libxcb-shape0-dev libxcb-xfixes0-dev nettle-dev -y
       - uses: actions-rs/cargo@v1
         with:
           command: test

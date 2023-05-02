@@ -37,26 +37,12 @@ I use this as my daily password-manager.
 cargo build -p ripasso-cursive
 ```
 
-
-### QT GUI - (unstable)
-![Screenshot of ripasso-qt](doc/ripasso-qt.png)
-This is mostly working, but needs updates.
-
-#### Build
-
-```
-cargo build -p ripasso-qt
-```
-For it to run, you need to be in the qml directory.
-
-```
-cd qml
-cargo run
-```
-
 ### GTK GUI - (WIP)
 ![Screenshot of ripasso-gtk](doc/ripasso-gtk.png)
-Build
+
+Not at feature-parity with the cursive code base yet, but basic operations work.
+
+#### Build
 
 ```
 cargo build -p ripasso-gtk
@@ -86,11 +72,6 @@ sudo dnf install ripasso
 GTK version (unstable)
 ```
 sudo dnf install ripasso-gtk
-```
-
-Qt version (unstable)
-```
-sudo dnf install ripasso-qt
 ```
 
 ### Nix
