@@ -17,8 +17,7 @@ They are named different things on different platforms
 
 ```
 $ brew update
-$ brew install automake cmake gettext qt5 gtk+3 gpgme
-$ export PATH="/usr/local/opt/qt/bin:$PATH"
+$ brew install automake cmake gettext gtk+4 gpgme
 $ git clone https://github.com/cortex/ripasso.git
 $ cd ripasso
 $ cargo run
@@ -26,14 +25,10 @@ $ cargo run
 
 ### Ubuntu
 ```
-$ apt install cargo libgtk-3-dev qtdeclarative5-dev libqt5svg5-dev cmake libncurses-dev libncursesw5-dev libssl-dev libgpgme-dev libxcb-xfixes0-dev libxcb-shape0-dev nettle-dev
+$ apt install cargo libssl-dev libclang-dev libadwaita-1-dev libgpgme11-dev libgpg-error-dev libgtk-4-dev libxcb-shape0-dev libxcb-xfixes0-dev nettle-dev
 $ cargo build --all
 ```
 
-### Arch
-```
-$ pacman -S qt5-base qt5-svg qt5-declarative
-```
 ### Fedora
 #### All
 ```
@@ -42,10 +37,6 @@ $ dnf install cargo gpgme-devel openssl-devel libxcb libxcb-devel nettle-devel
 #### GTK
 ```
 $ dnf install rust-gdk-devel
-```
-#### QML
-```
-$ dnf install qt5-qtbase-devel qt5-qtdeclarative-devel qt5-qtsvg-devel qt5-qtquickcontrols
 ```
 ## Building
 
@@ -59,9 +50,8 @@ this is mostly of interest for package maintainers in distributions.
 ### Build artifacts
 
 The build produces a number of artifacts:
- * `./target/release/ripasso-cursive` - the main application binary, with the ncurses TUI
- * `./target/release/ripasso-gtk` - the GTK application, still in an experimental phase and not really usable
- * `./target/release/ripasso-qt` - the QT application, still in an experimental phase and not really usable
+ * `./target/release/ripasso-cursive` - the main application binary, with the curses TUI
+ * `./target/release/ripasso-gtk` - the GTK application, still in an experimental phase
  * `./target/man-page/cursive/ripasso-cursive.1` - The manual page for ripasso-cursive
  * `./target/translations/cursive/de.mo` - german translation
  * `./target/translations/cursive/fr.mo` - french translation
@@ -70,5 +60,8 @@ The build produces a number of artifacts:
  * `./target/translations/cursive/nn.mo` - norwegian nynorsk translation
  * `./target/translations/cursive/sv.mo` - swedish translation
 
-The translation files are in gettext binary format, and should be installed in `/usr/share/ripasso/`. If that location doesn't
-conform to your distribution's guidelines, then you can supply the environmental variable `TRANSLATION_INPUT_PATH` when building to specify another.
+The translation files are in gettext binary format, and should be installed in
+`/usr/share/locale/{}/LC_MESSAGES/ripasso-cursive.mo` where `{}` should be replaced
+with the locale. If that location doesn't conform to your distribution's guidelines,
+then you can supply the environmental variable `TRANSLATION_INPUT_PATH` when building
+to specify another.
