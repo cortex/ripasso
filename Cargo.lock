@@ -4128,9 +4128,9 @@ checksum = "a67300977d3dc3f8034dae89778f502b6ba20b269527b3223ba59c0cf393bb8a"
 
 [[package]]
 name = "xml-rs"
-version = "0.8.5"
+version = "0.8.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "374b609fb36c36ce3501094dc0548f7df5d8d102224b65bc59812e4a5425d571"
+checksum = "52839dc911083a8ef63efa4d039d1f58b5e409f923e44c80828f206f66e5541c"
 
 [[package]]
 name = "xxhash-rust"
