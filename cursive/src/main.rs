@@ -61,8 +61,9 @@ type StoreListType = Arc<Mutex<Vec<Arc<Mutex<PasswordStore>>>>>;
 
 lazy_static! {
     static ref CATALOG: gettext::Catalog = get_translation_catalog();
-    static ref DEFAULT_TERMINAL_SIZE: (usize, usize) = match term_size::dimensions() {
-        Some((w, h)) => (w + 8, h),
+    static ref DEFAULT_TERMINAL_SIZE: (usize, usize) = match terminal_size::terminal_size() {
+        Some((terminal_size::Width(w), terminal_size::Height(h))) =>
+            (usize::from(w + 8), usize::from(h)),
         _ => (0, 0),
     };
 }

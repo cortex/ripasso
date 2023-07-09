@@ -15,6 +15,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#[cfg(not(target_os = "linux"))]
+use cli_clipboard::ClipboardProvider;
+#[cfg(target_os = "linux")]
+use clipboard::ClipboardProvider;
 use cursive::{
     event::Key,
     views::{Checkbox, Dialog, EditView, OnEventView, RadioButton, TextView},
@@ -24,10 +28,6 @@ use pass::Result;
 use ripasso::{crypto::CryptoImpl, pass};
 #[cfg(target_os = "linux")]
 use wl_clipboard_rs::copy::{MimeType, Options, Source};
-#[cfg(target_os = "linux")]
-use clipboard::ClipboardProvider;
-#[cfg(not(target_os = "linux"))]
-use cli_clipboard::ClipboardProvider;
 
 /// Displays an error in a cursive dialog
 pub fn errorbox(ui: &mut Cursive, err: &pass::Error) {
