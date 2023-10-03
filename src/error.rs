@@ -11,6 +11,7 @@ use crate::pass::PasswordStore;
 #[non_exhaustive]
 #[derive(Debug)]
 pub enum Error {
+    Clipboard(arboard::Error),
     Io(io::Error),
     Git(git2::Error),
     Gpg(gpgme::Error),
@@ -31,6 +32,12 @@ pub enum Error {
     FmtError(std::fmt::Error),
     TotpUrlError(totp_rs::TotpUrlError),
     SystemTimeError(std::time::SystemTimeError),
+}
+
+impl From<arboard::Error> for Error {
+    fn from(err: arboard::Error) -> Self {
+        Self::Clipboard(err)
+    }
 }
 
 impl From<io::Error> for Error {
@@ -189,6 +196,7 @@ impl From<PoisonError<MutexGuard<'_, Arc<Mutex<PasswordStore>>>>> for Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
+            Self::Clipboard(err) => write!(f, "{err}"),
             Self::Io(err) => write!(f, "{err}"),
             Self::Git(err) => write!(f, "{err}"),
             Self::Gpg(err) => write!(f, "{err}"),

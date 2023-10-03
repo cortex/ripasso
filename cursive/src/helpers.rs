@@ -14,14 +14,21 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use cli_clipboard::{ClipboardContext, ClipboardProvider};
+use std::sync::{Arc, Mutex};
+
+use arboard::Clipboard;
 use cursive::{
     event::Key,
     views::{Checkbox, Dialog, EditView, OnEventView, RadioButton, TextView},
     Cursive,
 };
+use lazy_static::lazy_static;
 use pass::Result;
 use ripasso::{crypto::CryptoImpl, pass};
+
+lazy_static! {
+    static ref CLIPBOARD: Arc<Mutex<Clipboard>> = Arc::new(Mutex::new(Clipboard::new().unwrap()));
+}
 
 /// Displays an error in a cursive dialog
 pub fn errorbox(ui: &mut Cursive, err: &pass::Error) {
@@ -46,10 +53,7 @@ pub fn errorbox(ui: &mut Cursive, err: &pass::Error) {
 
 /// Copies content to the clipboard.
 pub fn set_clipboard(content: String) -> Result<()> {
-    let mut ctx = ClipboardContext::new()?;
-    ctx.set_contents(content)?;
-
-    Ok(())
+    Ok(CLIPBOARD.lock().unwrap().set_text(content)?)
 }
 
 pub fn get_value_from_input(s: &mut Cursive, input_name: &str) -> Option<std::rc::Rc<String>> {
