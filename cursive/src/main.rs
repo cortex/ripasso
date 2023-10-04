@@ -67,14 +67,14 @@ lazy_static! {
     };
 }
 
-fn screen_width(ui: &mut Cursive) -> usize {
+fn screen_width(ui: &Cursive) -> usize {
     match ui.screen_size().x {
         0 => DEFAULT_TERMINAL_SIZE.0,
         w => w,
     }
 }
 
-fn screen_height(ui: &mut Cursive) -> usize {
+fn screen_height(ui: &Cursive) -> usize {
     match ui.screen_size().y {
         0 => DEFAULT_TERMINAL_SIZE.1,
         h => h,
@@ -894,8 +894,7 @@ fn render_recipient_label(
 fn get_sub_dirs(dir: &PathBuf) -> Result<Vec<PathBuf>> {
     let mut to_visit = vec![dir.clone()];
     let mut all = vec![PathBuf::from("./")];
-    while !to_visit.is_empty() {
-        let d = to_visit.pop().unwrap();
+    while let Some(d) = to_visit.pop() {
         for entry in std::fs::read_dir(d)? {
             let entry = entry?;
             let path = entry.path();

@@ -489,7 +489,7 @@ pub fn certificate_check(
     let Some(host_key) = cert.as_hostkey() else {
         // Return passthrough for TLS X509 certificates to use whatever validation
         // was done in git2.
-        return Ok(CertificateCheckStatus::CertificatePassthrough)
+        return Ok(CertificateCheckStatus::CertificatePassthrough);
     };
     // If a nonstandard port is in use, check for that first.
     // The fallback to check without a port is handled in the HostKeyNotFound handler.
@@ -676,10 +676,18 @@ impl KnownHost {
 }
 
 fn hashed_hostname_matches(host: &str, hashed: &str) -> bool {
-    let Some((b64_salt, b64_host)) = hashed.split_once('|') else { return false; };
-    let Ok(salt) = STANDARD.decode(b64_salt) else { return false; };
-    let Ok(hashed_host) = STANDARD.decode(b64_host) else { return false; };
-    let Ok(mut mac) = hmac::Hmac::<sha1::Sha1>::new_from_slice(&salt) else { return false; };
+    let Some((b64_salt, b64_host)) = hashed.split_once('|') else {
+        return false;
+    };
+    let Ok(salt) = STANDARD.decode(b64_salt) else {
+        return false;
+    };
+    let Ok(hashed_host) = STANDARD.decode(b64_host) else {
+        return false;
+    };
+    let Ok(mut mac) = hmac::Hmac::<sha1::Sha1>::new_from_slice(&salt) else {
+        return false;
+    };
     mac.update(host.as_bytes());
     let result = mac.finalize().into_bytes();
     hashed_host == result[..]
@@ -834,10 +842,12 @@ fn parse_known_hosts_line(line: &str, location: KnownHostLocation) -> Option<Kno
         return None;
     }
     let mut parts = line.split([' ', '\t']).filter(|s| !s.is_empty());
-    let Some(patterns) = parts.next() else { return None };
-    let Some(key_type) = parts.next() else { return None };
-    let Some(key) = parts.next() else { return None };
-    let Ok(key) = STANDARD.decode(key) else { return None };
+    let patterns = parts.next()?;
+    let key_type = parts.next()?;
+    let key = parts.next()?;
+    let Ok(key) = STANDARD.decode(key) else {
+        return None;
+    };
     Some(KnownHost {
         location,
         patterns: patterns.to_string(),
