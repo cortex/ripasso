@@ -704,8 +704,12 @@ impl PasswordStore {
         let keys = self
             .all_recipients()?
             .into_iter()
-            .map(|s| format!("0x{}, ", s.key_id))
-            .collect::<String>();
+            .fold(String::new(), |mut acc, r| {
+                use std::fmt::Write;
+                let _ = write!(acc, ", 0x{}", r.key_id);
+                acc
+            });
+
         let message = format!("Reencrypt password store with new GPG ids {keys}");
 
         self.add_and_commit(&names, &message)?;
