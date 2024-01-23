@@ -20,7 +20,7 @@ use sequoia_openpgp::{
     },
     policy::Policy,
     serialize::{
-        stream::{Armorer, Encryptor, LiteralWriter, Message, Signer},
+        stream::{Armorer, Encryptor2, LiteralWriter, Message, Signer},
         Serialize,
     },
     types::{RevocationStatus, SymmetricAlgorithm},
@@ -805,7 +805,7 @@ impl Crypto for Sequoia {
         let message = Message::new(&mut sink);
 
         // We want to encrypt a literal data packet.
-        let message = Encryptor::for_recipients(message, recipient_keys).build()?;
+        let message = Encryptor2::for_recipients(message, recipient_keys).build()?;
 
         // Emit a literal data packet.
         let mut message = LiteralWriter::new(message).build()?;
