@@ -26,7 +26,7 @@ use std::{
 
 use chrono::prelude::*;
 use totp_rs::TOTP;
-use zeroize::{Zeroize, Zeroizing};
+use zeroize::Zeroize;
 
 use crate::{
     crypto::{Crypto, CryptoImpl, GpgMe, Sequoia, VerificationError},

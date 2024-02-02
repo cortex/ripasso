@@ -26,7 +26,7 @@ use sequoia_openpgp::{
     types::{RevocationStatus, SymmetricAlgorithm},
     Cert, KeyHandle,
 };
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use zeroize::Zeroize;
 
 pub use crate::error::{Error, Result};
 use crate::{

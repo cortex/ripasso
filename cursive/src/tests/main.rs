@@ -193,6 +193,9 @@ fn substr_overlong() {
 
 #[test]
 fn create_label_basic() {
+
+    // TODO: Fix this test so that time zones don't mess with it.
+
     let p = pass::PasswordEntry::new(
         &PathBuf::from("/tmp/"),
         &PathBuf::from("file.gpg"),
