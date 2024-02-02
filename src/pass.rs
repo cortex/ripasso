@@ -26,6 +26,7 @@ use std::{
 
 use chrono::prelude::*;
 use totp_rs::TOTP;
+use zeroize::{Zeroize, Zeroizing};
 
 use crate::{
     crypto::{Crypto, CryptoImpl, GpgMe, Sequoia, VerificationError},
@@ -692,7 +693,9 @@ impl PasswordStore {
     fn reencrypt_all_password_entries(&self) -> Result<()> {
         let mut names: Vec<PathBuf> = Vec::new();
         for entry in self.all_passwords()? {
-            entry.update_internal(&entry.secret(self)?, self)?;
+            let mut secret = entry.secret(self)?;
+            entry.update_internal(&secret, self)?;
+            secret.zeroize();
             names.push(append_extension(PathBuf::from(&entry.name), ".gpg"));
         }
         names.push(PathBuf::from(".gpg-id"));
@@ -785,12 +788,13 @@ impl PasswordStore {
         fs::create_dir_all(&new_path_dir)?;
 
         let mut file = std::fs::File::create(&new_path)?;
-        let secret = self.crypto.decrypt_string(&std::fs::read(&old_path)?)?;
+        let mut secret = self.crypto.decrypt_string(&std::fs::read(&old_path)?)?;
         let new_recipients = Recipient::all_recipients(
             &self.recipients_file_for_dir(&new_path)?,
             self.crypto.as_ref(),
         )?;
         file.write_all(&self.crypto.encrypt_string(&secret, &new_recipients)?)?;
+        secret.zeroize();
         std::fs::remove_file(&old_path)?;
 
         if self.repo().is_ok() {
@@ -1014,14 +1018,17 @@ impl PasswordEntry {
     /// # Errors
     /// Returns an `Err` if the decryption fails
     pub fn password(&self, store: &PasswordStore) -> Result<String> {
-        Ok(self.secret(store)?.split('\n').take(1).collect())
+        let mut secret = self.secret(store)?;
+        let password: String= secret.split('\n').take(1).collect();
+        secret.zeroize();
+        Ok(password)
     }
 
     /// decrypts and returns a TOTP code if the entry contains a otpauth:// url
     /// # Errors
     /// Returns an `Err` if the code generation fails
     pub fn mfa(&self, store: &PasswordStore) -> Result<String> {
-        let secret = self.secret(store)?;
+        let mut secret = self.secret(store)?;
 
         if let Some(start_pos) = secret.find("otpauth://") {
             let end_pos = {
@@ -1035,13 +1042,16 @@ impl PasswordEntry {
                 end_pos
             };
             let totp = TOTP::from_url(&secret[start_pos..end_pos])?;
+            secret.zeroize();
             Ok(totp.generate_current()?)
         } else {
+            secret.zeroize();
             Err(Error::Generic("No otpauth:// url in secret"))
         }
     }
 
-    fn update_internal(&self, secret: &str, store: &PasswordStore) -> Result<()> {
+    /// All calls to this function must be followed by secret.zeroize()
+    fn update_internal(&self, secret: &String, store: &PasswordStore) -> Result<()> {
         if !store.valid_gpg_signing_keys.is_empty() {
             store.verify_gpg_id_files()?;
         }
@@ -1058,8 +1068,9 @@ impl PasswordEntry {
     /// is supplied.
     /// # Errors
     /// Returns an `Err` if the update fails.
-    pub fn update(&self, secret: String, store: &PasswordStore) -> Result<()> {
+    pub fn update(&self, mut secret: String, store: &PasswordStore) -> Result<()> {
         self.update_internal(&secret, store)?;
+        secret.zeroize();
 
         if store.repo().is_err() {
             return Ok(());

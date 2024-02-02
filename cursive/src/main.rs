@@ -50,6 +50,7 @@ mod helpers;
 mod wizard;
 
 use lazy_static::lazy_static;
+use zeroize::Zeroize;
 
 use crate::helpers::{get_value_from_input, is_checkbox_checked, is_radio_button_selected};
 
@@ -141,7 +142,9 @@ fn copy(ui: &mut Cursive, store: PasswordStoreType) {
         return;
     }
     if let Err(err) = || -> pass::Result<()> {
-        helpers::set_clipboard(sel.unwrap().secret(&*store.lock()?.lock()?)?)?;
+        let mut secret: String = sel.unwrap().secret(&*store.lock()?.lock()?)?;
+        helpers::set_clipboard(&secret)?;
+        secret.zeroize();
         Ok(())
     }() {
         helpers::errorbox(ui, &err);
@@ -150,7 +153,7 @@ fn copy(ui: &mut Cursive, store: PasswordStoreType) {
 
     thread::spawn(|| {
         thread::sleep(time::Duration::from_secs(40));
-        helpers::set_clipboard(String::new()).unwrap();
+        helpers::set_clipboard(&String::new()).unwrap();
     });
     ui.call_on_name("status_bar", |l: &mut TextView| {
         l.set_content(CATALOG.gettext("Copied password to copy buffer for 40 seconds"));
@@ -167,7 +170,10 @@ fn copy_first_line(ui: &mut Cursive, store: PasswordStoreType) {
         return;
     }
     if let Err(err) = || -> pass::Result<()> {
-        helpers::set_clipboard(sel.unwrap().secret(&*store.lock()?.lock()?)?)?;
+        //Wait, isn't this supposed to be a call to password()?
+        let mut secret = sel.unwrap().secret(&*store.lock()?.lock()?)?;
+        helpers::set_clipboard(&secret)?;
+        secret.zeroize();
         Ok(())
     }() {
         helpers::errorbox(ui, &err);
@@ -176,7 +182,7 @@ fn copy_first_line(ui: &mut Cursive, store: PasswordStoreType) {
 
     thread::spawn(|| {
         thread::sleep(time::Duration::from_secs(40));
-        helpers::set_clipboard(String::new()).unwrap();
+        helpers::set_clipboard(&String::new()).unwrap();
     });
     ui.call_on_name("status_bar", |l: &mut TextView| {
         l.set_content(CATALOG.gettext("Copied password to copy buffer for 40 seconds"));
@@ -193,7 +199,9 @@ fn copy_mfa(ui: &mut Cursive, store: PasswordStoreType) {
         return;
     }
     if let Err(err) = || -> pass::Result<()> {
-        helpers::set_clipboard(sel.unwrap().mfa(&*store.lock()?.lock()?)?)?;
+        let mut secret = sel.unwrap().mfa(&*store.lock()?.lock()?)?;
+        helpers::set_clipboard(&secret)?;
+        secret.zeroize();
         Ok(())
     }() {
         helpers::errorbox(ui, &err);
@@ -218,7 +226,7 @@ fn copy_name(ui: &mut Cursive) {
 
     if let Err(err) = || -> pass::Result<()> {
         let name = sel.name.split('/').next_back();
-        helpers::set_clipboard(name.unwrap_or("").to_string())?;
+        helpers::set_clipboard(&name.unwrap_or("").to_string())?;
         Ok(())
     }() {
         helpers::errorbox(ui, &err);
@@ -395,7 +403,7 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
 
     let password_entry = password_entry_opt.unwrap();
 
-    let password = {
+    let mut password = {
         match password_entry.secret(&*store.lock()?.lock()?) {
             Ok(p) => p,
             Err(err) => {
@@ -404,35 +412,40 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
             }
         }
     };
-    let d = Dialog::around(TextArea::new().content(password).with_name("editbox"))
+    let d = Dialog::around(TextArea::new().content(&password).with_name("editbox"))
         .button(CATALOG.gettext("Save"), move |s| {
-            let new_password = s
+            let mut new_secret = s
                 .call_on_name("editbox", |e: &mut TextArea| e.get_content().to_string())
                 .unwrap();
 
-            if new_password.contains("otpauth://") {
+            if new_secret.contains("otpauth://") {
                 let store = store.clone();
                 let d = Dialog::around(TextView::new(CATALOG.gettext("It seems like you are trying to save a TOTP code to the password store. This will reduce your 2FA solution to just 1FA, do you want to proceed?")))
                     .button(CATALOG.gettext("Save"), move |s| {
-                        do_password_save(s, &new_password, store.clone(), true);
+                        let mut confirmed_new_secret = s
+                            .call_on_name("editbox", |e: &mut TextArea| e.get_content().to_string())
+                            .unwrap();
+                        do_password_save(s, &confirmed_new_secret, store.clone(), true);
+                        confirmed_new_secret.zeroize();
                     })
                     .dismiss_button(CATALOG.gettext("Close"));
 
                 let ev = OnEventView::new(d).on_event(Key::Esc, |s| {
                     s.pop_layer();
                 });
-
                 s.add_layer(ev);
             } else {
-                do_password_save(s, &new_password, store.clone(), false);
+                do_password_save(s, &new_secret, store.clone(), false);
             };
+            new_secret.zeroize();
 
         })
         .button(CATALOG.gettext("Generate"), move |s| {
-            let new_password = ripasso::words::generate_password(6);
+            let mut new_password = ripasso::words::generate_password(6);
             s.call_on_name("editbox", |e: &mut TextArea| {
-                e.set_content(new_password);
+                e.set_content(&new_password);
             });
+            new_password.zeroize();
         })
         .dismiss_button(CATALOG.gettext("Close"));
 
@@ -441,7 +454,7 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
     });
 
     ui.add_layer(ev);
-
+    password.zeroize();
     Ok(())
 }
 
