@@ -1019,7 +1019,7 @@ impl PasswordEntry {
     /// Returns an `Err` if the decryption fails
     pub fn password(&self, store: &PasswordStore) -> Result<String> {
         let mut secret = self.secret(store)?;
-        let password: String= secret.split('\n').take(1).collect();
+        let password: String = secret.split('\n').take(1).collect();
         secret.zeroize();
         Ok(password)
     }
