@@ -1051,7 +1051,7 @@ impl PasswordEntry {
     }
 
     /// All calls to this function must be followed by secret.zeroize()
-    fn update_internal(&self, secret: &String, store: &PasswordStore) -> Result<()> {
+    fn update_internal(&self, secret: &str, store: &PasswordStore) -> Result<()> {
         if !store.valid_gpg_signing_keys.is_empty() {
             store.verify_gpg_id_files()?;
         }
