@@ -184,7 +184,9 @@ fn copy_first_line(ui: &mut Cursive, store: PasswordStoreType) {
         helpers::set_clipboard(&String::new()).unwrap();
     });
     ui.call_on_name("status_bar", |l: &mut TextView| {
-        l.set_content(CATALOG.gettext("Copied first line of password to copy buffer for 40 seconds"));
+        l.set_content(
+            CATALOG.gettext("Copied first line of password to copy buffer for 40 seconds"),
+        );
     });
 }
 
