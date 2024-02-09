@@ -26,6 +26,7 @@ use sequoia_openpgp::{
     types::{RevocationStatus, SymmetricAlgorithm},
     Cert, KeyHandle,
 };
+use zeroize::Zeroize;
 
 pub use crate::error::{Error, Result};
 use crate::{
@@ -227,7 +228,9 @@ impl Crypto for GpgMe {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
         let mut output = Vec::new();
         ctx.decrypt(ciphertext, &mut output)?;
-        Ok(String::from_utf8(output)?)
+        let result = String::from_utf8(output.to_vec())?;
+        output.zeroize();
+        Ok(result)
     }
 
     fn encrypt_string(&self, plaintext: &str, recipients: &[Recipient]) -> Result<Vec<u8>> {
@@ -249,7 +252,6 @@ impl Crypto for GpgMe {
             &mut output,
             gpgme::EncryptFlags::NO_COMPRESS,
         )?;
-
         Ok(output)
     }
 
@@ -756,8 +758,9 @@ impl Crypto for Sequoia {
 
             // Decrypt the data.
             std::io::copy(&mut decryptor, &mut sink).unwrap();
-
-            Ok(std::str::from_utf8(&sink).unwrap().to_owned())
+            let result = std::str::from_utf8(&sink).unwrap().to_owned();
+            sink.zeroize();
+            Ok(result)
         } else {
             // Make a helper that that feeds the recipient's secret key to the
             // decryptor.
@@ -776,8 +779,9 @@ impl Crypto for Sequoia {
 
             // Decrypt the data.
             std::io::copy(&mut decryptor, &mut sink)?;
-
-            Ok(std::str::from_utf8(&sink)?.to_owned())
+            let result = std::str::from_utf8(&sink)?.to_owned();
+            sink.zeroize();
+            Ok(result)
         }
     }
 

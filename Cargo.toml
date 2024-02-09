@@ -27,6 +27,7 @@ base64 = "0.21.4"
 sha2 = "0.10.8"
 sha1 = "0.10.6"
 hmac = "0.12.1"
+zeroize = { version = "1.7.0", features = ["zeroize_derive", "alloc"] }
 
 [dependencies.config]
 version = "0.11.0"

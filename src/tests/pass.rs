@@ -1184,9 +1184,10 @@ fn decrypt_password_multiline() -> Result<()> {
         user_home: None,
     };
 
-    let res = pe.password(&store).unwrap();
+    let mut res = pe.password(&store).unwrap();
 
     assert_eq!("row one", res);
+    res.zeroize();
 
     Ok(())
 }

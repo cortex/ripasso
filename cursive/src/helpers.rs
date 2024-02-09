@@ -52,7 +52,7 @@ pub fn errorbox(ui: &mut Cursive, err: &pass::Error) {
 }
 
 /// Copies content to the clipboard.
-pub fn set_clipboard(content: String) -> Result<()> {
+pub fn set_clipboard(content: &String) -> Result<()> {
     Ok(CLIPBOARD.lock().unwrap().set_text(content)?)
 }
 
