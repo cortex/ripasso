@@ -170,8 +170,7 @@ fn copy_first_line(ui: &mut Cursive, store: PasswordStoreType) {
         return;
     }
     if let Err(err) = || -> pass::Result<()> {
-        //Wait, isn't this supposed to be a call to password()?
-        let mut secret = sel.unwrap().secret(&*store.lock()?.lock()?)?;
+        let mut secret = sel.unwrap().password(&*store.lock()?.lock()?)?;
         helpers::set_clipboard(&secret)?;
         secret.zeroize();
         Ok(())
@@ -185,7 +184,7 @@ fn copy_first_line(ui: &mut Cursive, store: PasswordStoreType) {
         helpers::set_clipboard(&String::new()).unwrap();
     });
     ui.call_on_name("status_bar", |l: &mut TextView| {
-        l.set_content(CATALOG.gettext("Copied password to copy buffer for 40 seconds"));
+        l.set_content(CATALOG.gettext("Copied first line of password to copy buffer for 40 seconds"));
     });
 }
 
