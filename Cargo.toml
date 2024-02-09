@@ -9,21 +9,21 @@ license = "GPL-3.0-only"
 edition = '2021'
 
 [dependencies]
-arboard = "3.2.1"
+arboard = "3.3.0"
 glob = "0.3.1"
 gpgme = "0.11.0"
 chrono = { version = "0.4", default_features = false, features = ["clock"] }
 git2 = "0.18.1"
 rand = "0.8.5"
 whoami = "1.4.1"
-toml = "0.8.2"
-reqwest = { version = "0.11.22", features = ["blocking"] }
+toml = "0.8.8"
+reqwest = { version = "0.11.23", features = ["blocking"] }
 hex = "0.4.3"
 totp-rs = { version = "5.3.0", features = ["otpauth"] }
-sequoia-openpgp = "1.16.1"
-anyhow = "1.0.75"
-sequoia-ipc = "0.30.1"
-base64 = "0.21.4"
+sequoia-openpgp = "1.18.0"
+anyhow = "1.0.79"
+sequoia-ipc = "0.32.0"
+base64 = "0.21.7"
 sha2 = "0.10.8"
 sha1 = "0.10.6"
 hmac = "0.12.1"
@@ -35,8 +35,8 @@ default-features = false
 features = ["toml"]
 
 [dev-dependencies]
-tempfile = "3.8.0"
-flate2 = "1.0.27"
+tempfile = "3.9.0"
+flate2 = "1.0.28"
 tar = "0.4.40"
 criterion = "0.5.1"
 
