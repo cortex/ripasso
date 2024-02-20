@@ -54,7 +54,7 @@ cargo build -p ripasso-gtk
 
 TUI version
 ```
-paru install ripasso-cursive
+pacman -S ripasso
 ```
 
 ### Fedora
