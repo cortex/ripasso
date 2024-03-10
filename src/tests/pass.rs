@@ -119,7 +119,7 @@ fn populate_password_list_small_repo() -> Result<()> {
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "test");
     assert_eq!(results[0].committed_by, Some("Alexander Kjäll".to_owned()));
-    assert_eq!(results[0].signature_status.is_none(), true);
+    assert!(results[0].signature_status.is_none());
     Ok(())
 }
 
@@ -141,7 +141,7 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "10");
     assert_eq!(results[0].committed_by, Some("Alexander Kjäll".to_owned()));
-    assert_eq!(results[0].signature_status.is_none(), true);
+    assert!(results[0].signature_status.is_none());
     Ok(())
 }
 
@@ -162,19 +162,19 @@ fn populate_password_list_directory_without_git() -> Result<()> {
 
     assert_eq!(results.len(), 3);
     assert_eq!(results[0].name, "first");
-    assert_eq!(results[0].committed_by.is_none(), true);
-    assert_eq!(results[0].updated.is_none(), true);
-    assert_eq!(results[0].signature_status.is_none(), true);
+    assert!(results[0].committed_by.is_none());
+    assert!(results[0].updated.is_none());
+    assert!(results[0].signature_status.is_none());
 
     assert_eq!(results[1].name, "second");
-    assert_eq!(results[1].committed_by.is_none(), true);
-    assert_eq!(results[1].updated.is_none(), true);
-    assert_eq!(results[1].signature_status.is_none(), true);
+    assert!(results[1].committed_by.is_none());
+    assert!(results[1].updated.is_none());
+    assert!(results[1].signature_status.is_none());
 
     assert_eq!(results[2].name, "third");
-    assert_eq!(results[2].committed_by.is_none(), true);
-    assert_eq!(results[2].updated.is_none(), true);
-    assert_eq!(results[2].signature_status.is_none(), true);
+    assert!(results[2].committed_by.is_none());
+    assert!(results[2].updated.is_none());
+    assert!(results[2].signature_status.is_none());
     Ok(())
 }
 
@@ -193,14 +193,14 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
     )?;
     let results = store.all_passwords().unwrap();
 
-    let expected = vec!["3", "A/1", "B/2"];
+    let expected = ["3", "A/1", "B/2"];
 
     assert_eq!(results.len(), expected.len());
 
     for (i, e) in expected.iter().enumerate() {
         assert_eq!(results[i].name, e.to_string());
-        assert_eq!(results[i].committed_by.is_none(), false);
-        assert_eq!(results[i].updated.is_none(), false);
+        assert!(results[i].committed_by.is_some());
+        assert!(results[i].updated.is_some());
     }
     Ok(())
 }
@@ -223,16 +223,16 @@ fn password_store_with_relative_path() -> Result<()> {
 
     assert_eq!(results.len(), 3);
     assert_eq!(results[0].name, "3");
-    assert_eq!(results[0].committed_by.is_none(), false);
-    assert_eq!(results[0].updated.is_none(), false);
+    assert!(results[0].committed_by.is_some());
+    assert!(results[0].updated.is_some());
 
     assert_eq!(results[1].name, "2");
-    assert_eq!(results[1].committed_by.is_none(), false);
-    assert_eq!(results[1].updated.is_none(), false);
+    assert!(results[1].committed_by.is_some());
+    assert!(results[1].updated.is_some());
 
     assert_eq!(results[2].name, "1");
-    assert_eq!(results[2].committed_by.is_none(), false);
-    assert_eq!(results[2].updated.is_none(), false);
+    assert!(results[2].committed_by.is_some());
+    assert!(results[2].updated.is_some());
 
     Ok(())
 }
@@ -242,7 +242,7 @@ fn password_store_with_shallow_checkout() -> Result<()> {
     let dir = UnpackedDir::new("password_store_with_shallow_checkout")?;
 
     let store = PasswordStore::new(
-        &"default",
+        "default",
         &Some(dir.dir().to_path_buf()),
         &None,
         &Some(dir.dir().to_path_buf()),
@@ -254,8 +254,8 @@ fn password_store_with_shallow_checkout() -> Result<()> {
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "1");
-    assert_eq!(results[0].committed_by.is_none(), false);
-    assert_eq!(results[0].updated.is_none(), false);
+    assert!(results[0].committed_by.is_some());
+    assert!(results[0].updated.is_some());
 
     Ok(())
 }
@@ -277,16 +277,16 @@ fn password_store_with_sparse_checkout() -> Result<()> {
 
     assert_eq!(results.len(), 3);
     assert_eq!(results[0].name, "3/1");
-    assert_eq!(results[0].committed_by.is_none(), false);
-    assert_eq!(results[0].updated.is_none(), false);
+    assert!(results[0].committed_by.is_some());
+    assert!(results[0].updated.is_some());
 
     assert_eq!(results[1].name, "2/1");
-    assert_eq!(results[1].committed_by.is_none(), false);
-    assert_eq!(results[1].updated.is_none(), false);
+    assert!(results[1].committed_by.is_some());
+    assert!(results[1].updated.is_some());
 
     assert_eq!(results[2].name, "1/1");
-    assert_eq!(results[2].committed_by.is_none(), false);
-    assert_eq!(results[2].updated.is_none(), false);
+    assert!(results[2].committed_by.is_some());
+    assert!(results[2].updated.is_some());
     Ok(())
 }
 
@@ -316,22 +316,22 @@ fn password_store_with_symlink() -> Result<()> {
 
     assert_eq!(results.len(), 3);
     assert_eq!(results[0].name, "3");
-    assert_eq!(results[0].committed_by.is_none(), false);
-    assert_eq!(results[0].updated.is_none(), false);
+    assert!(results[0].committed_by.is_some());
+    assert!(results[0].updated.is_some());
 
     assert_eq!(results[1].name, "2");
-    assert_eq!(results[1].committed_by.is_none(), false);
-    assert_eq!(results[1].updated.is_none(), false);
+    assert!(results[1].committed_by.is_some());
+    assert!(results[1].updated.is_some());
 
     assert_eq!(results[2].name, "1");
-    assert_eq!(results[2].committed_by.is_none(), false);
-    assert_eq!(results[2].updated.is_none(), false);
+    assert!(results[2].committed_by.is_some());
+    assert!(results[2].updated.is_some());
     Ok(())
 }
 
 #[test]
 fn home_exists_missing_home_env() {
-    assert_eq!(false, home_exists(&None, &config::Config::default()));
+    assert!(!home_exists(&None, &config::Config::default()));
 }
 
 #[test]
@@ -339,7 +339,7 @@ fn home_exists_home_dir_without_config_dir() {
     let dir = tempfile::tempdir().unwrap();
     let result = home_exists(&Some(dir.into_path()), &config::Config::default());
 
-    assert_eq!(false, result);
+    assert!(!result);
 }
 
 #[test]
@@ -348,7 +348,7 @@ fn home_exists_home_dir_with_file_instead_of_dir() -> Result<()> {
     File::create(dir.path().join(".password-store"))?;
     let result = home_exists(&Some(dir.into_path()), &config::Config::default());
 
-    assert_eq!(false, result);
+    assert!(!result);
 
     Ok(())
 }
@@ -359,43 +359,40 @@ fn home_exists_home_dir_with_config_dir() -> Result<()> {
     std::fs::create_dir(dir.path().join(".password-store"))?;
     let result = home_exists(&Some(dir.into_path()), &config::Config::default());
 
-    assert_eq!(true, result);
+    assert!(result);
 
     Ok(())
 }
 
 #[test]
 fn env_var_exists_test_none() {
-    assert_eq!(false, env_var_exists(&None, &None));
+    assert!(!env_var_exists(&None, &None));
 }
 
 #[test]
 fn env_var_exists_test_without_dir() {
     let dir = tempfile::tempdir().unwrap();
 
-    assert_eq!(
-        true,
-        env_var_exists(
-            &Some(
-                dir.path()
-                    .join(".password-store")
-                    .to_str()
-                    .unwrap()
-                    .to_owned()
-            ),
-            &None
-        )
-    );
+    assert!(env_var_exists(
+        &Some(
+            dir.path()
+                .join(".password-store")
+                .to_str()
+                .unwrap()
+                .to_owned()
+        ),
+        &None
+    ));
 }
 
 #[test]
 fn env_var_exists_test_with_dir() {
     let dir = tempfile::tempdir().unwrap();
 
-    assert_eq!(
-        true,
-        env_var_exists(&Some(dir.path().to_str().unwrap().to_owned()), &None)
-    );
+    assert!(env_var_exists(
+        &Some(dir.path().to_str().unwrap().to_owned()),
+        &None
+    ));
 }
 
 #[test]
@@ -714,7 +711,7 @@ fn read_config_default_path_in_config_file() -> Result<()> {
     let path = work["path"].clone().into_str()?;
     assert_eq!(dir.path().join(".password-store").to_str().unwrap(), path);
 
-    assert_eq!(false, stores.contains_key("default"));
+    assert!(!stores.contains_key("default"));
     Ok(())
 }
 
@@ -756,7 +753,7 @@ fn read_config_default_path_in_env_var() -> Result<()> {
     assert_eq!("/tmp/t2/", path);
     assert_eq!("-1", keys);
 
-    assert_eq!(false, stores.contains_key("work"));
+    assert!(!stores.contains_key("work"));
     Ok(())
 }
 
@@ -803,7 +800,7 @@ fn read_config_default_path_in_env_var_with_pgp_setting() -> Result<()> {
         work["own_fingerprint"].clone().into_str()?
     );
 
-    assert_eq!(false, stores.contains_key("work"));
+    assert!(!stores.contains_key("work"));
     Ok(())
 }
 
@@ -935,12 +932,12 @@ fn rename_file() -> Result<()> {
 
     assert_eq!(store.passwords.len(), 2);
     assert_eq!(store.passwords[0].name, "test");
-    assert_eq!(store.passwords[0].committed_by.is_none(), false);
-    assert_eq!(store.passwords[0].updated.is_none(), false);
+    assert!(store.passwords[0].committed_by.is_some());
+    assert!(store.passwords[0].updated.is_some());
 
     assert_eq!(store.passwords[1].name, "2/test");
-    assert_eq!(store.passwords[1].committed_by.is_none(), false);
-    assert_eq!(store.passwords[1].updated.is_none(), false);
+    assert!(store.passwords[1].committed_by.is_some());
+    assert!(store.passwords[1].updated.is_some());
     Ok(())
 }
 
@@ -960,7 +957,7 @@ fn rename_file_absolute_path() -> Result<()> {
     store.reload_password_list()?;
     let res = store.rename_file("1/test", "/2/test");
 
-    assert_eq!(true, res.is_err());
+    assert!(res.is_err());
     Ok(())
 }
 
@@ -988,7 +985,7 @@ fn rename_file_git_index_clean() -> Result<()> {
     store.reload_password_list()?;
     store.rename_file("1/test", "2/test")?;
 
-    let repo = git2::Repository::open(dir.dir().to_path_buf())?;
+    let repo = git2::Repository::open(dir.dir())?;
 
     assert!(repo.statuses(None)?.is_empty());
 
@@ -1027,7 +1024,7 @@ fn decrypt_secret_empty_file() -> Result<()> {
 
     let res = pe.secret(&store);
 
-    assert_eq!(true, res.is_err());
+    assert!(res.is_err());
     assert_eq!("empty password file", format!("{}", res.err().unwrap()));
 
     Ok(())
@@ -1062,7 +1059,7 @@ fn decrypt_secret_missing_file() -> Result<()> {
 
     let res = pe.secret(&store);
 
-    assert_eq!(true, res.is_err());
+    assert!(res.is_err());
     assert_eq!(
         "No such file or directory (os error 2)",
         format!("{}", res.err().unwrap())
@@ -1144,7 +1141,7 @@ fn decrypt_password_empty_file() -> Result<()> {
 
     let res = pe.password(&store);
 
-    assert_eq!(true, res.is_err());
+    assert!(res.is_err());
     assert_eq!("empty password file", format!("{}", res.err().unwrap()));
 
     Ok(())
@@ -1234,7 +1231,7 @@ fn mfa_example1() -> Result<()> {
     let res = pe.mfa(&store).unwrap();
 
     assert_eq!(6, res.len());
-    assert_eq!(6, res.chars().filter(|c| c.is_digit(10)).count());
+    assert_eq!(6, res.chars().filter(|c| c.is_ascii_digit()).count());
 
     Ok(())
 }
@@ -1246,7 +1243,7 @@ fn mfa_example2() -> Result<()> {
     let res = pe.mfa(&store).unwrap();
 
     assert_eq!(6, res.len());
-    assert_eq!(6, res.chars().filter(|c| c.is_digit(10)).count());
+    assert_eq!(6, res.chars().filter(|c| c.is_ascii_digit()).count());
 
     Ok(())
 }
@@ -1258,7 +1255,7 @@ fn mfa_example3() -> Result<()> {
     let res = pe.mfa(&store).unwrap();
 
     assert_eq!(6, res.len());
-    assert_eq!(6, res.chars().filter(|c| c.is_digit(10)).count());
+    assert_eq!(6, res.chars().filter(|c| c.is_ascii_digit()).count());
 
     Ok(())
 }
@@ -1309,7 +1306,7 @@ fn update() -> Result<()> {
 
     let res = pe.update("new content".to_owned(), &store);
 
-    assert_eq!(false, res.is_err());
+    assert!(res.is_ok());
 
     let mut pass_file = File::open(dir.path().join(".password-store").join("file.gpg"))?;
     let mut data = Vec::new();
@@ -1351,10 +1348,10 @@ fn delete_file() -> Result<()> {
     );
 
     let res = pe.delete_file(&store);
-    assert_eq!(false, res.is_err());
+    assert!(res.is_ok());
 
     let stat = fs::metadata(dir.path().join(".password-store").join("file.gpg"));
-    assert_eq!(true, stat.is_err());
+    assert!(stat.is_err());
 
     Ok(())
 }
@@ -1414,7 +1411,7 @@ fn get_history_with_repo() -> Result<()> {
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "test");
     assert_eq!(results[0].committed_by, Some("default".to_owned()));
-    assert_eq!(results[0].signature_status.is_none(), true);
+    assert!(results[0].signature_status.is_none());
 
     let pw = &results[0];
     let history = pw.get_history(&store)?;
@@ -1447,11 +1444,13 @@ fn test_format_error() {
         "git error"
     );
 
+    #[allow(invalid_from_utf8)]
+    let utf8_error = String::from_utf8(vec![255]).err().unwrap();
+    #[allow(invalid_from_utf8)]
+    let str_utf8_error = std::str::from_utf8(&[255]).err().unwrap();
+
     assert_eq!(
-        format!(
-            "{}",
-            Error::from(String::from_utf8(vec![255]).err().unwrap())
-        ),
+        format!("{}", Error::from(utf8_error.clone())),
         "invalid utf-8 sequence of 1 bytes from index 0"
     );
 
@@ -1467,17 +1466,11 @@ fn test_format_error() {
     );
 
     assert_eq!(
-        format!(
-            "{}",
-            Error::from(std::str::from_utf8(&vec![255]).err().unwrap())
-        ),
+        format!("{}", Error::from(utf8_error)),
         "invalid utf-8 sequence of 1 bytes from index 0"
     );
     assert_eq!(
-        format!(
-            "{}",
-            Error::from(Some(std::str::from_utf8(&vec![255]).err().unwrap()))
-        ),
+        format!("{}", Error::from(Some(str_utf8_error))),
         "invalid utf-8 sequence of 1 bytes from index 0"
     );
     assert_eq!(
@@ -1512,7 +1505,7 @@ fn test_commit_unsigned() -> Result<()> {
     let path = td.path().join("password-to-add");
     let mut f = File::create(path)?;
     f.write_all("some data".as_bytes())?;
-    index.add_path(&Path::new("password-to-add"))?;
+    index.add_path(Path::new("password-to-add"))?;
     index.write()?;
 
     let oid = index.write_tree()?;
@@ -1523,7 +1516,7 @@ fn test_commit_unsigned() -> Result<()> {
     let crypto = MockCrypto::new();
     let c_oid = commit(&repo, &repo.signature()?, "test", &tree, &parents, &crypto)?;
 
-    assert_eq!(false, *crypto.sign_called.borrow());
+    assert!(!(*crypto.sign_called.borrow()));
 
     assert_eq!("test", repo.find_commit(c_oid).unwrap().message().unwrap());
 
@@ -1544,7 +1537,7 @@ fn test_commit_signed() -> Result<()> {
     let path = td.path().join("password-to-add");
     let mut f = File::create(path)?;
     f.write_all("some data".as_bytes())?;
-    index.add_path(&Path::new("password-to-add"))?;
+    index.add_path(Path::new("password-to-add"))?;
     index.write()?;
 
     let oid = index.write_tree()?;
@@ -1555,7 +1548,7 @@ fn test_commit_signed() -> Result<()> {
     let crypto = MockCrypto::new();
     let c_oid = commit(&repo, &repo.signature()?, "test", &tree, &parents, &crypto)?;
 
-    assert_eq!(true, *crypto.sign_called.borrow());
+    assert!(*crypto.sign_called.borrow());
 
     assert_eq!("test", repo.find_commit(c_oid).unwrap().message().unwrap());
 
@@ -1574,8 +1567,8 @@ fn test_move_and_commit_signed() -> Result<()> {
     config.set_str("user.email", "default@example.com")?;
 
     fs::rename(
-        &dir.dir().join("first_pass.gpg"),
-        &dir.dir().join("second_pass.gpg"),
+        dir.dir().join("first_pass.gpg"),
+        dir.dir().join("second_pass.gpg"),
     )?;
 
     let store = PasswordStore {
@@ -1589,8 +1582,8 @@ fn test_move_and_commit_signed() -> Result<()> {
     };
     let c_oid = move_and_commit(
         &store,
-        &Path::new("first_pass.gpg"),
-        &Path::new("second_pass.gpg"),
+        Path::new("first_pass.gpg"),
+        Path::new("second_pass.gpg"),
         "unit test",
     )?;
 
@@ -1689,14 +1682,14 @@ fn test_add_and_commit_internal() -> Result<()> {
     let crypto = MockCrypto::new();
 
     let new_password = dir.dir().join("new_password");
-    File::create(&new_password)
+    File::create(new_password)
         .unwrap()
         .write_all("swordfish".as_bytes())
         .unwrap();
 
     let c_oid = add_and_commit_internal(
         &repo,
-        &vec![PathBuf::from("new_password")],
+        &[PathBuf::from("new_password")],
         "unit test",
         &crypto,
     )
@@ -1733,19 +1726,15 @@ fn test_remove_and_commit() -> Result<()> {
     config.set_str("user.name", "default")?;
     config.set_str("user.email", "default@example.com")?;
 
-    let c_oid = remove_and_commit(
-        &store,
-        &vec![PathBuf::from("pass_to_be_deleted")],
-        "unit test",
-    )
-    .unwrap();
+    let c_oid =
+        remove_and_commit(&store, &[PathBuf::from("pass_to_be_deleted")], "unit test").unwrap();
 
     assert_eq!(
         "unit test",
         repo.find_commit(c_oid).unwrap().message().unwrap()
     );
 
-    assert_eq!(false, dir.dir().join("pass_to_be_deleted").is_file());
+    assert!(!dir.dir().join("pass_to_be_deleted").is_file());
 
     Ok(())
 }
@@ -1783,7 +1772,7 @@ fn test_verify_gpg_id_files_missing_sig_file() -> Result<()> {
 
     let result = store.verify_gpg_id_files();
 
-    assert_eq!(true, result.is_err());
+    assert!(result.is_err());
 
     assert_eq!(
         Error::Generic("problem reading .gpg-id.sig, and strict signature checking was asked for"),
@@ -1820,7 +1809,7 @@ fn test_verify_gpg_id_files() -> Result<()> {
 
     let result = store.verify_gpg_id_files();
 
-    assert_eq!(true, result.is_err());
+    assert!(result.is_err());
 
     assert_eq!(Error::Generic("the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY"),
                result.err().unwrap());
@@ -1919,7 +1908,7 @@ fn test_verify_gpg_id_files_untrusted_key_in_keyring() {
 
     let result = store.verify_gpg_id_files();
 
-    assert_eq!(true, result.is_err());
+    assert!(result.is_err());
 
     assert_eq!(
         Error::GenericDyn("No valid signature".to_owned()),
@@ -1954,9 +1943,9 @@ fn test_new_password_file() -> Result<()> {
     assert_eq!("test/file", store.passwords[0].name);
 
     assert_eq!(RepositoryStatus::NoRepo, result.is_in_git);
-    assert_eq!(false, result.signature_status.is_some());
-    assert_eq!(false, result.committed_by.is_some());
-    assert_eq!(false, result.updated.is_some());
+    assert!(result.signature_status.is_none());
+    assert!(result.committed_by.is_none());
+    assert!(result.updated.is_none());
     assert_eq!("test/file", result.name);
     assert_eq!(td.path().join("test").join("file.gpg"), result.path);
 
@@ -1995,9 +1984,9 @@ fn test_new_password_file_in_git_repo() -> Result<()> {
     assert_eq!("test/file", store.passwords[0].name);
 
     assert_eq!(RepositoryStatus::InRepo, result.is_in_git);
-    assert_eq!(false, result.signature_status.is_some());
-    assert_eq!(true, result.committed_by.is_some());
-    assert_eq!(true, result.updated.is_some());
+    assert!(result.signature_status.is_none());
+    assert!(result.committed_by.is_some());
+    assert!(result.updated.is_some());
     assert_eq!("test/file", result.name);
 
     Ok(())
@@ -2033,9 +2022,9 @@ fn test_new_password_file_encryption_failure() -> Result<()> {
 
     assert_eq!(0, store.passwords.len());
 
-    assert_eq!(true, err.is_err());
+    assert!(err.is_err());
 
-    assert_eq!(false, td.path().join("test").join("file.gpg").exists());
+    assert!(!td.path().join("test").join("file.gpg").exists());
 
     Ok(())
 }
@@ -2072,9 +2061,9 @@ fn test_new_password_file_twice() -> Result<()> {
     assert_eq!("test/file", store.passwords[0].name);
 
     assert_eq!(RepositoryStatus::InRepo, result.is_in_git);
-    assert_eq!(false, result.signature_status.is_some());
-    assert_eq!(true, result.committed_by.is_some());
-    assert_eq!(true, result.updated.is_some());
+    assert!(result.signature_status.is_none());
+    assert!(result.committed_by.is_some());
+    assert!(result.updated.is_some());
     assert_eq!("test/file", result.name);
 
     let result = store.new_password_file("test/file", "password");
@@ -2082,8 +2071,8 @@ fn test_new_password_file_twice() -> Result<()> {
     assert_eq!(1, store.passwords.len());
     assert_eq!("test/file", store.passwords[0].name);
 
-    assert_eq!(true, result.is_err());
-    assert_eq!(true, td.path().join("test").join("file.gpg").exists());
+    assert!(result.is_err());
+    assert!(td.path().join("test").join("file.gpg").exists());
 
     Ok(())
 }
@@ -2113,7 +2102,7 @@ fn test_new_password_file_outside_pass_dir() -> Result<()> {
 
     assert_eq!(0, store.passwords.len());
 
-    assert_eq!(true, result.is_err());
+    assert!(result.is_err());
 
     Ok(())
 }
@@ -2217,7 +2206,7 @@ fn test_add_recipient_different_sub_permissions() -> Result<()> {
         .add_recipient(
             &crate::test_helpers::recipient_from_cert(&users[2]),
             &PathBuf::from("./"),
-            &config_path.path(),
+            config_path.path(),
         )
         .unwrap();
 
@@ -2258,7 +2247,7 @@ fn test_add_recipient_to_sub_dir() -> Result<()> {
     store.add_recipient(
         &crate::test_helpers::recipient_from_cert(&users[2]),
         &PathBuf::from("dir/"),
-        &config_path.path(),
+        config_path.path(),
     )?;
 
     assert_eq!(2, store.passwords.len());
@@ -2283,7 +2272,7 @@ fn test_add_recipient_to_sub_dir_path_traversal() -> Result<()> {
     let res = store.add_recipient(
         &crate::test_helpers::recipient_from_cert(&users[2]),
         &PathBuf::from("/tmp/"),
-        &config_path.path(),
+        config_path.path(),
     );
 
     assert!(res.is_err());
@@ -2306,7 +2295,7 @@ fn test_add_recipient_to_sub_dir_unknown_path() -> Result<()> {
     let res = store.add_recipient(
         &crate::test_helpers::recipient_from_cert(&users[2]),
         &PathBuf::from("path_that_doesnt_exist/"),
-        &config_path.path(),
+        config_path.path(),
     );
 
     assert!(res.is_err());
@@ -2341,7 +2330,7 @@ fn test_add_recipient_not_in_key_ring() -> Result<()> {
     let res = store.add_recipient(
         &external_user_recipient,
         &PathBuf::from("./"),
-        &config_path.path(),
+        config_path.path(),
     );
     let gpg_id_file_post = std::fs::read_to_string(td.path().join(".gpg-id"))?;
 
@@ -2371,7 +2360,7 @@ fn test_remove_last_recipient_with_decryption_rights() -> Result<()> {
     assert_eq!(0, store.passwords.len());
 
     store.new_password_file("file", "password")?;
-    store.add_recipient(&user3_recipient, &PathBuf::from("./"), &config_path.path())?;
+    store.add_recipient(&user3_recipient, &PathBuf::from("./"), config_path.path())?;
 
     let gpg_id_file_pre = std::fs::read_to_string(td.path().join(".gpg-id"))?;
     let res = store.remove_recipient(&user0_recipient, &PathBuf::from("./"));
@@ -2431,7 +2420,7 @@ fn test_add_password_without_decryption_rights() -> Result<()> {
 
     fs::write(
         td.path().join(".gpg-id"),
-        hex::encode(&users[3].fingerprint().as_bytes()) + "\n",
+        hex::encode(users[3].fingerprint().as_bytes()) + "\n",
     )?;
 
     assert_eq!(0, store.passwords.len());
@@ -2535,11 +2524,11 @@ fn test_recipient_files() -> Result<()> {
 fn init_git_repo_success() -> Result<()> {
     let td = tempdir()?;
 
-    assert_eq!(false, td.path().join(".git").exists());
+    assert!(!td.path().join(".git").exists());
 
-    init_git_repo(&td.path())?;
+    init_git_repo(td.path())?;
 
-    assert_eq!(true, td.path().join(".git").exists());
+    assert!(td.path().join(".git").exists());
 
     Ok(())
 }

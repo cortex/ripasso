@@ -22,7 +22,7 @@ fn test_should_sign_true() -> Result<()> {
 
     let result = should_sign(&repo);
 
-    assert_eq!(true, result);
+    assert!(result);
 
     Ok(())
 }
@@ -35,7 +35,7 @@ fn test_should_sign_false() -> Result<()> {
 
     let result = should_sign(&repo);
 
-    assert_eq!(false, result);
+    assert!(!result);
 
     Ok(())
 }

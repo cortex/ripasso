@@ -67,7 +67,7 @@ pub fn new_one_cert() {
 
     cert.serialize(&mut file).unwrap();
 
-    let sequoia = Sequoia::new(&dir.path(), f, user_home.path()).unwrap();
+    let sequoia = Sequoia::new(dir.path(), f, user_home.path()).unwrap();
 
     assert_eq!(1, sequoia.key_ring.len());
     assert_eq!(
@@ -80,7 +80,7 @@ pub fn new_one_cert() {
             .next()
             .unwrap()
             .userid()
-            .email()
+            .email2()
             .unwrap()
             .unwrap()
     );
