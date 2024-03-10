@@ -1,7 +1,7 @@
 use std::{cell::RefCell, path::PathBuf};
 
 use adw::{subclass::prelude::*, Leaflet};
-use glib::{signal::Inhibit, subclass::InitializingObject};
+use glib::{subclass::InitializingObject, Propagation};
 use gtk::{
     gio, glib, glib::SignalHandlerId, Button, CompositeTemplate, Entry, FilterListModel, ListBox,
     Stack,
@@ -87,7 +87,7 @@ impl WidgetImpl for Window {}
 
 // Trait shared by all windows
 impl WindowImpl for Window {
-    fn close_request(&self) -> Inhibit {
+    fn close_request(&self) -> Propagation {
         // Pass close request on to the parent
         self.parent_close_request()
     }

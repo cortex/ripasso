@@ -18,7 +18,7 @@ locale_config = "0.3.0"
 unic-langid = "0.9.4"
 gettext = "0.4.0"
 lazy_static = "1.4.0"
-toml = "0.8.8"
+toml = "0.8.10"
 terminal_size = "0.3.0"
 hex = "0.4.3"
 zeroize = { version = "1.7.0", features = ["zeroize_derive", "alloc"] }
@@ -29,7 +29,7 @@ default-features = false
 features = ["toml"]
 
 [dev-dependencies]
-tempfile = "3.8.0"
+tempfile = "3.10.1"
 chrono = { version = "0.4", default_features = false, features = ["clock"] }
 
 [build-dependencies]

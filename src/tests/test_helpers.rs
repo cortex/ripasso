@@ -79,11 +79,17 @@ impl Key for MockKey {
     }
 
     fn fingerprint(&self) -> Result<[u8; 20]> {
-        Ok(self.fingerprint.clone())
+        Ok(self.fingerprint)
     }
 
     fn is_not_usable(&self) -> bool {
         false
+    }
+}
+
+impl Default for MockKey {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -115,6 +121,12 @@ pub struct MockCrypto {
     encrypt_string_error: Option<String>,
     get_key_string_error: Option<String>,
     get_key_answers: HashMap<String, MockKey>,
+}
+
+impl Default for MockCrypto {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MockCrypto {
@@ -231,12 +243,10 @@ impl Crypto for MockCrypto {
             Err(Error::GenericDyn(
                 self.get_key_string_error.clone().unwrap(),
             ))
+        } else if self.get_key_answers.contains_key(key_id) {
+            Ok(Box::new(self.get_key_answers.get(key_id).unwrap().clone()))
         } else {
-            if self.get_key_answers.contains_key(key_id) {
-                Ok(Box::new(self.get_key_answers.get(key_id).unwrap().clone()))
-            } else {
-                Err(Error::Generic("no key configured"))
-            }
+            Err(Error::Generic("no key configured"))
         }
     }
 
