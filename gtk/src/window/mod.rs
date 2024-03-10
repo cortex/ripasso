@@ -73,7 +73,7 @@ impl Window {
     }
 
     fn setup_collections(&self) {
-        let collections = gio::ListStore::new(CollectionObject::static_type());
+        let collections = gio::ListStore::new::<CollectionObject>();
         self.imp()
             .collections
             .set(collections.clone())
@@ -421,7 +421,7 @@ impl Window {
                 }
 
                 // Create a new list store
-                let passwords = gio::ListStore::new(PasswordObject::static_type());
+                let passwords = gio::ListStore::new::<PasswordObject>();
 
                 // Create a new collection object from the title the user provided
                 let title = entry.text().to_string();

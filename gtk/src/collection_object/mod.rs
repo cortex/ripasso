@@ -111,7 +111,7 @@ impl CollectionObject {
             .map(|p| PasswordObject::from_password_entry(p, store.clone()))
             .collect();
 
-        let passwords = gio::ListStore::new(PasswordObject::static_type());
+        let passwords = gio::ListStore::new::<PasswordObject>();
         passwords.extend_from_slice(&passwords_to_extend);
 
         Self::new(&title, passwords, store, user_config_dir)
