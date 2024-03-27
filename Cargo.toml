@@ -4,7 +4,7 @@ description = "A password manager that uses the file format of the standard unix
 repository = "https://github.com/cortex/ripasso/"
 keywords = ["password-manager", "pass"]
 version = "0.7.0-alpha"
-authors = ["Joakim Lundborg <joakim.lundborg@gmail.com", "Alexander Kjäll <alexander.kjall@gmail.com>"]
+authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>", "Alexander Kjäll <alexander.kjall@gmail.com>"]
 license = "GPL-3.0-only"
 edition = '2021'
 
