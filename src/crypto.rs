@@ -449,7 +449,7 @@ struct Helper<'a> {
     /// This is all the certificates that are allowed to sign something
     public_keys: Vec<Arc<sequoia_openpgp::Cert>>,
     /// context if talking to gpg_agent for example
-    ctx: Option<sequoia_ipc::gnupg::Context>,
+    ctx: Option<sequoia_gpg_agent::gnupg::Context>,
     /// to do verification or not
     do_signature_verification: bool,
 }
@@ -526,7 +526,7 @@ impl<'a> DecryptionHelper for Helper<'a> {
             for pkesk in pkesks {
                 if let Ok(cert) = find(self.key_ring, pkesk.recipient()) {
                     let key = cert.primary_key();
-                    let mut pair = sequoia_ipc::gnupg::KeyPair::new(
+                    let mut pair = sequoia_gpg_agent::gnupg::KeyPair::new(
                         self.ctx
                             .as_ref()
                             .ok_or_else(|| anyhow::anyhow!("no context configured"))?,
@@ -769,7 +769,10 @@ impl Crypto for Sequoia {
                 secret: Some(decrypt_key),
                 key_ring: &self.key_ring,
                 public_keys: vec![],
-                ctx: Some(sequoia_ipc::gnupg::Context::with_homedir(&self.user_home)?),
+                ctx: Some(
+                    sequoia_gpg_agent::gnupg::Context::with_homedir(&self.user_home)
+                        .map_err(anyhow::Error::from)?,
+                ),
                 do_signature_verification: false,
             };
 
