@@ -18,7 +18,6 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     process,
-    rc::Rc,
     sync::{Arc, Mutex},
     thread, time,
 };
@@ -283,7 +282,7 @@ fn delete(ui: &mut Cursive, store: PasswordStoreType) {
 }
 
 fn get_selected_password_entry(ui: &mut Cursive) -> Option<ripasso::pass::PasswordEntry> {
-    let password_entry_option: Option<Option<std::rc::Rc<ripasso::pass::PasswordEntry>>> = ui
+    let password_entry_option: Option<Option<Arc<ripasso::pass::PasswordEntry>>> = ui
         .call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
             l.selection()
         });
@@ -633,7 +632,7 @@ fn create_save(s: &mut Cursive, store: PasswordStoreType) {
 
     let note = s.call_on_name("note_input", |e: &mut TextArea| e.get_content().to_string());
     if let Some(note) = note {
-        password = Rc::from(format!("{password}\n{note}"));
+        password = Arc::from(format!("{password}\n{note}"));
     }
 
     if password.contains("otpauth://") {

@@ -11,7 +11,7 @@ edition = '2021'
 build = "build.rs"
 
 [dependencies]
-cursive = { version = "0.20.0", default-features = false, features = ["toml", "crossterm-backend"]}
+cursive = { version = "0.21.0", default-features = false, features = ["toml", "crossterm-backend"]}
 arboard = { version = "3.3.0", features = ["wayland-data-control"]}
 ripasso = { path = "../", version = "0.7.0-alpha" }
 locale_config = "0.3.0"

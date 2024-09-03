@@ -13,7 +13,7 @@ arboard = "3.3.2"
 glob = "0.3.1"
 gpgme = "0.11.0"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
-git2 = "0.18.2"
+git2 = "0.19.0"
 rand = "0.8.5"
 whoami = "1.4.1"
 toml = "0.8.10"
@@ -28,7 +28,7 @@ base64 = "0.22.0"
 sha2 = "0.10.8"
 sha1 = "0.10.6"
 hmac = "0.12.1"
-zeroize = { version = "1.7.0", features = ["zeroize_derive", "alloc"] }
+zeroize = { version = "1.8.0", features = ["zeroize_derive", "alloc"] }
 
 [dependencies.config]
 version = "0.11.0"
@@ -36,7 +36,7 @@ default-features = false
 features = ["toml"]
 
 [dev-dependencies]
-tempfile = "3.10.1"
+tempfile = "3.12.0"
 flate2 = "1.0.28"
 tar = "0.4.40"
 criterion = "0.5.1"
