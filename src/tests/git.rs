@@ -1,18 +1,4 @@
-use crate::{
-    error::Result,
-    git::{hashed_hostname_matches, should_sign},
-    test_helpers::UnpackedDir,
-};
-
-#[test]
-fn hashed_hostname_matches_github_com() {
-    let result = hashed_hostname_matches(
-        "github.com",
-        "QI6BGIOtEYviGBfiW2nsZ+JxeAY=|PnXH1BrfyPNBQ1fcKZmCeA7feLc=",
-    );
-
-    assert!(result);
-}
+use crate::{error::Result, git::should_sign, test_helpers::UnpackedDir};
 
 #[test]
 fn test_should_sign_true() -> Result<()> {
