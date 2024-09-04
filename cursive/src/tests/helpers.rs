@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use cursive::{
     view::Nameable,
@@ -19,7 +19,7 @@ fn test_get_value_from_input() {
     siv.add_layer(ev);
 
     assert_eq!(
-        Some(Rc::new(String::from("unit test content"))),
+        Some(Arc::new(String::from("unit test content"))),
         get_value_from_input(&mut siv, "input")
     );
 }
