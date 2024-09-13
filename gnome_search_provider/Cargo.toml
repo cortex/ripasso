@@ -1,0 +1,13 @@
+[package]
+name = "ripasso-gnome-search-provider"
+version = "0.1.0"
+edition = "2021"
+authors = ["Austin Riba <austin@m51.io>"]
+
+[dependencies]
+arboard = { version = "3.4.1", features = ["wayland-data-control"] }
+ripasso = { path = "../", version = "0.7.0-alpha" }
+search-provider = "0.10.0"
+tokio = { version = "1.40.0", features = ["macros"] }
+zbus = { version = "4.4.0", features = ["tokio"] }
+zeroize = "1.8.1"
