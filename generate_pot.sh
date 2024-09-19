@@ -9,3 +9,4 @@ touch cursive/res/fr.po && msgmerge --update cursive/res/fr.po cursive/res/ripas
 touch cursive/res/it.po && msgmerge --update cursive/res/it.po cursive/res/ripasso-cursive.pot
 touch cursive/res/de.po && msgmerge --update cursive/res/de.po cursive/res/ripasso-cursive.pot
 touch cursive/res/ru.po && msgmerge --update cursive/res/ru.po cursive/res/ripasso-cursive.pot
+touch cursive/res/es.po && msgmerge --update cursive/res/es.po cursive/res/ripasso-cursive.pot
