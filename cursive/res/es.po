@@ -1,23 +1,19 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# Header entry was created by Lokalize.
 #
+#: cursive/src/main.rs:1166
+# SPDX-FileCopyrightText: 2024 victorhck <victorhck@mailbox.org>
 msgid ""
 msgstr ""
-"Project-Id-Version: \n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-09-19 15:10+0200\n"
-"PO-Revision-Date: 2023-02-16 14:28+0100\n"
-"Last-Translator: \n"
-"Language-Team: \n"
-"Language: ru_RU\n"
-"MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
-"n%10<=4 && (n%100<12 || n%100>14) ? 1 : 2);\n"
-"X-Generator: Poedit 3.2.2\n"
+"Last-Translator: victorhck <victorhck@mailbox.org>\n"
+"PO-Revision-Date: 2024-09-19 15:47+0200\n"
+"Project-Id-Version: \n"
+"Language-Team: Spanish <kde-i18n-doc@kde.org>\n"
+"Language: es_ES\n"
+"MIME-Version: 1.0\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Lokalize 24.08.1\n"
 
 #: cursive/src/main.rs:1166
 msgid ""
@@ -26,382 +22,388 @@ msgid ""
 "default, override this by setting the PASSWORD_STORE_DIR environmental "
 "variable."
 msgstr ""
-"Менеджер паролей, который использует формат файла стандартного менеджера "
-"паролей unix «pass», реализованный в Rust. Ripasso по умолчанию читает "
-"$HOME/.password-store/.  Переопределите это, установив переменную окружения "
-"PASSWORD_STORE_DIR."
+"Un administrador de contraseñas que utiliza el formato de archivo de contraseñ"
+"as estándar del gestor "
+"de contraseñas de Unix 'pass', implementado en Rust. Ripasso lee $HOME/.passwo"
+"rd-store/ de manera "
+"predeterminada, anule esto ajustando la variable de entorno PASSWORD_STORE_DIR"
+" "
 
 #: cursive/src/main.rs:694
 msgid "Add new password"
-msgstr "Добавить новый пароль"
+msgstr "Añadir una nueva contraseña"
 
 #: cursive/src/main.rs:810
 msgid "Added team member to password store"
-msgstr "Добавить члена команды в хранилище паролей"
+msgstr "Miembro del equipo añadido al almacén de contraseñas"
 
 #: cursive/src/wizard.rs:75
 msgid "Also create a git repository for the encrypted files?"
-msgstr "Также создать git-репозиторий для зашифрованных файлов?"
+msgstr "¿Crear también un repositorio git para los archivos cifrados?"
 
 #: cursive/src/main.rs:272
 msgid "Are you sure you want to delete the password?"
-msgstr "Вы уверены, что хотите удалить пароль?"
+msgstr "¿Está seguro de que desea eliminar la contraseña?"
 
 #: cursive/src/main.rs:748
 msgid "Are you sure you want to remove this person?"
-msgstr "Вы уверены, что хотите удалить этого человека?"
+msgstr "¿Está seguro de que desea eliminar esta persona?"
 
 #: cursive/src/main.rs:773
 msgid ""
 "Can't import team member due to that the GPG trust relationship level isn't "
 "Ultimate"
 msgstr ""
-"Невозможно импортировать члена команды из-за того, что уровень доверительных "
-"отношений GPG не является Ultimate"
+"No se puede importar un miembro del equipo debido a que el nivel de relación d"
+"e confianza de GPG no es "
+"Último"
 
 #: cursive/src/main.rs:280 cursive/src/main.rs:550 cursive/src/main.rs:704
 #: cursive/src/main.rs:758 cursive/src/main.rs:862 cursive/src/main.rs:1253
 #: cursive/src/main.rs:1291 cursive/src/main.rs:1777 cursive/src/main.rs:1923
 #: cursive/src/wizard.rs:145
 msgid "Cancel"
-msgstr "Отмена"
+msgstr "Cancelar"
 
 #: cursive/src/main.rs:431 cursive/src/main.rs:450 cursive/src/main.rs:643
 msgid "Close"
-msgstr "Закрыть"
+msgstr "Cerrar"
 
 #: cursive/src/main.rs:212
 msgid "Copied MFA code to copy buffer"
-msgstr "Скопированный код MFA успешно копирован в буфер"
+msgstr "Código MFA copiado en el búfer de copiado"
 
 #: cursive/src/main.rs:237
 msgid "Copied file name to copy buffer"
-msgstr "Скопированное имя файла успешно копирован в буфер"
+msgstr "Nombre del archivo copiado en el búfer de copiado"
 
 #: cursive/src/main.rs:187
-#, fuzzy
 msgid "Copied first line of password to copy buffer for 40 seconds"
-msgstr "Скопирован пароль в буфер на 40 секунд"
+msgstr ""
+"Copiada la primera línea de la contraseña en el búfer copiado durante 40 segun"
+"dos"
 
 #: cursive/src/main.rs:158
 msgid "Copied password to copy buffer for 40 seconds"
-msgstr "Скопирован пароль в буфер на 40 секунд"
+msgstr "Contraseña copiada en el búfer de copiado durante 40 segundos"
 
 #: cursive/src/main.rs:2283
 msgid "Copy (ctrl-y)"
-msgstr "Копировать (ctrl-y)"
+msgstr "Copiar (ctrl-y)"
 
 #: cursive/src/main.rs:2290
 msgid "Copy MFA Code (ctrl-b)"
-msgstr "Копировать код MFA (ctrl-b)"
+msgstr "Copiar el código MFA (ctrl-b)"
 
 #: cursive/src/main.rs:2289
 msgid "Copy Name (ctrl-u)"
-msgstr "Копировать имя (ctrl-u)"
+msgstr "Copiar nombre (ctrl-u)"
 
 #: cursive/src/wizard.rs:77 cursive/src/wizard.rs:98 cursive/src/wizard.rs:142
 msgid "Create"
-msgstr "Создать"
+msgstr "Crear"
 
 #: cursive/src/main.rs:2308
 msgid "Create (ins) "
-msgstr "Создать (ins) "
+msgstr "Crear (ins) "
 
 #: cursive/src/main.rs:606
 msgid "Created new password"
-msgstr "Создать новый пароль"
+msgstr "Nueva contraseña creada"
 
 #: cursive/src/main.rs:2314
 msgid "Delete (del)"
-msgstr "Удалить (del)"
+msgstr "Eliminar (del)"
 
 #: cursive/src/main.rs:737
 msgid "Deleted team member from password store"
-msgstr "Удалить члена команды из хранилища паролей"
+msgstr "Miembro del equipo eliminado del almacén de contraseñas"
 
 #: cursive/src/main.rs:840 cursive/src/main.rs:1690 cursive/src/main.rs:1853
 msgid "Directory: "
-msgstr "Каталог: "
+msgstr "Carpeta: "
 
 #: cursive/src/main.rs:1292
 msgid "Download"
-msgstr "Скачать"
+msgstr "Descargar"
 
 #: cursive/src/main.rs:1289
 msgid ""
 "Download pgp data from keys.openpgp.org and import them into your key ring?"
 msgstr ""
-"Скачать данные pgp с keys.openpgp.org и импортировать их в Вашу связку "
-"ключей?"
+"¿Descargar los datos pgp desde keys.openpgp.org e importarlos en su anillo de "
+"claves?"
 
 #: cursive/src/main.rs:1979
 msgid "Edit password stores"
-msgstr "Отредактировать хранилище паролей"
+msgstr "Editar almacenes de contraseñas"
 
 #: cursive/src/main.rs:1772
 msgid "Edit store config"
-msgstr "Изменить конфигурацию хранилища"
+msgstr "Editar configuración del almacén"
 
 #: cursive/src/main.rs:1701 cursive/src/main.rs:1863
 msgid "Enforce signing of .gpg-id file: "
-msgstr "Принудительно подписать файл .gpg-id: "
+msgstr "Aplicar la firma del archivo .gpg-id: "
 
 #: cursive/src/helpers.rs:45
 msgid "Error"
-msgstr "Ошибка"
+msgstr "Error"
 
 #: cursive/src/main.rs:2274 cursive/src/wizard.rs:134
 msgid "F1: Menu | "
-msgstr "F1: Меню | "
+msgstr "F1: Menú | "
 
 #: cursive/src/main.rs:333
 msgid "File History"
-msgstr "История файла"
+msgstr "Historial de archivos"
 
 #: cursive/src/main.rs:2302
 msgid "File History (ctrl-h)"
-msgstr "История файла"
+msgstr "Historial de archivos (ctrl-h)"
 
 #: cursive/src/main.rs:884
 msgid "Full"
-msgstr "Полное доверие"
+msgstr "Completo"
 
 #: cursive/src/main.rs:1298
 msgid "GPG Download"
-msgstr "Загрузить GPG"
+msgstr "Descargar GPG"
 
 #: cursive/src/main.rs:829
 msgid "GPG Key ID: "
-msgstr "Идентификатор ключа GPG: "
+msgstr "ID de clave GPG: "
 
 #: cursive/src/main.rs:443 cursive/src/main.rs:695
 msgid "Generate"
-msgstr "Генерировать"
+msgstr "Generar"
 
 #: cursive/src/wizard.rs:83
 msgid "Git Init"
-msgstr "Git-инициализация"
+msgstr "Git Init"
 
 #: cursive/src/main.rs:2334
 msgid "Git Pull (ctrl-f)"
-msgstr "Git Скачивали (ctrl-f)"
+msgstr "Git Pull (ctrl-f)"
 
 #: cursive/src/main.rs:2340
 msgid "Git Push (ctrl-g)"
-msgstr "Git Загрузка (ctrl-g)"
+msgstr "Git Push (ctrl-g)"
 
 #: cursive/src/main.rs:1254
 msgid "Import"
-msgstr "Импортировать"
+msgstr "Importar"
 
 #: cursive/src/main.rs:2354
 msgid "Import PGP Certificate from text"
-msgstr "Импорт сертификата PGP из текста"
+msgstr "Importar certificado GPG de texto"
 
 #: cursive/src/main.rs:1234 cursive/src/main.rs:1275
 msgid "Import Results"
-msgstr "Импортировать рузальтаты"
+msgstr "Importar resultados"
 
 #: cursive/src/wizard.rs:149
 msgid "Init"
-msgstr "Инициализация"
+msgstr "Init"
 
 #: cursive/src/wizard.rs:35
 msgid "Initialized password repo with Ripasso"
-msgstr "Инициализированно хранилище паролей с помощью Ripasso"
+msgstr "Inicializado el repositorio de contraseñas con Ripasso"
 
 #: cursive/src/main.rs:423 cursive/src/main.rs:639
 msgid ""
 "It seems like you are trying to save a TOTP code to the password store. This "
 "will reduce your 2FA solution to just 1FA, do you want to proceed?"
 msgstr ""
-"Похоже, вы пытаетесь сохранить код TOTP в хранилище паролей. Это уменьшит "
-"ваше решение 2FA до 1FA. Хотите продолжить?"
+"Parece que está intentando guardar un código TOTP en el almacén de contraseñas"
+". Esto "
+"reducirá su solución 2FA a solo 1FA, ¿desea continuar?"
 
 #: cursive/src/main.rs:2396
 msgid "Manage"
-msgstr "Управление"
+msgstr "Gestionar"
 
 #: cursive/src/main.rs:1252
 msgid "Manual GPG Import"
-msgstr "Ручной импорт GPG"
+msgstr "Importar manualmente GPG"
 
 #: cursive/src/main.rs:885
 msgid "Marginal"
-msgstr "Частичное доверие"
+msgstr "Marginal"
 
 #: cursive/src/main.rs:1679 cursive/src/main.rs:1843
 msgid "Name: "
-msgstr "Имя: "
+msgstr "Nombre: "
 
 #: cursive/src/main.rs:886
 msgid "Never"
-msgstr "Никогда"
+msgstr "Nunca"
 
 #: cursive/src/main.rs:529
 msgid "New file name: "
-msgstr "Новое имя файла: "
+msgstr "Nuevo nombre de archivo: "
 
 #: cursive/src/main.rs:1908
 msgid "New store config"
-msgstr "Новая конфигурация хранилища"
+msgstr "Nueva configuración de almacenamiento"
 
 #: cursive/src/wizard.rs:80
 msgid "No"
-msgstr "Нет"
+msgstr "No"
 
 #: cursive/src/main.rs:2069
 msgid "No home directory set"
-msgstr "Не задан домашний каталог"
+msgstr "No se ha establecido ningún directorio de inicio"
 
 #: cursive/src/main.rs:898
 msgid "Not Usable"
-msgstr "Не может быть использован"
+msgstr "No utilizable"
 
 #: cursive/src/main.rs:682
 msgid "Note: "
-msgstr "Примечание: "
+msgstr "Nota: "
 
 #: cursive/src/helpers.rs:44 cursive/src/main.rs:334 cursive/src/main.rs:1001
 #: cursive/src/main.rs:1076 cursive/src/main.rs:1233 cursive/src/main.rs:1274
 #: cursive/src/main.rs:1980
 msgid "Ok"
-msgstr "Окей"
+msgstr "Ok"
 
 #: cursive/src/main.rs:519
 msgid "Old file name: "
-msgstr "Старое имя файла: "
+msgstr "Antiguo nombre de archivo: "
 
 #: cursive/src/main.rs:2296
 msgid "Open (ctrl-o)"
-msgstr "Открыть (ctrl-о)"
+msgstr "Abrir (ctrl-o)"
 
 #: cursive/src/main.rs:2281
 msgid "Operations"
-msgstr "Операции"
+msgstr "Operaciones"
 
 #: cursive/src/main.rs:1726
 msgid "Own key fingerprint: "
-msgstr "Отпечаток собственного ключа: "
+msgstr "Clave de huella digital propia: "
 
 #: cursive/src/main.rs:1712 cursive/src/main.rs:1870
 msgid "PGP Implementation: "
-msgstr "Имплементрация PGP: "
+msgstr "Implementaciones PGP: "
 
 #: cursive/src/main.rs:277
 msgid "Password deleted"
-msgstr "Пароль удален"
+msgstr "Contraseña eliminada"
 
 #: cursive/src/main.rs:671
 msgid "Password: "
-msgstr "Пароль: "
+msgstr "Contraseña: "
 
 #: cursive/src/main.rs:661
 msgid "Path: "
-msgstr "Путь: "
+msgstr "Ruta: "
 
 #: cursive/src/main.rs:2347
 msgid "Pull PGP Certificates"
-msgstr "Получить сертификаты PGP"
+msgstr "Importar certificados PGP"
 
 #: cursive/src/main.rs:1218
 msgid "Pulled from remote git repository"
-msgstr "Вытащено из удаленного репозитория git"
+msgstr "Importado desde un repositorio git remoto"
 
 #: cursive/src/main.rs:1182
 msgid "Pushed to remote git repository"
-msgstr "Перенесено в удаленный репозиторий git"
+msgstr "Enviado a un repositorio git remoto"
 
 #: cursive/src/main.rs:2361
 msgid "Quit (esc)"
-msgstr "Выйти (esc)"
+msgstr "Salir (esc)"
 
 #: cursive/src/main.rs:545
 msgid "Rename"
-msgstr "Переименовать"
+msgstr "Renombrar"
 
 #: cursive/src/main.rs:544
 msgid "Rename File"
-msgstr "Переименовать файл"
+msgstr "Renombrar archivo"
 
 #: cursive/src/main.rs:2320
 msgid "Rename file (ctrl-r)"
-msgstr "Переименовать файл (ctrl-r)"
+msgstr "Renombrar archivo (ctrl-r)"
 
 #: cursive/src/wizard.rs:95
 msgid ""
 "Ripasso uses GPG in order to encrypt the stored passwords.\n"
 "Please enter your GPG key ID"
 msgstr ""
-"Ripasso использует GPG для шифрования сохраненных паролей.\n"
-"Пожалуйста, введите идентификатор ключа GPG"
+"Ripasso utiliza GPG para cifrar las contraseñas almacenadas.\n"
+"Por favor ingrese su ID de clave GPG"
 
 #: cursive/src/main.rs:416 cursive/src/main.rs:424 cursive/src/main.rs:640
 #: cursive/src/main.rs:701 cursive/src/main.rs:1773 cursive/src/main.rs:1909
 msgid "Save"
-msgstr "Сохранить"
+msgstr "Guardar"
 
 #: cursive/src/main.rs:1746 cursive/src/main.rs:1888
 msgid "Store Members: "
-msgstr "Члены хранилища: "
+msgstr "Almacenar miembros: "
 
 #: cursive/src/main.rs:2399
 msgid "Stores"
-msgstr "Хранилище"
+msgstr "Almacenes"
 
 #: cursive/src/main.rs:1000 cursive/src/main.rs:1075
 msgid "Team Members"
-msgstr "Члены команды"
+msgstr "Miembros del equipo"
 
 #: cursive/src/main.rs:2326
 msgid "Team Members (ctrl-v)"
-msgstr "Члены команды (ctrl-v)"
+msgstr "Miembros del equipo (ctrl-v)"
 
 #: cursive/src/helpers.rs:37
 msgid "Team member with key id {} isn't in your GPG keyring, fetch it first"
 msgstr ""
-"Член команды с идентификатором ключа {} не входит в вашу связку ключей GPG, "
-"сначала получите его"
+"El miembro del equipo con ID de clave {} no está en su conjunto de claves GPG,"
+" búsquelo primero"
 
 #: cursive/src/main.rs:2150
 msgid ""
 "The password store is backed by a git repository, but there is passwords "
 "there that's not in git. Please add them, otherwise they might get lost."
 msgstr ""
-"Хранилище паролей поддерживается репозиторием git, но там есть пароли, "
-"которых нет в git. Пожалуйста, добавьте их, иначе они могут потеряться."
+"El almacén de contraseñas está respaldado en un repositorio git, pero hay cont"
+"raseñas "
+"ahí que no están en git. Por favor añádalas, de lo contrario podrían perderse."
 
 #: cursive/src/main.rs:883
 msgid "Ultimate"
-msgstr "Максимальное доверие"
+msgstr "Último"
 
 #: cursive/src/wizard.rs:69
 msgid "Unable to write file"
-msgstr "Невозможно записать файл"
+msgstr "No se puede escribir el archivo"
 
 #: cursive/src/main.rs:887
 msgid "Undefined"
-msgstr "Не определено"
+msgstr "Indefinido"
 
 #: cursive/src/main.rs:888
 msgid "Unknown"
-msgstr "Неизвестно"
+msgstr "Desconocido"
 
 #: cursive/src/main.rs:2047 cursive/src/main.rs:2055
 msgid "Unknown argument, usage: ripasso-cursive [-h|--help]"
-msgstr "Неизвестный аргумент, использование: ripasso-cursive [-h|—help]"
+msgstr "Argumento desconocido, utilice: ripasso-cursive [-h|--help]"
 
 #: cursive/src/main.rs:1589 cursive/src/main.rs:1634 cursive/src/main.rs:1823
 msgid "Updated config file"
-msgstr "Обновлен файл конфигурации"
+msgstr "Archivo de configuración actualizado"
 
 #: cursive/src/main.rs:382
 msgid "Updated password entry"
-msgstr "Обновленный ввод пароля"
+msgstr "Entrada de contraseña actualizada"
 
 #: cursive/src/main.rs:900
 msgid "Usable"
-msgstr "Годный"
+msgstr "Utilizable"
 
 #: cursive/src/wizard.rs:141
 msgid ""
@@ -410,14 +412,15 @@ msgid ""
 "It's created in $HOME/.password-store or where the PASSWORD_STORE_DIR "
 "environmental variable points."
 msgstr ""
-"Добро пожаловать в Ripasso! Похоже, у вас еще нет каталога для хранения "
-"паролей. Хотели бы вы его создать?\n"
-"Он создается в $HOME/.password-store или там, куда указывает "
+"Bienvenido a Ripasso, parece que aún no tiene un directorio de almacenamiento "
+"de contraseñas "
+"¿Le gustaría crearlo?\n"
+"Se crea en $HOME/.password-store o donde apunte la variable de entorno "
 "PASSWORD_STORE_DIR."
 
 #: cursive/src/main.rs:274 cursive/src/main.rs:750 cursive/src/main.rs:856
 msgid "Yes"
-msgstr "Да"
+msgstr "Sí"
 
 #: cursive/src/main.rs:2144
 msgid ""
@@ -430,28 +433,27 @@ msgid ""
 "git config --global user.signingkey 3AA5C34371567BD2\n"
 "git config --global commit.gpgsign true"
 msgstr ""
-"Вы не настроили свое имя и адрес электронной почты в git, это облегчит "
-"сотрудничество с вашей командой, вы можете сделать это следующим образом:\n"
-"git config —global user.name «Джон Доу»\n"
-"git config —global user.email “email@example.com”\n"
+"No ha configurado su nombre y correo electrónico en git, hacerlo hará que "
+"la cooperación con su equipo sea más fácil, puede hacerlo así:\n"
+"git config --global user.name \"John Doe\"\n"
+"git config --global user.email \"email@ejemplo.com\"\n"
 "\n"
-"Также рассмотрите возможность настройки git для подписи ваших коммитов с "
-"помощью GPG:\n"
-"git config —global user.signingkey 3AA5C34371567BD2\n"
-"git config —global commit.gpgsign true"
+"También considere configurar git para firmar sus confirmaciones con GPG::\n"
+"git config --global user.signingkey 3AA5C34371567BD2\n"
+"git config --global commit.gpgsign true"
 
 #: cursive/src/main.rs:1984
 msgid "ctrl-e: Edit | "
-msgstr "ctrl-e: Редактировать | "
+msgstr "ctrl-e: Editar | "
 
 #: cursive/src/main.rs:1006 cursive/src/main.rs:1081 cursive/src/main.rs:1986
 msgid "del: Remove"
-msgstr "del: Удалить"
+msgstr "del: Eliminar"
 
 #: cursive/src/main.rs:1005 cursive/src/main.rs:1080 cursive/src/main.rs:1985
 msgid "ins: Add | "
-msgstr "ins: Добавить | "
+msgstr "ins: Añadir | "
 
 #: cursive/src/main.rs:1113 cursive/src/main.rs:1135
 msgid "n/a"
-msgstr "н/д"
+msgstr "n/a"

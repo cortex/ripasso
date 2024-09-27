@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-11-09 17:54+0100\n"
+"POT-Creation-Date: 2024-09-19 15:10+0200\n"
 "PO-Revision-Date: 2020-10-06 13:58-0400\n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -18,7 +18,7 @@ msgstr ""
 "X-Generator: Poedit 2.4.1\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: cursive/src/main.rs:937
+#: cursive/src/main.rs:1166
 msgid ""
 "A password manager that uses the file format of the standard unix password "
 "manager 'pass', implemented in Rust. Ripasso reads $HOME/.password-store/ by "
@@ -30,27 +30,27 @@ msgstr ""
 "RIpasso lit $HOME/.password-store/ par défaut, remplacez cela en définissant "
 "la variable d'environnement PASSWORD_STORE_DIR."
 
-#: cursive/src/main.rs:639
+#: cursive/src/main.rs:694
 msgid "Add new password"
 msgstr "Ajouter un nouveau mot de passe"
 
-#: cursive/src/main.rs:744
+#: cursive/src/main.rs:810
 msgid "Added team member to password store"
 msgstr "Membre de l'équipe ajouté au stockage des mots de passe"
 
-#: cursive/src/wizard.rs:76
+#: cursive/src/wizard.rs:75
 msgid "Also create a git repository for the encrypted files?"
 msgstr "Créer également un dépôt distant git pour les fichiers chiffrés?"
 
-#: cursive/src/main.rs:264
+#: cursive/src/main.rs:272
 msgid "Are you sure you want to delete the password?"
 msgstr "Êtes-vous sûr de vouloir supprimer le mot de passe ?"
 
-#: cursive/src/main.rs:690
+#: cursive/src/main.rs:748
 msgid "Are you sure you want to remove this person?"
 msgstr "Êtes-vous sûr de vouloir retirer cette personne ?"
 
-#: cursive/src/main.rs:710
+#: cursive/src/main.rs:773
 msgid ""
 "Can't import team member due to that the GPG trust relationship level isn't "
 "Ultimate"
@@ -58,268 +58,274 @@ msgstr ""
 "Impossible d'importe le membre d'équipe car la relation de confiance GPG "
 "n'est pas au niveau Ultime"
 
-#: cursive/src/main.rs:272 cursive/src/main.rs:508 cursive/src/main.rs:649
-#: cursive/src/main.rs:696 cursive/src/main.rs:782 cursive/src/main.rs:985
-#: cursive/src/main.rs:1023 cursive/src/main.rs:1478 cursive/src/main.rs:1618
-#: cursive/src/wizard.rs:146
+#: cursive/src/main.rs:280 cursive/src/main.rs:550 cursive/src/main.rs:704
+#: cursive/src/main.rs:758 cursive/src/main.rs:862 cursive/src/main.rs:1253
+#: cursive/src/main.rs:1291 cursive/src/main.rs:1777 cursive/src/main.rs:1923
+#: cursive/src/wizard.rs:145
 msgid "Cancel"
 msgstr "Annuler"
 
-#: cursive/src/main.rs:390 cursive/src/main.rs:408 cursive/src/main.rs:588
+#: cursive/src/main.rs:431 cursive/src/main.rs:450 cursive/src/main.rs:643
 msgid "Close"
 msgstr "Fermer"
 
-#: cursive/src/main.rs:209
+#: cursive/src/main.rs:212
 #, fuzzy
 msgid "Copied MFA code to copy buffer"
 msgstr "Mot de passe copié dans le tampon "
 
-#: cursive/src/main.rs:234
+#: cursive/src/main.rs:237
 msgid "Copied file name to copy buffer"
 msgstr "Mot de passe copié dans le tampon "
 
-#: cursive/src/main.rs:158 cursive/src/main.rs:187
+#: cursive/src/main.rs:187
+#, fuzzy
+msgid "Copied first line of password to copy buffer for 40 seconds"
+msgstr "Mot de passe copié dans le tampon pendant 40 secondes"
+
+#: cursive/src/main.rs:158
 msgid "Copied password to copy buffer for 40 seconds"
 msgstr "Mot de passe copié dans le tampon pendant 40 secondes"
 
-#: cursive/src/main.rs:1944
+#: cursive/src/main.rs:2283
 msgid "Copy (ctrl-y)"
 msgstr "Copier (ctrl-y)"
 
-#: cursive/src/main.rs:1949
+#: cursive/src/main.rs:2290
 #, fuzzy
 msgid "Copy MFA Code (ctrl-b)"
 msgstr "Copier le nom (ctrl-y)"
 
-#: cursive/src/main.rs:1948
+#: cursive/src/main.rs:2289
 msgid "Copy Name (ctrl-u)"
 msgstr "Copier le nom (ctrl-y)"
 
-#: cursive/src/wizard.rs:78 cursive/src/wizard.rs:99 cursive/src/wizard.rs:143
+#: cursive/src/wizard.rs:77 cursive/src/wizard.rs:98 cursive/src/wizard.rs:142
 msgid "Create"
 msgstr "Créer"
 
-#: cursive/src/main.rs:1961
+#: cursive/src/main.rs:2308
 msgid "Create (ins) "
 msgstr "Créer (ins)"
 
-#: cursive/src/main.rs:553
+#: cursive/src/main.rs:606
 msgid "Created new password"
 msgstr "Créer un nouveau mot de passe"
 
-#: cursive/src/main.rs:1965
+#: cursive/src/main.rs:2314
 msgid "Delete (del)"
 msgstr "Supprimer (del)"
 
-#: cursive/src/main.rs:681
+#: cursive/src/main.rs:737
 msgid "Deleted team member from password store"
 msgstr "Supprimer un membre d'équipe du stockage de mots de passe"
 
-#: cursive/src/main.rs:1391 cursive/src/main.rs:1548
+#: cursive/src/main.rs:840 cursive/src/main.rs:1690 cursive/src/main.rs:1853
 msgid "Directory: "
 msgstr "Répertoire:"
 
-#: cursive/src/main.rs:1024
+#: cursive/src/main.rs:1292
 msgid "Download"
 msgstr ""
 
-#: cursive/src/main.rs:1021
+#: cursive/src/main.rs:1289
 msgid ""
 "Download pgp data from keys.openpgp.org and import them into your key ring?"
 msgstr ""
 
-#: cursive/src/main.rs:1663
+#: cursive/src/main.rs:1979
 msgid "Edit password stores"
 msgstr "Éditer les stockages de mot de passe"
 
-#: cursive/src/main.rs:1473
+#: cursive/src/main.rs:1772
 msgid "Edit store config"
 msgstr "Éditer la configuration du stockage"
 
-#: cursive/src/main.rs:1402 cursive/src/main.rs:1558
+#: cursive/src/main.rs:1701 cursive/src/main.rs:1863
 msgid "Enforce signing of .gpg-id file: "
 msgstr ""
 
-#: cursive/src/helpers.rs:40
+#: cursive/src/helpers.rs:45
 msgid "Error"
 msgstr "Erreur"
 
-#: cursive/src/main.rs:1935 cursive/src/wizard.rs:135
+#: cursive/src/main.rs:2274 cursive/src/wizard.rs:134
 msgid "F1: Menu | "
 msgstr "F1: Menu |"
 
-#: cursive/src/main.rs:327
+#: cursive/src/main.rs:333
 msgid "File History"
 msgstr "Historique du fichier"
 
-#: cursive/src/main.rs:1957
+#: cursive/src/main.rs:2302
 msgid "File History (ctrl-h)"
 msgstr "Historique du fichier (ctrl-h)"
 
-#: cursive/src/main.rs:804
+#: cursive/src/main.rs:884
 msgid "Full"
 msgstr "Entier"
 
-#: cursive/src/main.rs:1044
+#: cursive/src/main.rs:1298
 msgid "GPG Download"
 msgstr ""
 
-#: cursive/src/main.rs:759
+#: cursive/src/main.rs:829
 msgid "GPG Key ID: "
 msgstr "GPG Clé ID:"
 
-#: cursive/src/main.rs:402 cursive/src/main.rs:640
+#: cursive/src/main.rs:443 cursive/src/main.rs:695
 msgid "Generate"
 msgstr "Générer"
 
-#: cursive/src/wizard.rs:84
+#: cursive/src/wizard.rs:83
 msgid "Git Init"
 msgstr "Git Init"
 
-#: cursive/src/main.rs:1978
+#: cursive/src/main.rs:2334
 msgid "Git Pull (ctrl-f)"
 msgstr "Git Pull (ctrl-f)"
 
-#: cursive/src/main.rs:1982
+#: cursive/src/main.rs:2340
 msgid "Git Push (ctrl-g)"
 msgstr "Git Push (ctrl-g)"
 
-#: cursive/src/main.rs:986
+#: cursive/src/main.rs:1254
 msgid "Import"
 msgstr ""
 
-#: cursive/src/main.rs:1992
+#: cursive/src/main.rs:2354
 msgid "Import PGP Certificate from text"
 msgstr ""
 
-#: cursive/src/main.rs:1000 cursive/src/main.rs:1034
+#: cursive/src/main.rs:1234 cursive/src/main.rs:1275
 msgid "Import Results"
 msgstr ""
 
-#: cursive/src/wizard.rs:150
+#: cursive/src/wizard.rs:149
 msgid "Init"
 msgstr "Init"
 
-#: cursive/src/wizard.rs:36
+#: cursive/src/wizard.rs:35
 msgid "Initialized password repo with Ripasso"
 msgstr "Dépôt de mot de passe initialisé avec Ripasso"
 
-#: cursive/src/main.rs:386 cursive/src/main.rs:584
+#: cursive/src/main.rs:423 cursive/src/main.rs:639
 msgid ""
 "It seems like you are trying to save a TOTP code to the password store. This "
 "will reduce your 2FA solution to just 1FA, do you want to proceed?"
 msgstr ""
 
-#: cursive/src/main.rs:2032
+#: cursive/src/main.rs:2396
 msgid "Manage"
 msgstr "Gérer"
 
-#: cursive/src/main.rs:984
+#: cursive/src/main.rs:1252
 msgid "Manual GPG Import"
 msgstr ""
 
-#: cursive/src/main.rs:805
+#: cursive/src/main.rs:885
 msgid "Marginal"
 msgstr "Marginal"
 
-#: cursive/src/main.rs:1380 cursive/src/main.rs:1538
+#: cursive/src/main.rs:1679 cursive/src/main.rs:1843
 msgid "Name: "
 msgstr "Nom:"
 
-#: cursive/src/main.rs:806
+#: cursive/src/main.rs:886
 msgid "Never"
 msgstr "Jamais"
 
-#: cursive/src/main.rs:487
+#: cursive/src/main.rs:529
 msgid "New file name: "
 msgstr "Nouveau nom de fichier:"
 
-#: cursive/src/main.rs:1603
+#: cursive/src/main.rs:1908
 msgid "New store config"
 msgstr "Nouvelle configuration de stockage"
 
-#: cursive/src/wizard.rs:81
+#: cursive/src/wizard.rs:80
 msgid "No"
 msgstr "Non"
 
-#: cursive/src/main.rs:1749
+#: cursive/src/main.rs:2069
 msgid "No home directory set"
 msgstr ""
 
-#: cursive/src/main.rs:818
+#: cursive/src/main.rs:898
 msgid "Not Usable"
 msgstr ""
 
-#: cursive/src/main.rs:627
+#: cursive/src/main.rs:682
 msgid "Note: "
 msgstr "Note:"
 
-#: cursive/src/helpers.rs:39 cursive/src/main.rs:328 cursive/src/main.rs:859
-#: cursive/src/main.rs:999 cursive/src/main.rs:1033 cursive/src/main.rs:1664
+#: cursive/src/helpers.rs:44 cursive/src/main.rs:334 cursive/src/main.rs:1001
+#: cursive/src/main.rs:1076 cursive/src/main.rs:1233 cursive/src/main.rs:1274
+#: cursive/src/main.rs:1980
 msgid "Ok"
 msgstr "Ok"
 
-#: cursive/src/main.rs:477
+#: cursive/src/main.rs:519
 msgid "Old file name: "
 msgstr "Ancien nom de fichier"
 
-#: cursive/src/main.rs:1953
+#: cursive/src/main.rs:2296
 msgid "Open (ctrl-o)"
 msgstr "Ouvrir (ctrl-o)"
 
-#: cursive/src/main.rs:1942
+#: cursive/src/main.rs:2281
 msgid "Operations"
 msgstr "Opérations"
 
-#: cursive/src/main.rs:1427
+#: cursive/src/main.rs:1726
 msgid "Own key fingerprint: "
 msgstr ""
 
-#: cursive/src/main.rs:1413 cursive/src/main.rs:1565
+#: cursive/src/main.rs:1712 cursive/src/main.rs:1870
 msgid "PGP Implementation: "
 msgstr ""
 
-#: cursive/src/main.rs:269
+#: cursive/src/main.rs:277
 msgid "Password deleted"
 msgstr "Mot de passe supprimé"
 
-#: cursive/src/main.rs:616
+#: cursive/src/main.rs:671
 msgid "Password: "
 msgstr "Mot de passe:"
 
-#: cursive/src/main.rs:606
+#: cursive/src/main.rs:661
 msgid "Path: "
 msgstr "Chemin:"
 
-#: cursive/src/main.rs:1987
+#: cursive/src/main.rs:2347
 msgid "Pull PGP Certificates"
 msgstr ""
 
-#: cursive/src/main.rs:973
+#: cursive/src/main.rs:1218
 msgid "Pulled from remote git repository"
 msgstr "Tiré du dépôt distant git"
 
-#: cursive/src/main.rs:946
+#: cursive/src/main.rs:1182
 msgid "Pushed to remote git repository"
 msgstr "Poussé vers le dépôt distant git"
 
-#: cursive/src/main.rs:1997
+#: cursive/src/main.rs:2361
 msgid "Quit (esc)"
 msgstr "Quitter (esc)"
 
-#: cursive/src/main.rs:503
+#: cursive/src/main.rs:545
 msgid "Rename"
 msgstr "Renommer"
 
-#: cursive/src/main.rs:502
+#: cursive/src/main.rs:544
 msgid "Rename File"
 msgstr "Renommer le fichier"
 
-#: cursive/src/main.rs:1969
+#: cursive/src/main.rs:2320
 msgid "Rename file (ctrl-r)"
 msgstr "Renommer le fichier (ctrl-v)"
 
-#: cursive/src/wizard.rs:96
+#: cursive/src/wizard.rs:95
 msgid ""
 "Ripasso uses GPG in order to encrypt the stored passwords.\n"
 "Please enter your GPG key ID"
@@ -327,35 +333,35 @@ msgstr ""
 "Ripasso utilise GPG pour chiffrer les mots de passe.\n"
 "Entrer votre GPG clé ID s'il-vous-plaît"
 
-#: cursive/src/main.rs:379 cursive/src/main.rs:387 cursive/src/main.rs:585
-#: cursive/src/main.rs:646 cursive/src/main.rs:1474 cursive/src/main.rs:1604
+#: cursive/src/main.rs:416 cursive/src/main.rs:424 cursive/src/main.rs:640
+#: cursive/src/main.rs:701 cursive/src/main.rs:1773 cursive/src/main.rs:1909
 msgid "Save"
 msgstr "Sauvegarder"
 
-#: cursive/src/main.rs:1447 cursive/src/main.rs:1583
+#: cursive/src/main.rs:1746 cursive/src/main.rs:1888
 #, fuzzy
 msgid "Store Members: "
 msgstr "Membres d'équipe"
 
-#: cursive/src/main.rs:2035
+#: cursive/src/main.rs:2399
 msgid "Stores"
 msgstr "Stockages"
 
-#: cursive/src/main.rs:858
+#: cursive/src/main.rs:1000 cursive/src/main.rs:1075
 msgid "Team Members"
 msgstr "Membres d'équipe"
 
-#: cursive/src/main.rs:1973
+#: cursive/src/main.rs:2326
 msgid "Team Members (ctrl-v)"
 msgstr "Membres d'équipe (ctrl-v)"
 
-#: cursive/src/helpers.rs:32
+#: cursive/src/helpers.rs:37
 msgid "Team member with key id {} isn't in your GPG keyring, fetch it first"
 msgstr ""
 "Le membre d'équipe avec la clé id {} n'est pas dans votre porte-clés GPG, "
 "ajoutez-le d'abord"
 
-#: cursive/src/main.rs:1822
+#: cursive/src/main.rs:2150
 msgid ""
 "The password store is backed by a git repository, but there is passwords "
 "there that's not in git. Please add them, otherwise they might get lost."
@@ -364,39 +370,39 @@ msgstr ""
 "mots de passe qui ne sont pas sur git. Ajoutez-les, sinon ils peuvent être "
 "perdus."
 
-#: cursive/src/main.rs:803
+#: cursive/src/main.rs:883
 msgid "Ultimate"
 msgstr "Ultime"
 
-#: cursive/src/wizard.rs:70
+#: cursive/src/wizard.rs:69
 msgid "Unable to write file"
 msgstr "Fichier impossible à écrire"
 
-#: cursive/src/main.rs:807
+#: cursive/src/main.rs:887
 msgid "Undefined"
 msgstr "Indéfini"
 
-#: cursive/src/main.rs:808
+#: cursive/src/main.rs:888
 msgid "Unknown"
 msgstr "Inconnu"
 
-#: cursive/src/main.rs:1727 cursive/src/main.rs:1735
+#: cursive/src/main.rs:2047 cursive/src/main.rs:2055
 msgid "Unknown argument, usage: ripasso-cursive [-h|--help]"
 msgstr "Argument invalide, utilisation: ripasso-cursive [-h|--help]"
 
-#: cursive/src/main.rs:1292 cursive/src/main.rs:1335 cursive/src/main.rs:1520
+#: cursive/src/main.rs:1589 cursive/src/main.rs:1634 cursive/src/main.rs:1823
 msgid "Updated config file"
 msgstr "Configuration du fichier mise à jour"
 
-#: cursive/src/main.rs:357
+#: cursive/src/main.rs:382
 msgid "Updated password entry"
 msgstr "Entrée de mot de passe mise à jour"
 
-#: cursive/src/main.rs:820
+#: cursive/src/main.rs:900
 msgid "Usable"
 msgstr ""
 
-#: cursive/src/wizard.rs:142
+#: cursive/src/wizard.rs:141
 msgid ""
 "Welcome to Ripasso, it seems like you don't have a password store directory "
 "yet would you like to create it?\n"
@@ -408,11 +414,11 @@ msgstr ""
 "Il est créé dans $HOME/.password-store ou là où la variable d'environnement "
 "PASSWORD_STORE_DIR désigne."
 
-#: cursive/src/main.rs:266 cursive/src/main.rs:692 cursive/src/main.rs:779
+#: cursive/src/main.rs:274 cursive/src/main.rs:750 cursive/src/main.rs:856
 msgid "Yes"
 msgstr "Oui"
 
-#: cursive/src/main.rs:1816
+#: cursive/src/main.rs:2144
 msgid ""
 "You haven't configured you name and email in git, doing so will make "
 "cooperation with your team easier, you can do it like this:\n"
@@ -433,19 +439,19 @@ msgstr ""
 "git config --global user.signingkey 3AA5C34371567BD2\n"
 "git config --global commit.gpgsign true"
 
-#: cursive/src/main.rs:1668
+#: cursive/src/main.rs:1984
 msgid "ctrl-e: Edit | "
 msgstr "ctrl-e: Éditer | "
 
-#: cursive/src/main.rs:864 cursive/src/main.rs:1670
+#: cursive/src/main.rs:1006 cursive/src/main.rs:1081 cursive/src/main.rs:1986
 msgid "del: Remove"
 msgstr "del: Supprimer"
 
-#: cursive/src/main.rs:863 cursive/src/main.rs:1669
+#: cursive/src/main.rs:1005 cursive/src/main.rs:1080 cursive/src/main.rs:1985
 msgid "ins: Add | "
 msgstr "ins: Ajouter | "
 
-#: cursive/src/main.rs:893 cursive/src/main.rs:915
+#: cursive/src/main.rs:1113 cursive/src/main.rs:1135
 msgid "n/a"
 msgstr "n/a"
 
