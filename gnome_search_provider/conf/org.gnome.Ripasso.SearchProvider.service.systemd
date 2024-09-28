@@ -1,0 +1,7 @@
+[Unit]
+Description=Ripasso Gnome Shell search provider for GNOME
+
+[Service]
+Type=dbus
+BusName=org.gnome.Ripasso.SearchProvider
+ExecStart=/usr/lib/ripasso-search-provider/ripasso-gnome-search-provider

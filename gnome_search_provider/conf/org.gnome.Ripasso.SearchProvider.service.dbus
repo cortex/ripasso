@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.gnome.Ripasso.SearchProvider
+Exec=/usr/lib/ripasso-search-provider/ripasso-gnome-search-provider
+SystemdService=org.gnome.Ripasso.SearchProvider.service
