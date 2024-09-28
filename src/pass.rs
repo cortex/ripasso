@@ -1041,7 +1041,9 @@ impl PasswordEntry {
                 }
                 end_pos
             };
-            let totp = TOTP::from_url(&secret[start_pos..end_pos])?;
+            // Use unchecked for sites like Discord, Github that still use 80
+            // bit secrets. https://github.com/constantoine/totp-rs/issues/46
+            let totp = TOTP::from_url_unchecked(&secret[start_pos..end_pos])?;
             secret.zeroize();
             Ok(totp.generate_current()?)
         } else {
