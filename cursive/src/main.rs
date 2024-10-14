@@ -106,7 +106,7 @@ fn up(ui: &mut Cursive) {
 }
 
 fn page_down(ui: &mut Cursive) {
-    let rows = screen_height(&ui);
+    let rows = screen_height(&ui) - 6;
     ui.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
         l.select_down(rows);
     });
@@ -119,7 +119,7 @@ fn page_down(ui: &mut Cursive) {
 }
 
 fn page_up(ui: &mut Cursive) {
-    let rows = screen_height(&ui);
+    let rows = screen_height(&ui) - 6;
     ui.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
         l.select_up(rows);
     });
