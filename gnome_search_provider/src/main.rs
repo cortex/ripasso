@@ -10,6 +10,7 @@ use zeroize::Zeroize;
     default_path = "/org/freedesktop/Notifications"
 )]
 trait Notifications {
+    #[allow(clippy::too_many_arguments)]
     fn notify(
         &self,
         app_name: &str,
@@ -29,7 +30,7 @@ fn copy_to_clipbard(content: &String) {
     thread::spawn(|| {
         thread::sleep(time::Duration::from_secs(40));
         let mut clipboard = Clipboard::new().unwrap();
-        clipboard.set_text(&String::new()).unwrap();
+        clipboard.set_text(String::new()).unwrap();
     });
 }
 
@@ -59,10 +60,7 @@ struct Application {
 impl SearchProviderImpl for Application {
     fn activate_result(&self, identifier: ResultID, terms: &[String], _timestamp: u32) {
         let passwords = self.password_store.all_passwords().unwrap_or_default();
-        if let Some(password) = passwords
-            .iter()
-            .find(|entry| entry.name == identifier.to_owned())
-        {
+        if let Some(password) = passwords.iter().find(|entry| entry.name == identifier) {
             if terms[0] == "otp" {
                 let mut otp = match password.mfa(&self.password_store) {
                     Ok(otp) => otp,
