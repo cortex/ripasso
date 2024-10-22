@@ -106,10 +106,10 @@ fn up(ui: &mut Cursive) {
 }
 
 fn page_down(ui: &mut Cursive) {
-    let mut l = ui
-        .find_name::<SelectView<pass::PasswordEntry>>("results")
-        .unwrap();
-    l.select_down(screen_height(ui));
+    let rows = screen_height(&ui) - 7;
+    ui.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
+        l.select_down(rows);
+    });
     ui.call_on_name(
         "scroll_results",
         |l: &mut ScrollView<ResizedView<NamedView<SelectView<pass::PasswordEntry>>>>| {
@@ -119,10 +119,10 @@ fn page_down(ui: &mut Cursive) {
 }
 
 fn page_up(ui: &mut Cursive) {
-    let mut l = ui
-        .find_name::<SelectView<pass::PasswordEntry>>("results")
-        .unwrap();
-    l.select_up(screen_height(ui));
+    let rows = screen_height(&ui) - 7;
+    ui.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
+        l.select_up(rows);
+    });
     ui.call_on_name(
         "scroll_results",
         |l: &mut ScrollView<ResizedView<NamedView<SelectView<pass::PasswordEntry>>>>| {
