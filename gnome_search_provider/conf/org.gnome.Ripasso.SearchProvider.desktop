@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Categories=GNOME;Security;
+Icon=dialog-password
+Name=Ripasso
+Comment=GNOME Shell search provider for Ripasso
+Terminal=true
+Type=Application
+OnlyShowIn=GNOME;
