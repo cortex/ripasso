@@ -83,7 +83,7 @@ nix-env -iA nixpkgs.ripasso-cursive
 
 ### Mac OS X
 
-The best way to install ripasso on mac right now is the nix package system, first [install that](https://nixos.org/nix/download.html) and then
+The best way to install ripasso on mac right now is the nix package system, first [install that](https://nixos.org/download/) and then
 
 ```
 nix-env -iA nixpkgs.ripasso-cursive
