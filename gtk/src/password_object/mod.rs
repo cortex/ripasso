@@ -58,10 +58,7 @@ impl PasswordObject {
             },
         };
 
-        let commit_name = match p_e.committed_by {
-            Some(n) => n,
-            None => "".into(),
-        };
+        let commit_name = p_e.committed_by.unwrap_or_else(|| "".into());
 
         Self::new(p_e.name, p_e.path, file_date, commit_name, store)
     }

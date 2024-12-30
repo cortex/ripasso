@@ -45,7 +45,7 @@ pub enum CryptoImpl {
     Sequoia,
 }
 
-impl std::convert::TryFrom<&str> for CryptoImpl {
+impl TryFrom<&str> for CryptoImpl {
     type Error = Error;
 
     fn try_from(value: &str) -> Result<Self> {
@@ -92,8 +92,8 @@ impl From<std::io::Error> for VerificationError {
     }
 }
 
-impl From<crate::error::Error> for VerificationError {
-    fn from(err: crate::error::Error) -> Self {
+impl From<Error> for VerificationError {
+    fn from(err: Error) -> Self {
         InfrastructureError(format!("{err:?}"))
     }
 }
@@ -181,7 +181,7 @@ pub trait Crypto {
 
     /// Verifies is a signature is valid
     /// # Errors
-    /// Will return `Err` if the verifican fails.
+    /// Will return `Err` if the verification fails.
     fn verify_sign(
         &self,
         data: &[u8],
@@ -189,7 +189,7 @@ pub trait Crypto {
         valid_signing_keys: &[[u8; 20]],
     ) -> std::result::Result<SignatureStatus, VerificationError>;
 
-    /// Returns true if a recipient is in the users keyring.
+    /// Returns true if a recipient is in the user's keyring.
     fn is_key_in_keyring(&self, recipient: &Recipient) -> Result<bool>;
 
     /// Pull keys from the keyserver for those recipients.
@@ -199,18 +199,18 @@ pub trait Crypto {
 
     /// Import a key from text.
     /// # Errors
-    /// Will return `Err` if the text wasn't able to be imported as a key.
+    /// Will return `Err` if the import of `key` as a key failed.
     fn import_key(&mut self, key: &str, config_path: &Path) -> Result<String>;
 
     /// Return a key corresponding to the given key id.
     /// # Errors
     /// Will return `Err` if `key_id` didn't correspond to a key.
-    fn get_key(&self, key_id: &str) -> Result<Box<dyn crate::crypto::Key>>;
+    fn get_key(&self, key_id: &str) -> Result<Box<dyn Key>>;
 
     /// Returns a map from key fingerprints to OwnerTrustLevel's
     /// # Errors
     /// Will return `Err` on failure to obtain trust levels.
-    fn get_all_trust_items(&self) -> Result<HashMap<[u8; 20], crate::signature::OwnerTrustLevel>>;
+    fn get_all_trust_items(&self) -> Result<HashMap<[u8; 20], OwnerTrustLevel>>;
 
     /// Returns the type of this `CryptoImpl`, useful for serializing the store config
     fn implementation(&self) -> CryptoImpl;
@@ -307,21 +307,21 @@ impl Crypto for GpgMe {
         valid_signing_keys: &[[u8; 20]],
     ) -> std::result::Result<SignatureStatus, VerificationError> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
-            .map_err(|e| VerificationError::InfrastructureError(format!("{e:?}")))?;
+            .map_err(|e| InfrastructureError(format!("{e:?}")))?;
 
         let result = ctx
             .verify_detached(sig, data)
-            .map_err(|e| VerificationError::InfrastructureError(format!("{e:?}")))?;
+            .map_err(|e| InfrastructureError(format!("{e:?}")))?;
 
         let mut sig_sum = None;
 
         for (i, s) in result.signatures().enumerate() {
             let fpr = s
                 .fingerprint()
-                .map_err(|e| VerificationError::InfrastructureError(format!("{e:?}")))?;
+                .map_err(|e| InfrastructureError(format!("{e:?}")))?;
 
-            let fpr = <[u8; 20]>::from_hex(fpr)
-                .map_err(|e| VerificationError::InfrastructureError(format!("{e:?}")))?;
+            let fpr =
+                <[u8; 20]>::from_hex(fpr).map_err(|e| InfrastructureError(format!("{e:?}")))?;
 
             if !valid_signing_keys.contains(&fpr) {
                 return Err(VerificationError::SignatureFromWrongRecipient);
@@ -384,7 +384,7 @@ impl Crypto for GpgMe {
         Ok(result_str)
     }
 
-    fn get_key(&self, key_id: &str) -> Result<Box<dyn crate::crypto::Key>> {
+    fn get_key(&self, key_id: &str) -> Result<Box<dyn Key>> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
         Ok(Box::new(GpgMeKey {
@@ -392,7 +392,7 @@ impl Crypto for GpgMe {
         }))
     }
 
-    fn get_all_trust_items(&self) -> Result<HashMap<[u8; 20], crate::signature::OwnerTrustLevel>> {
+    fn get_all_trust_items(&self) -> Result<HashMap<[u8; 20], OwnerTrustLevel>> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
         ctx.set_key_list_mode(gpgme::KeyListMode::SIGS)?;
 
@@ -443,22 +443,19 @@ struct Helper<'a> {
     /// A sequoia policy to use in various operations
     policy: &'a dyn Policy,
     /// the users cert
-    secret: Option<&'a sequoia_openpgp::Cert>,
+    secret: Option<&'a Cert>,
     /// all certs
-    key_ring: &'a HashMap<[u8; 20], Arc<sequoia_openpgp::Cert>>,
+    key_ring: &'a HashMap<[u8; 20], Arc<Cert>>,
     /// This is all the certificates that are allowed to sign something
-    public_keys: Vec<Arc<sequoia_openpgp::Cert>>,
+    public_keys: Vec<Arc<Cert>>,
     /// context if talking to gpg_agent for example
     ctx: Option<sequoia_gpg_agent::gnupg::Context>,
     /// to do verification or not
     do_signature_verification: bool,
 }
 
-impl<'a> VerificationHelper for Helper<'a> {
-    fn get_certs(
-        &mut self,
-        handles: &[sequoia_openpgp::KeyHandle],
-    ) -> sequoia_openpgp::Result<Vec<sequoia_openpgp::Cert>> {
+impl VerificationHelper for Helper<'_> {
+    fn get_certs(&mut self, handles: &[KeyHandle]) -> sequoia_openpgp::Result<Vec<Cert>> {
         let mut certs = vec![];
 
         for handle in handles {
@@ -491,9 +488,9 @@ impl<'a> VerificationHelper for Helper<'a> {
 }
 
 fn find(
-    key_ring: &HashMap<[u8; 20], Arc<sequoia_openpgp::Cert>>,
+    key_ring: &HashMap<[u8; 20], Arc<Cert>>,
     recipient: &sequoia_openpgp::KeyID,
-) -> Result<Arc<sequoia_openpgp::Cert>> {
+) -> Result<Arc<Cert>> {
     let bytes: &[u8; 8] = match recipient {
         sequoia_openpgp::KeyID::V4(bytes) => bytes,
         _ => return Err(Error::Generic("not an v4 keyid")),
@@ -508,7 +505,7 @@ fn find(
     Err(Error::Generic("key not found in keyring"))
 }
 
-impl<'a> DecryptionHelper for Helper<'a> {
+impl DecryptionHelper for Helper<'_> {
     fn decrypt<D>(
         &mut self,
         pkesks: &[sequoia_openpgp::packet::PKESK],
@@ -534,7 +531,7 @@ impl<'a> DecryptionHelper for Helper<'a> {
                     )?;
                     if pkesk
                         .decrypt(&mut pair, sym_algo)
-                        .map_or(false, |(algo, session_key)| decrypt(algo, &session_key))
+                        .is_some_and(|(algo, session_key)| decrypt(algo, &session_key))
                     {
                         selected_fingerprint = Some(cert.fingerprint());
                         break;
@@ -574,7 +571,9 @@ impl<'a> DecryptionHelper for Helper<'a> {
             }
         }
 
-        Err(anyhow::anyhow!("no pkesks managed to descrypt ciphertext"))
+        Err(anyhow::anyhow!(
+            "no pkesks managed to decrypt the ciphertext"
+        ))
     }
 }
 
@@ -593,7 +592,7 @@ pub fn slice_to_20_bytes(b: &[u8]) -> Result<[u8; 20]> {
 /// A pgp key produced with sequoia.
 pub struct SequoiaKey {
     /// The pgp key
-    cert: sequoia_openpgp::Cert,
+    cert: Cert,
 }
 
 impl Key for SequoiaKey {
@@ -618,12 +617,12 @@ impl Key for SequoiaKey {
     }
 }
 
-/// If the users configures to use sequoia as their pgp implementation.
+/// If the user selects to use sequoia as their pgp implementation.
 pub struct Sequoia {
     /// key id of the user.
     user_key_id: [u8; 20],
     /// All certs in the keys directory
-    key_ring: HashMap<[u8; 20], Arc<sequoia_openpgp::Cert>>,
+    key_ring: HashMap<[u8; 20], Arc<Cert>>,
     /// The home directory of the user, for gnupg context
     user_home: std::path::PathBuf,
 }
@@ -633,7 +632,7 @@ impl Sequoia {
     /// # Errors
     /// If there is any problems reading the keys directory
     pub fn new(config_path: &Path, own_fingerprint: [u8; 20], user_home: &Path) -> Result<Self> {
-        let mut key_ring: HashMap<[u8; 20], Arc<sequoia_openpgp::Cert>> = HashMap::new();
+        let mut key_ring: HashMap<[u8; 20], Arc<Cert>> = HashMap::new();
 
         let dir = config_path.join("share").join("ripasso").join("keys");
         if dir.exists() {
@@ -659,7 +658,7 @@ impl Sequoia {
 
     pub fn from_values(
         user_key_id: [u8; 20],
-        key_ring: HashMap<[u8; 20], Arc<sequoia_openpgp::Cert>>,
+        key_ring: HashMap<[u8; 20], Arc<Cert>>,
         user_home: &Path,
     ) -> Self {
         Self {
@@ -671,8 +670,8 @@ impl Sequoia {
 
     /// Converts a list of recipients to their sequoia certs
     /// # Errors
-    /// errors if not all recipients have certs
-    fn convert_recipients(&self, input: &[Recipient]) -> Result<Vec<Arc<sequoia_openpgp::Cert>>> {
+    /// The function errors if any recipient doesn't have a cert
+    fn convert_recipients(&self, input: &[Recipient]) -> Result<Vec<Arc<Cert>>> {
         let mut result = vec![];
 
         for recipient in input {
@@ -687,7 +686,7 @@ impl Sequoia {
                     }
                 },
                 None => {
-                    let kh: sequoia_openpgp::KeyHandle = recipient.key_id.parse()?;
+                    let kh: KeyHandle = recipient.key_id.parse()?;
 
                     for cert in self.key_ring.values() {
                         if cert.key_handle().aliases(&kh) {
@@ -701,9 +700,9 @@ impl Sequoia {
         Ok(result)
     }
 
-    /// Download keys from the internet and write them to the keys dir.
+    /// Download keys from the internet and write them to the keys-dir.
     /// # Errors
-    /// Errors on download problems
+    /// The function errors on download problems.
     fn pull_and_write(&mut self, key_id: &str, keys_dir: &Path) -> Result<String> {
         let response = download_keys(key_id)?;
 
@@ -712,7 +711,7 @@ impl Sequoia {
 
     /// Writes a key to the keys directory, imported from a string.
     /// # Errors
-    /// Errors if the string can't be parsed as a cert.
+    /// The function errors if the string can't be parsed as a cert.
     fn write_cert(&mut self, cert_str: &str, keys_dir: &Path) -> Result<String> {
         let cert = Cert::from_bytes(cert_str.as_bytes())?;
 
@@ -752,13 +751,12 @@ impl Crypto for Sequoia {
             };
 
             // Now, create a decryptor with a helper using the given Certs.
-            let mut decryptor = DecryptorBuilder::from_bytes(ciphertext)?
-                .with_policy(&p, None, helper)
-                .unwrap();
+            let mut decryptor =
+                DecryptorBuilder::from_bytes(ciphertext)?.with_policy(&p, None, helper)?;
 
             // Decrypt the data.
-            std::io::copy(&mut decryptor, &mut sink).unwrap();
-            let result = std::str::from_utf8(&sink).unwrap().to_owned();
+            std::io::copy(&mut decryptor, &mut sink)?;
+            let result = std::str::from_utf8(&sink)?.to_owned();
             sink.zeroize();
             Ok(result)
         } else {
@@ -928,7 +926,7 @@ impl Crypto for Sequoia {
 
     fn pull_keys(&mut self, recipients: &[&Recipient], config_path: &Path) -> Result<String> {
         let p = config_path.join("share").join("ripasso").join("keys");
-        std::fs::create_dir_all(&p)?;
+        fs::create_dir_all(&p)?;
 
         let mut ret = String::new();
         for recipient in recipients {
@@ -947,7 +945,7 @@ impl Crypto for Sequoia {
 
     fn import_key(&mut self, key: &str, config_path: &Path) -> Result<String> {
         let p = config_path.join("share").join("ripasso").join("keys");
-        std::fs::create_dir_all(&p)?;
+        fs::create_dir_all(&p)?;
 
         self.write_cert(key, &p)
     }

@@ -141,13 +141,13 @@ impl std::hash::Hash for IdComment {
     }
 }
 
-impl std::cmp::PartialEq for IdComment {
+impl PartialEq for IdComment {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
 }
 
-impl std::cmp::Eq for IdComment {}
+impl Eq for IdComment {}
 
 /// Describes a comment around a gpg id / fingerprint. See this commit for source:
 /// <https://git.zx2c4.com/password-store/commit/?id=a271b43cbd76cc30406202c49041b552656538bd>
@@ -166,11 +166,11 @@ pub struct Comment {
 /// All secrets are encrypted with the key_id of the recipients.
 #[derive(Clone, Debug)]
 pub struct Recipient {
-    /// Human readable name of the person.
+    /// Human-readable name of the person.
     pub name: String,
     /// The comment field from the .gpg-id file, not including the leading '#' characters.
     pub comment: Comment,
-    /// Machine readable identity taken from the .gpg-id file, in the form of a gpg key id
+    /// Machine-readable identity taken from the .gpg-id file, in the form of a gpg key id
     /// (16 hex chars) or a fingerprint (40 hex chars).
     pub key_id: String,
     /// The fingerprint of the pgp key, as 20 bytes,
@@ -342,7 +342,7 @@ impl Recipient {
         valid_gpg_signing_keys: &[[u8; 20]],
         crypto: &(dyn crate::crypto::Crypto + Send),
     ) -> Result<()> {
-        let mut file = std::fs::OpenOptions::new()
+        let mut file = fs::OpenOptions::new()
             .write(true)
             .create(true)
             .truncate(true)
@@ -392,7 +392,7 @@ impl Recipient {
                 sig.into()
             };
 
-            let mut recipient_sig_file = std::fs::OpenOptions::new()
+            let mut recipient_sig_file = fs::OpenOptions::new()
                 .write(true)
                 .create(true)
                 .truncate(true)
@@ -428,7 +428,7 @@ impl Recipient {
             if recipients_file == store_root_path.join(".gpg_id") {
                 Err(Error::Generic("Can't delete the last encryption key"))
             } else {
-                Ok(std::fs::remove_file(recipients_file)?)
+                Ok(fs::remove_file(recipients_file)?)
             }
         } else {
             Recipient::write_recipients_file(
@@ -475,7 +475,7 @@ impl PartialEq for Recipient {
             return false;
         }
 
-        return self.fingerprint.as_ref().unwrap() == other.fingerprint.as_ref().unwrap();
+        self.fingerprint.as_ref().unwrap() == other.fingerprint.as_ref().unwrap()
     }
 }
 

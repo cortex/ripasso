@@ -25,6 +25,7 @@ use std::{
 };
 
 use chrono::prelude::*;
+use config::Config;
 use totp_rs::TOTP;
 use zeroize::Zeroize;
 
@@ -52,7 +53,7 @@ pub struct PasswordStore {
     /// A list of fingerprints of keys that are allowed to sign the .gpg-id file, obtained from the environmental
     /// variable `PASSWORD_STORE_SIGNING_KEY` or from the configuration file
     valid_gpg_signing_keys: Vec<[u8; 20]>,
-    /// a list of password files with meta data
+    /// a list of password files with metadata
     pub passwords: Vec<PasswordEntry>,
     /// A file that describes the style of the store
     style_file: Option<PathBuf>,
@@ -313,18 +314,18 @@ impl PasswordStore {
 
     /// Creates a new password file in the store.
     /// # Errors
-    /// Returns an `Err` if the path points to an file outside of the password store or the file already exists.
+    /// Returns an `Err` if the path points to a file outside the password store or the file already exists.
     pub fn new_password_file(&mut self, path_end: &str, content: &str) -> Result<PasswordEntry> {
         let mut path = self.root.clone();
 
-        let c_path = std::fs::canonicalize(path.as_path())?;
+        let c_path = fs::canonicalize(path.as_path())?;
 
         let path_iter = &mut path_end.split('/').peekable();
 
         while let Some(p) = path_iter.next() {
             if path_iter.peek().is_some() {
                 path.push(p);
-                let c_file_res = std::fs::canonicalize(path.as_path());
+                let c_file_res = fs::canonicalize(path.as_path());
                 if let Ok(c_file) = c_file_res {
                     if !c_file.starts_with(c_path.as_path()) {
                         return Err(Error::Generic(
@@ -333,7 +334,7 @@ impl PasswordStore {
                     }
                 }
                 if !path.exists() {
-                    std::fs::create_dir(&path)?;
+                    fs::create_dir(&path)?;
                 }
             } else {
                 path.push(format!("{p}.gpg"));
@@ -348,7 +349,7 @@ impl PasswordStore {
             Ok(pe) => Ok(pe),
             Err(err) => {
                 // try to remove the file we created, as cleanup
-                let _ = std::fs::remove_file(path);
+                let _ = fs::remove_file(path);
 
                 // but always return the original error
                 Err(err)
@@ -416,7 +417,7 @@ impl PasswordStore {
         Ok(())
     }
 
-    /// checks if there is a user name configured in git
+    /// checks if there is a username configured in git
     pub fn has_configured_username(&self) -> bool {
         if self.repo().is_err() {
             return true;
@@ -581,9 +582,9 @@ impl PasswordStore {
     }
 
     fn recipients_file_for_dir(&self, path: &Path) -> Result<PathBuf> {
-        let mut new_dir = std::fs::canonicalize(self.root.join(path))?;
+        let mut new_dir = fs::canonicalize(self.root.join(path))?;
 
-        let root = std::fs::canonicalize(&self.root)?;
+        let root = fs::canonicalize(&self.root)?;
 
         if !new_dir.starts_with(&root) {
             return Err(Error::Generic("path traversal is not allowed"));
@@ -635,22 +636,23 @@ impl PasswordStore {
 
     /// Removes a key from the .gpg-id file and re-encrypts all the passwords
     /// # Errors
-    /// Returns an `Err` if the gpg_id file should be verified and it can't be or if the recipient is the last one.
+    /// Returns an `Err` if the gpg_id file can't be verified when it should
+    /// or if the recipient is the last one.
     pub fn remove_recipient(&self, r: &Recipient, path: &Path) -> Result<()> {
         let gpg_id_file = &self.recipients_file_for_dir(path)?;
-        let gpg_id_file_content = std::fs::read_to_string(gpg_id_file)?;
+        let gpg_id_file_content = fs::read_to_string(gpg_id_file)?;
 
         let res = self.remove_recipient_inner(r, path);
 
         if res.is_err() {
-            std::fs::write(gpg_id_file, gpg_id_file_content)?;
+            fs::write(gpg_id_file, gpg_id_file_content)?;
         }
         res
     }
 
     /// Adds a key to the .gpg-id file in the path directory and re-encrypts all the passwords
     /// # Errors
-    /// Returns an `Err` if the gpg_id file should be verified and it can't be or there is some problem with
+    /// Returns an `Err` if the gpg_id file can't be verified when it should or there is some problem with
     /// the encryption.
     pub fn add_recipient(&mut self, r: &Recipient, path: &Path, config_path: &Path) -> Result<()> {
         if !self.crypto.is_key_in_keyring(r)? {
@@ -666,14 +668,14 @@ impl PasswordStore {
         if !dir.exists() {
             return Err(Error::Generic("path doesn't exist"));
         }
-        let dir = std::fs::canonicalize(self.root.join(path))?;
-        let root = std::fs::canonicalize(&self.root)?;
+        let dir = fs::canonicalize(self.root.join(path))?;
+        let root = fs::canonicalize(&self.root)?;
 
         if !dir.starts_with(root) {
             return Err(Error::Generic("path traversal not allowed"));
         }
         if !dir.join(".gpg-id").exists() {
-            std::fs::File::create(dir.join(".gpg-id"))?;
+            File::create(dir.join(".gpg-id"))?;
         }
 
         Recipient::add_recipient_to_file(
@@ -688,7 +690,7 @@ impl PasswordStore {
     /// Reencrypt all the entries in the store, for example when a new collaborator is added
     /// to the team.
     /// # Errors
-    /// Returns an `Err` if the gpg_id file should be verified and it can't be or there is some problem with
+    /// Returns an `Err` if the gpg_id file can't be verified when it should or there is some problem with
     /// the encryption.
     fn reencrypt_all_password_entries(&self) -> Result<()> {
         let mut names: Vec<PathBuf> = Vec::new();
@@ -785,17 +787,17 @@ impl PasswordStore {
 
         let mut new_path_dir = new_path.clone();
         new_path_dir.pop();
-        fs::create_dir_all(&new_path_dir)?;
+        create_dir_all(&new_path_dir)?;
 
-        let mut file = std::fs::File::create(&new_path)?;
-        let mut secret = self.crypto.decrypt_string(&std::fs::read(&old_path)?)?;
+        let mut file = File::create(&new_path)?;
+        let mut secret = self.crypto.decrypt_string(&fs::read(&old_path)?)?;
         let new_recipients = Recipient::all_recipients(
             &self.recipients_file_for_dir(&new_path)?,
             self.crypto.as_ref(),
         )?;
         file.write_all(&self.crypto.encrypt_string(&secret, &new_recipients)?)?;
         secret.zeroize();
-        std::fs::remove_file(&old_path)?;
+        fs::remove_file(&old_path)?;
 
         if self.repo().is_ok() {
             let old_file_name = append_extension(PathBuf::from(old_name), ".gpg");
@@ -829,7 +831,7 @@ impl PasswordStore {
         pre_comment: &[String],
         post_comment: Option<String>,
     ) -> Result<Recipient> {
-        crate::signature::Recipient::from(key_id, pre_comment, post_comment, self.crypto.as_ref())
+        Recipient::from(key_id, pre_comment, post_comment, self.crypto.as_ref())
     }
 }
 
@@ -890,7 +892,7 @@ impl GitLogLine {
     }
 }
 
-/// The state of a password, with regards to git
+/// The state of a password, in the context of git
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 #[non_exhaustive]
 pub enum RepositoryStatus {
@@ -924,7 +926,7 @@ fn to_name(relpath: &Path) -> String {
     let mut s = relpath.to_string_lossy().to_string();
     if relpath
         .extension()
-        .map_or(false, |ext| ext.eq_ignore_ascii_case("gpg"))
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("gpg"))
     {
         s.truncate(s.len() - 4);
         s
@@ -934,7 +936,7 @@ fn to_name(relpath: &Path) -> String {
 }
 
 impl PasswordEntry {
-    /// constructs a a `PasswordEntry` from the supplied parts
+    /// constructs a `PasswordEntry` from the supplied parts
     pub fn new(
         base: &Path,    // Root of the password directory
         relpath: &Path, // Relative path to the password.
@@ -1024,7 +1026,7 @@ impl PasswordEntry {
         Ok(password)
     }
 
-    /// decrypts and returns a TOTP code if the entry contains a otpauth:// url
+    /// decrypts and returns a TOTP code if the entry contains an otpauth:// url
     /// # Errors
     /// Returns an `Err` if the code generation fails
     pub fn mfa(&self, store: &PasswordStore) -> Result<String> {
@@ -1041,7 +1043,7 @@ impl PasswordEntry {
                 }
                 end_pos
             };
-            // Use unchecked for sites like Discord, Github that still use 80
+            // Use unchecked for sites like Discord, GitHub that still use 80
             // bit secrets. https://github.com/constantoine/totp-rs/issues/46
             let totp = TOTP::from_url_unchecked(&secret[start_pos..end_pos])?;
             secret.zeroize();
@@ -1092,7 +1094,7 @@ impl PasswordEntry {
     /// # Errors
     /// Returns an `Err` if the remove fails.
     pub fn delete_file(&self, store: &PasswordStore) -> Result<()> {
-        std::fs::remove_file(&self.path)?;
+        fs::remove_file(&self.path)?;
 
         if store.repo().is_err() {
             return Ok(());
@@ -1232,42 +1234,41 @@ pub fn password_dir_raw(password_store_dir: &Option<PathBuf>, home: &Option<Path
     }
 }
 
-fn home_exists(home: &Option<PathBuf>, settings: &config::Config) -> bool {
+fn home_exists(home: &Option<PathBuf>, settings: &Config) -> bool {
     if home.is_none() {
         return false;
     }
     let home = home.as_ref().unwrap();
 
-    let home_dir = home.join(".password-store");
-    if home_dir.exists() {
-        if !home_dir.is_dir() {
-            return false;
-        }
+    let default_password_store_dir = home.join(".password-store");
+    if !default_password_store_dir.exists() {
+        return false;
+    }
+    if !default_password_store_dir.is_dir() {
+        return false;
+    }
 
-        let stores_res = settings.get("stores");
-        if let Ok(stores) = stores_res {
-            let stores: HashMap<String, config::Value> = stores;
+    let stores_res = settings.get("stores");
+    if let Ok(stores) = stores_res {
+        let stores: HashMap<String, config::Value> = stores;
 
-            for store_name in stores.keys() {
-                let store: HashMap<String, config::Value> =
-                    stores[store_name].clone().into_table().unwrap();
+        for store_name in stores.keys() {
+            let store: HashMap<String, config::Value> =
+                stores[store_name].clone().into_table().unwrap();
 
-                let password_store_dir_opt = store.get("path");
-                if let Some(p) = password_store_dir_opt {
-                    let p_path = PathBuf::from(p.clone().into_str().unwrap());
-                    let c1 = std::fs::canonicalize(home_dir.clone());
-                    let c2 = std::fs::canonicalize(p_path);
-                    if c1.is_ok() && c2.is_ok() && c1.unwrap() == c2.unwrap() {
-                        return false;
-                    }
+            let password_store_dir_opt = store.get("path");
+            if let Some(p) = password_store_dir_opt {
+                let p_path = PathBuf::from(p.clone().into_string().unwrap());
+                let c1 = fs::canonicalize(default_password_store_dir.clone());
+                let c2 = fs::canonicalize(p_path);
+                if c1.is_ok() && c2.is_ok() && c1.unwrap() == c2.unwrap() {
+                    return false;
                 }
             }
         }
-
-        return true;
     }
 
-    false
+    true
 }
 
 fn env_var_exists(store_dir: &Option<String>, signing_keys: &Option<String>) -> bool {
@@ -1287,15 +1288,14 @@ fn settings_file_exists(home: &Option<PathBuf>, xdg_config_home: &Option<PathBuf
 
     let xdg_config_file_dir = Path::new(&xdg_config_file);
     if xdg_config_file_dir.exists() {
-        return fs::metadata(xdg_config_file_dir)
-            .map_or(false, |config_file| config_file.len() != 0);
+        return fs::metadata(xdg_config_file_dir).is_ok_and(|config_file| config_file.len() != 0);
     }
 
     false
 }
 
-fn home_settings(home: &Option<PathBuf>) -> Result<config::Config> {
-    let mut default_store = std::collections::HashMap::new();
+fn home_settings(home: &Option<PathBuf>) -> Result<Config> {
+    let mut default_store = HashMap::new();
 
     let home = home.as_ref().ok_or("no home directory set")?;
 
@@ -1304,20 +1304,17 @@ fn home_settings(home: &Option<PathBuf>) -> Result<config::Config> {
         home.join(".password-store/").to_string_lossy().to_string(),
     );
 
-    let mut stores_map = std::collections::HashMap::new();
+    let mut stores_map = HashMap::new();
     stores_map.insert("default".to_owned(), default_store);
 
-    let mut new_settings = config::Config::default();
-    new_settings.set("stores", stores_map)?;
+    let mut new_settings = config::ConfigBuilder::default();
+    new_settings = new_settings.set_default("stores", stores_map)?;
 
-    Ok(new_settings)
+    Ok(config::ConfigBuilder::<config::builder::DefaultState>::build(new_settings)?)
 }
 
-fn var_settings(
-    store_dir: &Option<String>,
-    signing_keys: &Option<String>,
-) -> Result<config::Config> {
-    let mut default_store = std::collections::HashMap::new();
+fn var_settings(store_dir: &Option<String>, signing_keys: &Option<String>) -> Result<Config> {
+    let mut default_store = HashMap::new();
 
     if let Some(dir) = store_dir {
         if dir.ends_with('/') {
@@ -1332,13 +1329,13 @@ fn var_settings(
         default_store.insert("valid_signing_keys".to_owned(), "-1".to_owned());
     }
 
-    let mut stores_map = std::collections::HashMap::new();
+    let mut stores_map = HashMap::new();
     stores_map.insert("default".to_owned(), default_store);
 
-    let mut new_settings = config::Config::default();
-    new_settings.set("stores", stores_map)?;
+    let mut new_settings = config::ConfigBuilder::default();
+    new_settings = new_settings.set_default("stores", stores_map)?;
 
-    Ok(new_settings)
+    Ok(config::ConfigBuilder::<config::builder::DefaultState>::build(new_settings)?)
 }
 
 fn xdg_config_file_location(
@@ -1357,7 +1354,9 @@ fn xdg_config_file_location(
     }
 }
 
-fn file_settings(xdg_config_file: &Path) -> config::File<config::FileSourceFile> {
+fn file_settings(
+    xdg_config_file: &Path,
+) -> config::File<config::FileSourceFile, config::FileFormat> {
     config::File::from(xdg_config_file.to_path_buf())
 }
 
@@ -1373,30 +1372,33 @@ pub fn read_config(
     signing_keys: &Option<String>,
     home: &Option<PathBuf>,
     xdg_config_home: &Option<PathBuf>,
-) -> Result<(config::Config, PathBuf)> {
-    let mut settings = config::Config::default();
+) -> Result<(Config, PathBuf)> {
+    let mut settings = config::ConfigBuilder::default();
     let config_file_location = xdg_config_file_location(home, xdg_config_home)?;
 
     if settings_file_exists(home, xdg_config_home) {
-        settings.merge(file_settings(&config_file_location))?;
+        settings = config::ConfigBuilder::<config::builder::DefaultState>::add_source(
+            settings,
+            file_settings(&config_file_location),
+        )
     }
 
-    if home_exists(home, &settings) {
-        settings.merge(home_settings(home)?)?;
+    if home_exists(home, &settings.clone().build()?) {
+        settings = settings.add_source(home_settings(home)?);
     }
 
     if env_var_exists(store_dir, signing_keys) {
-        settings.merge(var_settings(store_dir, signing_keys)?)?;
+        settings = settings.add_source(var_settings(store_dir, signing_keys)?);
     }
 
-    Ok((settings, config_file_location))
+    Ok((settings.build()?, config_file_location))
 }
 
 pub fn save_config(
     stores: Arc<Mutex<Vec<Arc<Mutex<PasswordStore>>>>>,
     config_file_location: &Path,
 ) -> Result<()> {
-    let mut stores_map = std::collections::HashMap::new();
+    let mut stores_map = HashMap::new();
     let stores_borrowed = stores
         .lock()
         .map_err(|_e| Error::Generic("problem locking the mutex"))?;
@@ -1405,7 +1407,7 @@ pub fn save_config(
         let store = store
             .lock()
             .map_err(|_e| Error::Generic("problem locking the mutex"))?;
-        let mut store_map = std::collections::HashMap::new();
+        let mut store_map = HashMap::new();
         store_map.insert(
             "path",
             store
@@ -1440,10 +1442,10 @@ pub fn save_config(
         stores_map.insert(store.get_name().clone(), store_map);
     }
 
-    let mut settings = std::collections::HashMap::new();
+    let mut settings = HashMap::new();
     settings.insert("stores", stores_map);
 
-    let f = std::fs::File::create(config_file_location)?;
+    let f = File::create(config_file_location)?;
     let mut f = std::io::BufWriter::new(f);
     f.write_all(toml::ser::to_string_pretty(&settings)?.as_bytes())?;
 
