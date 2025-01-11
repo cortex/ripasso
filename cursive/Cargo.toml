@@ -18,13 +18,12 @@ locale_config = "0.3.0"
 unic-langid = "0.9.4"
 gettext = "0.4.0"
 lazy_static = "1.4.0"
-toml = "0.8.10"
 terminal_size = "0.3.0"
 hex = "0.4.3"
 zeroize = { version = "1.7.0", features = ["zeroize_derive", "alloc"] }
 
 [dependencies.config]
-version = "0.11.0"
+version = "0.15.5"
 default-features = false
 features = ["toml"]
 

@@ -60,16 +60,23 @@ impl Window {
     }
 
     fn filter(&self) -> CustomFilter {
-        CustomFilter::new(clone!(@weak self as window => @default-panic, move |obj| {
-            let text = window.imp().entry.text();
+        CustomFilter::new(clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or_panic]
+            move |obj| {
+                let text = window.imp().entry.text();
 
-            // Get `PasswordObject` from `glib::Object`
-            let password_object = obj
-                .downcast_ref::<PasswordObject>()
-                .expect("The object needs to be of type `PasswordObject`.");
+                // Get `PasswordObject` from `glib::Object`
+                let password_object = obj
+                    .downcast_ref::<PasswordObject>()
+                    .expect("The object needs to be of type `PasswordObject`.");
 
-            password_object.property::<String>("name").contains(&text.to_string())
-        }))
+                password_object
+                    .property::<String>("name")
+                    .contains(&text.to_string())
+            }
+        ))
     }
 
     fn setup_collections(&self) {
@@ -81,13 +88,18 @@ impl Window {
 
         self.imp().collections_list.bind_model(
             Some(&collections),
-            clone!(@weak self as window => @default-panic, move |obj| {
-                let collection_object = obj
-                    .downcast_ref()
-                    .expect("The object should be of type `CollectionObject`.");
-                let row = window.create_collection_row(collection_object);
-                row.upcast()
-            }),
+            clone!(
+                #[weak(rename_to = window)]
+                self,
+                #[upgrade_or_panic]
+                move |obj| {
+                    let collection_object = obj
+                        .downcast_ref()
+                        .expect("The object should be of type `CollectionObject`.");
+                    let row = window.create_collection_row(collection_object);
+                    row.upcast()
+                }
+            ),
         )
     }
 
@@ -119,7 +131,7 @@ impl Window {
 
         collection_object
             .bind_property("title", &label, "label")
-            .flags(glib::BindingFlags::SYNC_CREATE)
+            .flags(BindingFlags::SYNC_CREATE)
             .build();
 
         ListBoxRow::builder().child(&label).build()
@@ -132,13 +144,18 @@ impl Window {
         let selection_model = NoSelection::new(Some(filter_model.clone()));
         self.imp().passwords_list.bind_model(
             Some(&selection_model),
-            clone!(@weak self as window => @default-panic, move |obj| {
-                let password_object = obj
-                    .downcast_ref()
-                    .expect("The object should be of type `PasswordObject`.");
-                let row = window.create_password_row(password_object);
-                row.upcast()
-            }),
+            clone!(
+                #[weak(rename_to = window)]
+                self,
+                #[upgrade_or_panic]
+                move |obj| {
+                    let password_object = obj
+                        .downcast_ref()
+                        .expect("The object should be of type `PasswordObject`.");
+                    let row = window.create_password_row(password_object);
+                    row.upcast()
+                }
+            ),
         );
 
         // Store filter model
@@ -151,11 +168,14 @@ impl Window {
 
         // Assure that the task list is only visible when it is supposed to
         self.set_task_list_visible(&passwords);
-        let passwords_changed_handler_id = passwords.connect_items_changed(
-            clone!(@weak self as window => move |passwords, _, _, _| {
+        let passwords_changed_handler_id = passwords.connect_items_changed(clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or_panic]
+            move |passwords, _, _, _| {
                 window.set_task_list_visible(passwords);
-            }),
-        );
+            }
+        ));
         self.imp()
             .passwords_changed_handler_id
             .replace(Some(passwords_changed_handler_id));
@@ -231,40 +251,54 @@ impl Window {
     }
 
     fn setup_callbacks(&self) {
-        self.imp()
-            .entry
-            .connect_changed(clone!(@weak self as window => move |_| {
+        self.imp().entry.connect_changed(clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or_panic]
+            move |_| {
                 window.set_filter();
-            }));
+            }
+        ));
 
         // Setup callback when items of collections change
         self.set_stack();
-        self.collections().connect_items_changed(
-            clone!(@weak self as window => move |_, _, _, _| {
+        self.collections().connect_items_changed(clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or_panic]
+            move |_, _, _, _| {
                 window.set_stack();
-            }),
-        );
+            }
+        ));
 
         // Setup callback for activating a row of collections list
-        self.imp().collections_list.connect_row_activated(
-            clone!(@weak self as window => move |_, row| {
+        self.imp().collections_list.connect_row_activated(clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or_panic]
+            move |_, row| {
                 let index = row.index();
-                let selected_collection = window.collections()
+                let selected_collection = window
+                    .collections()
                     .item(index as u32)
                     .expect("There needs to be an object at this position.")
                     .downcast::<CollectionObject>()
                     .expect("The object needs to be a `CollectionObject`.");
                 window.set_current_collection(selected_collection);
                 window.imp().leaflet.navigate(NavigationDirection::Forward);
-            }),
-        );
+            }
+        ));
 
         // Setup callback for activating a row in the password list
-        self.imp().passwords_list.connect_row_activated(
-            clone!(@weak self as window => move |_, row| {
+        self.imp().passwords_list.connect_row_activated(clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or_panic]
+            move |_, row| {
                 let index = row.index();
 
-                let password = window.current_collection()
+                let password = window
+                    .current_collection()
                     .passwords()
                     .item(index as u32)
                     .expect("There needs to be an object at this position.")
@@ -274,13 +308,15 @@ impl Window {
                 let display = gtk::gdk::Display::default().unwrap();
                 let clipboard = display.clipboard();
                 clipboard.set_text(&password.property::<String>("secret"));
-            }),
-        );
+            }
+        ));
 
         // Setup callback for folding the leaflet
-        self.imp()
-            .leaflet
-            .connect_folded_notify(clone!(@weak self as window => move |leaflet| {
+        self.imp().leaflet.connect_folded_notify(clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or_panic]
+            move |leaflet| {
                 if leaflet.is_folded() {
                     window
                         .imp()
@@ -293,13 +329,17 @@ impl Window {
                         .set_selection_mode(SelectionMode::Single);
                     window.select_collection_row();
                 }
-            }));
+            }
+        ));
 
-        self.imp()
-            .back_button
-            .connect_clicked(clone!(@weak self as window => move |_| {
+        self.imp().back_button.connect_clicked(clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or_panic]
+            move |_| {
                 window.imp().leaflet.navigate(NavigationDirection::Back);
-            }));
+            }
+        ));
     }
 
     fn set_stack(&self) {
@@ -313,37 +353,62 @@ impl Window {
     fn setup_actions(&self) {
         // Create action to do a git pull for the current repository
         let action_git_pull = gio::SimpleAction::new("git-pull", None);
-        action_git_pull.connect_activate(clone!(@weak self as window => move |_, _| {
-            window.current_collection().git_pull(&window);
-        }));
+        action_git_pull.connect_activate(clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or_panic]
+            move |_, _| {
+                window.current_collection().git_pull(&window);
+            }
+        ));
         self.add_action(&action_git_pull);
 
         // Create action to do a git push for the current repository
         let action_git_push = gio::SimpleAction::new("git-push", None);
-        action_git_push.connect_activate(clone!(@weak self as window => move |_, _| {
-            window.current_collection().git_push(&window);
-        }));
+        action_git_push.connect_activate(clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or_panic]
+            move |_, _| {
+                window.current_collection().git_push(&window);
+            }
+        ));
         self.add_action(&action_git_push);
 
         // Create action to download pgp certificates for the current repository
         let action_pgp_download = gio::SimpleAction::new("pgp-download", None);
-        action_pgp_download.connect_activate(clone!(@weak self as window => move |_, _| {
-            window.current_collection().pgp_download(&window);
-        }));
+        action_pgp_download.connect_activate(clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or_panic]
+            move |_, _| {
+                window.current_collection().pgp_download(&window);
+            }
+        ));
         self.add_action(&action_pgp_download);
 
         // Create action to download pgp certificates for the current repository
         let action_about = gio::SimpleAction::new("about", None);
-        action_about.connect_activate(clone!(@weak self as window => move |_, _| {
-            window.about_dialog();
-        }));
+        action_about.connect_activate(clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or_panic]
+            move |_, _| {
+                window.about_dialog();
+            }
+        ));
         self.add_action(&action_about);
 
         // Create action to create new collection and add to action group "win"
         let action_new_list = gio::SimpleAction::new("new-collection", None);
-        action_new_list.connect_activate(clone!(@weak self as window => move |_, _| {
-            window.new_collection();
-        }));
+        action_new_list.connect_activate(clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or_panic]
+            move |_, _| {
+                window.new_collection();
+            }
+        ));
         self.add_action(&action_new_list);
     }
 
@@ -392,26 +457,40 @@ impl Window {
             .build();
         dialog.content_area().append(&entry);
 
-        // Set entry's css class to "error", when there is not text in it
-        entry.connect_changed(clone!(@weak dialog => move |entry| {
-            let text = entry.text();
-            let dialog_button = dialog.
-                widget_for_response(ResponseType::Accept).
-                expect("The dialog needs to have a widget for response type `Accept`.");
-            let empty = text.is_empty();
+        // Set entry's css class to "error", when there is no text in it
+        entry.connect_changed(clone!(
+            #[weak(rename_to = _window)]
+            self,
+            #[weak]
+            dialog,
+            #[upgrade_or_panic]
+            move |entry| {
+                let text = entry.text();
+                let dialog_button = dialog
+                    .widget_for_response(ResponseType::Accept)
+                    .expect("The dialog needs to have a widget for response type `Accept`.");
+                let empty = text.is_empty();
 
-            dialog_button.set_sensitive(!empty);
+                dialog_button.set_sensitive(!empty);
 
-            if empty {
-                entry.add_css_class("error");
-            } else {
-                entry.remove_css_class("error");
+                if empty {
+                    entry.add_css_class("error");
+                } else {
+                    entry.remove_css_class("error");
+                }
             }
-        }));
+        ));
 
         // Connect response to dialog
-        dialog.connect_response(
-            clone!(@weak self as window, @weak entry => move |dialog, response| {
+        dialog.connect_response(clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[weak]
+            entry,
+            #[weak]
+            dialog,
+            #[upgrade_or_panic]
+            move |_, response| {
                 // Destroy dialog
                 dialog.destroy();
 
@@ -425,7 +504,23 @@ impl Window {
 
                 // Create a new collection object from the title the user provided
                 let title = entry.text().to_string();
-                let collection = CollectionObject::new(&title, passwords, Arc::new(Mutex::new(PasswordStore::new("default", &None, &None, &None, &None, &CryptoImpl::GpgMe, &None).expect("Created store"))), &window.imp().user_config_dir.borrow());
+                let collection = CollectionObject::new(
+                    &title,
+                    passwords,
+                    Arc::new(Mutex::new(
+                        PasswordStore::new(
+                            "default",
+                            &None,
+                            &None,
+                            &None,
+                            &None,
+                            &CryptoImpl::GpgMe,
+                            &None,
+                        )
+                        .expect("Created store"),
+                    )),
+                    &window.imp().user_config_dir.borrow(),
+                );
 
                 // Add new collection object and set current passwords
                 window.collections().append(&collection);
@@ -433,8 +528,8 @@ impl Window {
 
                 // Let the leaflet navigate to the next child
                 window.imp().leaflet.navigate(NavigationDirection::Forward);
-            }),
-        );
+            }
+        ));
         dialog.present();
     }
 }
@@ -449,21 +544,17 @@ fn get_stores(
         let stores: HashMap<String, config::Value> = stores;
 
         for store_name in stores.keys() {
-            let store: HashMap<String, config::Value> = stores
-                .get(store_name)
-                .unwrap()
-                .clone()
-                .into_table()
-                .unwrap();
+            let store: HashMap<String, config::Value> =
+                stores.get(store_name).unwrap().clone().into_table()?;
 
             let password_store_dir_opt = store.get("path");
             let valid_signing_keys_opt = store.get("valid_signing_keys");
 
             if let Some(store_dir) = password_store_dir_opt {
-                let password_store_dir = Some(PathBuf::from(store_dir.clone().into_str()?));
+                let password_store_dir = Some(PathBuf::from(store_dir.clone().into_string()?));
 
                 let valid_signing_keys = match valid_signing_keys_opt {
-                    Some(k) => match k.clone().into_str() {
+                    Some(k) => match k.clone().into_string() {
                         Err(_) => None,
                         Ok(key) => {
                             if key == "-1" {
@@ -476,7 +567,7 @@ fn get_stores(
                     None => None,
                 };
                 let style_path_opt = match store.get("style_path") {
-                    Some(path) => match path.clone().into_str() {
+                    Some(path) => match path.clone().into_string() {
                         Ok(p) => Some(PathBuf::from(p)),
                         Err(_err) => None,
                     },
@@ -484,14 +575,14 @@ fn get_stores(
                 };
 
                 let pgp_impl = match store.get("pgp") {
-                    Some(pgp_str) => CryptoImpl::try_from(pgp_str.clone().into_str()?.as_str()),
+                    Some(pgp_str) => CryptoImpl::try_from(pgp_str.clone().into_string()?.as_str()),
                     None => Ok(CryptoImpl::GpgMe),
                 }?;
 
                 let own_fingerprint = store.get("own_fingerprint");
                 let own_fingerprint = match own_fingerprint {
                     None => None,
-                    Some(k) => match k.clone().into_str() {
+                    Some(k) => match k.clone().into_string() {
                         Err(_) => None,
                         Ok(key) => match <[u8; 20]>::from_hex(key) {
                             Err(_) => None,

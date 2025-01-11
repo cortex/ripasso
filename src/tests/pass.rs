@@ -1,5 +1,4 @@
-use std::{env, fs::File, path::PathBuf};
-
+use config::ConfigBuilder;
 use git2::Repository;
 use hex::FromHex;
 use sequoia_openpgp::{
@@ -9,6 +8,7 @@ use sequoia_openpgp::{
         Serialize,
     },
 };
+use std::{env, fs::File, path::PathBuf};
 use tempfile::tempdir;
 
 use super::*;
@@ -20,7 +20,7 @@ use crate::{
     },
 };
 
-impl std::cmp::PartialEq for Error {
+impl PartialEq for Error {
     fn eq(&self, other: &Error) -> bool {
         format!("{:?}", self) == format!("{:?}", *other)
     }
@@ -62,7 +62,7 @@ pub fn setup_store(
 
 #[test]
 fn get_password_dir_no_env() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempdir().unwrap();
     env::remove_var("PASSWORD_STORE_DIR");
 
     let path = password_dir(&None, &Some(dir.into_path()));
@@ -331,22 +331,22 @@ fn password_store_with_symlink() -> Result<()> {
 
 #[test]
 fn home_exists_missing_home_env() {
-    assert!(!home_exists(&None, &config::Config::default()));
+    assert!(!home_exists(&None, &Config::default()));
 }
 
 #[test]
 fn home_exists_home_dir_without_config_dir() {
-    let dir = tempfile::tempdir().unwrap();
-    let result = home_exists(&Some(dir.into_path()), &config::Config::default());
+    let dir = tempdir().unwrap();
+    let result = home_exists(&Some(dir.into_path()), &Config::default());
 
     assert!(!result);
 }
 
 #[test]
 fn home_exists_home_dir_with_file_instead_of_dir() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempdir().unwrap();
     File::create(dir.path().join(".password-store"))?;
-    let result = home_exists(&Some(dir.into_path()), &config::Config::default());
+    let result = home_exists(&Some(dir.into_path()), &Config::default());
 
     assert!(!result);
 
@@ -355,9 +355,9 @@ fn home_exists_home_dir_with_file_instead_of_dir() -> Result<()> {
 
 #[test]
 fn home_exists_home_dir_with_config_dir() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir(dir.path().join(".password-store"))?;
-    let result = home_exists(&Some(dir.into_path()), &config::Config::default());
+    let dir = tempdir().unwrap();
+    fs::create_dir(dir.path().join(".password-store"))?;
+    let result = home_exists(&Some(dir.into_path()), &Config::default());
 
     assert!(result);
 
@@ -371,7 +371,7 @@ fn env_var_exists_test_none() {
 
 #[test]
 fn env_var_exists_test_without_dir() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempdir().unwrap();
 
     assert!(env_var_exists(
         &Some(
@@ -387,7 +387,7 @@ fn env_var_exists_test_without_dir() {
 
 #[test]
 fn env_var_exists_test_with_dir() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempdir().unwrap();
 
     assert!(env_var_exists(
         &Some(dir.path().to_str().unwrap().to_owned()),
@@ -405,14 +405,14 @@ fn home_settings_missing() {
 
 #[test]
 fn home_settings_dir_exists() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir(dir.path().join(".password-store"))?;
+    let dir = tempdir().unwrap();
+    fs::create_dir(dir.path().join(".password-store"))?;
 
     let settings = home_settings(&Some(PathBuf::from(dir.path()))).unwrap();
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
-    let path = work["path"].clone().into_str()?;
+    let path = work["path"].clone().into_string()?;
 
     assert_eq!(
         dir.path()
@@ -429,13 +429,13 @@ fn home_settings_dir_exists() -> Result<()> {
 /// this works due to that it's the function `home_exists` that checks if it exists
 #[test]
 fn home_settings_dir_doesnt_exists() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempdir().unwrap();
 
     let settings = home_settings(&Some(PathBuf::from(dir.path()))).unwrap();
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
-    let path = work["path"].clone().into_str()?;
+    let path = work["path"].clone().into_string()?;
 
     assert_eq!(
         dir.path()
@@ -458,8 +458,8 @@ fn var_settings_test() -> Result<()> {
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
-    let path = work["path"].clone().into_str()?;
-    let valid_signing_keys = work["valid_signing_keys"].clone().into_str()?;
+    let path = work["path"].clone().into_string()?;
+    let valid_signing_keys = work["valid_signing_keys"].clone().into_string()?;
 
     assert_eq!("/home/user/.password-store/", path);
     assert_eq!(
@@ -472,8 +472,8 @@ fn var_settings_test() -> Result<()> {
 
 #[test]
 fn file_settings_simple_file() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".config").join("ripasso"))?;
+    let dir = tempdir().unwrap();
+    create_dir_all(dir.path().join(".config").join("ripasso"))?;
     let mut file = File::create(
         dir.path()
             .join(".config")
@@ -487,15 +487,17 @@ fn file_settings_simple_file() -> Result<()> {
     )?;
     file.flush()?;
 
-    let mut settings: config::Config = config::Config::default();
-    settings.merge(file_settings(
-        &xdg_config_file_location(&Some(dir.into_path()), &None).unwrap(),
-    ))?;
+    let mut settings = ConfigBuilder::default();
+    settings = config::ConfigBuilder::<config::builder::DefaultState>::add_source(
+        settings,
+        file_settings(&xdg_config_file_location(&Some(dir.into_path()), &None).unwrap()),
+    );
+    let settings = settings.build()?;
 
     let stores = settings.get_table("stores")?;
 
     let work = stores["work"].clone().into_table()?;
-    let path = work["path"].clone().into_str()?;
+    let path = work["path"].clone().into_string()?;
     assert_eq!("/home/user/.password-store", path);
 
     Ok(())
@@ -503,9 +505,9 @@ fn file_settings_simple_file() -> Result<()> {
 
 #[test]
 fn file_settings_file_in_xdg_config_home() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    let dir2 = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir2.path().join(".random_config").join("ripasso"))?;
+    let dir = tempdir().unwrap();
+    let dir2 = tempdir().unwrap();
+    create_dir_all(dir2.path().join(".random_config").join("ripasso"))?;
     let mut file = File::create(
         dir2.path()
             .join(".random_config")
@@ -519,16 +521,20 @@ fn file_settings_file_in_xdg_config_home() -> Result<()> {
     )?;
     file.flush()?;
 
-    let mut settings: config::Config = config::Config::default();
-    settings.merge(file_settings(&xdg_config_file_location(
-        &Some(dir.into_path()),
-        &Some(dir2.path().join(".random_config")),
-    )?))?;
+    let mut settings = ConfigBuilder::default();
+    settings = config::ConfigBuilder::<config::builder::DefaultState>::add_source(
+        settings,
+        file_settings(&xdg_config_file_location(
+            &Some(dir.into_path()),
+            &Some(dir2.path().join(".random_config")),
+        )?),
+    );
+    let settings = settings.build()?;
 
     let stores = settings.get_table("stores")?;
 
     let work = stores["work"].clone().into_table()?;
-    let path = work["path"].clone().into_str()?;
+    let path = work["path"].clone().into_string()?;
     assert_eq!("/home/user/.password-store", path);
 
     Ok(())
@@ -536,9 +542,9 @@ fn file_settings_file_in_xdg_config_home() -> Result<()> {
 
 #[test]
 fn read_config_empty_config_file() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".config").join("ripasso"))?;
-    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let dir = tempdir().unwrap();
+    create_dir_all(dir.path().join(".config").join("ripasso"))?;
+    create_dir_all(dir.path().join(".password-store"))?;
     File::create(
         dir.path()
             .join(".config")
@@ -550,7 +556,7 @@ fn read_config_empty_config_file() -> Result<()> {
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
-    let path = work["path"].clone().into_str()?;
+    let path = work["path"].clone().into_string()?;
 
     assert_eq!(
         dir.path()
@@ -566,8 +572,8 @@ fn read_config_empty_config_file() -> Result<()> {
 
 #[test]
 fn read_config_empty_config_file_with_keys_env() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let dir = tempdir().unwrap();
+    create_dir_all(dir.path().join(".password-store"))?;
 
     let (settings, _) = read_config(
         &None,
@@ -578,8 +584,8 @@ fn read_config_empty_config_file_with_keys_env() -> Result<()> {
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
-    let path = work["path"].clone().into_str()?;
-    let valid_signing_keys = work["valid_signing_keys"].clone().into_str()?;
+    let path = work["path"].clone().into_string()?;
+    let valid_signing_keys = work["valid_signing_keys"].clone().into_string()?;
 
     assert_eq!(
         dir.path()
@@ -599,8 +605,8 @@ fn read_config_empty_config_file_with_keys_env() -> Result<()> {
 
 #[test]
 fn read_config_env_vars() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join("env_var").join(".password-store"))?;
+    let dir = tempdir().unwrap();
+    create_dir_all(dir.path().join("env_var").join(".password-store"))?;
 
     let (settings, _) = read_config(
         &Some(
@@ -618,8 +624,8 @@ fn read_config_env_vars() -> Result<()> {
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
-    let path = work["path"].clone().into_str()?;
-    let valid_signing_keys = work["valid_signing_keys"].clone().into_str()?;
+    let path = work["path"].clone().into_string()?;
+    let valid_signing_keys = work["valid_signing_keys"].clone().into_string()?;
 
     assert_eq!(
         dir.path()
@@ -640,9 +646,9 @@ fn read_config_env_vars() -> Result<()> {
 
 #[test]
 fn read_config_home_and_env_vars() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".password-store"))?;
-    std::fs::create_dir_all(dir.path().join("env_var").join(".password-store"))?;
+    let dir = tempdir().unwrap();
+    create_dir_all(dir.path().join(".password-store"))?;
+    create_dir_all(dir.path().join("env_var").join(".password-store"))?;
 
     let (settings, _) = read_config(
         &Some(
@@ -660,8 +666,8 @@ fn read_config_home_and_env_vars() -> Result<()> {
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
-    let path = work["path"].clone().into_str()?;
-    let valid_signing_keys = work["valid_signing_keys"].clone().into_str()?;
+    let path = work["path"].clone().into_string()?;
+    let valid_signing_keys = work["valid_signing_keys"].clone().into_string()?;
 
     assert_eq!(
         dir.path()
@@ -682,13 +688,13 @@ fn read_config_home_and_env_vars() -> Result<()> {
 
 #[test]
 fn read_config_default_path_in_config_file() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let dir = tempdir().unwrap();
+    create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
     gpg_file.flush()?;
 
-    std::fs::create_dir_all(dir.path().join(".config").join("ripasso"))?;
+    create_dir_all(dir.path().join(".config").join("ripasso"))?;
     let mut file = File::create(
         dir.path()
             .join(".config")
@@ -708,7 +714,7 @@ fn read_config_default_path_in_config_file() -> Result<()> {
     let stores = settings.get_table("stores")?;
 
     let work = stores["work"].clone().into_table()?;
-    let path = work["path"].clone().into_str()?;
+    let path = work["path"].clone().into_string()?;
     assert_eq!(dir.path().join(".password-store").to_str().unwrap(), path);
 
     assert!(!stores.contains_key("default"));
@@ -717,13 +723,13 @@ fn read_config_default_path_in_config_file() -> Result<()> {
 
 #[test]
 fn read_config_default_path_in_env_var() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let dir = tempdir().unwrap();
+    create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
     gpg_file.flush()?;
 
-    std::fs::create_dir_all(dir.path().join(".config").join("ripasso"))?;
+    create_dir_all(dir.path().join(".config").join("ripasso"))?;
     let mut file = File::create(
         dir.path()
             .join(".config")
@@ -748,8 +754,8 @@ fn read_config_default_path_in_env_var() -> Result<()> {
     let stores = settings.get_table("stores")?;
 
     let work = stores["default"].clone().into_table()?;
-    let path = work["path"].clone().into_str()?;
-    let keys = work["valid_signing_keys"].clone().into_str()?;
+    let path = work["path"].clone().into_string()?;
+    let keys = work["valid_signing_keys"].clone().into_string()?;
     assert_eq!("/tmp/t2/", path);
     assert_eq!("-1", keys);
 
@@ -759,13 +765,13 @@ fn read_config_default_path_in_env_var() -> Result<()> {
 
 #[test]
 fn read_config_default_path_in_env_var_with_pgp_setting() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let dir = tempdir().unwrap();
+    create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
     gpg_file.flush()?;
 
-    std::fs::create_dir_all(dir.path().join(".config").join("ripasso"))?;
+    create_dir_all(dir.path().join(".config").join("ripasso"))?;
     let mut file = File::create(
         dir.path()
             .join(".config")
@@ -790,14 +796,14 @@ fn read_config_default_path_in_env_var_with_pgp_setting() -> Result<()> {
     let stores = settings.get_table("stores")?;
 
     let work = stores["default"].clone().into_table()?;
-    let path = work["path"].clone().into_str()?;
-    let keys = work["valid_signing_keys"].clone().into_str()?;
+    let path = work["path"].clone().into_string()?;
+    let keys = work["valid_signing_keys"].clone().into_string()?;
     assert_eq!("/tmp/t2/", path);
     assert_eq!("-1", keys);
-    assert_eq!("gpg", work["pgp_implementation"].clone().into_str()?);
+    assert_eq!("gpg", work["pgp_implementation"].clone().into_string()?);
     assert_eq!(
         "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
-        work["own_fingerprint"].clone().into_str()?
+        work["own_fingerprint"].clone().into_string()?
     );
 
     assert!(!stores.contains_key("work"));
@@ -808,8 +814,8 @@ fn read_config_default_path_in_env_var_with_pgp_setting() -> Result<()> {
 fn save_config_one_store() {
     let config_file = tempfile::NamedTempFile::new().unwrap();
     let style_file = tempfile::NamedTempFile::new().unwrap();
-    let passdir = tempfile::tempdir().unwrap();
-    let home = tempfile::tempdir().unwrap();
+    let passdir = tempdir().unwrap();
+    let home = tempdir().unwrap();
 
     let s1 = PasswordStore::new(
         "s1 name",
@@ -828,7 +834,7 @@ fn save_config_one_store() {
     )
     .unwrap();
 
-    let config = std::fs::read_to_string(config_file.path()).unwrap();
+    let config = fs::read_to_string(config_file.path()).unwrap();
 
     assert!(config.contains("[stores.\"s1 name\"]\n"));
     assert!(config.contains(&format!("path = \"{}\"\n", passdir.path().display())));
@@ -842,7 +848,7 @@ fn save_config_one_store() {
 
 #[test]
 fn save_config_one_store_with_pgp_impl() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempdir().unwrap();
 
     let store = PasswordStore::new(
         "default",
@@ -870,7 +876,7 @@ fn save_config_one_store_with_pgp_impl() {
 
 #[test]
 fn save_config_one_store_with_fingerprint() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempdir().unwrap();
 
     let store = PasswordStore::new(
         "default",
@@ -985,7 +991,7 @@ fn rename_file_git_index_clean() -> Result<()> {
     store.reload_password_list()?;
     store.rename_file("1/test", "2/test")?;
 
-    let repo = git2::Repository::open(dir.dir())?;
+    let repo = Repository::open(dir.dir())?;
 
     assert!(repo.statuses(None)?.is_empty());
 
@@ -994,8 +1000,8 @@ fn rename_file_git_index_clean() -> Result<()> {
 
 #[test]
 fn decrypt_secret_empty_file() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let dir = tempdir().unwrap();
+    create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
     gpg_file.flush()?;
@@ -1032,8 +1038,8 @@ fn decrypt_secret_empty_file() -> Result<()> {
 
 #[test]
 fn decrypt_secret_missing_file() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let dir = tempdir().unwrap();
+    create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
     gpg_file.flush()?;
@@ -1070,8 +1076,8 @@ fn decrypt_secret_missing_file() -> Result<()> {
 
 #[test]
 fn decrypt_secret() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let dir = tempdir().unwrap();
+    create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
     gpg_file.flush()?;
@@ -1111,8 +1117,8 @@ fn decrypt_secret() -> Result<()> {
 
 #[test]
 fn decrypt_password_empty_file() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let dir = tempdir().unwrap();
+    create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
     gpg_file.flush()?;
@@ -1149,8 +1155,8 @@ fn decrypt_password_empty_file() -> Result<()> {
 
 #[test]
 fn decrypt_password_multiline() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let dir = tempdir().unwrap();
+    create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
     gpg_file.flush()?;
@@ -1190,8 +1196,8 @@ fn decrypt_password_multiline() -> Result<()> {
 }
 
 fn mfa_setup(payload: String) -> Result<(tempfile::TempDir, PasswordEntry, PasswordStore)> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let dir = tempdir().unwrap();
+    create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
     gpg_file.flush()?;
@@ -1273,8 +1279,8 @@ fn mfa_no_otpauth_url() -> Result<()> {
 
 #[test]
 fn update() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let dir = tempdir().unwrap();
+    create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
     gpg_file.flush()?;
@@ -1319,8 +1325,8 @@ fn update() -> Result<()> {
 
 #[test]
 fn delete_file() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let dir = tempdir().unwrap();
+    create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
     gpg_file.flush()?;
@@ -1358,8 +1364,8 @@ fn delete_file() -> Result<()> {
 
 #[test]
 fn get_history_no_repo() -> Result<()> {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(dir.path().join(".password-store"))?;
+    let dir = tempdir().unwrap();
+    create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
     gpg_file.flush()?;
@@ -1447,7 +1453,7 @@ fn test_format_error() {
     #[allow(invalid_from_utf8)]
     let utf8_error = String::from_utf8(vec![255]).err().unwrap();
     #[allow(invalid_from_utf8)]
-    let str_utf8_error = std::str::from_utf8(&[255]).err().unwrap();
+    let str_utf8_error = str::from_utf8(&[255]).err().unwrap();
 
     assert_eq!(
         format!("{}", Error::from(utf8_error.clone())),
@@ -1623,7 +1629,7 @@ fn test_search() -> Result<()> {
     };
     let store = PasswordStore {
         name: "store_name".to_owned(),
-        root: std::env::temp_dir(),
+        root: env::temp_dir(),
         valid_gpg_signing_keys: vec![],
         passwords: vec![p1, p2, p3],
         style_file: None,
@@ -1645,7 +1651,7 @@ fn test_search() -> Result<()> {
 fn test_verify_git_signature() -> Result<()> {
     let dir = UnpackedDir::new("test_verify_git_signature")?;
 
-    let repo = git2::Repository::open(dir.dir()).unwrap();
+    let repo = Repository::open(dir.dir()).unwrap();
     let oid = repo.head()?.target().unwrap();
 
     let store = PasswordStore {
@@ -1719,7 +1725,7 @@ fn test_remove_and_commit() -> Result<()> {
         user_home: None,
     };
 
-    let repo = git2::Repository::open(dir.dir()).unwrap();
+    let repo = Repository::open(dir.dir()).unwrap();
     let mut config = repo.config()?;
 
     config.set_bool("commit.gpgsign", true)?;
@@ -1854,7 +1860,7 @@ fn sign(to_sign: &str, tsk: &sequoia_openpgp::Cert) -> String {
     // written.
     message.finalize().unwrap();
 
-    std::str::from_utf8(&sink).unwrap().to_owned()
+    str::from_utf8(&sink).unwrap().to_owned()
 }
 
 #[test]
@@ -1879,9 +1885,9 @@ fn test_verify_gpg_id_files_untrusted_key_in_keyring() {
         .join("share")
         .join("ripasso")
         .join("keys");
-    std::fs::create_dir_all(&keys_dir).unwrap();
+    create_dir_all(&keys_dir).unwrap();
     let password_store_dir = td.path().join(".password_store");
-    std::fs::create_dir_all(&password_store_dir).unwrap();
+    create_dir_all(&password_store_dir).unwrap();
     let mut file =
         File::create(keys_dir.join(hex::encode(store_owner.fingerprint().as_bytes()))).unwrap();
     store_owner.serialize(&mut file).unwrap();
@@ -1971,7 +1977,7 @@ fn test_new_password_file_in_git_repo() -> Result<()> {
         "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
     )?;
 
-    let repo = git2::Repository::init(td.path())?;
+    let repo = Repository::init(td.path())?;
     let mut config = repo.config()?;
     config.set_str("user.name", "default")?;
     config.set_str("user.email", "default@example.com")?;
@@ -2011,7 +2017,7 @@ fn test_new_password_file_encryption_failure() -> Result<()> {
         "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
     )?;
 
-    let repo = git2::Repository::init(td.path())?;
+    let repo = Repository::init(td.path())?;
     let mut config = repo.config()?;
     config.set_str("user.name", "default")?;
     config.set_str("user.email", "default@example.com")?;
@@ -2048,7 +2054,7 @@ fn test_new_password_file_twice() -> Result<()> {
         "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
     )?;
 
-    let repo = git2::Repository::init(td.path())?;
+    let repo = Repository::init(td.path())?;
     let mut config = repo.config()?;
     config.set_str("user.name", "default")?;
     config.set_str("user.email", "default@example.com")?;
@@ -2326,13 +2332,13 @@ fn test_add_recipient_not_in_key_ring() -> Result<()> {
     assert_eq!(0, store.passwords.len());
 
     store.new_password_file("file", "password")?;
-    let gpg_id_file_pre = std::fs::read_to_string(td.path().join(".gpg-id"))?;
+    let gpg_id_file_pre = fs::read_to_string(td.path().join(".gpg-id"))?;
     let res = store.add_recipient(
         &external_user_recipient,
         &PathBuf::from("./"),
         config_path.path(),
     );
-    let gpg_id_file_post = std::fs::read_to_string(td.path().join(".gpg-id"))?;
+    let gpg_id_file_post = fs::read_to_string(td.path().join(".gpg-id"))?;
 
     assert!(res.is_err());
 
@@ -2362,9 +2368,9 @@ fn test_remove_last_recipient_with_decryption_rights() -> Result<()> {
     store.new_password_file("file", "password")?;
     store.add_recipient(&user3_recipient, &PathBuf::from("./"), config_path.path())?;
 
-    let gpg_id_file_pre = std::fs::read_to_string(td.path().join(".gpg-id"))?;
+    let gpg_id_file_pre = fs::read_to_string(td.path().join(".gpg-id"))?;
     let res = store.remove_recipient(&user0_recipient, &PathBuf::from("./"));
-    let gpg_id_file_post = std::fs::read_to_string(td.path().join(".gpg-id"))?;
+    let gpg_id_file_post = fs::read_to_string(td.path().join(".gpg-id"))?;
 
     assert!(res.is_ok());
 
@@ -2387,7 +2393,7 @@ fn test_remove_last_recipient_from_sub_folder() -> Result<()> {
         hex::encode(users[0].fingerprint().as_bytes()) + "\n",
     )?;
 
-    std::fs::create_dir(td.path().join("dir"))?;
+    fs::create_dir(td.path().join("dir"))?;
 
     fs::write(
         td.path().join("dir").join(".gpg-id"),
@@ -2399,9 +2405,9 @@ fn test_remove_last_recipient_from_sub_folder() -> Result<()> {
     store.new_password_file("file", "password")?;
     store.new_password_file("dir/file", "password")?;
 
-    let gpg_id_file_pre = std::fs::read_to_string(td.path().join(".gpg-id"))?;
+    let gpg_id_file_pre = fs::read_to_string(td.path().join(".gpg-id"))?;
     let res = store.remove_recipient(&user0_recipient, &PathBuf::from("dir"));
-    let gpg_id_file_post = std::fs::read_to_string(td.path().join(".gpg-id"))?;
+    let gpg_id_file_post = fs::read_to_string(td.path().join(".gpg-id"))?;
 
     assert!(res.is_ok());
     assert!(!td.path().join("dir").join(".gpg-id").exists());
@@ -2483,7 +2489,7 @@ fn test_recipients_file_for_dir() -> Result<()> {
 
     let (store, _) = setup_store(&td, user_home.path())?;
 
-    std::fs::File::create(td.path().join(".gpg-id"))?;
+    File::create(td.path().join(".gpg-id"))?;
 
     assert_eq!(
         td.path().join(".gpg-id"),

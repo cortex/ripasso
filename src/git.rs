@@ -14,7 +14,7 @@ use crate::{
     signature::SignatureStatus,
 };
 
-fn git_branch_name(repo: &git2::Repository) -> Result<String> {
+fn git_branch_name(repo: &Repository) -> Result<String> {
     let head = repo.find_reference("HEAD")?;
     let symbolic = head
         .symbolic_target()
@@ -32,13 +32,13 @@ fn git_branch_name(repo: &git2::Repository) -> Result<String> {
 
 /// Apply the changes to the git repository.
 pub fn commit(
-    repo: &git2::Repository,
+    repo: &Repository,
     signature: &git2::Signature,
     message: &str,
     tree: &git2::Tree,
     parents: &[&git2::Commit],
     crypto: &(dyn Crypto + Send),
-) -> Result<git2::Oid> {
+) -> Result<Oid> {
     if should_sign(repo) {
         let commit_buf = repo.commit_create_buffer(
             signature, // author
@@ -75,23 +75,22 @@ pub fn commit(
     }
 }
 
-pub fn find_last_commit(repo: &git2::Repository) -> Result<git2::Commit> {
+pub fn find_last_commit(repo: &Repository) -> Result<git2::Commit> {
     let obj = repo.head()?.resolve()?.peel(git2::ObjectType::Commit)?;
     obj.into_commit()
         .map_err(|_| Error::Generic("Couldn't find commit"))
 }
 
 /// Returns if a git commit should be gpg signed or not.
-fn should_sign(repo: &git2::Repository) -> bool {
-    repo.config().map_or(false, |config| {
-        config.get_bool("commit.gpgsign").unwrap_or(false)
-    })
+fn should_sign(repo: &Repository) -> bool {
+    repo.config()
+        .is_ok_and(|config| config.get_bool("commit.gpgsign").unwrap_or(false))
 }
 
-/// returns true if the diff between the two commit's contains the path that the `DiffOptions`
+/// returns true if the diff between the two commits contains the path that the `DiffOptions`
 /// have been prepared with
 pub fn match_with_parent(
-    repo: &git2::Repository,
+    repo: &Repository,
     commit: &git2::Commit,
     parent: &git2::Commit,
     opts: &mut git2::DiffOptions,
@@ -104,11 +103,11 @@ pub fn match_with_parent(
 
 /// Add a file to the store, and commit it to the supplied git repository.
 pub fn add_and_commit_internal(
-    repo: &git2::Repository,
+    repo: &Repository,
     paths: &[PathBuf],
     message: &str,
     crypto: &(dyn Crypto + Send),
-) -> Result<git2::Oid> {
+) -> Result<Oid> {
     let mut index = repo.index()?;
     for path in paths {
         index.add_path(path)?;
@@ -131,11 +130,7 @@ pub fn add_and_commit_internal(
 }
 
 /// Remove a file from the store, and commit the deletion to the supplied git repository.
-pub fn remove_and_commit(
-    store: &PasswordStore,
-    paths: &[PathBuf],
-    message: &str,
-) -> Result<git2::Oid> {
+pub fn remove_and_commit(store: &PasswordStore, paths: &[PathBuf], message: &str) -> Result<Oid> {
     let repo = store
         .repo()
         .map_err(|_| Error::Generic("must have a repository"))?;
@@ -175,7 +170,7 @@ pub fn move_and_commit(
     old_name: &Path,
     new_name: &Path,
     message: &str,
-) -> Result<git2::Oid> {
+) -> Result<Oid> {
     let repo = store
         .repo()
         .map_err(|_| Error::Generic("must have a repository"))?;
@@ -210,7 +205,7 @@ pub fn move_and_commit(
 /// find the origin of the git repo, with the following strategy:
 /// find the branch that HEAD points to, and read the remote configured for that branch
 /// returns the remote and the name of the local branch
-fn find_origin(repo: &git2::Repository) -> Result<(git2::Remote, String)> {
+fn find_origin(repo: &Repository) -> Result<(git2::Remote, String)> {
     for branch in repo.branches(Some(git2::BranchType::Local))? {
         let b = branch?.0;
         if b.is_head() {
@@ -253,7 +248,7 @@ fn cred(
 
 /// Push your changes to the remote git repository.
 /// # Errors
-/// Returns an `Err` if the repository doesn't exist or if an git operation fails
+/// Returns an `Err` if the repository doesn't exist or if a git operation fails
 pub fn push(store: &PasswordStore) -> Result<()> {
     let repo = store
         .repo()
@@ -286,7 +281,7 @@ pub fn push(store: &PasswordStore) -> Result<()> {
 
 /// Pull new changes from the remote git repository.
 /// # Errors
-/// Returns an `Err` if the repository doesn't exist or if an git operation fails
+/// Returns an `Err` if the repository doesn't exist or if a git operation fails
 pub fn pull(store: &PasswordStore) -> Result<()> {
     let repo = store
         .repo()
@@ -353,7 +348,7 @@ fn triple<T: Display>(
 pub fn read_git_meta_data(
     base: &Path,
     path: &Path,
-    repo: &git2::Repository,
+    repo: &Repository,
     store: &PasswordStore,
 ) -> (
     Result<DateTime<Local>>,
@@ -423,17 +418,17 @@ pub fn verify_git_signature(
 /// Initialize a git repository for the store.
 /// # Errors
 /// Returns an `Err` if the git init fails
-pub fn init_git_repo(base: &Path) -> Result<git2::Repository> {
-    Ok(git2::Repository::init(base)?)
+pub fn init_git_repo(base: &Path) -> Result<Repository> {
+    Ok(Repository::init(base)?)
 }
 
 pub fn push_password_if_match(
     target: &Path,
     found: &Path,
     commit: &git2::Commit,
-    repo: &git2::Repository,
+    repo: &Repository,
     passwords: &mut Vec<PasswordEntry>,
-    oid: &git2::Oid,
+    oid: &Oid,
     store: &PasswordStore,
 ) -> bool {
     if *target == *found {

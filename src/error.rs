@@ -7,7 +7,7 @@ use hex::FromHexError;
 
 use crate::pass::PasswordStore;
 
-/// A enum that contains the different types of errors that the library returns as part of Result's.
+/// An enum that contains the different types of errors that the library returns as part of Result's.
 #[non_exhaustive]
 #[derive(Debug)]
 pub enum Error {
@@ -97,8 +97,8 @@ impl From<Option<std::str::Utf8Error>> for Error {
     }
 }
 
-impl From<std::boxed::Box<dyn std::error::Error>> for Error {
-    fn from(err: std::boxed::Box<dyn std::error::Error>) -> Self {
+impl From<Box<dyn std::error::Error>> for Error {
+    fn from(err: Box<dyn std::error::Error>) -> Self {
         Self::GenericDyn(err.to_string())
     }
 }
@@ -121,10 +121,8 @@ impl From<&str> for Error {
     }
 }
 
-impl From<std::sync::PoisonError<std::sync::MutexGuard<'_, crate::pass::PasswordStore>>> for Error {
-    fn from(
-        _err: std::sync::PoisonError<std::sync::MutexGuard<'_, crate::pass::PasswordStore>>,
-    ) -> Self {
+impl From<PoisonError<MutexGuard<'_, PasswordStore>>> for Error {
+    fn from(_err: PoisonError<MutexGuard<'_, PasswordStore>>) -> Self {
         Self::Generic("thread error")
     }
 }
@@ -141,18 +139,8 @@ impl From<anyhow::Error> for Error {
     }
 }
 
-impl
-    From<
-        std::sync::PoisonError<
-            std::sync::MutexGuard<'_, std::vec::Vec<crate::pass::PasswordStore>>,
-        >,
-    > for Error
-{
-    fn from(
-        _err: std::sync::PoisonError<
-            std::sync::MutexGuard<'_, std::vec::Vec<crate::pass::PasswordStore>>,
-        >,
-    ) -> Self {
+impl From<PoisonError<MutexGuard<'_, Vec<PasswordStore>>>> for Error {
+    fn from(_err: PoisonError<MutexGuard<'_, Vec<PasswordStore>>>) -> Self {
         Self::Generic("thread error")
     }
 }

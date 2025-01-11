@@ -22,9 +22,9 @@ fn do_delete_normal() {
     let mut siv = cursive::default();
 
     let td = tempdir().unwrap();
-    std::fs::create_dir(&td.path().join(".password-store")).unwrap();
+    std::fs::create_dir(td.path().join(".password-store")).unwrap();
     std::fs::write(
-        &td.path().join(".password-store").join("file.gpg"),
+        td.path().join(".password-store").join("file.gpg"),
         "pgp-data",
     )
     .unwrap();

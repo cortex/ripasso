@@ -56,7 +56,7 @@ pub fn set_clipboard(content: &String) -> Result<()> {
     Ok(CLIPBOARD.lock().unwrap().set_text(content)?)
 }
 
-pub fn get_value_from_input(s: &mut Cursive, input_name: &str) -> Option<std::sync::Arc<String>> {
+pub fn get_value_from_input(s: &mut Cursive, input_name: &str) -> Option<Arc<String>> {
     let mut password = None;
     s.call_on_name(input_name, |e: &mut EditView| {
         password = Some(e.get_content());

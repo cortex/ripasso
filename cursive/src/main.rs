@@ -106,7 +106,7 @@ fn up(ui: &mut Cursive) {
 }
 
 fn page_down(ui: &mut Cursive) {
-    let rows = screen_height(&ui) - 7;
+    let rows = screen_height(ui) - 7;
     ui.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
         l.select_down(rows);
     });
@@ -119,7 +119,7 @@ fn page_down(ui: &mut Cursive) {
 }
 
 fn page_up(ui: &mut Cursive) {
-    let rows = screen_height(&ui) - 7;
+    let rows = screen_height(ui) - 7;
     ui.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
         l.select_up(rows);
     });
@@ -140,7 +140,7 @@ fn copy(ui: &mut Cursive, store: PasswordStoreType) {
     if sel.is_none() {
         return;
     }
-    if let Err(err) = || -> pass::Result<()> {
+    if let Err(err) = || -> Result<()> {
         let mut secret: String = sel.unwrap().secret(&*store.lock()?.lock()?)?;
         helpers::set_clipboard(&secret)?;
         secret.zeroize();
@@ -168,7 +168,7 @@ fn copy_first_line(ui: &mut Cursive, store: PasswordStoreType) {
     if sel.is_none() {
         return;
     }
-    if let Err(err) = || -> pass::Result<()> {
+    if let Err(err) = || -> Result<()> {
         let mut secret = sel.unwrap().password(&*store.lock()?.lock()?)?;
         helpers::set_clipboard(&secret)?;
         secret.zeroize();
@@ -198,7 +198,7 @@ fn copy_mfa(ui: &mut Cursive, store: PasswordStoreType) {
     if sel.is_none() {
         return;
     }
-    if let Err(err) = || -> pass::Result<()> {
+    if let Err(err) = || -> Result<()> {
         let mut secret = sel.unwrap().mfa(&*store.lock()?.lock()?)?;
         helpers::set_clipboard(&secret)?;
         secret.zeroize();
@@ -224,7 +224,7 @@ fn copy_name(ui: &mut Cursive) {
     }
     let sel = sel.unwrap();
 
-    if let Err(err) = || -> pass::Result<()> {
+    if let Err(err) = || -> Result<()> {
         let name = sel.name.split('/').next_back();
         helpers::set_clipboard(&name.unwrap_or("").to_string())?;
         Ok(())
@@ -281,8 +281,8 @@ fn delete(ui: &mut Cursive, store: PasswordStoreType) {
     ));
 }
 
-fn get_selected_password_entry(ui: &mut Cursive) -> Option<ripasso::pass::PasswordEntry> {
-    let password_entry_option: Option<Option<Arc<ripasso::pass::PasswordEntry>>> = ui
+fn get_selected_password_entry(ui: &mut Cursive) -> Option<pass::PasswordEntry> {
+    let password_entry_option: Option<Option<Arc<pass::PasswordEntry>>> = ui
         .call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
             l.selection()
         });
@@ -716,12 +716,12 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
 
 fn delete_recipient(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
     let mut l = ui
-        .find_name::<SelectView<Option<(PathBuf, pass::Recipient)>>>("recipients")
+        .find_name::<SelectView<Option<(PathBuf, Recipient)>>>("recipients")
         .unwrap();
     let sel = l.selection();
 
     if sel.is_none() || sel.as_ref().unwrap().is_none() {
-        return Err(crate::pass::Error::Generic("Selection is empty"));
+        return Err(pass::Error::Generic("Selection is empty"));
     }
 
     let binding = sel.unwrap();
@@ -795,9 +795,7 @@ fn add_recipient(ui: &mut Cursive, store: PasswordStoreType, config_path: &Path)
                             }
 
                             let mut recipients_view = ui
-                                .find_name::<SelectView<Option<(PathBuf, pass::Recipient)>>>(
-                                    "recipients",
-                                )
+                                .find_name::<SelectView<Option<(PathBuf, Recipient)>>>("recipients")
                                 .unwrap();
                             recipients_view.add_item(
                                 render_recipient_label(&recipient, max_width_key, max_width_name),
@@ -870,7 +868,7 @@ fn add_recipient_dialog(ui: &mut Cursive, store: PasswordStoreType, config_path:
 }
 
 fn render_recipient_label(
-    recipient: &pass::Recipient,
+    recipient: &Recipient,
     max_width_key: usize,
     max_width_name: usize,
 ) -> String {
@@ -929,7 +927,7 @@ fn view_recipients(ui: &mut Cursive, store: PasswordStoreType, config_path: &Pat
         helpers::errorbox(ui, &err);
         return Ok(());
     }
-    let sub_dirs = sub_dirs.unwrap();
+    let sub_dirs = sub_dirs?;
 
     match sub_dirs.len().cmp(&1) {
         std::cmp::Ordering::Greater => {
@@ -942,7 +940,7 @@ fn view_recipients(ui: &mut Cursive, store: PasswordStoreType, config_path: &Pat
                     return Ok(());
                 }
 
-                path_to_recipients.insert(dir.clone(), recipients_res.unwrap());
+                path_to_recipients.insert(dir.clone(), recipients_res?);
             }
 
             view_recipients_for_many_dirs(ui, store, path_to_recipients, config_path);
@@ -971,7 +969,7 @@ fn view_recipients_for_many_dirs(
     path_to_recipients: HashMap<PathBuf, Vec<Recipient>>,
     config_path: &Path,
 ) {
-    let mut recipients_view = SelectView::<Option<(PathBuf, pass::Recipient)>>::new()
+    let mut recipients_view = SelectView::<Option<(PathBuf, Recipient)>>::new()
         .h_align(cursive::align::HAlign::Left)
         .with_name("recipients");
 
@@ -1048,9 +1046,9 @@ fn view_recipients_for_dir(
         helpers::errorbox(ui, &err);
         return Ok(());
     }
-    let recipients = recipients_res.unwrap();
+    let recipients = recipients_res?;
 
-    let mut recipients_view = SelectView::<Option<(PathBuf, pass::Recipient)>>::new()
+    let mut recipients_view = SelectView::<Option<(PathBuf, Recipient)>>::new()
         .h_align(cursive::align::HAlign::Left)
         .with_name("recipients");
 
@@ -1108,10 +1106,7 @@ fn create_label(p: &pass::PasswordEntry, col: usize) -> String {
     let committed_by = p.committed_by.clone();
     let updated = p.updated;
     let name = substr(
-        &match committed_by {
-            Some(d) => d,
-            None => CATALOG.gettext("n/a").to_string(),
-        },
+        &committed_by.unwrap_or_else(|| CATALOG.gettext("n/a").to_string()),
         0,
         15,
     );
@@ -1377,21 +1372,17 @@ fn get_stores(config: &config::Config, home: &Option<PathBuf>) -> Result<Vec<Pas
         let stores: HashMap<String, config::Value> = stores;
 
         for store_name in stores.keys() {
-            let store: HashMap<String, config::Value> = stores
-                .get(store_name)
-                .unwrap()
-                .clone()
-                .into_table()
-                .unwrap();
+            let store: HashMap<String, config::Value> =
+                stores.get(store_name).unwrap().clone().into_table()?;
 
             let password_store_dir_opt = store.get("path");
             let valid_signing_keys_opt = store.get("valid_signing_keys");
 
             if let Some(store_dir) = password_store_dir_opt {
-                let password_store_dir = Some(PathBuf::from(store_dir.clone().into_str()?));
+                let password_store_dir = Some(PathBuf::from(store_dir.clone().into_string()?));
 
                 let valid_signing_keys = match valid_signing_keys_opt {
-                    Some(k) => match k.clone().into_str() {
+                    Some(k) => match k.clone().into_string() {
                         Err(_) => None,
                         Ok(key) => {
                             if key == "-1" {
@@ -1404,7 +1395,7 @@ fn get_stores(config: &config::Config, home: &Option<PathBuf>) -> Result<Vec<Pas
                     None => None,
                 };
                 let style_path_opt = match store.get("style_path") {
-                    Some(path) => match path.clone().into_str() {
+                    Some(path) => match path.clone().into_string() {
                         Ok(p) => Some(PathBuf::from(p)),
                         Err(_err) => None,
                     },
@@ -1412,14 +1403,14 @@ fn get_stores(config: &config::Config, home: &Option<PathBuf>) -> Result<Vec<Pas
                 };
 
                 let pgp_impl = match store.get("pgp") {
-                    Some(pgp_str) => CryptoImpl::try_from(pgp_str.clone().into_str()?.as_str()),
+                    Some(pgp_str) => CryptoImpl::try_from(pgp_str.clone().into_string()?.as_str()),
                     None => Ok(CryptoImpl::GpgMe),
                 }?;
 
                 let own_fingerprint = store.get("own_fingerprint");
                 let own_fingerprint = match own_fingerprint {
                     None => None,
-                    Some(k) => match k.clone().into_str() {
+                    Some(k) => match k.clone().into_string() {
                         Err(_) => None,
                         Ok(key) => match <[u8; 20]>::from_hex(key) {
                             Err(_) => None,
@@ -1477,11 +1468,11 @@ fn validate_stores_config(settings: &config::Config, home: &Option<PathBuf>) -> 
             let password_store_dir_opt = store.get("path");
 
             if let Some(p) = password_store_dir_opt {
-                let p_path = PathBuf::from(p.clone().into_str().unwrap());
+                let p_path = PathBuf::from(p.clone().into_string().unwrap());
                 let gpg_id = p_path.clone().join(".gpg-id");
 
                 if !p_path.exists() || !gpg_id.exists() {
-                    incomplete_stores.push(PathBuf::from(p.clone().into_str().unwrap()));
+                    incomplete_stores.push(PathBuf::from(p.clone().into_string().unwrap()));
                 }
             }
         }
@@ -1520,8 +1511,7 @@ fn save_edit_config(
 
     let e_k = if e_k_bool {
         let mut recipients: Vec<Recipient> = vec![];
-        for (i, r) in all_recipients_from_stores(stores.clone())
-            .unwrap()
+        for (i, r) in all_recipients_from_stores(stores.clone())?
             .iter()
             .enumerate()
         {
@@ -1563,7 +1553,7 @@ fn save_edit_config(
         helpers::errorbox(ui, &err);
         return Ok(());
     }
-    let new_store = new_store.unwrap();
+    let new_store = new_store?;
 
     let l = ui.find_name::<SelectView<String>>("stores").unwrap();
 
@@ -2040,7 +2030,7 @@ fn main() -> Result<()> {
         2 => {
             if args[1] == "-h" || args[1] == "--help" {
                 help();
-                std::process::exit(0);
+                process::exit(0);
             } else {
                 eprintln!(
                     "{}",
@@ -2092,7 +2082,7 @@ fn main() -> Result<()> {
         eprintln!("Error {err}");
         process::exit(1);
     }
-    let (config, config_file_location) = config_res.unwrap();
+    let (config, config_file_location) = config_res?;
 
     for path in validate_stores_config(&config, &home) {
         wizard::show_init_menu(&Some(path), &home);
@@ -2105,8 +2095,7 @@ fn main() -> Result<()> {
     }
 
     let stores: StoreListType = Arc::new(Mutex::new(
-        stores
-            .unwrap()
+        stores?
             .into_iter()
             .map(|s| Arc::new(Mutex::new(s)))
             .collect(),
@@ -2175,8 +2164,8 @@ fn main() -> Result<()> {
     // Movement
     ui.add_global_callback(Event::CtrlChar('n'), down);
     ui.add_global_callback(Event::CtrlChar('p'), up);
-    ui.add_global_callback(Event::Key(cursive::event::Key::PageDown), page_down);
-    ui.add_global_callback(Event::Key(cursive::event::Key::PageUp), page_up);
+    ui.add_global_callback(Event::Key(Key::PageDown), page_down);
+    ui.add_global_callback(Event::Key(Key::PageUp), page_up);
 
     // View list of persons that have access
     ui.add_global_callback(Event::CtrlChar('v'), {
@@ -2224,14 +2213,14 @@ fn main() -> Result<()> {
             do_git_push(ui, store.clone());
         }
     });
-    ui.add_global_callback(Event::Key(cursive::event::Key::Ins), {
+    ui.add_global_callback(Event::Key(Key::Ins), {
         let store = store.clone();
         move |ui: &mut Cursive| {
             create(ui, store.clone());
         }
     });
 
-    ui.add_global_callback(Event::Key(cursive::event::Key::Esc), |s| s.quit());
+    ui.add_global_callback(Event::Key(Key::Esc), |s| s.quit());
 
     if let Err(err) = ui.load_toml(&get_style(&store.lock()?.lock()?.get_style_file())) {
         eprintln!("Error {err:?}");
@@ -2240,7 +2229,7 @@ fn main() -> Result<()> {
     let search_box = EditView::new()
         .on_edit({
             let store = store.clone();
-            move |ui: &mut cursive::Cursive, query, _| {
+            move |ui: &mut Cursive, query, _| {
                 do_search(&store, ui, query);
             }
         })

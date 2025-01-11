@@ -29,7 +29,7 @@ fn is_checkbox_checked_false() {
     let mut siv = cursive::default();
     siv.add_layer(Checkbox::new().with_name("unit_test"));
 
-    assert_eq!(false, is_checkbox_checked(&mut siv, "unit_test"));
+    assert!(!is_checkbox_checked(&mut siv, "unit_test"));
 }
 
 #[test]
@@ -39,7 +39,7 @@ fn is_checkbox_checked_true() {
     c_b.set_checked(true);
     siv.add_layer(c_b.with_name("unit_test"));
 
-    assert_eq!(true, is_checkbox_checked(&mut siv, "unit_test"));
+    assert!(is_checkbox_checked(&mut siv, "unit_test"));
 }
 
 #[test]
@@ -56,7 +56,7 @@ fn is_radio_button_selected_false() {
 
     siv.add_layer(ll);
 
-    assert_eq!(false, is_radio_button_selected(&mut siv, "button1_name"));
+    assert!(!is_radio_button_selected(&mut siv, "button1_name"));
 }
 
 #[test]
@@ -79,5 +79,5 @@ fn is_radio_button_selected_true() {
         e.select();
     });
 
-    assert_eq!(true, is_radio_button_selected(&mut siv, "button2_name"));
+    assert!(is_radio_button_selected(&mut siv, "button2_name"));
 }
