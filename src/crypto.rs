@@ -523,7 +523,7 @@ impl DecryptionHelper for Helper<'_> {
             for pkesk in pkesks {
                 if let Ok(cert) = find(self.key_ring, pkesk.recipient()) {
                     let key = cert.primary_key();
-                    let mut pair = sequoia_gpg_agent::gnupg::KeyPair::new(
+                    let mut pair = sequoia_gpg_agent::KeyPair::new_for_gnupg_context(
                         self.ctx
                             .as_ref()
                             .ok_or_else(|| anyhow::anyhow!("no context configured"))?,

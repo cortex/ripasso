@@ -494,7 +494,7 @@ impl Window {
                 // Destroy dialog
                 dialog.destroy();
 
-                // Return if the user chose a response different than `Accept`
+                // Return if the user chose a response different from `Accept`
                 if response != ResponseType::Accept {
                     return;
                 }

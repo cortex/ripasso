@@ -24,6 +24,7 @@ use cursive::{
 };
 use lazy_static::lazy_static;
 use pass::Result;
+use ripasso::pass::Recipient;
 use ripasso::{crypto::CryptoImpl, pass};
 
 lazy_static! {
@@ -79,6 +80,20 @@ pub fn is_radio_button_selected(s: &mut Cursive, button_name: &str) -> bool {
         selected = e.is_selected();
     });
     selected
+}
+
+pub fn recipients_widths(recipients: &[Recipient]) -> (usize, usize) {
+    let mut max_width_key = 0;
+    let mut max_width_name = 0;
+    for recipient in recipients {
+        if recipient.key_id.len() > max_width_key {
+            max_width_key = recipient.key_id.len();
+        }
+        if recipient.name.len() > max_width_name {
+            max_width_name = recipient.name.len();
+        }
+    }
+    (max_width_key, max_width_name)
 }
 
 #[cfg(test)]
