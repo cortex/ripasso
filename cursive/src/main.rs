@@ -51,7 +51,9 @@ mod wizard;
 use lazy_static::lazy_static;
 use zeroize::Zeroize;
 
-use crate::helpers::{get_value_from_input, is_checkbox_checked, is_radio_button_selected};
+use crate::helpers::{
+    get_value_from_input, is_checkbox_checked, is_radio_button_selected, recipients_widths,
+};
 
 /// The 'pointer' to the current PasswordStore is of this convoluted type.
 type PasswordStoreType = Arc<Mutex<Arc<Mutex<PasswordStore>>>>;
@@ -783,16 +785,7 @@ fn add_recipient(ui: &mut Cursive, store: PasswordStoreType, config_path: &Path)
                     match all_recipients_res {
                         Err(err) => helpers::errorbox(ui, &err),
                         Ok(recipients) => {
-                            let mut max_width_key = 0;
-                            let mut max_width_name = 0;
-                            for recipient in &recipients {
-                                if recipient.key_id.len() > max_width_key {
-                                    max_width_key = recipient.key_id.len();
-                                }
-                                if recipient.name.len() > max_width_name {
-                                    max_width_name = recipient.name.len();
-                                }
-                            }
+                            let (max_width_key, max_width_name) = recipients_widths(&recipients);
 
                             let mut recipients_view = ui
                                 .find_name::<SelectView<Option<(PathBuf, Recipient)>>>("recipients")
@@ -977,16 +970,7 @@ fn view_recipients_for_many_dirs(
         recipients_view
             .get_mut()
             .add_item(path.to_string_lossy(), None);
-        let mut max_width_key = 0;
-        let mut max_width_name = 0;
-        for recipient in recipients {
-            if recipient.key_id.len() > max_width_key {
-                max_width_key = recipient.key_id.len();
-            }
-            if recipient.name.len() > max_width_name {
-                max_width_name = recipient.name.len();
-            }
-        }
+        let (max_width_key, max_width_name) = recipients_widths(recipients);
         for recipient in recipients {
             recipients_view.get_mut().add_item(
                 render_recipient_label(recipient, max_width_key, max_width_name),
@@ -1052,16 +1036,7 @@ fn view_recipients_for_dir(
         .h_align(cursive::align::HAlign::Left)
         .with_name("recipients");
 
-    let mut max_width_key = 0;
-    let mut max_width_name = 0;
-    for recipient in &recipients {
-        if recipient.key_id.len() > max_width_key {
-            max_width_key = recipient.key_id.len();
-        }
-        if recipient.name.len() > max_width_name {
-            max_width_name = recipient.name.len();
-        }
-    }
+    let (max_width_key, max_width_name) = recipients_widths(&recipients);
     for recipient in recipients {
         recipients_view.get_mut().add_item(
             render_recipient_label(&recipient, max_width_key, max_width_name),

@@ -51,8 +51,12 @@ impl UnpackedDir {
         })
     }
 
-    pub fn dir(&self) -> &Path {
+    pub fn path(&self) -> &Path {
         self.dir.as_path()
+    }
+
+    pub fn dir(&self) -> PathBuf {
+        self.dir.clone()
     }
 }
 
@@ -295,7 +299,7 @@ pub fn recipient_alex_old() -> Recipient {
         not_usable: false,
     }
 }
-pub fn recipient_from_cert(cert: &sequoia_openpgp::Cert) -> Recipient {
+pub fn recipient_from_cert(cert: &Cert) -> Recipient {
     Recipient {
         name: String::from_utf8(cert.userids().next().unwrap().value().to_vec()).unwrap(),
         comment: Comment {
@@ -317,7 +321,7 @@ pub fn append_file_name(file: &Path) -> PathBuf {
     sig.into()
 }
 
-pub fn generate_sequoia_cert(email: &str) -> sequoia_openpgp::Cert {
+pub fn generate_sequoia_cert(email: &str) -> Cert {
     let (cert, _) = CertBuilder::general_purpose(None, Some(email))
         .generate()
         .unwrap();
@@ -325,7 +329,7 @@ pub fn generate_sequoia_cert(email: &str) -> sequoia_openpgp::Cert {
     cert
 }
 
-pub fn generate_sequoia_cert_without_private_key(email: &str) -> sequoia_openpgp::Cert {
+pub fn generate_sequoia_cert_without_private_key(email: &str) -> Cert {
     let (cert, _) = CertBuilder::general_purpose(None, Some(email))
         .generate()
         .unwrap();

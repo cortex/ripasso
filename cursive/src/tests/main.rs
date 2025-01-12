@@ -10,7 +10,7 @@ use super::*;
 fn copy_name_none() {
     let mut siv = cursive::default();
 
-    let entries = SelectView::<pass::PasswordEntry>::new();
+    let entries = SelectView::<PasswordEntry>::new();
 
     siv.add_layer(entries.with_name("results"));
 
@@ -49,7 +49,7 @@ fn do_delete_normal() {
     ));
     let store: PasswordStoreType = Arc::new(Mutex::new(Arc::new(Mutex::new(store))));
 
-    let mut entries = SelectView::<pass::PasswordEntry>::new();
+    let mut entries = SelectView::<PasswordEntry>::new();
     entries.add_all(
         store
             .lock()
@@ -65,12 +65,12 @@ fn do_delete_normal() {
 
     siv.add_layer(entries.with_name("results"));
 
-    siv.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
+    siv.call_on_name("results", |l: &mut SelectView<PasswordEntry>| {
         assert_eq!(1, l.len());
     });
     do_delete(&mut siv, store);
 
-    siv.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
+    siv.call_on_name("results", |l: &mut SelectView<PasswordEntry>| {
         assert_eq!(0, l.len());
     });
 }
@@ -88,11 +88,11 @@ fn get_selected_password_entry_none() {
 fn get_selected_password_entry_some() {
     let mut siv = cursive::default();
 
-    let mut sv = SelectView::<pass::PasswordEntry>::new();
+    let mut sv = SelectView::<PasswordEntry>::new();
 
     sv.add_item(
         "Item 1",
-        pass::PasswordEntry::new(
+        PasswordEntry::new(
             &PathBuf::from("/tmp/"),
             &PathBuf::from("file.gpg"),
             Ok(Local::now()),
@@ -112,7 +112,7 @@ fn get_selected_password_entry_some() {
 
 #[test]
 fn do_delete_one_entry() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join(".password-store")).unwrap();
     let mut pass_file = File::create(dir.path().join(".password-store").join("file.gpg")).unwrap();
     pass_file.flush().unwrap();
@@ -138,7 +138,7 @@ fn do_delete_one_entry() {
 
     let mut siv = cursive::default();
 
-    let mut sv = SelectView::<pass::PasswordEntry>::new();
+    let mut sv = SelectView::<PasswordEntry>::new();
 
     for (i, item) in store.all_passwords().unwrap().into_iter().enumerate() {
         sv.add_item(format!("Item {}", i), item);
@@ -147,12 +147,12 @@ fn do_delete_one_entry() {
     assert_eq!(1, sv.len());
 
     siv.add_layer(sv.with_name("results"));
-    siv.add_layer(SelectView::<pass::PasswordEntry>::new().with_name("just to be popped"));
+    siv.add_layer(SelectView::<PasswordEntry>::new().with_name("just to be popped"));
 
     let store: PasswordStoreType = Arc::new(Mutex::new(Arc::new(Mutex::new(store))));
     do_delete(&mut siv, store);
 
-    let cbr = siv.call_on_name("results", |l: &mut SelectView<pass::PasswordEntry>| {
+    let cbr = siv.call_on_name("results", |l: &mut SelectView<PasswordEntry>| {
         assert_eq!(0, l.len());
     });
 
@@ -163,7 +163,7 @@ fn do_delete_one_entry() {
 fn render_recipient_label_ultimate() {
     let r = Recipient {
         name: "Alexander Kjäll <alexander.kjall@gmail.com>".to_owned(),
-        comment: ripasso::pass::Comment {
+        comment: pass::Comment {
             pre_comment: None,
             post_comment: None,
         },
@@ -171,7 +171,7 @@ fn render_recipient_label_ultimate() {
         fingerprint: Some(
             <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
         ),
-        key_ring_status: ripasso::pass::KeyRingStatus::InKeyRing,
+        key_ring_status: pass::KeyRingStatus::InKeyRing,
         trust_level: OwnerTrustLevel::Ultimate,
         not_usable: false,
     };
@@ -195,7 +195,7 @@ fn substr_overlong() {
 fn create_label_basic() {
     // TODO: Fix this test so that time zones don't mess with it.
 
-    let p = pass::PasswordEntry::new(
+    let p = PasswordEntry::new(
         &PathBuf::from("/tmp/"),
         &PathBuf::from("file.gpg"),
         Ok(chrono::DateTime::<Local>::from(
@@ -214,7 +214,7 @@ fn create_label_basic() {
 
 #[test]
 fn get_sub_dirs_empty() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempdir().unwrap();
 
     let dirs = get_sub_dirs(&dir.path().to_path_buf()).unwrap();
 
@@ -224,7 +224,7 @@ fn get_sub_dirs_empty() {
 
 #[test]
 fn get_sub_dirs_one_dir() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempdir().unwrap();
     std::fs::create_dir(dir.path().join("one_dir")).unwrap();
 
     let dirs = get_sub_dirs(&dir.path().to_path_buf()).unwrap();
@@ -235,9 +235,9 @@ fn get_sub_dirs_one_dir() {
 
 #[test]
 fn get_sub_dirs_one_dir_with_pgpid() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = tempdir().unwrap();
     std::fs::create_dir(dir.path().join("one_dir")).unwrap();
-    std::fs::File::create(dir.path().join("one_dir").join(".gpg-id")).unwrap();
+    File::create(dir.path().join("one_dir").join(".gpg-id")).unwrap();
 
     let dirs = get_sub_dirs(&dir.path().to_path_buf()).unwrap();
 

@@ -107,14 +107,14 @@ fn populate_password_list_small_repo() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
         &CryptoImpl::GpgMe,
         &None,
     )?;
-    let results = store.all_passwords().unwrap();
+    let results = store.all_passwords()?;
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "test");
@@ -129,14 +129,14 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
         &CryptoImpl::GpgMe,
         &None,
     )?;
-    let results = store.all_passwords().unwrap();
+    let results = store.all_passwords()?;
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "10");
@@ -151,14 +151,14 @@ fn populate_password_list_directory_without_git() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
         &CryptoImpl::GpgMe,
         &None,
     )?;
-    let results = store.all_passwords().unwrap();
+    let results = store.all_passwords()?;
 
     assert_eq!(results.len(), 3);
     assert_eq!(results[0].name, "first");
@@ -184,14 +184,14 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
         &CryptoImpl::GpgMe,
         &None,
     )?;
-    let results = store.all_passwords().unwrap();
+    let results = store.all_passwords()?;
 
     let expected = ["3", "A/1", "B/2"];
 
@@ -211,9 +211,9 @@ fn password_store_with_relative_path() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
         &CryptoImpl::GpgMe,
         &None,
@@ -243,14 +243,14 @@ fn password_store_with_shallow_checkout() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
         &CryptoImpl::GpgMe,
         &None,
     )?;
-    let results = store.all_passwords().unwrap();
+    let results = store.all_passwords()?;
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "1");
@@ -266,14 +266,14 @@ fn password_store_with_sparse_checkout() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
         &CryptoImpl::GpgMe,
         &None,
     )?;
-    let results = store.all_passwords().unwrap();
+    let results = store.all_passwords()?;
 
     assert_eq!(results.len(), 3);
     assert_eq!(results[0].name, "3/1");
@@ -295,11 +295,11 @@ fn password_store_with_sparse_checkout() -> Result<()> {
 fn password_store_with_symlink() -> Result<()> {
     let dir = UnpackedDir::new("password_store_with_symlink")?;
     let link_dir = dir
-        .dir()
+        .path()
         .parent()
         .unwrap()
         .join("password_store_with_symlink_link");
-    std::os::unix::fs::symlink(dir.dir(), link_dir.clone())?;
+    std::os::unix::fs::symlink(dir.path(), link_dir.clone())?;
 
     let store = PasswordStore::new(
         "default",
@@ -310,7 +310,7 @@ fn password_store_with_symlink() -> Result<()> {
         &CryptoImpl::GpgMe,
         &None,
     )?;
-    let results = store.all_passwords().unwrap();
+    let results = store.all_passwords()?;
 
     fs::remove_file(link_dir)?;
 
@@ -344,7 +344,7 @@ fn home_exists_home_dir_without_config_dir() {
 
 #[test]
 fn home_exists_home_dir_with_file_instead_of_dir() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     File::create(dir.path().join(".password-store"))?;
     let result = home_exists(&Some(dir.into_path()), &Config::default());
 
@@ -355,7 +355,7 @@ fn home_exists_home_dir_with_file_instead_of_dir() -> Result<()> {
 
 #[test]
 fn home_exists_home_dir_with_config_dir() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     fs::create_dir(dir.path().join(".password-store"))?;
     let result = home_exists(&Some(dir.into_path()), &Config::default());
 
@@ -405,10 +405,10 @@ fn home_settings_missing() {
 
 #[test]
 fn home_settings_dir_exists() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     fs::create_dir(dir.path().join(".password-store"))?;
 
-    let settings = home_settings(&Some(PathBuf::from(dir.path()))).unwrap();
+    let settings = home_settings(&Some(PathBuf::from(dir.path())))?;
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
@@ -429,9 +429,9 @@ fn home_settings_dir_exists() -> Result<()> {
 /// this works due to that it's the function `home_exists` that checks if it exists
 #[test]
 fn home_settings_dir_doesnt_exists() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
 
-    let settings = home_settings(&Some(PathBuf::from(dir.path()))).unwrap();
+    let settings = home_settings(&Some(PathBuf::from(dir.path())))?;
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
@@ -472,7 +472,7 @@ fn var_settings_test() -> Result<()> {
 
 #[test]
 fn file_settings_simple_file() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     create_dir_all(dir.path().join(".config").join("ripasso"))?;
     let mut file = File::create(
         dir.path()
@@ -490,7 +490,7 @@ fn file_settings_simple_file() -> Result<()> {
     let mut settings = ConfigBuilder::default();
     settings = config::ConfigBuilder::<config::builder::DefaultState>::add_source(
         settings,
-        file_settings(&xdg_config_file_location(&Some(dir.into_path()), &None).unwrap()),
+        file_settings(&xdg_config_file_location(&Some(dir.into_path()), &None)?),
     );
     let settings = settings.build()?;
 
@@ -505,8 +505,8 @@ fn file_settings_simple_file() -> Result<()> {
 
 #[test]
 fn file_settings_file_in_xdg_config_home() -> Result<()> {
-    let dir = tempdir().unwrap();
-    let dir2 = tempdir().unwrap();
+    let dir = tempdir()?;
+    let dir2 = tempdir()?;
     create_dir_all(dir2.path().join(".random_config").join("ripasso"))?;
     let mut file = File::create(
         dir2.path()
@@ -542,7 +542,7 @@ fn file_settings_file_in_xdg_config_home() -> Result<()> {
 
 #[test]
 fn read_config_empty_config_file() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     create_dir_all(dir.path().join(".config").join("ripasso"))?;
     create_dir_all(dir.path().join(".password-store"))?;
     File::create(
@@ -572,7 +572,7 @@ fn read_config_empty_config_file() -> Result<()> {
 
 #[test]
 fn read_config_empty_config_file_with_keys_env() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     create_dir_all(dir.path().join(".password-store"))?;
 
     let (settings, _) = read_config(
@@ -605,7 +605,7 @@ fn read_config_empty_config_file_with_keys_env() -> Result<()> {
 
 #[test]
 fn read_config_env_vars() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     create_dir_all(dir.path().join("env_var").join(".password-store"))?;
 
     let (settings, _) = read_config(
@@ -646,7 +646,7 @@ fn read_config_env_vars() -> Result<()> {
 
 #[test]
 fn read_config_home_and_env_vars() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     create_dir_all(dir.path().join(".password-store"))?;
     create_dir_all(dir.path().join("env_var").join(".password-store"))?;
 
@@ -688,7 +688,7 @@ fn read_config_home_and_env_vars() -> Result<()> {
 
 #[test]
 fn read_config_default_path_in_config_file() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
@@ -723,7 +723,7 @@ fn read_config_default_path_in_config_file() -> Result<()> {
 
 #[test]
 fn read_config_default_path_in_env_var() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
@@ -765,7 +765,7 @@ fn read_config_default_path_in_env_var() -> Result<()> {
 
 #[test]
 fn read_config_default_path_in_env_var_with_pgp_setting() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
@@ -913,7 +913,7 @@ fn append_extension_with_dot() {
 fn rename_file() -> Result<()> {
     let dir = UnpackedDir::new("rename_file")?;
 
-    let mut config_location = dir.dir().to_path_buf();
+    let mut config_location = dir.dir();
     config_location.push(".git");
     config_location.push("config");
     let mut config = git2::Config::open(&config_location)?;
@@ -923,7 +923,7 @@ fn rename_file() -> Result<()> {
 
     let mut store = PasswordStore {
         name: "default".to_owned(),
-        root: dir.dir().to_path_buf(),
+        root: dir.dir(),
         valid_gpg_signing_keys: vec![],
         passwords: vec![],
         style_file: None,
@@ -953,9 +953,9 @@ fn rename_file_absolute_path() -> Result<()> {
 
     let mut store = PasswordStore::new(
         "default",
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
         &CryptoImpl::GpgMe,
         &None,
@@ -971,7 +971,7 @@ fn rename_file_absolute_path() -> Result<()> {
 fn rename_file_git_index_clean() -> Result<()> {
     let dir = UnpackedDir::new("rename_file_git_index_clean")?;
 
-    let mut config_location = dir.dir().to_path_buf();
+    let mut config_location = dir.dir();
     config_location.push(".git");
     config_location.push("config");
     let mut config = git2::Config::open(&config_location)?;
@@ -981,7 +981,7 @@ fn rename_file_git_index_clean() -> Result<()> {
 
     let mut store = PasswordStore {
         name: "default".to_owned(),
-        root: dir.dir().to_path_buf(),
+        root: dir.dir(),
         valid_gpg_signing_keys: vec![],
         passwords: vec![],
         style_file: None,
@@ -991,7 +991,7 @@ fn rename_file_git_index_clean() -> Result<()> {
     store.reload_password_list()?;
     store.rename_file("1/test", "2/test")?;
 
-    let repo = Repository::open(dir.dir())?;
+    let repo = Repository::open(dir.path())?;
 
     assert!(repo.statuses(None)?.is_empty());
 
@@ -1000,7 +1000,7 @@ fn rename_file_git_index_clean() -> Result<()> {
 
 #[test]
 fn decrypt_secret_empty_file() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
@@ -1038,7 +1038,7 @@ fn decrypt_secret_empty_file() -> Result<()> {
 
 #[test]
 fn decrypt_secret_missing_file() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
@@ -1076,14 +1076,14 @@ fn decrypt_secret_missing_file() -> Result<()> {
 
 #[test]
 fn decrypt_secret() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
     gpg_file.flush()?;
 
     let mut pass_file = File::create(dir.path().join(".password-store").join("file.gpg"))?;
-    pass_file.write_all("dummy data".as_bytes()).unwrap();
+    pass_file.write_all("dummy data".as_bytes())?;
     pass_file.flush()?;
 
     let pe = PasswordEntry::new(
@@ -1108,7 +1108,7 @@ fn decrypt_secret() -> Result<()> {
         user_home: None,
     };
 
-    let res = pe.secret(&store).unwrap();
+    let res = pe.secret(&store)?;
 
     assert_eq!("decrypt_secret unit test", res);
 
@@ -1117,7 +1117,7 @@ fn decrypt_secret() -> Result<()> {
 
 #[test]
 fn decrypt_password_empty_file() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
@@ -1155,14 +1155,14 @@ fn decrypt_password_empty_file() -> Result<()> {
 
 #[test]
 fn decrypt_password_multiline() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
     gpg_file.flush()?;
 
     let mut pass_file = File::create(dir.path().join(".password-store").join("file.gpg"))?;
-    pass_file.write_all("dummy data".as_bytes()).unwrap();
+    pass_file.write_all("dummy data".as_bytes())?;
     pass_file.flush()?;
 
     let pe = PasswordEntry::new(
@@ -1187,7 +1187,7 @@ fn decrypt_password_multiline() -> Result<()> {
         user_home: None,
     };
 
-    let mut res = pe.password(&store).unwrap();
+    let mut res = pe.password(&store)?;
 
     assert_eq!("row one", res);
     res.zeroize();
@@ -1196,14 +1196,14 @@ fn decrypt_password_multiline() -> Result<()> {
 }
 
 fn mfa_setup(payload: String) -> Result<(tempfile::TempDir, PasswordEntry, PasswordStore)> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
     gpg_file.flush()?;
 
     let mut pass_file = File::create(dir.path().join(".password-store").join("file.gpg"))?;
-    pass_file.write_all("dummy data".as_bytes()).unwrap();
+    pass_file.write_all("dummy data".as_bytes())?;
     pass_file.flush()?;
 
     let pe = PasswordEntry::new(
@@ -1234,7 +1234,7 @@ fn mfa_setup(payload: String) -> Result<(tempfile::TempDir, PasswordEntry, Passw
 fn mfa_example1() -> Result<()> {
     let (_dir, pe, store) = mfa_setup("otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example".to_owned())?;
 
-    let res = pe.mfa(&store).unwrap();
+    let res = pe.mfa(&store)?;
 
     assert_eq!(6, res.len());
     assert_eq!(6, res.chars().filter(|c| c.is_ascii_digit()).count());
@@ -1246,7 +1246,7 @@ fn mfa_example1() -> Result<()> {
 fn mfa_example2() -> Result<()> {
     let (_dir, pe, store) = mfa_setup("some text\n otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example\nmore txt\n\n".to_owned())?;
 
-    let res = pe.mfa(&store).unwrap();
+    let res = pe.mfa(&store)?;
 
     assert_eq!(6, res.len());
     assert_eq!(6, res.chars().filter(|c| c.is_ascii_digit()).count());
@@ -1258,7 +1258,7 @@ fn mfa_example2() -> Result<()> {
 fn mfa_example3() -> Result<()> {
     let (_dir, pe, store) = mfa_setup("lots and lots and lots and lots and lots and lots and lots and lots and lots and lots of text\n otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example\nmore txt\n\n".to_owned())?;
 
-    let res = pe.mfa(&store).unwrap();
+    let res = pe.mfa(&store)?;
 
     assert_eq!(6, res.len());
     assert_eq!(6, res.chars().filter(|c| c.is_ascii_digit()).count());
@@ -1279,14 +1279,14 @@ fn mfa_no_otpauth_url() -> Result<()> {
 
 #[test]
 fn update() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
     gpg_file.flush()?;
 
     let mut pass_file = File::create(dir.path().join(".password-store").join("file.gpg"))?;
-    pass_file.write_all("dummy data".as_bytes()).unwrap();
+    pass_file.write_all("dummy data".as_bytes())?;
     pass_file.flush()?;
 
     let pe = PasswordEntry::new(
@@ -1325,7 +1325,7 @@ fn update() -> Result<()> {
 
 #[test]
 fn delete_file() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
@@ -1364,7 +1364,7 @@ fn delete_file() -> Result<()> {
 
 #[test]
 fn get_history_no_repo() -> Result<()> {
-    let dir = tempdir().unwrap();
+    let dir = tempdir()?;
     create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
     writeln!(&gpg_file, "0xDF0C3D316B7312D5\n")?;
@@ -1405,14 +1405,14 @@ fn get_history_with_repo() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
-        &Some(dir.dir().to_path_buf()),
+        &Some(dir.dir()),
         &None,
         &CryptoImpl::GpgMe,
         &None,
     )?;
-    let results = store.all_passwords().unwrap();
+    let results = store.all_passwords()?;
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "test");
@@ -1524,7 +1524,7 @@ fn test_commit_unsigned() -> Result<()> {
 
     assert!(!(*crypto.sign_called.borrow()));
 
-    assert_eq!("test", repo.find_commit(c_oid).unwrap().message().unwrap());
+    assert_eq!("test", repo.find_commit(c_oid)?.message().unwrap());
 
     Ok(())
 }
@@ -1556,7 +1556,7 @@ fn test_commit_signed() -> Result<()> {
 
     assert!(*crypto.sign_called.borrow());
 
-    assert_eq!("test", repo.find_commit(c_oid).unwrap().message().unwrap());
+    assert_eq!("test", repo.find_commit(c_oid)?.message().unwrap());
 
     Ok(())
 }
@@ -1565,7 +1565,7 @@ fn test_commit_signed() -> Result<()> {
 fn test_move_and_commit_signed() -> Result<()> {
     let dir = UnpackedDir::new("test_move_and_commit_signed")?;
 
-    let repo = Repository::init(dir.dir())?;
+    let repo = Repository::init(dir.path())?;
     let mut config = repo.config()?;
 
     config.set_bool("commit.gpgsign", true)?;
@@ -1573,13 +1573,13 @@ fn test_move_and_commit_signed() -> Result<()> {
     config.set_str("user.email", "default@example.com")?;
 
     fs::rename(
-        dir.dir().join("first_pass.gpg"),
-        dir.dir().join("second_pass.gpg"),
+        dir.path().join("first_pass.gpg"),
+        dir.path().join("second_pass.gpg"),
     )?;
 
     let store = PasswordStore {
         name: "store_name".to_owned(),
-        root: dir.dir().to_path_buf(),
+        root: dir.dir(),
         valid_gpg_signing_keys: vec![],
         passwords: vec![],
         style_file: None,
@@ -1593,10 +1593,7 @@ fn test_move_and_commit_signed() -> Result<()> {
         "unit test",
     )?;
 
-    assert_eq!(
-        "unit test",
-        repo.find_commit(c_oid).unwrap().message().unwrap()
-    );
+    assert_eq!("unit test", repo.find_commit(c_oid)?.message().unwrap());
 
     Ok(())
 }
@@ -1651,12 +1648,12 @@ fn test_search() -> Result<()> {
 fn test_verify_git_signature() -> Result<()> {
     let dir = UnpackedDir::new("test_verify_git_signature")?;
 
-    let repo = Repository::open(dir.dir()).unwrap();
+    let repo = Repository::open(dir.path())?;
     let oid = repo.head()?.target().unwrap();
 
     let store = PasswordStore {
         name: "store_name".to_owned(),
-        root: dir.dir().to_path_buf(),
+        root: dir.dir(),
         valid_gpg_signing_keys: vec![<[u8; 20]>::from_hex(
             "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
         )?],
@@ -1678,7 +1675,7 @@ fn test_verify_git_signature() -> Result<()> {
 fn test_add_and_commit_internal() -> Result<()> {
     let dir = UnpackedDir::new("test_add_and_commit_internal")?;
 
-    let repo = Repository::init(dir.dir())?;
+    let repo = Repository::init(dir.path())?;
     let mut config = repo.config()?;
 
     config.set_bool("commit.gpgsign", true)?;
@@ -1687,24 +1684,17 @@ fn test_add_and_commit_internal() -> Result<()> {
 
     let crypto = MockCrypto::new();
 
-    let new_password = dir.dir().join("new_password");
-    File::create(new_password)
-        .unwrap()
-        .write_all("swordfish".as_bytes())
-        .unwrap();
+    let new_password = dir.path().join("new_password");
+    File::create(new_password)?.write_all("swordfish".as_bytes())?;
 
     let c_oid = add_and_commit_internal(
         &repo,
         &[PathBuf::from("new_password")],
         "unit test",
         &crypto,
-    )
-    .unwrap();
+    )?;
 
-    assert_eq!(
-        "unit test",
-        repo.find_commit(c_oid).unwrap().message().unwrap()
-    );
+    assert_eq!("unit test", repo.find_commit(c_oid)?.message().unwrap());
 
     Ok(())
 }
@@ -1715,7 +1705,7 @@ fn test_remove_and_commit() -> Result<()> {
 
     let store = PasswordStore {
         name: "store_name".to_owned(),
-        root: dir.dir().to_path_buf(),
+        root: dir.dir(),
         valid_gpg_signing_keys: vec![<[u8; 20]>::from_hex(
             "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
         )?],
@@ -1725,22 +1715,18 @@ fn test_remove_and_commit() -> Result<()> {
         user_home: None,
     };
 
-    let repo = Repository::open(dir.dir()).unwrap();
+    let repo = Repository::open(dir.path())?;
     let mut config = repo.config()?;
 
     config.set_bool("commit.gpgsign", true)?;
     config.set_str("user.name", "default")?;
     config.set_str("user.email", "default@example.com")?;
 
-    let c_oid =
-        remove_and_commit(&store, &[PathBuf::from("pass_to_be_deleted")], "unit test").unwrap();
+    let c_oid = remove_and_commit(&store, &[PathBuf::from("pass_to_be_deleted")], "unit test")?;
 
-    assert_eq!(
-        "unit test",
-        repo.find_commit(c_oid).unwrap().message().unwrap()
-    );
+    assert_eq!("unit test", repo.find_commit(c_oid)?.message().unwrap());
 
-    assert!(!dir.dir().join("pass_to_be_deleted").is_file());
+    assert!(!dir.path().join("pass_to_be_deleted").is_file());
 
     Ok(())
 }
@@ -1943,7 +1929,7 @@ fn test_new_password_file() -> Result<()> {
 
     assert_eq!(0, store.passwords.len());
 
-    let result = store.new_password_file("test/file", "password").unwrap();
+    let result = store.new_password_file("test/file", "password")?;
 
     assert_eq!(1, store.passwords.len());
     assert_eq!("test/file", store.passwords[0].name);
@@ -1984,7 +1970,7 @@ fn test_new_password_file_in_git_repo() -> Result<()> {
 
     assert_eq!(0, store.passwords.len());
 
-    let result = store.new_password_file("test/file", "password").unwrap();
+    let result = store.new_password_file("test/file", "password")?;
 
     assert_eq!(1, store.passwords.len());
     assert_eq!("test/file", store.passwords[0].name);
@@ -2061,7 +2047,7 @@ fn test_new_password_file_twice() -> Result<()> {
 
     assert_eq!(0, store.passwords.len());
 
-    let result = store.new_password_file("test/file", "password").unwrap();
+    let result = store.new_password_file("test/file", "password")?;
 
     assert_eq!(1, store.passwords.len());
     assert_eq!("test/file", store.passwords[0].name);
@@ -2128,7 +2114,7 @@ fn test_new_password_file_different_sub_permissions() -> Result<()> {
             + "\n",
     )?;
 
-    fs::create_dir(td.path().join("dir")).unwrap();
+    fs::create_dir(td.path().join("dir"))?;
     fs::write(
         td.path().join("dir").join(".gpg-id"),
         hex::encode(users[1].fingerprint().as_bytes()),
@@ -2161,7 +2147,7 @@ fn test_rename_file_different_sub_permissions() -> Result<()> {
             + "\n",
     )?;
 
-    fs::create_dir(td.path().join("dir")).unwrap();
+    fs::create_dir(td.path().join("dir"))?;
     fs::write(
         td.path().join("dir").join(".gpg-id"),
         hex::encode(users[0].fingerprint().as_bytes()),
@@ -2197,7 +2183,7 @@ fn test_add_recipient_different_sub_permissions() -> Result<()> {
             + "\n",
     )?;
 
-    fs::create_dir(td.path().join("dir")).unwrap();
+    fs::create_dir(td.path().join("dir"))?;
     fs::write(
         td.path().join("dir").join(".gpg-id"),
         hex::encode(users[0].fingerprint().as_bytes()) + "\n",
@@ -2208,20 +2194,18 @@ fn test_add_recipient_different_sub_permissions() -> Result<()> {
     store.new_password_file("file", "password")?;
     store.new_password_file("dir/file", "password")?;
 
-    store
-        .add_recipient(
-            &crate::test_helpers::recipient_from_cert(&users[2]),
-            &PathBuf::from("./"),
-            config_path.path(),
-        )
-        .unwrap();
+    store.add_recipient(
+        &crate::test_helpers::recipient_from_cert(&users[2]),
+        &PathBuf::from("./"),
+        config_path.path(),
+    )?;
 
     assert_eq!(2, store.passwords.len());
 
-    let content = fs::read(td.path().join("file.gpg")).unwrap();
+    let content = fs::read(td.path().join("file.gpg"))?;
     assert_eq!(3, count_recipients(&content));
 
-    let content = fs::read(td.path().join("dir/file.gpg")).unwrap();
+    let content = fs::read(td.path().join("dir/file.gpg"))?;
     assert_eq!(1, count_recipients(&content));
 
     Ok(())
@@ -2243,7 +2227,7 @@ fn test_add_recipient_to_sub_dir() -> Result<()> {
             + "\n",
     )?;
 
-    fs::create_dir(td.path().join("dir")).unwrap();
+    fs::create_dir(td.path().join("dir"))?;
 
     assert_eq!(0, store.passwords.len());
 
@@ -2258,10 +2242,10 @@ fn test_add_recipient_to_sub_dir() -> Result<()> {
 
     assert_eq!(2, store.passwords.len());
 
-    let content = fs::read(td.path().join("file.gpg")).unwrap();
+    let content = fs::read(td.path().join("file.gpg"))?;
     assert_eq!(2, count_recipients(&content));
 
-    let content = fs::read(td.path().join("dir/file.gpg")).unwrap();
+    let content = fs::read(td.path().join("dir/file.gpg"))?;
     assert_eq!(1, count_recipients(&content));
 
     Ok(())
@@ -2453,7 +2437,7 @@ fn test_remove_recipient_root() -> Result<()> {
             + "\n",
     )?;
 
-    fs::create_dir(td.path().join("dir")).unwrap();
+    fs::create_dir(td.path().join("dir"))?;
     fs::write(
         td.path().join("dir").join(".gpg-id"),
         hex::encode(users[0].fingerprint().as_bytes()) + "\n",
@@ -2464,19 +2448,17 @@ fn test_remove_recipient_root() -> Result<()> {
     store.new_password_file("file", "password")?;
     store.new_password_file("dir/file", "password")?;
 
-    store
-        .remove_recipient(
-            &crate::test_helpers::recipient_from_cert(&users[1]),
-            &PathBuf::from("./"),
-        )
-        .unwrap();
+    store.remove_recipient(
+        &crate::test_helpers::recipient_from_cert(&users[1]),
+        &PathBuf::from("./"),
+    )?;
 
     assert_eq!(2, store.passwords.len());
 
-    let content = fs::read(td.path().join("file.gpg")).unwrap();
+    let content = fs::read(td.path().join("file.gpg"))?;
     assert_eq!(1, count_recipients(&content));
 
-    let content = fs::read(td.path().join("dir/file.gpg")).unwrap();
+    let content = fs::read(td.path().join("dir/file.gpg"))?;
     assert_eq!(1, count_recipients(&content));
 
     Ok(())
@@ -2513,7 +2495,7 @@ fn test_recipient_files() -> Result<()> {
             + "\n",
     )?;
 
-    fs::create_dir(td.path().join("dir")).unwrap();
+    fs::create_dir(td.path().join("dir"))?;
     fs::write(
         td.path().join("dir").join(".gpg-id"),
         hex::encode(users[0].fingerprint().as_bytes()),

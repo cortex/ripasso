@@ -126,7 +126,7 @@ fn all_recipients() {
         result[0].name
     );
     assert_eq!("0x1D108E6C07CBC406", result[0].key_id);
-    assert!(KeyRingStatus::InKeyRing == result[0].key_ring_status);
+    assert_eq!(KeyRingStatus::InKeyRing, result[0].key_ring_status);
 }
 
 #[test]
@@ -158,7 +158,7 @@ fn all_recipients_with_one_comment_line() {
     );
     assert_eq!(None, result[0].comment.post_comment);
     assert_eq!("0x1D108E6C07CBC406", result[0].key_id);
-    assert!(KeyRingStatus::InKeyRing == result[0].key_ring_status);
+    assert_eq!(KeyRingStatus::InKeyRing, result[0].key_ring_status);
 }
 
 #[test]
@@ -194,7 +194,7 @@ fn all_recipients_with_multiple_comment_lines() {
     );
     assert_eq!(None, result[0].comment.post_comment);
     assert_eq!("0x1D108E6C07CBC406", result[0].key_id);
-    assert!(KeyRingStatus::InKeyRing == result[0].key_ring_status);
+    assert_eq!(KeyRingStatus::InKeyRing, result[0].key_ring_status);
 }
 
 #[test]
@@ -229,7 +229,7 @@ fn all_recipients_with_comment_lines_pre_and_post() {
         result[0].comment.pre_comment.as_ref().unwrap()
     );
     assert_eq!("0x1D108E6C07CBC406", result[0].key_id);
-    assert!(KeyRingStatus::InKeyRing == result[0].key_ring_status);
+    assert_eq!(KeyRingStatus::InKeyRing, result[0].key_ring_status);
 }
 
 #[test]
@@ -247,7 +247,7 @@ fn all_recipients_error() {
     assert_eq!(1, result.len());
     assert_eq!("key id not in keyring", result[0].name);
     assert_eq!("0x1D108E6C07CBC406", result[0].key_id);
-    assert!(KeyRingStatus::NotInKeyRing == result[0].key_ring_status);
+    assert_eq!(KeyRingStatus::NotInKeyRing, result[0].key_ring_status);
 }
 
 #[test]
@@ -757,8 +757,8 @@ fn recipient_both_none() {
         not_usable: false,
     };
 
-    assert!(r1 != r2);
-    assert!(r2 != r1);
+    assert_ne!(r1, r2);
+    assert_ne!(r2, r1);
 }
 
 #[test]
@@ -790,8 +790,8 @@ fn recipient_one_none() {
         not_usable: false,
     };
 
-    assert!(r1 != r2);
-    assert!(r2 != r1);
+    assert_ne!(r1, r2);
+    assert_ne!(r2, r1);
 }
 
 #[test]
@@ -825,6 +825,6 @@ fn recipient_same_fingerprint_different_key_id() {
         not_usable: false,
     };
 
-    assert!(r1 == r2);
-    assert!(r2 == r1);
+    assert_eq!(r1, r2);
+    assert_eq!(r2, r1);
 }

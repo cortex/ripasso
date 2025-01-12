@@ -1,12 +1,15 @@
 use std::sync::Arc;
 
+use crate::helpers::{
+    get_value_from_input, is_checkbox_checked, is_radio_button_selected, recipients_widths,
+};
 use cursive::{
     view::Nameable,
     views::{Checkbox, EditView, LinearLayout, RadioButton, RadioGroup},
 };
+use hex::FromHex;
 use ripasso::crypto::CryptoImpl;
-
-use crate::helpers::{get_value_from_input, is_checkbox_checked, is_radio_button_selected};
+use ripasso::pass::{Comment, KeyRingStatus, OwnerTrustLevel, Recipient};
 
 #[test]
 fn test_get_value_from_input() {
@@ -80,4 +83,35 @@ fn is_radio_button_selected_true() {
     });
 
     assert!(is_radio_button_selected(&mut siv, "button2_name"));
+}
+
+#[test]
+fn recipients_widths_empty() {
+    let (max_width_key, max_width_name) = recipients_widths(&[]);
+    assert_eq!(0, max_width_key);
+    assert_eq!(0, max_width_name);
+}
+
+pub fn recipient_alex() -> Recipient {
+    Recipient {
+        name: "Alexander Kjäll <alexander.kjall@gmail.com>".to_owned(),
+        comment: Comment {
+            pre_comment: None,
+            post_comment: None,
+        },
+        key_id: "1D108E6C07CBC406".to_owned(),
+        fingerprint: Some(
+            <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+        ),
+        key_ring_status: KeyRingStatus::InKeyRing,
+        trust_level: OwnerTrustLevel::Ultimate,
+        not_usable: false,
+    }
+}
+
+#[test]
+fn recipients_widths_basic() {
+    let (max_width_key, max_width_name) = recipients_widths(&[recipient_alex()]);
+    assert_eq!(16, max_width_key);
+    assert_eq!(44, max_width_name);
 }
