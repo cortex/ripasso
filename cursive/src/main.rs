@@ -23,6 +23,7 @@ use std::{
 };
 
 use cursive::{
+    Cursive, CursiveExt,
     direction::Orientation,
     event::{Event, Key},
     menu::Tree,
@@ -31,7 +32,6 @@ use cursive::{
         Checkbox, CircularFocus, Dialog, EditView, LinearLayout, NamedView, OnEventView,
         RadioGroup, ResizedView, ScrollView, SelectView, TextArea, TextView,
     },
-    Cursive, CursiveExt,
 };
 use hex::FromHex;
 use pass::Result;
@@ -40,7 +40,7 @@ use ripasso::{
     git::{pull, push},
     pass,
     pass::{
-        all_recipients_from_stores, OwnerTrustLevel, PasswordStore, Recipient, SignatureStatus,
+        OwnerTrustLevel, PasswordStore, Recipient, SignatureStatus, all_recipients_from_stores,
     },
 };
 use unic_langid::LanguageIdentifier;

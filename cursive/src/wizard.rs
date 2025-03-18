@@ -17,11 +17,11 @@
 use std::path::PathBuf;
 
 use cursive::{
+    Cursive, CursiveExt,
     direction::Orientation,
     event::Key,
     traits::*,
     views::{Dialog, EditView, LinearLayout, OnEventView, SelectView, TextView},
-    Cursive, CursiveExt,
 };
 use ripasso::{crypto::CryptoImpl, git::init_git_repo, pass};
 

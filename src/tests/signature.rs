@@ -2,8 +2,8 @@ use hex::FromHex;
 
 use crate::{
     pass::{KeyRingStatus, OwnerTrustLevel, Recipient},
-    signature::{parse_signing_keys, Comment},
-    test_helpers::{append_file_name, recipient_alex, recipient_alex_old, MockCrypto, MockKey},
+    signature::{Comment, parse_signing_keys},
+    test_helpers::{MockCrypto, MockKey, append_file_name, recipient_alex, recipient_alex_old},
 };
 
 #[test]

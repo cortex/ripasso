@@ -6,11 +6,11 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use adw::{prelude::*, subclass::prelude::*, ActionRow, NavigationDirection};
-use glib::{clone, Object};
+use adw::{ActionRow, NavigationDirection, prelude::*, subclass::prelude::*};
+use glib::{Object, clone};
 use gtk::{
-    gio, glib, glib::BindingFlags, pango, AboutDialog, CustomFilter, Dialog, DialogFlags, Entry,
-    FilterListModel, Label, ListBox, ListBoxRow, NoSelection, ResponseType, SelectionMode,
+    AboutDialog, CustomFilter, Dialog, DialogFlags, Entry, FilterListModel, Label, ListBox,
+    ListBoxRow, NoSelection, ResponseType, SelectionMode, gio, glib, glib::BindingFlags, pango,
 };
 use hex::FromHex;
 use ripasso::{crypto::CryptoImpl, pass::PasswordStore};

@@ -1,6 +1,6 @@
 use std::{fs::File, path::PathBuf};
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use flate2::read::GzDecoder;
 use ripasso::{crypto::CryptoImpl, pass};
 use tar::Archive;

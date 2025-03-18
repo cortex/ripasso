@@ -18,9 +18,9 @@ use std::sync::{Arc, Mutex};
 
 use arboard::Clipboard;
 use cursive::{
+    Cursive,
     event::Key,
     views::{Checkbox, Dialog, EditView, OnEventView, RadioButton, TextView},
-    Cursive,
 };
 use lazy_static::lazy_static;
 use pass::Result;

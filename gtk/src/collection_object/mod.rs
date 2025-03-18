@@ -15,7 +15,7 @@ use ripasso::pass::{PasswordEntry, PasswordStore};
 
 use crate::{
     password_object::PasswordObject,
-    utils::{error_dialog, PasswordStoreBoxed},
+    utils::{PasswordStoreBoxed, error_dialog},
 };
 
 glib::wrapper! {

@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use adw::prelude::{DialogExt, GtkWindowExt, WidgetExt};
-use gtk::{prelude::IsA, MessageDialog};
+use gtk::{MessageDialog, prelude::IsA};
 use ripasso::pass::{Error, PasswordStore};
 
 #[derive(Clone, glib::SharedBoxed)]
