@@ -452,6 +452,15 @@ impl PasswordStore {
             return true;
         }
 
+        if let Ok(repo) = self.repo() {
+            if let Ok(config) = repo.config() {
+                let user_name = config.get_string("user.name");
+                if user_name.is_ok() {
+                    return true;
+                }
+            }
+        }
+
         match git2::Config::open_default() {
             Err(_) => false,
             Ok(config) => {
