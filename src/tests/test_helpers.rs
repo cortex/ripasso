@@ -8,13 +8,13 @@ use std::{
 use flate2::read::GzDecoder;
 use hex::FromHex;
 use sequoia_openpgp::{
+    Cert, KeyHandle, KeyID,
     cert::CertBuilder,
     parse::{
-        stream::{DecryptionHelper, DecryptorBuilder, MessageStructure, VerificationHelper},
         Parse,
+        stream::{DecryptionHelper, DecryptorBuilder, MessageStructure, VerificationHelper},
     },
     policy::StandardPolicy,
-    Cert, KeyHandle, KeyID,
 };
 use tar::Archive;
 

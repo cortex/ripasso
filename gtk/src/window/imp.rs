@@ -1,10 +1,10 @@
 use std::{cell::RefCell, path::PathBuf};
 
-use adw::{subclass::prelude::*, Leaflet};
-use glib::{subclass::InitializingObject, Propagation};
+use adw::{Leaflet, subclass::prelude::*};
+use glib::{Propagation, subclass::InitializingObject};
 use gtk::{
-    gio, glib, glib::SignalHandlerId, Button, CompositeTemplate, Entry, FilterListModel, ListBox,
-    Stack,
+    Button, CompositeTemplate, Entry, FilterListModel, ListBox, Stack, gio, glib,
+    glib::SignalHandlerId,
 };
 use once_cell::sync::OnceCell;
 

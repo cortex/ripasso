@@ -11,7 +11,7 @@ use gtk::glib;
 use once_cell::sync::Lazy;
 use ripasso::pass::{PasswordEntry, PasswordStore};
 
-use crate::utils::{error_dialog_standalone, PasswordStoreBoxed};
+use crate::utils::{PasswordStoreBoxed, error_dialog_standalone};
 
 // Object holding the state
 #[derive(Default)]

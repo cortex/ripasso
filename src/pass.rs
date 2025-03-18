@@ -17,7 +17,7 @@
 use std::{
     collections::HashMap,
     fs,
-    fs::{create_dir_all, File},
+    fs::{File, create_dir_all},
     io::prelude::*,
     path::{Path, PathBuf},
     str,
@@ -38,9 +38,9 @@ use crate::{
     },
 };
 pub use crate::{
-    error::{to_result, Error, Result},
+    error::{Error, Result, to_result},
     signature::{
-        parse_signing_keys, Comment, KeyRingStatus, OwnerTrustLevel, Recipient, SignatureStatus,
+        Comment, KeyRingStatus, OwnerTrustLevel, Recipient, SignatureStatus, parse_signing_keys,
     },
 };
 
@@ -258,27 +258,45 @@ impl PasswordStore {
             gpg_id_sig_file.push(".gpg-id.sig");
 
             let gpg_id = fs::read(gpg_id_file)?;
-            let gpg_id_sig =
-                match fs::read(gpg_id_sig_file) {
-                    Ok(c) => c,
-                    Err(_) => return Err(Error::Generic(
+            let gpg_id_sig = match fs::read(gpg_id_sig_file) {
+                Ok(c) => c,
+                Err(_) => {
+                    return Err(Error::Generic(
                         "problem reading .gpg-id.sig, and strict signature checking was asked for",
-                    )),
-                };
+                    ));
+                }
+            };
 
-            match self.crypto.verify_sign(&gpg_id, &gpg_id_sig, &self.valid_gpg_signing_keys) {
-                Ok(r) => {
-                    match r {
-                        SignatureStatus::Good => {},
-                        SignatureStatus::AlmostGood => result = SignatureStatus::AlmostGood,
-                        SignatureStatus::Bad => return Ok(SignatureStatus::Bad)
-                    }
+            match self
+                .crypto
+                .verify_sign(&gpg_id, &gpg_id_sig, &self.valid_gpg_signing_keys)
+            {
+                Ok(r) => match r {
+                    SignatureStatus::Good => {}
+                    SignatureStatus::AlmostGood => result = SignatureStatus::AlmostGood,
+                    SignatureStatus::Bad => return Ok(SignatureStatus::Bad),
                 },
-                Err(VerificationError::InfrastructureError(message)) => return Err(Error::GenericDyn(message)),
-                Err(VerificationError::SignatureFromWrongRecipient) => return Err(Error::Generic("the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY")),
-                Err(VerificationError::BadSignature) => return Err(Error::Generic("Bad signature for .gpg-id file")),
-                Err(VerificationError::MissingSignatures) => return Err(Error::Generic("Missing signature for .gpg-id file, and PASSWORD_STORE_SIGNING_KEY specified")),
-                Err(VerificationError::TooManySignatures) => return Err(Error::Generic("Signature for .gpg-id file contained more than one signature, something is fishy")),
+                Err(VerificationError::InfrastructureError(message)) => {
+                    return Err(Error::GenericDyn(message));
+                }
+                Err(VerificationError::SignatureFromWrongRecipient) => {
+                    return Err(Error::Generic(
+                        "the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY",
+                    ));
+                }
+                Err(VerificationError::BadSignature) => {
+                    return Err(Error::Generic("Bad signature for .gpg-id file"));
+                }
+                Err(VerificationError::MissingSignatures) => {
+                    return Err(Error::Generic(
+                        "Missing signature for .gpg-id file, and PASSWORD_STORE_SIGNING_KEY specified",
+                    ));
+                }
+                Err(VerificationError::TooManySignatures) => {
+                    return Err(Error::Generic(
+                        "Signature for .gpg-id file contained more than one signature, something is fishy",
+                    ));
+                }
             }
         }
         Ok(result)
@@ -298,17 +316,28 @@ impl PasswordStore {
             Err(_) => {
                 return Err(Error::Generic(
                     "problem reading .gpg-id.sig, and strict signature checking was asked for",
-                ))
+                ));
             }
         };
 
-        match self.crypto.verify_sign(&gpg_id, &gpg_id_sig, &self.valid_gpg_signing_keys) {
+        match self
+            .crypto
+            .verify_sign(&gpg_id, &gpg_id_sig, &self.valid_gpg_signing_keys)
+        {
             Ok(r) => Ok(r),
             Err(VerificationError::InfrastructureError(message)) => Err(Error::GenericDyn(message)),
-            Err(VerificationError::SignatureFromWrongRecipient) => Err(Error::Generic("the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY")),
-            Err(VerificationError::BadSignature) => Err(Error::Generic("Bad signature for .gpg-id file")),
-            Err(VerificationError::MissingSignatures) => Err(Error::Generic("Missing signature for .gpg-id file, and PASSWORD_STORE_SIGNING_KEY specified")),
-            Err(VerificationError::TooManySignatures) => Err(Error::Generic("Signature for .gpg-id file contained more than one signature, something is fishy")),
+            Err(VerificationError::SignatureFromWrongRecipient) => Err(Error::Generic(
+                "the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY",
+            )),
+            Err(VerificationError::BadSignature) => {
+                Err(Error::Generic("Bad signature for .gpg-id file"))
+            }
+            Err(VerificationError::MissingSignatures) => Err(Error::Generic(
+                "Missing signature for .gpg-id file, and PASSWORD_STORE_SIGNING_KEY specified",
+            )),
+            Err(VerificationError::TooManySignatures) => Err(Error::Generic(
+                "Signature for .gpg-id file contained more than one signature, something is fishy",
+            )),
         }
     }
 

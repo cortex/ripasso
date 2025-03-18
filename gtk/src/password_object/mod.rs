@@ -11,7 +11,7 @@ use glib::Object;
 use gtk::glib;
 use ripasso::pass::{Error, PasswordEntry, PasswordStore};
 
-use crate::utils::{error_dialog_standalone, PasswordStoreBoxed};
+use crate::utils::{PasswordStoreBoxed, error_dialog_standalone};
 
 glib::wrapper! {
     pub struct PasswordObject(ObjectSubclass<imp::PasswordObject>);

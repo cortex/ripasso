@@ -4,8 +4,8 @@ use hex::FromHex;
 use sequoia_openpgp::{
     cert::CertBuilder,
     serialize::{
-        stream::{Armorer, Message, Signer},
         Serialize,
+        stream::{Armorer, Message, Signer},
     },
 };
 use std::{env, fs::File, path::PathBuf};
@@ -15,8 +15,8 @@ use super::*;
 use crate::{
     crypto::slice_to_20_bytes,
     test_helpers::{
-        count_recipients, generate_sequoia_cert, generate_sequoia_cert_without_private_key,
-        MockCrypto, UnpackedDir,
+        MockCrypto, UnpackedDir, count_recipients, generate_sequoia_cert,
+        generate_sequoia_cert_without_private_key,
     },
 };
 
@@ -63,7 +63,12 @@ pub fn setup_store(
 #[test]
 fn get_password_dir_no_env() {
     let dir = tempdir().unwrap();
-    env::remove_var("PASSWORD_STORE_DIR");
+
+    // ensure that the test run isn't polluted by outside env.
+    // "safe" as it's just a unit test
+    unsafe {
+        env::remove_var("PASSWORD_STORE_DIR");
+    }
 
     let path = password_dir(&None, &Some(dir.into_path()));
 
@@ -1665,8 +1670,12 @@ fn test_verify_git_signature() -> Result<()> {
 
     let result = verify_git_signature(&repo, &oid, &store);
 
-    assert_eq!(Error::Generic("the commit wasn\'t signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY"),
-               result.err().unwrap());
+    assert_eq!(
+        Error::Generic(
+            "the commit wasn\'t signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY"
+        ),
+        result.err().unwrap()
+    );
 
     Ok(())
 }
@@ -1803,8 +1812,12 @@ fn test_verify_gpg_id_files() -> Result<()> {
 
     assert!(result.is_err());
 
-    assert_eq!(Error::Generic("the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY"),
-               result.err().unwrap());
+    assert_eq!(
+        Error::Generic(
+            "the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY"
+        ),
+        result.err().unwrap()
+    );
 
     Ok(())
 }

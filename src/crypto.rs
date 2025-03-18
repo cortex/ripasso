@@ -10,21 +10,21 @@ use std::{
 
 use hex::FromHex;
 use sequoia_openpgp::{
+    Cert, KeyHandle,
     crypto::SessionKey,
     parse::{
+        Parse,
         stream::{
             DecryptionHelper, DecryptorBuilder, DetachedVerifierBuilder, MessageLayer,
             MessageStructure, VerificationHelper,
         },
-        Parse,
     },
     policy::Policy,
     serialize::{
-        stream::{Armorer, Encryptor2, LiteralWriter, Message, Signer},
         Serialize,
+        stream::{Armorer, Encryptor2, LiteralWriter, Message, Signer},
     },
     types::{RevocationStatus, SymmetricAlgorithm},
-    Cert, KeyHandle,
 };
 use zeroize::Zeroize;
 
@@ -682,7 +682,7 @@ impl Sequoia {
                         return Err(Error::GenericDyn(format!(
                             "Recipient with key id {} not found",
                             recipient.key_id
-                        )))
+                        )));
                     }
                 },
                 None => {

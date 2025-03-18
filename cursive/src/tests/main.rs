@@ -178,7 +178,12 @@ fn render_recipient_label_ultimate() {
 
     let result = render_recipient_label(&r, 20, 20);
 
-    assert_eq!(String::from("  \u{fe0f} 1D108E6C07CBC406     Alexander Kjäll <alexander.kjall@gmail.com> Ultimate  Usable  "), result);
+    assert_eq!(
+        String::from(
+            "  \u{fe0f} 1D108E6C07CBC406     Alexander Kjäll <alexander.kjall@gmail.com> Ultimate  Usable  "
+        ),
+        result
+    );
 }
 
 #[test]

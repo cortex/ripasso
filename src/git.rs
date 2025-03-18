@@ -10,7 +10,7 @@ use git2::{Oid, Repository};
 use crate::{
     crypto::{Crypto, FindSigningFingerprintStrategy, VerificationError},
     error::{Error, Result},
-    pass::{to_result, PasswordEntry, PasswordStore, RepositoryStatus},
+    pass::{PasswordEntry, PasswordStore, RepositoryStatus, to_result},
     signature::SignatureStatus,
 };
 
@@ -405,13 +405,23 @@ pub fn verify_git_signature(
             "signature not checked as PASSWORD_STORE_SIGNING_KEY is not configured",
         ));
     }
-    match store.get_crypto().verify_sign(&signed_data_str.into_bytes(), &signature_str.into_bytes(), store.get_valid_gpg_signing_keys()) {
+    match store.get_crypto().verify_sign(
+        &signed_data_str.into_bytes(),
+        &signature_str.into_bytes(),
+        store.get_valid_gpg_signing_keys(),
+    ) {
         Ok(r) => Ok(r),
         Err(VerificationError::InfrastructureError(message)) => Err(Error::GenericDyn(message)),
-        Err(VerificationError::SignatureFromWrongRecipient) => Err(Error::Generic("the commit wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY")),
+        Err(VerificationError::SignatureFromWrongRecipient) => Err(Error::Generic(
+            "the commit wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY",
+        )),
         Err(VerificationError::BadSignature) => Err(Error::Generic("Bad signature for commit")),
-        Err(VerificationError::MissingSignatures) => Err(Error::Generic("Missing signature for commit")),
-        Err(VerificationError::TooManySignatures) => Err(Error::Generic("If a git commit contains more than one signature, something is fishy")),
+        Err(VerificationError::MissingSignatures) => {
+            Err(Error::Generic("Missing signature for commit"))
+        }
+        Err(VerificationError::TooManySignatures) => Err(Error::Generic(
+            "If a git commit contains more than one signature, something is fishy",
+        )),
     }
 }
 

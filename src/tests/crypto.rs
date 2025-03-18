@@ -1,11 +1,11 @@
 use std::{collections::HashMap, sync::Arc};
 
 use hex::FromHex;
-use sequoia_openpgp::{cert::CertBuilder, parse::Parse, serialize::Serialize, Cert};
+use sequoia_openpgp::{Cert, cert::CertBuilder, parse::Parse, serialize::Serialize};
 use tempfile::tempdir;
 
 use crate::{
-    crypto::{slice_to_20_bytes, Crypto, CryptoImpl, Sequoia},
+    crypto::{Crypto, CryptoImpl, Sequoia, slice_to_20_bytes},
     signature::Recipient,
 };
 
