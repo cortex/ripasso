@@ -7,15 +7,13 @@ use std::{
 
 use flate2::read::GzDecoder;
 use hex::FromHex;
-use sequoia_openpgp::{
-    Cert, KeyHandle, KeyID,
-    cert::CertBuilder,
-    parse::{
-        Parse,
-        stream::{DecryptionHelper, DecryptorBuilder, MessageStructure, VerificationHelper},
-    },
-    policy::StandardPolicy,
-};
+use sequoia_openpgp::{Cert, KeyHandle, KeyID, cert::CertBuilder, parse::{
+    Parse,
+    stream::{DecryptionHelper, DecryptorBuilder, MessageStructure, VerificationHelper},
+}, policy::StandardPolicy, Fingerprint};
+use sequoia_openpgp::crypto::SessionKey;
+use sequoia_openpgp::packet::UserID;
+use sequoia_openpgp::types::SymmetricAlgorithm;
 use tar::Archive;
 
 use crate::{
@@ -301,7 +299,7 @@ pub fn recipient_alex_old() -> Recipient {
 }
 pub fn recipient_from_cert(cert: &Cert) -> Recipient {
     Recipient {
-        name: String::from_utf8(cert.userids().next().unwrap().value().to_vec()).unwrap(),
+        name: String::from_utf8(cert.userids().next().unwrap().userid().value().to_vec()).unwrap(),
         comment: Comment {
             pre_comment: None,
             post_comment: None,
@@ -322,7 +320,7 @@ pub fn append_file_name(file: &Path) -> PathBuf {
 }
 
 pub fn generate_sequoia_cert(email: &str) -> Cert {
-    let (cert, _) = CertBuilder::general_purpose(None, Some(email))
+    let (cert, _) = CertBuilder::general_purpose([UserID::from(email)])
         .generate()
         .unwrap();
 
@@ -330,7 +328,7 @@ pub fn generate_sequoia_cert(email: &str) -> Cert {
 }
 
 pub fn generate_sequoia_cert_without_private_key(email: &str) -> Cert {
-    let (cert, _) = CertBuilder::general_purpose(None, Some(email))
+    let (cert, _) = CertBuilder::general_purpose([UserID::from(email)])
         .generate()
         .unwrap();
 
@@ -352,24 +350,27 @@ impl VerificationHelper for &mut KeyLister {
 }
 
 impl DecryptionHelper for &mut KeyLister {
-    fn decrypt<D>(
+    fn decrypt(
         &mut self,
         pkesks: &[sequoia_openpgp::packet::PKESK],
         _: &[sequoia_openpgp::packet::SKESK],
-        _: Option<sequoia_openpgp::types::SymmetricAlgorithm>,
-        _: D,
-    ) -> std::result::Result<Option<sequoia_openpgp::Fingerprint>, anyhow::Error>
-    where
-        D: FnMut(
-            sequoia_openpgp::types::SymmetricAlgorithm,
-            &sequoia_openpgp::crypto::SessionKey,
-        ) -> bool,
+        _: Option<SymmetricAlgorithm>,
+        _: &mut dyn FnMut(Option<SymmetricAlgorithm>, &SessionKey) -> bool,
+    ) -> std::result::Result<Option<Cert>, anyhow::Error>
     {
         self.ids.extend(
             pkesks
                 .iter()
-                .map(|p| p.recipient().clone())
-                .collect::<Vec<KeyID>>(),
+                .map(|p|
+                    match p.recipient().clone().unwrap() {
+                        KeyHandle::Fingerprint(fpr) => {
+                            return Err(anyhow::anyhow!("not supported"))
+                        }
+                        KeyHandle::KeyID(key_id) => {
+                            return Ok(key_id)
+                        }
+                    })
+                .collect::<std::result::Result<Vec<KeyID>, anyhow::Error>>()?,
         );
         Ok(None)
     }

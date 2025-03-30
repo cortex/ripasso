@@ -1850,7 +1850,7 @@ fn sign(to_sign: &str, tsk: &sequoia_openpgp::Cert) -> String {
         .unwrap();
 
     // We want to sign a literal data packet.
-    let mut message = Signer::new(message, keypair).detached().build().unwrap();
+    let mut message = Signer::new(message, keypair).unwrap().detached().build().unwrap();
 
     // Sign the data.
     message.write_all(to_sign.as_bytes()).unwrap();
