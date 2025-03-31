@@ -9,16 +9,23 @@ use std::{
 };
 
 use hex::FromHex;
-use sequoia_openpgp::{Cert, KeyHandle, crypto::SessionKey, parse::{
-    Parse,
-    stream::{
-        DecryptionHelper, DecryptorBuilder, DetachedVerifierBuilder, MessageLayer,
-        MessageStructure, VerificationHelper,
+use sequoia_openpgp::{
+    Cert, Fingerprint, KeyHandle, KeyID,
+    crypto::SessionKey,
+    parse::{
+        Parse,
+        stream::{
+            DecryptionHelper, DecryptorBuilder, DetachedVerifierBuilder, MessageLayer,
+            MessageStructure, VerificationHelper,
+        },
     },
-}, policy::Policy, serialize::{
-    Serialize,
-    stream::{Armorer, Encryptor, LiteralWriter, Message, Signer},
-}, types::{RevocationStatus, SymmetricAlgorithm}, KeyID, Fingerprint};
+    policy::Policy,
+    serialize::{
+        Serialize,
+        stream::{Armorer, Encryptor, LiteralWriter, Message, Signer},
+    },
+    types::{RevocationStatus, SymmetricAlgorithm},
+};
 use zeroize::Zeroize;
 
 pub use crate::error::{Error, Result};
@@ -500,26 +507,24 @@ fn find(
                     }
                 }
                 Fingerprint::Unknown { .. } => {
-                    return Err(Error::Generic("unknown fingerprint version"))
+                    return Err(Error::Generic("unknown fingerprint version"));
                 }
                 _ => {}
             };
         }
-        KeyHandle::KeyID(key_id) => {
-            match key_id {
-                KeyID::Long(bytes) => {
-                    for (key, value) in key_ring {
-                        if key[0..8] == *bytes {
-                            return Ok(value.clone());
-                        }
+        KeyHandle::KeyID(key_id) => match key_id {
+            KeyID::Long(bytes) => {
+                for (key, value) in key_ring {
+                    if key[0..8] == *bytes {
+                        return Ok(value.clone());
                     }
                 }
-                KeyID::Invalid(_) => {
-                    return Err(Error::Generic("Invalid key ID"));
-                }
-                _ => {}
             }
-        }
+            KeyID::Invalid(_) => {
+                return Err(Error::Generic("Invalid key ID"));
+            }
+            _ => {}
+        },
     }
 
     Err(Error::Generic("key not found in keyring"))
@@ -532,8 +537,7 @@ impl DecryptionHelper for Helper<'_> {
         _skesks: &[sequoia_openpgp::packet::SKESK],
         sym_algo: Option<SymmetricAlgorithm>,
         decrypt: &mut dyn FnMut(Option<SymmetricAlgorithm>, &SessionKey) -> bool,
-    ) -> sequoia_openpgp::Result<Option<Cert>>
-    {
+    ) -> sequoia_openpgp::Result<Option<Cert>> {
         if self.secret.is_none() {
             // we don't know which key is the users own key, so lets try them all
             let mut selected_fingerprint: Option<Arc<Cert>> = None;
@@ -582,8 +586,11 @@ impl DecryptionHelper for Helper<'_> {
                 .unwrap_or(false)
             {
                 return Ok(Some(
-                    (*self.secret.clone()
-                        .ok_or_else(|| anyhow::anyhow!("no user secret"))?).clone(),
+                    (*self
+                        .secret
+                        .clone()
+                        .ok_or_else(|| anyhow::anyhow!("no user secret"))?)
+                    .clone(),
                 ));
             }
         }
@@ -614,7 +621,10 @@ pub struct SequoiaKey {
 
 impl Key for SequoiaKey {
     fn user_id_names(&self) -> Vec<String> {
-        self.cert.userids().map(|ui| ui.userid().to_string()).collect()
+        self.cert
+            .userids()
+            .map(|ui| ui.userid().to_string())
+            .collect()
     }
 
     fn fingerprint(&self) -> Result<[u8; 20]> {
