@@ -7,6 +7,9 @@ use std::{
 
 use flate2::read::GzDecoder;
 use hex::FromHex;
+use sequoia_openpgp::crypto::SessionKey;
+use sequoia_openpgp::packet::UserID;
+use sequoia_openpgp::types::SymmetricAlgorithm;
 use sequoia_openpgp::{
     Cert, KeyHandle, KeyID,
     cert::CertBuilder,
@@ -301,7 +304,7 @@ pub fn recipient_alex_old() -> Recipient {
 }
 pub fn recipient_from_cert(cert: &Cert) -> Recipient {
     Recipient {
-        name: String::from_utf8(cert.userids().next().unwrap().value().to_vec()).unwrap(),
+        name: String::from_utf8(cert.userids().next().unwrap().userid().value().to_vec()).unwrap(),
         comment: Comment {
             pre_comment: None,
             post_comment: None,
@@ -322,7 +325,7 @@ pub fn append_file_name(file: &Path) -> PathBuf {
 }
 
 pub fn generate_sequoia_cert(email: &str) -> Cert {
-    let (cert, _) = CertBuilder::general_purpose(None, Some(email))
+    let (cert, _) = CertBuilder::general_purpose([UserID::from(email)])
         .generate()
         .unwrap();
 
@@ -330,7 +333,7 @@ pub fn generate_sequoia_cert(email: &str) -> Cert {
 }
 
 pub fn generate_sequoia_cert_without_private_key(email: &str) -> Cert {
-    let (cert, _) = CertBuilder::general_purpose(None, Some(email))
+    let (cert, _) = CertBuilder::general_purpose([UserID::from(email)])
         .generate()
         .unwrap();
 
@@ -352,24 +355,23 @@ impl VerificationHelper for &mut KeyLister {
 }
 
 impl DecryptionHelper for &mut KeyLister {
-    fn decrypt<D>(
+    fn decrypt(
         &mut self,
         pkesks: &[sequoia_openpgp::packet::PKESK],
         _: &[sequoia_openpgp::packet::SKESK],
-        _: Option<sequoia_openpgp::types::SymmetricAlgorithm>,
-        _: D,
-    ) -> std::result::Result<Option<sequoia_openpgp::Fingerprint>, anyhow::Error>
-    where
-        D: FnMut(
-            sequoia_openpgp::types::SymmetricAlgorithm,
-            &sequoia_openpgp::crypto::SessionKey,
-        ) -> bool,
-    {
+        _: Option<SymmetricAlgorithm>,
+        _: &mut dyn FnMut(Option<SymmetricAlgorithm>, &SessionKey) -> bool,
+    ) -> std::result::Result<Option<Cert>, anyhow::Error> {
         self.ids.extend(
             pkesks
                 .iter()
-                .map(|p| p.recipient().clone())
-                .collect::<Vec<KeyID>>(),
+                .map(|p| {
+                    return match p.recipient().clone().unwrap() {
+                        KeyHandle::Fingerprint(fpr) => Ok(fpr.into()),
+                        KeyHandle::KeyID(key_id) => Ok(key_id),
+                    };
+                })
+                .collect::<std::result::Result<Vec<KeyID>, anyhow::Error>>()?,
         );
         Ok(None)
     }
@@ -378,9 +380,33 @@ impl DecryptionHelper for &mut KeyLister {
 pub fn count_recipients(data: &[u8]) -> usize {
     let p = StandardPolicy::new();
     let mut h = KeyLister { ids: vec![] };
+
+    // result ignored since it's always an error, as we are not decrypting for real
     let _ = DecryptorBuilder::from_bytes(&data)
         .unwrap()
         .with_policy(&p, None, &mut h);
 
     h.ids.len()
+}
+
+#[test]
+fn test_count_recipients() {
+    let data = vec![
+        0xc1, 0x6c, 0x06, 0x15, 0x04, 0x08, 0x6f, 0x6c, 0x69, 0x12, 0x24, 0xad, 0x6e, 0x3c, 0x0c,
+        0x86, 0xfc, 0xa2, 0x26, 0xb7, 0x82, 0xd7, 0xfc, 0xd2, 0x44, 0x12, 0x01, 0x07, 0x40, 0x72,
+        0xb0, 0x2f, 0x8b, 0x35, 0x5a, 0x34, 0xe1, 0x05, 0xbf, 0x6f, 0x35, 0x2d, 0xc8, 0x33, 0xed,
+        0xaa, 0xdf, 0x76, 0xbf, 0xfb, 0x54, 0x8b, 0x73, 0x2c, 0xac, 0x7d, 0xd4, 0xd8, 0xc9, 0xdf,
+        0x1b, 0x30, 0x0d, 0x09, 0x53, 0x11, 0x31, 0x03, 0x99, 0xfb, 0x77, 0xa0, 0xa1, 0x1a, 0x0d,
+        0x9a, 0xb2, 0xf0, 0x22, 0xe6, 0xf1, 0x63, 0x90, 0x29, 0xb8, 0x37, 0xd4, 0x75, 0xd8, 0x03,
+        0xc7, 0x22, 0xdb, 0xe3, 0x9d, 0x62, 0xea, 0x70, 0x69, 0xfa, 0x29, 0x4b, 0x00, 0x11, 0x49,
+        0x0c, 0xbf, 0x96, 0x39, 0xa9, 0xd2, 0x54, 0x02, 0x09, 0x02, 0x06, 0x55, 0x14, 0xe8, 0x76,
+        0xdd, 0x0f, 0x25, 0x13, 0x16, 0xe5, 0xfd, 0xb4, 0x57, 0x3b, 0xce, 0xa0, 0x3c, 0x81, 0x3d,
+        0xc1, 0x82, 0x27, 0x46, 0x91, 0xf1, 0x9e, 0xc1, 0x09, 0x94, 0x9b, 0xbb, 0x55, 0xd4, 0xa4,
+        0x26, 0x31, 0xb8, 0x17, 0xef, 0xd8, 0x48, 0xbd, 0x1b, 0x3a, 0xbd, 0x40, 0xec, 0xc6, 0x0b,
+        0x33, 0xb0, 0x2f, 0x8c, 0x71, 0xb1, 0x90, 0xf6, 0xda, 0x35, 0xe5, 0x8b, 0xb5, 0x3e, 0x23,
+        0xa3, 0x80, 0x35, 0x11, 0x83, 0x79, 0xf4, 0x79, 0x09, 0x71, 0xac, 0xee, 0xc5, 0x65, 0x0e,
+        0xb8,
+    ];
+
+    assert_eq!(1, count_recipients(&data));
 }

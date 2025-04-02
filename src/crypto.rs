@@ -10,7 +10,7 @@ use std::{
 
 use hex::FromHex;
 use sequoia_openpgp::{
-    Cert, KeyHandle,
+    Cert, Fingerprint, KeyHandle, KeyID,
     crypto::SessionKey,
     parse::{
         Parse,
@@ -22,7 +22,7 @@ use sequoia_openpgp::{
     policy::Policy,
     serialize::{
         Serialize,
-        stream::{Armorer, Encryptor2, LiteralWriter, Message, Signer},
+        stream::{Armorer, Encryptor, LiteralWriter, Message, Signer},
     },
     types::{RevocationStatus, SymmetricAlgorithm},
 };
@@ -443,7 +443,7 @@ struct Helper<'a> {
     /// A sequoia policy to use in various operations
     policy: &'a dyn Policy,
     /// the users cert
-    secret: Option<&'a Cert>,
+    secret: Option<Arc<Cert>>,
     /// all certs
     key_ring: &'a HashMap<[u8; 20], Arc<Cert>>,
     /// This is all the certificates that are allowed to sign something
@@ -461,7 +461,7 @@ impl VerificationHelper for Helper<'_> {
         for handle in handles {
             for cert in &self.public_keys {
                 for c in cert.keys() {
-                    if c.key_handle().aliases(handle) {
+                    if c.key().keyid().aliases(handle) {
                         certs.push(cert.as_ref().clone());
                     }
                 }
@@ -489,61 +489,83 @@ impl VerificationHelper for Helper<'_> {
 
 fn find(
     key_ring: &HashMap<[u8; 20], Arc<Cert>>,
-    recipient: &sequoia_openpgp::KeyID,
+    recipient: &Option<KeyHandle>,
 ) -> Result<Arc<Cert>> {
-    let bytes: &[u8; 8] = match recipient {
-        sequoia_openpgp::KeyID::V4(bytes) => bytes,
-        _ => return Err(Error::Generic("not an v4 keyid")),
-    };
+    let recipient = recipient.as_ref().ok_or(Error::Generic("No recipient"))?;
 
-    for (key, value) in key_ring {
-        if key[0..8] == *bytes {
-            return Ok(value.clone());
+    match recipient {
+        KeyHandle::Fingerprint(fpr) => {
+            match fpr {
+                Fingerprint::V6(_v6) => {
+                    return Err(Error::Generic("v6 keys not supported yet"));
+                }
+                Fingerprint::V4(v4) => {
+                    for (key, value) in key_ring {
+                        if key == v4 {
+                            return Ok(value.clone());
+                        }
+                    }
+                }
+                Fingerprint::Unknown { .. } => {
+                    return Err(Error::Generic("unknown fingerprint version"));
+                }
+                _ => {}
+            };
         }
+        KeyHandle::KeyID(key_id) => match key_id {
+            KeyID::Long(bytes) => {
+                for (key, value) in key_ring {
+                    if key[0..8] == *bytes {
+                        return Ok(value.clone());
+                    }
+                }
+            }
+            KeyID::Invalid(_) => {
+                return Err(Error::Generic("Invalid key ID"));
+            }
+            _ => {}
+        },
     }
 
     Err(Error::Generic("key not found in keyring"))
 }
 
 impl DecryptionHelper for Helper<'_> {
-    fn decrypt<D>(
+    fn decrypt(
         &mut self,
         pkesks: &[sequoia_openpgp::packet::PKESK],
         _skesks: &[sequoia_openpgp::packet::SKESK],
         sym_algo: Option<SymmetricAlgorithm>,
-        mut decrypt: D,
-    ) -> sequoia_openpgp::Result<Option<sequoia_openpgp::Fingerprint>>
-    where
-        D: FnMut(SymmetricAlgorithm, &SessionKey) -> bool,
-    {
+        decrypt: &mut dyn FnMut(Option<SymmetricAlgorithm>, &SessionKey) -> bool,
+    ) -> sequoia_openpgp::Result<Option<Cert>> {
         if self.secret.is_none() {
             // we don't know which key is the users own key, so lets try them all
-
-            let mut selected_fingerprint: Option<sequoia_openpgp::Fingerprint> = None;
+            let mut selected_fingerprint: Option<Arc<Cert>> = None;
             for pkesk in pkesks {
-                if let Ok(cert) = find(self.key_ring, pkesk.recipient()) {
-                    let key = cert.primary_key();
+                if let Ok(cert) = find(self.key_ring, &pkesk.recipient()) {
+                    let key = cert.primary_key().key();
                     let mut pair = sequoia_gpg_agent::KeyPair::new_for_gnupg_context(
                         self.ctx
                             .as_ref()
                             .ok_or_else(|| anyhow::anyhow!("no context configured"))?,
-                        &*key,
+                        key,
                     )?;
                     if pkesk
                         .decrypt(&mut pair, sym_algo)
                         .is_some_and(|(algo, session_key)| decrypt(algo, &session_key))
                     {
-                        selected_fingerprint = Some(cert.fingerprint());
+                        selected_fingerprint = Some(cert);
                         break;
                     }
                 }
             }
 
-            return Ok(selected_fingerprint);
+            return Ok(selected_fingerprint.map(|f| f.as_ref().clone()));
         }
         // The encryption key is the first and only subkey.
         let key = self
             .secret
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("no user secret"))?
             .keys()
             .unencrypted_secret()
@@ -564,9 +586,11 @@ impl DecryptionHelper for Helper<'_> {
                 .unwrap_or(false)
             {
                 return Ok(Some(
-                    self.secret
-                        .ok_or_else(|| anyhow::anyhow!("no user secret"))?
-                        .fingerprint(),
+                    (*self
+                        .secret
+                        .clone()
+                        .ok_or_else(|| anyhow::anyhow!("no user secret"))?)
+                    .clone(),
                 ));
             }
         }
@@ -597,7 +621,10 @@ pub struct SequoiaKey {
 
 impl Key for SequoiaKey {
     fn user_id_names(&self) -> Vec<String> {
-        self.cert.userids().map(|ui| ui.to_string()).collect()
+        self.cert
+            .userids()
+            .map(|ui| ui.userid().to_string())
+            .collect()
     }
 
     fn fingerprint(&self) -> Result<[u8; 20]> {
@@ -743,7 +770,7 @@ impl Crypto for Sequoia {
             // decryptor.
             let helper = Helper {
                 policy: &p,
-                secret: Some(decrypt_key),
+                secret: Some(decrypt_key.clone()),
                 key_ring: &self.key_ring,
                 public_keys: vec![],
                 ctx: None,
@@ -764,7 +791,7 @@ impl Crypto for Sequoia {
             // decryptor.
             let helper = Helper {
                 policy: &p,
-                secret: Some(decrypt_key),
+                secret: Some(decrypt_key.clone()),
                 key_ring: &self.key_ring,
                 public_keys: vec![],
                 ctx: Some(
@@ -810,7 +837,7 @@ impl Crypto for Sequoia {
         let message = Message::new(&mut sink);
 
         // We want to encrypt a literal data packet.
-        let message = Encryptor2::for_recipients(message, recipient_keys).build()?;
+        let message = Encryptor::for_recipients(message, recipient_keys).build()?;
 
         // Emit a literal data packet.
         let mut message = LiteralWriter::new(message).build()?;
@@ -862,7 +889,7 @@ impl Crypto for Sequoia {
             .build()?;
 
         // We want to sign a literal data packet.
-        let mut message = Signer::new(message, keypair).detached().build()?;
+        let mut message = Signer::new(message, keypair)?.detached().build()?;
 
         // Sign the data.
         message.write_all(to_sign.as_bytes())?;

@@ -80,7 +80,7 @@ pub fn new_one_cert() {
             .next()
             .unwrap()
             .userid()
-            .email2()
+            .email()
             .unwrap()
             .unwrap()
     );
