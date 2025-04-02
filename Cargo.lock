@@ -3384,7 +3384,7 @@ dependencies = [
 
 [[package]]
 name = "ripasso"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "arboard",
@@ -3410,7 +3410,7 @@ dependencies = [
 
 [[package]]
 name = "ripasso-cursive"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "arboard",
  "chrono",
@@ -3431,7 +3431,7 @@ dependencies = [
 
 [[package]]
 name = "ripasso-gtk"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "chrono",
  "config",
