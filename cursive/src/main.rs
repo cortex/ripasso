@@ -1387,10 +1387,7 @@ fn get_stores(config: &config::Config, home: &Option<PathBuf>) -> Result<Vec<Pas
                     None => None,
                     Some(k) => match k.clone().into_string() {
                         Err(_) => None,
-                        Ok(key) => match <[u8; 20]>::from_hex(key) {
-                            Err(_) => None,
-                            Ok(fp) => Some(fp),
-                        },
+                        Ok(key) => <[u8; 20]>::from_hex(key).ok(),
                     },
                 };
 
@@ -1510,10 +1507,7 @@ fn save_edit_config(
         false => CryptoImpl::GpgMe,
     };
 
-    let own_fingerprint = match <[u8; 20]>::from_hex(own_fingerprint) {
-        Err(_) => None,
-        Ok(fp) => Some(fp),
-    };
+    let own_fingerprint = <[u8; 20]>::from_hex(own_fingerprint).ok();
 
     let new_store = PasswordStore::new(
         e_n,
