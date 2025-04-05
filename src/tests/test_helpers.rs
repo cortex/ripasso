@@ -366,10 +366,10 @@ impl DecryptionHelper for &mut KeyLister {
             pkesks
                 .iter()
                 .map(|p| {
-                    return match p.recipient().clone().unwrap() {
+                    match p.recipient().clone().unwrap() {
                         KeyHandle::Fingerprint(fpr) => Ok(fpr.into()),
                         KeyHandle::KeyID(key_id) => Ok(key_id),
-                    };
+                    }
                 })
                 .collect::<std::result::Result<Vec<KeyID>, anyhow::Error>>()?,
         );
