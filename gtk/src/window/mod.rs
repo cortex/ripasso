@@ -584,10 +584,7 @@ fn get_stores(
                     None => None,
                     Some(k) => match k.clone().into_string() {
                         Err(_) => None,
-                        Ok(key) => match <[u8; 20]>::from_hex(key) {
-                            Err(_) => None,
-                            Ok(fp) => Some(fp),
-                        },
+                        Ok(key) => <[u8; 20]>::from_hex(key).ok(),
                     },
                 };
 
