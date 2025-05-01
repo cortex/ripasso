@@ -6,6 +6,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use crate::{collection_object::CollectionObject, password_object::PasswordObject};
 use adw::{ActionRow, NavigationDirection, prelude::*, subclass::prelude::*};
 use glib::{Object, clone};
 use gtk::{
@@ -13,9 +14,9 @@ use gtk::{
     ListBoxRow, NoSelection, ResponseType, SelectionMode, gio, glib, glib::BindingFlags, pango,
 };
 use hex::FromHex;
+use ripasso::crypto::Fingerprint;
+use ripasso::pass::Error;
 use ripasso::{crypto::CryptoImpl, pass::PasswordStore};
-
-use crate::{collection_object::CollectionObject, password_object::PasswordObject};
 
 glib::wrapper! {
     pub struct Window(ObjectSubclass<imp::Window>)
@@ -580,13 +581,20 @@ fn get_stores(
                 }?;
 
                 let own_fingerprint = store.get("own_fingerprint");
-                let own_fingerprint = match own_fingerprint {
-                    None => None,
-                    Some(k) => match k.clone().into_string() {
-                        Err(_) => None,
-                        Ok(key) => <[u8; 20]>::from_hex(key).ok(),
-                    },
-                };
+                let own_fingerprint = own_fingerprint
+                    .map(|k| {
+                        k.clone().into_string().map(|fingerprint| {
+                            if fingerprint.len() == 40 || fingerprint.len() == 42 {
+                                Ok(Fingerprint::from(<[u8; 20]>::from_hex(fingerprint)?))
+                            } else if fingerprint.len() == 64 || fingerprint.len() == 66 {
+                                Ok(Fingerprint::from(<[u8; 32]>::from_hex(fingerprint)?))
+                            } else {
+                                Err(Error::Generic("unable to parse fingerprint"))
+                            }
+                        })
+                    })
+                    .transpose()?
+                    .transpose()?;
 
                 final_stores.push(PasswordStore::new(
                     store_name,

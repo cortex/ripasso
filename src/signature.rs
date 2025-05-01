@@ -8,7 +8,7 @@ use std::{
 
 use hex::FromHex;
 
-use crate::crypto::FindSigningFingerprintStrategy;
+use crate::crypto::{FindSigningFingerprintStrategy, Fingerprint};
 pub use crate::error::{Error, Result};
 
 /// A git commit for a password might be signed by a gpg key, and this signature's verification
@@ -42,7 +42,7 @@ impl From<gpgme::SignatureSummary> for SignatureStatus {
 pub fn parse_signing_keys(
     password_store_signing_key: &Option<String>,
     crypto: &(dyn crate::crypto::Crypto + Send),
-) -> Result<Vec<[u8; 20]>> {
+) -> Result<Vec<Fingerprint>> {
     if password_store_signing_key.is_none() {
         return Ok(vec![]);
     }
@@ -50,10 +50,12 @@ pub fn parse_signing_keys(
     let mut signing_keys = vec![];
     for key in password_store_signing_key.as_ref().unwrap().split(',') {
         let trimmed = key.trim().to_owned();
+        let len = trimmed.len();
+        let have_0x = trimmed.starts_with("0x");
 
-        if trimmed.len() != 40 && (trimmed.len() != 42 && trimmed.starts_with("0x")) {
+        if !(len == 40 || len == 64 || len == 42 && have_0x || len == 66 && have_0x) {
             return Err(Error::Generic(
-                "signing key isn't in full 40 character id format",
+                "signing key isn't in full 40/64 hex character fingerprint format",
             ));
         }
 
@@ -65,9 +67,13 @@ pub fn parse_signing_keys(
         }
 
         if trimmed.len() == 40 {
-            signing_keys.push(<[u8; 20]>::from_hex(trimmed)?);
+            signing_keys.push(Fingerprint::V4(<[u8; 20]>::from_hex(trimmed)?));
+        } else if trimmed.len() == 42 {
+            signing_keys.push(Fingerprint::V4(<[u8; 20]>::from_hex(&trimmed[2..])?));
+        } else if trimmed.len() == 64 {
+            signing_keys.push(Fingerprint::V6(<[u8; 32]>::from_hex(trimmed)?));
         } else {
-            signing_keys.push(<[u8; 20]>::from_hex(&trimmed[2..])?);
+            signing_keys.push(Fingerprint::V6(<[u8; 32]>::from_hex(&trimmed[2..])?));
         }
     }
     Ok(signing_keys)
@@ -173,9 +179,9 @@ pub struct Recipient {
     /// Machine-readable identity taken from the .gpg-id file, in the form of a gpg key id
     /// (16 hex chars) or a fingerprint (40 hex chars).
     pub key_id: String,
-    /// The fingerprint of the pgp key, as 20 bytes,
+    /// The fingerprint of the pgp key, as 20 bytes or 32 bytes,
     /// if the fingerprint of the key is not known, this will be None.
-    pub fingerprint: Option<[u8; 20]>,
+    pub fingerprint: Option<Fingerprint>,
     /// The status of the key in GPG's keyring
     pub key_ring_status: KeyRingStatus,
     /// The trust level the owner of the key ring has placed in this person
@@ -191,7 +197,7 @@ impl Recipient {
         name: String,
         comment: Comment,
         key_id: String,
-        fingerprint: Option<[u8; 20]>,
+        fingerprint: Option<Fingerprint>,
         key_ring_status: KeyRingStatus,
         trust_level: OwnerTrustLevel,
         not_usable: bool,
@@ -247,7 +253,7 @@ impl Recipient {
             _ => names.pop().unwrap(),
         };
 
-        let trusts: HashMap<[u8; 20], OwnerTrustLevel> = crypto.get_all_trust_items()?;
+        let trusts: HashMap<Fingerprint, OwnerTrustLevel> = crypto.get_all_trust_items()?;
 
         let fingerprint = real_key.fingerprint()?;
 
@@ -339,7 +345,7 @@ impl Recipient {
     pub fn write_recipients_file(
         recipients: &[Self],
         recipients_file: &Path,
-        valid_gpg_signing_keys: &[[u8; 20]],
+        valid_gpg_signing_keys: &[Fingerprint],
         crypto: &(dyn crate::crypto::Crypto + Send),
     ) -> Result<()> {
         let mut file = fs::OpenOptions::new()
@@ -411,7 +417,7 @@ impl Recipient {
         s: &Self,
         recipients_file: &Path,
         store_root_path: &Path,
-        valid_gpg_signing_keys: &[[u8; 20]],
+        valid_gpg_signing_keys: &[Fingerprint],
         crypto: &(dyn crate::crypto::Crypto + Send),
     ) -> Result<()> {
         let mut recipients: Vec<Recipient> = Self::all_recipients(recipients_file, crypto)?;
@@ -446,7 +452,7 @@ impl Recipient {
     pub fn add_recipient_to_file(
         recipient: &Self,
         recipients_file: &Path,
-        valid_gpg_signing_keys: &[[u8; 20]],
+        valid_gpg_signing_keys: &[Fingerprint],
         crypto: &(dyn crate::crypto::Crypto + Send),
     ) -> Result<()> {
         let mut recipients: Vec<Self> = Self::all_recipients(recipients_file, crypto)?;

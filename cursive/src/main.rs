@@ -48,12 +48,13 @@ use unic_langid::LanguageIdentifier;
 mod helpers;
 mod wizard;
 
-use lazy_static::lazy_static;
-use zeroize::Zeroize;
-
 use crate::helpers::{
     get_value_from_input, is_checkbox_checked, is_radio_button_selected, recipients_widths,
 };
+use lazy_static::lazy_static;
+use ripasso::crypto::Fingerprint;
+use ripasso::pass::Error;
+use zeroize::Zeroize;
 
 /// The 'pointer' to the current PasswordStore is of this convoluted type.
 type PasswordStoreType = Arc<Mutex<Arc<Mutex<PasswordStore>>>>;
@@ -1383,13 +1384,19 @@ fn get_stores(config: &config::Config, home: &Option<PathBuf>) -> Result<Vec<Pas
                 }?;
 
                 let own_fingerprint = store.get("own_fingerprint");
-                let own_fingerprint = match own_fingerprint {
-                    None => None,
-                    Some(k) => match k.clone().into_string() {
-                        Err(_) => None,
-                        Ok(key) => <[u8; 20]>::from_hex(key).ok(),
-                    },
-                };
+                let own_fingerprint = own_fingerprint
+                    .map(|k| {
+                        k.clone().into_string().map(|key| {
+                            if key.len() == 40 || key.len() == 42 {
+                                Ok(Fingerprint::from(<[u8; 20]>::from_hex(key)?))
+                            } else if key.len() == 64 || key.len() == 66 {
+                                Ok(Fingerprint::from(<[u8; 32]>::from_hex(key)?))
+                            } else {
+                                Err(Error::Generic("unable to parse fingerprint"))
+                            }
+                        })?
+                    })
+                    .transpose()?;
 
                 final_stores.push(PasswordStore::new(
                     store_name,
@@ -1507,7 +1514,13 @@ fn save_edit_config(
         false => CryptoImpl::GpgMe,
     };
 
-    let own_fingerprint = <[u8; 20]>::from_hex(own_fingerprint).ok();
+    let own_fingerprint = if own_fingerprint.len() == 40 || own_fingerprint.len() == 42 {
+        Ok(Fingerprint::from(<[u8; 20]>::from_hex(own_fingerprint)?))
+    } else if own_fingerprint.len() == 64 || own_fingerprint.len() == 66 {
+        Ok(Fingerprint::from(<[u8; 32]>::from_hex(own_fingerprint)?))
+    } else {
+        Err(Error::Generic("unable to parse fingerprint"))
+    };
 
     let new_store = PasswordStore::new(
         e_n,
@@ -1516,7 +1529,7 @@ fn save_edit_config(
         home,
         &None,
         &pgp_impl,
-        &own_fingerprint,
+        &Some(own_fingerprint?),
     );
     if let Err(err) = new_store {
         helpers::errorbox(ui, &err);
@@ -1689,7 +1702,10 @@ fn edit_store_in_config(
     fingerprint_fields.add_child(
         EditView::new()
             .content(hex::encode_upper(
-                store.get_crypto().own_fingerprint().unwrap_or([0; 20]),
+                store
+                    .get_crypto()
+                    .own_fingerprint()
+                    .unwrap_or(Fingerprint::V4([0; 20])),
             ))
             .with_name("edit_own_fingerprint_input")
             .fixed_size((50_usize, 1_usize)),

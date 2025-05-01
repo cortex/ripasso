@@ -13,7 +13,7 @@ use tempfile::tempdir;
 
 use super::*;
 use crate::{
-    crypto::slice_to_20_bytes,
+    crypto::slice_to_fingerprint,
     test_helpers::{
         MockCrypto, UnpackedDir, count_recipients, generate_sequoia_cert,
         generate_sequoia_cert_without_private_key,
@@ -40,7 +40,7 @@ pub fn setup_store(
     ];
     let mut key_ring = HashMap::new();
     for u in &users {
-        key_ring.insert(slice_to_20_bytes(u.fingerprint().as_bytes())?, u.clone());
+        key_ring.insert(slice_to_fingerprint(u.fingerprint().as_bytes())?, u.clone());
     }
 
     let store = PasswordStore {
@@ -50,7 +50,7 @@ pub fn setup_store(
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(Sequoia::from_values(
-            slice_to_20_bytes(users[0].fingerprint().as_bytes())?,
+            slice_to_fingerprint(users[0].fingerprint().as_bytes())?,
             key_ring,
             user_home,
         )),
@@ -829,7 +829,7 @@ fn save_config_one_store() {
         &Some(home.path().to_path_buf()),
         &Some(style_file.path().to_path_buf()),
         &CryptoImpl::Sequoia,
-        &Some([0; 20]),
+        &Some(Fingerprint::V4([0; 20])),
     )
     .unwrap();
 
@@ -890,7 +890,9 @@ fn save_config_one_store_with_fingerprint() {
         &Some(dir.path().to_path_buf()),
         &None,
         &CryptoImpl::Sequoia,
-        &Some(<[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap()),
+        &Some(Fingerprint::V4(
+            <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+        )),
     )
     .unwrap();
 
@@ -1100,8 +1102,7 @@ fn decrypt_secret() -> Result<()> {
         RepositoryStatus::NoRepo,
     );
 
-    let crypto =
-        MockCrypto::new().with_decrypt_string_return("decrypt_secret unit test".to_owned());
+    let crypto = MockCrypto::new().with_decrypt_string_return("decrypt_secret unit test");
 
     let store = PasswordStore {
         name: "store_name".to_owned(),
@@ -1179,8 +1180,7 @@ fn decrypt_password_multiline() -> Result<()> {
         RepositoryStatus::NoRepo,
     );
 
-    let crypto =
-        MockCrypto::new().with_decrypt_string_return("row one\nrow two\nrow three".to_owned());
+    let crypto = MockCrypto::new().with_decrypt_string_return("row one\nrow two\nrow three");
 
     let store = PasswordStore {
         name: "store_name".to_owned(),
@@ -1220,7 +1220,7 @@ fn mfa_setup(payload: String) -> Result<(tempfile::TempDir, PasswordEntry, Passw
         RepositoryStatus::NoRepo,
     );
 
-    let crypto = MockCrypto::new().with_decrypt_string_return(payload);
+    let crypto = MockCrypto::new().with_decrypt_string_return(&payload);
 
     let store = PasswordStore {
         name: "store_name".to_owned(),
@@ -1659,9 +1659,9 @@ fn test_verify_git_signature() -> Result<()> {
     let store = PasswordStore {
         name: "store_name".to_owned(),
         root: dir.dir(),
-        valid_gpg_signing_keys: vec![<[u8; 20]>::from_hex(
+        valid_gpg_signing_keys: vec![Fingerprint::V4(<[u8; 20]>::from_hex(
             "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
-        )?],
+        )?)],
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
@@ -1715,9 +1715,9 @@ fn test_remove_and_commit() -> Result<()> {
     let store = PasswordStore {
         name: "store_name".to_owned(),
         root: dir.dir(),
-        valid_gpg_signing_keys: vec![<[u8; 20]>::from_hex(
+        valid_gpg_signing_keys: vec![Fingerprint::V4(<[u8; 20]>::from_hex(
             "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
-        )?],
+        )?)],
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
@@ -1757,9 +1757,9 @@ fn test_verify_gpg_id_files_missing_sig_file() -> Result<()> {
     let store = PasswordStore {
         name: "store_name".to_owned(),
         root: td.path().to_path_buf(),
-        valid_gpg_signing_keys: vec![<[u8; 20]>::from_hex(
+        valid_gpg_signing_keys: vec![Fingerprint::V4(<[u8; 20]>::from_hex(
             "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
-        )?],
+        )?)],
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
@@ -1790,9 +1790,9 @@ fn test_verify_gpg_id_files() -> Result<()> {
     let store = PasswordStore {
         name: "store_name".to_owned(),
         root: td.path().to_path_buf(),
-        valid_gpg_signing_keys: vec![<[u8; 20]>::from_hex(
+        valid_gpg_signing_keys: vec![Fingerprint::V4(<[u8; 20]>::from_hex(
             "7E068070D5EF794B00C8A9D91D108E6C07CBC406",
-        )?],
+        )?)],
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(MockCrypto::new()),
@@ -1875,7 +1875,7 @@ fn test_verify_gpg_id_files_untrusted_key_in_keyring() {
         .add_signing_subkey()
         .generate()
         .unwrap();
-    let sofp = slice_to_20_bytes(store_owner.fingerprint().as_bytes()).unwrap();
+    let sofp = slice_to_fingerprint(store_owner.fingerprint().as_bytes()).unwrap();
     let (unrelated_user, _) = CertBuilder::new()
         .add_userid("unrelated_user@example.org")
         .add_signing_subkey()
@@ -2011,7 +2011,7 @@ fn test_new_password_file_encryption_failure() -> Result<()> {
         valid_gpg_signing_keys: vec![],
         passwords: [].to_vec(),
         style_file: None,
-        crypto: Box::new(MockCrypto::new().with_encrypt_error("unit test error".to_owned())),
+        crypto: Box::new(MockCrypto::new().with_encrypt_error("unit test error")),
         user_home: None,
     };
 

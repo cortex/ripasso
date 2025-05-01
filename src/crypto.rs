@@ -10,7 +10,7 @@ use std::{
 
 use hex::FromHex;
 use sequoia_openpgp::{
-    Cert, Fingerprint, KeyHandle, KeyID,
+    Cert, KeyHandle, KeyID,
     crypto::SessionKey,
     parse::{
         Parse,
@@ -114,13 +114,40 @@ pub enum FindSigningFingerprintStrategy {
     GPG,
 }
 
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
+pub enum Fingerprint {
+    V4([u8; 20]),
+    V6([u8; 32]),
+}
+
+impl From<[u8; 32]> for Fingerprint {
+    fn from(value: [u8; 32]) -> Self {
+        Fingerprint::V6(value)
+    }
+}
+
+impl From<[u8; 20]> for Fingerprint {
+    fn from(value: [u8; 20]) -> Self {
+        Fingerprint::V4(value)
+    }
+}
+
+impl AsRef<[u8]> for Fingerprint {
+    fn as_ref(&self) -> &[u8] {
+        match self {
+            Fingerprint::V4(v4) => v4.as_slice(),
+            Fingerprint::V6(v6) => v6.as_slice(),
+        }
+    }
+}
+
 /// Models the interactions that can be done on a pgp key
 pub trait Key {
     /// returns a list of names associated with the key
     fn user_id_names(&self) -> Vec<String>;
 
     /// returns the keys fingerprint
-    fn fingerprint(&self) -> Result<[u8; 20]>;
+    fn fingerprint(&self) -> Result<Fingerprint>;
 
     /// returns if the key isn't usable
     fn is_not_usable(&self) -> bool;
@@ -140,10 +167,10 @@ impl Key for GpgMeKey {
             .collect()
     }
 
-    fn fingerprint(&self) -> Result<[u8; 20]> {
+    fn fingerprint(&self) -> Result<Fingerprint> {
         let fp = self.key.fingerprint()?;
 
-        Ok(<[u8; 20]>::from_hex(fp)?)
+        Ok(<[u8; 20]>::from_hex(fp)?.into())
     }
 
     fn is_not_usable(&self) -> bool {
@@ -175,7 +202,7 @@ pub trait Crypto {
     fn sign_string(
         &self,
         to_sign: &str,
-        valid_gpg_signing_keys: &[[u8; 20]],
+        valid_gpg_signing_keys: &[Fingerprint],
         strategy: &FindSigningFingerprintStrategy,
     ) -> Result<String>;
 
@@ -186,7 +213,7 @@ pub trait Crypto {
         &self,
         data: &[u8],
         sig: &[u8],
-        valid_signing_keys: &[[u8; 20]],
+        valid_signing_keys: &[Fingerprint],
     ) -> std::result::Result<SignatureStatus, VerificationError>;
 
     /// Returns true if a recipient is in the user's keyring.
@@ -210,13 +237,13 @@ pub trait Crypto {
     /// Returns a map from key fingerprints to OwnerTrustLevel's
     /// # Errors
     /// Will return `Err` on failure to obtain trust levels.
-    fn get_all_trust_items(&self) -> Result<HashMap<[u8; 20], OwnerTrustLevel>>;
+    fn get_all_trust_items(&self) -> Result<HashMap<Fingerprint, OwnerTrustLevel>>;
 
     /// Returns the type of this `CryptoImpl`, useful for serializing the store config
     fn implementation(&self) -> CryptoImpl;
 
     /// Returns the fingerprint of the user using ripasso
-    fn own_fingerprint(&self) -> Option<[u8; 20]>;
+    fn own_fingerprint(&self) -> Option<Fingerprint>;
 }
 
 /// Used when the user configures gpgme to be used as a pgp backend.
@@ -258,7 +285,7 @@ impl Crypto for GpgMe {
     fn sign_string(
         &self,
         to_sign: &str,
-        valid_gpg_signing_keys: &[[u8; 20]],
+        valid_gpg_signing_keys: &[Fingerprint],
         strategy: &FindSigningFingerprintStrategy,
     ) -> Result<String> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
@@ -304,7 +331,7 @@ impl Crypto for GpgMe {
         &self,
         data: &[u8],
         sig: &[u8],
-        valid_signing_keys: &[[u8; 20]],
+        valid_signing_keys: &[Fingerprint],
     ) -> std::result::Result<SignatureStatus, VerificationError> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
             .map_err(|e| InfrastructureError(format!("{e:?}")))?;
@@ -323,7 +350,7 @@ impl Crypto for GpgMe {
             let fpr =
                 <[u8; 20]>::from_hex(fpr).map_err(|e| InfrastructureError(format!("{e:?}")))?;
 
-            if !valid_signing_keys.contains(&fpr) {
+            if !valid_signing_keys.contains(&Fingerprint::V4(fpr)) {
                 return Err(VerificationError::SignatureFromWrongRecipient);
             }
             if i == 0 {
@@ -348,7 +375,7 @@ impl Crypto for GpgMe {
     fn is_key_in_keyring(&self, recipient: &Recipient) -> Result<bool> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
 
-        if let Some(fingerprint) = recipient.fingerprint {
+        if let Some(fingerprint) = &recipient.fingerprint {
             Ok(ctx.get_key(hex::encode(fingerprint)).is_ok())
         } else {
             Ok(false)
@@ -392,7 +419,7 @@ impl Crypto for GpgMe {
         }))
     }
 
-    fn get_all_trust_items(&self) -> Result<HashMap<[u8; 20], OwnerTrustLevel>> {
+    fn get_all_trust_items(&self) -> Result<HashMap<Fingerprint, OwnerTrustLevel>> {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
         ctx.set_key_list_mode(gpgme::KeyListMode::SIGS)?;
 
@@ -402,7 +429,7 @@ impl Crypto for GpgMe {
         for key_res in keys {
             let key = key_res?;
             trusts.insert(
-                <[u8; 20]>::from_hex(key.fingerprint()?)?,
+                Fingerprint::V4(<[u8; 20]>::from_hex(key.fingerprint()?)?),
                 crate::signature::OwnerTrustLevel::from(&key.owner_trust()),
             );
         }
@@ -414,7 +441,7 @@ impl Crypto for GpgMe {
         CryptoImpl::GpgMe
     }
 
-    fn own_fingerprint(&self) -> Option<[u8; 20]> {
+    fn own_fingerprint(&self) -> Option<Fingerprint> {
         None
     }
 }
@@ -445,7 +472,7 @@ struct Helper<'a> {
     /// the users cert
     secret: Option<Arc<Cert>>,
     /// all certs
-    key_ring: &'a HashMap<[u8; 20], Arc<Cert>>,
+    key_ring: &'a HashMap<Fingerprint, Arc<Cert>>,
     /// This is all the certificates that are allowed to sign something
     public_keys: Vec<Arc<Cert>>,
     /// context if talking to gpg_agent for example
@@ -488,7 +515,7 @@ impl VerificationHelper for Helper<'_> {
 }
 
 fn find(
-    key_ring: &HashMap<[u8; 20], Arc<Cert>>,
+    key_ring: &HashMap<Fingerprint, Arc<Cert>>,
     recipient: &Option<KeyHandle>,
 ) -> Result<Arc<Cert>> {
     let recipient = recipient.as_ref().ok_or(Error::Generic("No recipient"))?;
@@ -496,17 +523,17 @@ fn find(
     match recipient {
         KeyHandle::Fingerprint(fpr) => {
             match fpr {
-                Fingerprint::V6(_v6) => {
-                    return Err(Error::Generic("v6 keys not supported yet"));
-                }
-                Fingerprint::V4(v4) => {
-                    for (key, value) in key_ring {
-                        if key == v4 {
-                            return Ok(value.clone());
-                        }
+                sequoia_openpgp::Fingerprint::V6(v6) => {
+                    if let Some(key_handle) = key_ring.get(&Fingerprint::V6(*v6)) {
+                        return Ok(key_handle.clone());
                     }
                 }
-                Fingerprint::Unknown { .. } => {
+                sequoia_openpgp::Fingerprint::V4(v4) => {
+                    if let Some(key_handle) = key_ring.get(&Fingerprint::V4(*v4)) {
+                        return Ok(key_handle.clone());
+                    }
+                }
+                sequoia_openpgp::Fingerprint::Unknown { .. } => {
                     return Err(Error::Generic("unknown fingerprint version"));
                 }
                 _ => {}
@@ -515,7 +542,7 @@ fn find(
         KeyHandle::KeyID(key_id) => match key_id {
             KeyID::Long(bytes) => {
                 for (key, value) in key_ring {
-                    if key[0..8] == *bytes {
+                    if key.as_ref()[0..8] == *bytes {
                         return Ok(value.clone());
                     }
                 }
@@ -602,15 +629,16 @@ impl DecryptionHelper for Helper<'_> {
 }
 
 /// Intended for usage with slices containing a v4 fingerprint.
-pub fn slice_to_20_bytes(b: &[u8]) -> Result<[u8; 20]> {
-    if b.len() != 20 {
-        return Err(Error::Generic("slice isn't 20 bytes"));
+pub fn slice_to_fingerprint(b: &[u8]) -> Result<Fingerprint> {
+    match b.len() {
+        20 => Ok(Fingerprint::V4(
+            b.try_into().expect("slice with incorrect length"),
+        )),
+        32 => Ok(Fingerprint::V6(
+            b.try_into().expect("slice with incorrect length"),
+        )),
+        _ => Err(Error::Generic("slice isn't 20 bytes")),
     }
-
-    let mut f: [u8; 20] = [0; 20];
-    f.copy_from_slice(&b[0..20]);
-
-    Ok(f)
 }
 
 /// A pgp key produced with sequoia.
@@ -627,8 +655,8 @@ impl Key for SequoiaKey {
             .collect()
     }
 
-    fn fingerprint(&self) -> Result<[u8; 20]> {
-        slice_to_20_bytes(self.cert.fingerprint().as_bytes())
+    fn fingerprint(&self) -> Result<Fingerprint> {
+        slice_to_fingerprint(self.cert.fingerprint().as_bytes())
     }
 
     fn is_not_usable(&self) -> bool {
@@ -647,9 +675,9 @@ impl Key for SequoiaKey {
 /// If the user selects to use sequoia as their pgp implementation.
 pub struct Sequoia {
     /// key id of the user.
-    user_key_id: [u8; 20],
+    user_key_id: Fingerprint,
     /// All certs in the keys directory
-    key_ring: HashMap<[u8; 20], Arc<Cert>>,
+    key_ring: HashMap<Fingerprint, Arc<Cert>>,
     /// The home directory of the user, for gnupg context
     user_home: std::path::PathBuf,
 }
@@ -658,8 +686,8 @@ impl Sequoia {
     /// creates the sequoia object
     /// # Errors
     /// If there is any problems reading the keys directory
-    pub fn new(config_path: &Path, own_fingerprint: [u8; 20], user_home: &Path) -> Result<Self> {
-        let mut key_ring: HashMap<[u8; 20], Arc<Cert>> = HashMap::new();
+    pub fn new(config_path: &Path, own_fingerprint: Fingerprint, user_home: &Path) -> Result<Self> {
+        let mut key_ring: HashMap<Fingerprint, Arc<Cert>> = HashMap::new();
 
         let dir = config_path.join("share").join("ripasso").join("keys");
         if dir.exists() {
@@ -670,7 +698,7 @@ impl Sequoia {
                     let data = fs::read(path)?;
                     let cert = Cert::from_bytes(&data)?;
 
-                    let fingerprint = slice_to_20_bytes(cert.fingerprint().as_bytes())?;
+                    let fingerprint = slice_to_fingerprint(cert.fingerprint().as_bytes())?;
                     key_ring.insert(fingerprint, Arc::new(cert));
                 }
             }
@@ -684,8 +712,8 @@ impl Sequoia {
     }
 
     pub fn from_values(
-        user_key_id: [u8; 20],
-        key_ring: HashMap<[u8; 20], Arc<Cert>>,
+        user_key_id: Fingerprint,
+        key_ring: HashMap<Fingerprint, Arc<Cert>>,
         user_home: &Path,
     ) -> Self {
         Self {
@@ -702,8 +730,8 @@ impl Sequoia {
         let mut result = vec![];
 
         for recipient in input {
-            match recipient.fingerprint {
-                Some(fp) => match self.key_ring.get(&fp) {
+            match &recipient.fingerprint {
+                Some(fp) => match self.key_ring.get(fp) {
                     Some(cert) => result.push(cert.clone()),
                     None => {
                         return Err(Error::GenericDyn(format!(
@@ -742,7 +770,7 @@ impl Sequoia {
     fn write_cert(&mut self, cert_str: &str, keys_dir: &Path) -> Result<String> {
         let cert = Cert::from_bytes(cert_str.as_bytes())?;
 
-        let fingerprint = slice_to_20_bytes(cert.fingerprint().as_bytes())?;
+        let fingerprint = slice_to_fingerprint(cert.fingerprint().as_bytes())?;
 
         let mut file = File::create(keys_dir.join(hex::encode(fingerprint)))?;
 
@@ -855,7 +883,7 @@ impl Crypto for Sequoia {
     fn sign_string(
         &self,
         to_sign: &str,
-        _valid_gpg_signing_keys: &[[u8; 20]],
+        _valid_gpg_signing_keys: &[Fingerprint],
         _strategy: &FindSigningFingerprintStrategy,
     ) -> Result<String> {
         let p = sequoia_openpgp::policy::StandardPolicy::new();
@@ -905,7 +933,7 @@ impl Crypto for Sequoia {
         &self,
         data: &[u8],
         sig: &[u8],
-        valid_signing_keys: &[[u8; 20]],
+        valid_signing_keys: &[Fingerprint],
     ) -> std::result::Result<SignatureStatus, VerificationError> {
         let p = sequoia_openpgp::policy::StandardPolicy::new();
 
@@ -990,8 +1018,8 @@ impl Crypto for Sequoia {
         Err(Error::GenericDyn(format!("no key found for {key_id}")))
     }
 
-    fn get_all_trust_items(&self) -> Result<HashMap<[u8; 20], OwnerTrustLevel>> {
-        let mut res: HashMap<[u8; 20], OwnerTrustLevel> = HashMap::new();
+    fn get_all_trust_items(&self) -> Result<HashMap<Fingerprint, OwnerTrustLevel>> {
+        let mut res: HashMap<Fingerprint, OwnerTrustLevel> = HashMap::new();
 
         for k in self.key_ring.keys() {
             res.insert(*k, OwnerTrustLevel::Ultimate);
@@ -1004,7 +1032,7 @@ impl Crypto for Sequoia {
         CryptoImpl::Sequoia
     }
 
-    fn own_fingerprint(&self) -> Option<[u8; 20]> {
+    fn own_fingerprint(&self) -> Option<Fingerprint> {
         Some(self.user_key_id)
     }
 }

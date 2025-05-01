@@ -21,6 +21,7 @@ use sequoia_openpgp::{
 };
 use tar::Archive;
 
+use crate::crypto::Fingerprint;
 use crate::{
     crypto::{Crypto, CryptoImpl, FindSigningFingerprintStrategy, Key, VerificationError},
     error::{Error, Result},
@@ -76,7 +77,7 @@ fn get_testres_path() -> PathBuf {
 
 #[derive(Clone)]
 pub struct MockKey {
-    fingerprint: [u8; 20],
+    fingerprint: Fingerprint,
     user_id_names: Vec<String>,
 }
 
@@ -85,7 +86,7 @@ impl Key for MockKey {
         self.user_id_names.clone()
     }
 
-    fn fingerprint(&self) -> Result<[u8; 20]> {
+    fn fingerprint(&self) -> Result<Fingerprint> {
         Ok(self.fingerprint)
     }
 
@@ -103,12 +104,14 @@ impl Default for MockKey {
 impl MockKey {
     pub fn new() -> MockKey {
         MockKey {
-            fingerprint: <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+            fingerprint: Fingerprint::V4(
+                <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+            ),
             user_id_names: vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()],
         }
     }
 
-    pub fn from_args(fingerprint: [u8; 20], user_id_names: Vec<String>) -> MockKey {
+    pub fn from_args(fingerprint: Fingerprint, user_id_names: Vec<String>) -> MockKey {
         MockKey {
             user_id_names,
             fingerprint,
@@ -158,32 +161,32 @@ impl MockCrypto {
         self
     }
 
-    pub fn with_decrypt_string_return(mut self, data: String) -> MockCrypto {
-        self.decrypt_string_return = Some(data);
+    pub fn with_decrypt_string_return(mut self, data: &str) -> MockCrypto {
+        self.decrypt_string_return = Some(data.to_string());
 
         self
     }
 
-    pub fn with_encrypt_error(mut self, err_str: String) -> MockCrypto {
-        self.encrypt_string_error = Some(err_str);
+    pub fn with_encrypt_error(mut self, err_str: &str) -> MockCrypto {
+        self.encrypt_string_error = Some(err_str.to_string());
 
         self
     }
 
-    pub fn with_get_key_error(mut self, err_str: String) -> MockCrypto {
-        self.get_key_string_error = Some(err_str);
+    pub fn with_get_key_error(mut self, err_str: &str) -> MockCrypto {
+        self.get_key_string_error = Some(err_str.to_string());
 
         self
     }
 
-    pub fn with_get_key_result(mut self, key_id: String, key: MockKey) -> MockCrypto {
-        self.get_key_answers.insert(key_id, key);
+    pub fn with_get_key_result(mut self, key_id: &str, key: MockKey) -> MockCrypto {
+        self.get_key_answers.insert(key_id.to_string(), key);
 
         self
     }
 
-    pub fn with_sign_string_return(mut self, sign_str: String) -> MockCrypto {
-        self.sign_string_return = Some(sign_str);
+    pub fn with_sign_string_return(mut self, sign_str: &str) -> MockCrypto {
+        self.sign_string_return = Some(sign_str.to_string());
 
         self
     }
@@ -213,7 +216,7 @@ impl Crypto for MockCrypto {
     fn sign_string(
         &self,
         _: &str,
-        _: &[[u8; 20]],
+        _: &[Fingerprint],
         _: &FindSigningFingerprintStrategy,
     ) -> Result<String> {
         self.sign_called.replace(true);
@@ -227,7 +230,7 @@ impl Crypto for MockCrypto {
         &self,
         _: &[u8],
         _: &[u8],
-        _: &[[u8; 20]],
+        _: &[Fingerprint],
     ) -> std::result::Result<SignatureStatus, VerificationError> {
         self.verify_called.replace(true);
         Err(VerificationError::SignatureFromWrongRecipient)
@@ -257,7 +260,7 @@ impl Crypto for MockCrypto {
         }
     }
 
-    fn get_all_trust_items(&self) -> Result<HashMap<[u8; 20], OwnerTrustLevel>> {
+    fn get_all_trust_items(&self) -> Result<HashMap<Fingerprint, OwnerTrustLevel>> {
         Ok(HashMap::new())
     }
 
@@ -265,7 +268,7 @@ impl Crypto for MockCrypto {
         CryptoImpl::GpgMe
     }
 
-    fn own_fingerprint(&self) -> Option<[u8; 20]> {
+    fn own_fingerprint(&self) -> Option<Fingerprint> {
         None
     }
 }
@@ -278,9 +281,9 @@ pub fn recipient_alex() -> Recipient {
             post_comment: None,
         },
         key_id: "1D108E6C07CBC406".to_owned(),
-        fingerprint: Some(
+        fingerprint: Some(Fingerprint::V4(
             <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
-        ),
+        )),
         key_ring_status: KeyRingStatus::InKeyRing,
         trust_level: OwnerTrustLevel::Ultimate,
         not_usable: false,
@@ -294,9 +297,9 @@ pub fn recipient_alex_old() -> Recipient {
             post_comment: None,
         },
         key_id: "DF0C3D316B7312D5".to_owned(),
-        fingerprint: Some(
+        fingerprint: Some(Fingerprint::V4(
             <[u8; 20]>::from_hex("DB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5").unwrap(),
-        ),
+        )),
         key_ring_status: KeyRingStatus::InKeyRing,
         trust_level: OwnerTrustLevel::Ultimate,
         not_usable: false,
@@ -310,7 +313,9 @@ pub fn recipient_from_cert(cert: &Cert) -> Recipient {
             post_comment: None,
         },
         key_id: cert.fingerprint().to_hex(),
-        fingerprint: Some(<[u8; 20]>::from_hex(cert.fingerprint().to_hex()).unwrap()),
+        fingerprint: Some(Fingerprint::V4(
+            <[u8; 20]>::from_hex(cert.fingerprint().to_hex()).unwrap(),
+        )),
         key_ring_status: KeyRingStatus::InKeyRing,
         trust_level: OwnerTrustLevel::Ultimate,
         not_usable: false,
