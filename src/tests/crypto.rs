@@ -6,7 +6,7 @@ use tempfile::tempdir;
 
 use crate::crypto::Fingerprint;
 use crate::{
-    crypto::{Crypto, CryptoImpl, Sequoia, slice_to_fingerprint},
+    crypto::{Crypto, CryptoImpl, Sequoia},
     signature::Recipient,
 };
 
@@ -32,20 +32,20 @@ pub fn crypto_impl_display() {
 
 #[test]
 pub fn slice_to_20_bytes_failure() {
-    let input = [3; 16];
+    let input: [u8; 16] = [3; 16];
 
-    let result = slice_to_fingerprint(&input);
+    let result = TryInto::<Fingerprint>::try_into(input.as_slice());
 
     assert!(result.is_err());
 }
 
 #[test]
 pub fn slice_to_20_bytes_success() {
-    let input = [3; 20];
+    let input: &[u8] = &[3; 20];
 
-    let result = slice_to_fingerprint(&input).unwrap();
+    let result = input.try_into().unwrap();
 
-    assert_eq!(Fingerprint::V4(input), result);
+    assert_eq!(Fingerprint::V4([3; 20]), result);
 }
 
 #[test]
@@ -59,7 +59,7 @@ pub fn new_one_cert() {
         .generate()
         .unwrap();
 
-    let f = slice_to_fingerprint(cert.fingerprint().as_bytes()).unwrap();
+    let f = cert.fingerprint().as_bytes().try_into().unwrap();
 
     let p = dir.path().join("share").join("ripasso").join("keys");
     std::fs::create_dir_all(&p).unwrap();
@@ -227,7 +227,7 @@ pub fn sign_string_sequoia() {
         .generate()
         .unwrap();
 
-    let f = slice_to_fingerprint(cert.fingerprint().as_bytes()).unwrap();
+    let f = cert.fingerprint().as_bytes().try_into().unwrap();
 
     let mut c = Sequoia {
         user_key_id: f,
@@ -258,7 +258,7 @@ pub fn sign_then_verify_sequoia_with_signing_keys() {
         .generate()
         .unwrap();
 
-    let f = slice_to_fingerprint(cert.fingerprint().as_bytes()).unwrap();
+    let f = cert.fingerprint().as_bytes().try_into().unwrap();
 
     let mut c = Sequoia {
         user_key_id: f,
@@ -293,7 +293,7 @@ pub fn sign_then_verify_sequoia_with_v6_signing_keys() {
         .generate()
         .unwrap();
 
-    let f = slice_to_fingerprint(cert.fingerprint().as_bytes()).unwrap();
+    let f = cert.fingerprint().as_bytes().try_into().unwrap();
 
     let mut c = Sequoia {
         user_key_id: f,
@@ -326,7 +326,7 @@ pub fn sign_then_verify_sequoia_without_signing_keys() {
         .generate()
         .unwrap();
 
-    let f = slice_to_fingerprint(cert.fingerprint().as_bytes()).unwrap();
+    let f = cert.fingerprint().as_bytes().try_into().unwrap();
 
     let mut c = Sequoia {
         user_key_id: f,
@@ -359,7 +359,7 @@ pub fn encrypt_then_decrypt_sequoia() {
         .generate()
         .unwrap();
 
-    let f = slice_to_fingerprint(cert.fingerprint().as_bytes()).unwrap();
+    let f = cert.fingerprint().as_bytes().try_into().unwrap();
 
     let mut c = Sequoia {
         user_key_id: f,
@@ -408,7 +408,7 @@ pub fn encrypt_then_decrypt_sequoia_v6() {
 
     let cert = cert_v6();
 
-    let f = slice_to_fingerprint(cert.fingerprint().as_bytes()).unwrap();
+    let f = cert.fingerprint().as_bytes().try_into().unwrap();
 
     let mut c = Sequoia {
         user_key_id: f,

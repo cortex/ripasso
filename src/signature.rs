@@ -6,8 +6,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use hex::FromHex;
-
 use crate::crypto::{FindSigningFingerprintStrategy, Fingerprint};
 pub use crate::error::{Error, Result};
 
@@ -66,15 +64,7 @@ pub fn parse_signing_keys(
             )));
         }
 
-        if trimmed.len() == 40 {
-            signing_keys.push(Fingerprint::V4(<[u8; 20]>::from_hex(trimmed)?));
-        } else if trimmed.len() == 42 {
-            signing_keys.push(Fingerprint::V4(<[u8; 20]>::from_hex(&trimmed[2..])?));
-        } else if trimmed.len() == 64 {
-            signing_keys.push(Fingerprint::V6(<[u8; 32]>::from_hex(trimmed)?));
-        } else {
-            signing_keys.push(Fingerprint::V6(<[u8; 32]>::from_hex(&trimmed[2..])?));
-        }
+        signing_keys.push(trimmed.as_str().try_into()?);
     }
     Ok(signing_keys)
 }

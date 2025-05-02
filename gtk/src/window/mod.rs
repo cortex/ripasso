@@ -13,9 +13,6 @@ use gtk::{
     AboutDialog, CustomFilter, Dialog, DialogFlags, Entry, FilterListModel, Label, ListBox,
     ListBoxRow, NoSelection, ResponseType, SelectionMode, gio, glib, glib::BindingFlags, pango,
 };
-use hex::FromHex;
-use ripasso::crypto::Fingerprint;
-use ripasso::pass::Error;
 use ripasso::{crypto::CryptoImpl, pass::PasswordStore};
 
 glib::wrapper! {
@@ -582,17 +579,7 @@ fn get_stores(
 
                 let own_fingerprint = store.get("own_fingerprint");
                 let own_fingerprint = own_fingerprint
-                    .map(|k| {
-                        k.clone().into_string().map(|fingerprint| {
-                            if fingerprint.len() == 40 || fingerprint.len() == 42 {
-                                Ok(Fingerprint::from(<[u8; 20]>::from_hex(fingerprint)?))
-                            } else if fingerprint.len() == 64 || fingerprint.len() == 66 {
-                                Ok(Fingerprint::from(<[u8; 32]>::from_hex(fingerprint)?))
-                            } else {
-                                Err(Error::Generic("unable to parse fingerprint"))
-                            }
-                        })
-                    })
+                    .map(|k| k.clone().into_string().map(|fp| fp.as_str().try_into()))
                     .transpose()?
                     .transpose()?;
 

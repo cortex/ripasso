@@ -12,12 +12,9 @@ use std::{env, fs::File, path::PathBuf};
 use tempfile::tempdir;
 
 use super::*;
-use crate::{
-    crypto::slice_to_fingerprint,
-    test_helpers::{
-        MockCrypto, UnpackedDir, count_recipients, generate_sequoia_cert,
-        generate_sequoia_cert_without_private_key,
-    },
+use crate::test_helpers::{
+    MockCrypto, UnpackedDir, count_recipients, generate_sequoia_cert,
+    generate_sequoia_cert_without_private_key,
 };
 
 impl PartialEq for Error {
@@ -40,7 +37,7 @@ pub fn setup_store(
     ];
     let mut key_ring = HashMap::new();
     for u in &users {
-        key_ring.insert(slice_to_fingerprint(u.fingerprint().as_bytes())?, u.clone());
+        key_ring.insert(u.fingerprint().as_bytes().try_into()?, u.clone());
     }
 
     let store = PasswordStore {
@@ -50,7 +47,7 @@ pub fn setup_store(
         passwords: [].to_vec(),
         style_file: None,
         crypto: Box::new(Sequoia::from_values(
-            slice_to_fingerprint(users[0].fingerprint().as_bytes())?,
+            users[0].fingerprint().as_bytes().try_into()?,
             key_ring,
             user_home,
         )),
@@ -1875,7 +1872,7 @@ fn test_verify_gpg_id_files_untrusted_key_in_keyring() {
         .add_signing_subkey()
         .generate()
         .unwrap();
-    let sofp = slice_to_fingerprint(store_owner.fingerprint().as_bytes()).unwrap();
+    let sofp = store_owner.fingerprint().as_bytes().try_into().unwrap();
     let (unrelated_user, _) = CertBuilder::new()
         .add_userid("unrelated_user@example.org")
         .add_signing_subkey()

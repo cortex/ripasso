@@ -114,9 +114,12 @@ pub enum FindSigningFingerprintStrategy {
     GPG,
 }
 
+/// Contains a full pgp fingerprint of a certificate.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
 pub enum Fingerprint {
+    /// A RFC4880 style fingerprint.
     V4([u8; 20]),
+    /// A RFC9580 style fingerprint.
     V6([u8; 32]),
 }
 
@@ -129,6 +132,42 @@ impl From<[u8; 32]> for Fingerprint {
 impl From<[u8; 20]> for Fingerprint {
     fn from(value: [u8; 20]) -> Self {
         Fingerprint::V4(value)
+    }
+}
+
+/// Intended for usage with slices containing a v4 or v6 fingerprint.
+impl TryFrom<&[u8]> for Fingerprint {
+    type Error = Error;
+
+    fn try_from(b: &[u8]) -> std::result::Result<Self, Self::Error> {
+        match b.len() {
+            20 => Ok(Fingerprint::V4(
+                b.try_into().expect("slice with incorrect length"),
+            )),
+            32 => Ok(Fingerprint::V6(
+                b.try_into().expect("slice with incorrect length"),
+            )),
+            _ => Err(Error::Generic("slice isn't 20 or 32 bytes")),
+        }
+    }
+}
+
+/// Intended for usage with string containing a v4 or v6 fingerprint in hex.
+impl TryFrom<&str> for Fingerprint {
+    type Error = Error;
+
+    fn try_from(key: &str) -> std::result::Result<Self, Self::Error> {
+        if key.len() == 40 {
+            Ok(Fingerprint::from(<[u8; 20]>::from_hex(key)?))
+        } else if key.len() == 42 {
+            Ok(Fingerprint::from(<[u8; 20]>::from_hex(&key[2..])?))
+        } else if key.len() == 64 {
+            Ok(Fingerprint::from(<[u8; 32]>::from_hex(key)?))
+        } else if key.len() == 66 {
+            Ok(Fingerprint::from(<[u8; 32]>::from_hex(&key[2..])?))
+        } else {
+            Err(Error::Generic("unable to parse fingerprint"))
+        }
     }
 }
 
@@ -628,19 +667,6 @@ impl DecryptionHelper for Helper<'_> {
     }
 }
 
-/// Intended for usage with slices containing a v4 fingerprint.
-pub fn slice_to_fingerprint(b: &[u8]) -> Result<Fingerprint> {
-    match b.len() {
-        20 => Ok(Fingerprint::V4(
-            b.try_into().expect("slice with incorrect length"),
-        )),
-        32 => Ok(Fingerprint::V6(
-            b.try_into().expect("slice with incorrect length"),
-        )),
-        _ => Err(Error::Generic("slice isn't 20 bytes")),
-    }
-}
-
 /// A pgp key produced with sequoia.
 pub struct SequoiaKey {
     /// The pgp key
@@ -656,7 +682,7 @@ impl Key for SequoiaKey {
     }
 
     fn fingerprint(&self) -> Result<Fingerprint> {
-        slice_to_fingerprint(self.cert.fingerprint().as_bytes())
+        self.cert.fingerprint().as_bytes().try_into()
     }
 
     fn is_not_usable(&self) -> bool {
@@ -698,7 +724,7 @@ impl Sequoia {
                     let data = fs::read(path)?;
                     let cert = Cert::from_bytes(&data)?;
 
-                    let fingerprint = slice_to_fingerprint(cert.fingerprint().as_bytes())?;
+                    let fingerprint = cert.fingerprint().as_bytes().try_into()?;
                     key_ring.insert(fingerprint, Arc::new(cert));
                 }
             }
@@ -770,7 +796,7 @@ impl Sequoia {
     fn write_cert(&mut self, cert_str: &str, keys_dir: &Path) -> Result<String> {
         let cert = Cert::from_bytes(cert_str.as_bytes())?;
 
-        let fingerprint = slice_to_fingerprint(cert.fingerprint().as_bytes())?;
+        let fingerprint = cert.fingerprint().as_bytes().try_into()?;
 
         let mut file = File::create(keys_dir.join(hex::encode(fingerprint)))?;
 
