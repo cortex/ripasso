@@ -6,16 +6,14 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use crate::{collection_object::CollectionObject, password_object::PasswordObject};
 use adw::{ActionRow, NavigationDirection, prelude::*, subclass::prelude::*};
 use glib::{Object, clone};
 use gtk::{
     AboutDialog, CustomFilter, Dialog, DialogFlags, Entry, FilterListModel, Label, ListBox,
     ListBoxRow, NoSelection, ResponseType, SelectionMode, gio, glib, glib::BindingFlags, pango,
 };
-use hex::FromHex;
 use ripasso::{crypto::CryptoImpl, pass::PasswordStore};
-
-use crate::{collection_object::CollectionObject, password_object::PasswordObject};
 
 glib::wrapper! {
     pub struct Window(ObjectSubclass<imp::Window>)
@@ -580,13 +578,10 @@ fn get_stores(
                 }?;
 
                 let own_fingerprint = store.get("own_fingerprint");
-                let own_fingerprint = match own_fingerprint {
-                    None => None,
-                    Some(k) => match k.clone().into_string() {
-                        Err(_) => None,
-                        Ok(key) => <[u8; 20]>::from_hex(key).ok(),
-                    },
-                };
+                let own_fingerprint = own_fingerprint
+                    .map(|k| k.clone().into_string().map(|fp| fp.as_str().try_into()))
+                    .transpose()?
+                    .transpose()?;
 
                 final_stores.push(PasswordStore::new(
                     store_name,

@@ -4,8 +4,9 @@ use hex::FromHex;
 use sequoia_openpgp::{Cert, cert::CertBuilder, parse::Parse, serialize::Serialize};
 use tempfile::tempdir;
 
+use crate::crypto::Fingerprint;
 use crate::{
-    crypto::{Crypto, CryptoImpl, Sequoia, slice_to_20_bytes},
+    crypto::{Crypto, CryptoImpl, Sequoia},
     signature::Recipient,
 };
 
@@ -31,20 +32,20 @@ pub fn crypto_impl_display() {
 
 #[test]
 pub fn slice_to_20_bytes_failure() {
-    let input = [3; 16];
+    let input: [u8; 16] = [3; 16];
 
-    let result = slice_to_20_bytes(&input);
+    let result = TryInto::<Fingerprint>::try_into(input.as_slice());
 
     assert!(result.is_err());
 }
 
 #[test]
 pub fn slice_to_20_bytes_success() {
-    let input = [3; 20];
+    let input: &[u8] = &[3; 20];
 
-    let result = slice_to_20_bytes(&input).unwrap();
+    let result = input.try_into().unwrap();
 
-    assert_eq!(input, result);
+    assert_eq!(Fingerprint::V4([3; 20]), result);
 }
 
 #[test]
@@ -58,7 +59,7 @@ pub fn new_one_cert() {
         .generate()
         .unwrap();
 
-    let f = slice_to_20_bytes(cert.fingerprint().as_bytes()).unwrap();
+    let f = cert.fingerprint().as_bytes().try_into().unwrap();
 
     let p = dir.path().join("share").join("ripasso").join("keys");
     std::fs::create_dir_all(&p).unwrap();
@@ -141,11 +142,11 @@ HRCObAfLxAb07QD9FxvNNG1SDh3jzbvQZdL59p1ehgEniMmzGSALeBYbdtQBAILa
     )
 }
 
-fn fingerprint() -> [u8; 20] {
-    [
+fn fingerprint() -> Fingerprint {
+    Fingerprint::V4([
         0x7E, 0x06, 0x80, 0x70, 0xD5, 0xEF, 0x79, 0x4B, 0x00, 0xC8, 0xA9, 0xD9, 0x1D, 0x10, 0x8E,
         0x6C, 0x07, 0xCB, 0xC4, 0x06,
-    ]
+    ])
 }
 
 #[test]
@@ -174,7 +175,9 @@ pub fn verify_sign_sequoia_git_commit() {
     let result = c.verify_sign(
         &data,
         &sig,
-        &[<[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap()],
+        &[Fingerprint::V4(
+            <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+        )],
     );
 
     assert!(result.is_ok());
@@ -206,7 +209,9 @@ pub fn verify_sign_sequoia_git_commit_invalid_signing_key() {
     let result = c.verify_sign(
         &data,
         &sig,
-        &[<[u8; 20]>::from_hex("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").unwrap()],
+        &[Fingerprint::V4(
+            <[u8; 20]>::from_hex("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").unwrap(),
+        )],
     );
 
     assert!(result.is_err());
@@ -222,7 +227,7 @@ pub fn sign_string_sequoia() {
         .generate()
         .unwrap();
 
-    let f = slice_to_20_bytes(cert.fingerprint().as_bytes()).unwrap();
+    let f = cert.fingerprint().as_bytes().try_into().unwrap();
 
     let mut c = Sequoia {
         user_key_id: f,
@@ -253,7 +258,42 @@ pub fn sign_then_verify_sequoia_with_signing_keys() {
         .generate()
         .unwrap();
 
-    let f = slice_to_20_bytes(cert.fingerprint().as_bytes()).unwrap();
+    let f = cert.fingerprint().as_bytes().try_into().unwrap();
+
+    let mut c = Sequoia {
+        user_key_id: f,
+        key_ring: HashMap::new(),
+        user_home: user_home.path().to_path_buf(),
+    };
+
+    c.key_ring.insert(f, Arc::new(cert));
+
+    let sig = c
+        .sign_string(
+            "test",
+            &[],
+            &crate::crypto::FindSigningFingerprintStrategy::GPG,
+        )
+        .unwrap();
+
+    let result = c.verify_sign("test".as_bytes(), sig.as_bytes(), &[f]);
+
+    assert!(result.is_ok());
+}
+
+#[test]
+pub fn sign_then_verify_sequoia_with_v6_signing_keys() {
+    let user_home = tempdir().unwrap();
+
+    let (cert, _) = CertBuilder::new()
+        .set_profile(sequoia_openpgp::Profile::RFC9580)
+        .unwrap()
+        .add_userid("someone@example.org")
+        .add_signing_subkey()
+        .generate()
+        .unwrap();
+
+    let f = cert.fingerprint().as_bytes().try_into().unwrap();
 
     let mut c = Sequoia {
         user_key_id: f,
@@ -286,7 +326,7 @@ pub fn sign_then_verify_sequoia_without_signing_keys() {
         .generate()
         .unwrap();
 
-    let f = slice_to_20_bytes(cert.fingerprint().as_bytes()).unwrap();
+    let f = cert.fingerprint().as_bytes().try_into().unwrap();
 
     let mut c = Sequoia {
         user_key_id: f,
@@ -319,7 +359,7 @@ pub fn encrypt_then_decrypt_sequoia() {
         .generate()
         .unwrap();
 
-    let f = slice_to_20_bytes(cert.fingerprint().as_bytes()).unwrap();
+    let f = cert.fingerprint().as_bytes().try_into().unwrap();
 
     let mut c = Sequoia {
         user_key_id: f,
@@ -328,6 +368,55 @@ pub fn encrypt_then_decrypt_sequoia() {
     };
 
     c.key_ring.insert(f, Arc::new(cert));
+
+    let r = Recipient::from(&hex::encode(f), &[], None, &c).unwrap();
+
+    let result = c.encrypt_string("test", &[r]).unwrap();
+
+    let result = c.decrypt_string(&result).unwrap();
+
+    assert_eq!("test", result);
+}
+
+fn cert_v6() -> Arc<Cert> {
+    let (cert, _rev) = CertBuilder::new()
+        .set_profile(sequoia_openpgp::Profile::RFC9580)
+        .unwrap()
+        .add_userid("someone@example.org")
+        .add_signing_subkey()
+        .add_transport_encryption_subkey()
+        .add_storage_encryption_subkey()
+        .generate()
+        .unwrap();
+
+    Arc::new(cert)
+}
+
+fn fingerprint_from_cert(cert: Arc<Cert>) -> [u8; 32] {
+    <[u8; 32]>::try_from(cert.fingerprint().as_bytes()).unwrap()
+}
+
+#[test]
+fn test_fingerprint_from_cert() {
+    let cert = cert_v6();
+    assert_eq!(32, fingerprint_from_cert(cert).iter().len());
+}
+
+#[test]
+pub fn encrypt_then_decrypt_sequoia_v6() {
+    let user_home = tempdir().unwrap();
+
+    let cert = cert_v6();
+
+    let f = cert.fingerprint().as_bytes().try_into().unwrap();
+
+    let mut c = Sequoia {
+        user_key_id: f,
+        key_ring: HashMap::new(),
+        user_home: user_home.path().to_path_buf(),
+    };
+
+    c.key_ring.insert(f, cert);
 
     let r = Recipient::from(&hex::encode(f), &[], None, &c).unwrap();
 

@@ -29,6 +29,7 @@ use config::Config;
 use totp_rs::TOTP;
 use zeroize::Zeroize;
 
+use crate::crypto::Fingerprint;
 use crate::{
     crypto::{Crypto, CryptoImpl, GpgMe, Sequoia, VerificationError},
     git::{
@@ -52,7 +53,7 @@ pub struct PasswordStore {
     root: PathBuf,
     /// A list of fingerprints of keys that are allowed to sign the .gpg-id file, obtained from the environmental
     /// variable `PASSWORD_STORE_SIGNING_KEY` or from the configuration file
-    valid_gpg_signing_keys: Vec<[u8; 20]>,
+    valid_gpg_signing_keys: Vec<Fingerprint>,
     /// a list of password files with metadata
     pub passwords: Vec<PasswordEntry>,
     /// A file that describes the style of the store
@@ -89,7 +90,7 @@ impl PasswordStore {
         home: &Option<PathBuf>,
         style_file: &Option<PathBuf>,
         crypto_impl: &CryptoImpl,
-        own_fingerprint: &Option<[u8; 20]>,
+        own_fingerprint: &Option<Fingerprint>,
     ) -> Result<Self> {
         let pass_home = password_dir_raw(password_store_dir, home);
         if !pass_home.exists() {
@@ -224,7 +225,7 @@ impl PasswordStore {
     }
 
     /// Returns a vec with the keys that are allowed to sign the .gpg-id file
-    pub fn get_valid_gpg_signing_keys(&self) -> &Vec<[u8; 20]> {
+    pub fn get_valid_gpg_signing_keys(&self) -> &Vec<Fingerprint> {
         &self.valid_gpg_signing_keys
     }
 
