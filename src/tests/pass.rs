@@ -129,6 +129,29 @@ fn populate_password_list_small_repo() -> Result<()> {
 }
 
 #[test]
+fn test_nordic_letters_in_filenames() -> Result<()> {
+    let dir = UnpackedDir::new("test_nordic_letters_in_filenames")?;
+
+    let store = PasswordStore::new(
+        "default",
+        &Some(dir.dir()),
+        &None,
+        &Some(dir.dir()),
+        &None,
+        &CryptoImpl::GpgMe,
+        &None,
+    )?;
+    let results = store.all_passwords()?;
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].name, "test_åæøÅÆØ");
+    assert_eq!(results[0].committed_by, Some("Alexander Kjäll".to_owned()));
+    assert!(results[0].signature_status.is_none());
+    assert_eq!(results[0].is_in_git, RepositoryStatus::InRepo);
+    Ok(())
+}
+
+#[test]
 fn populate_password_list_repo_with_deleted_files() -> Result<()> {
     let dir = UnpackedDir::new("populate_password_list_repo_with_deleted_files")?;
 
