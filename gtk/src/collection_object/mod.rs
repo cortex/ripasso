@@ -29,7 +29,7 @@ impl CollectionObject {
         store: Arc<Mutex<PasswordStore>>,
         user_config_dir: &Path,
     ) -> Self {
-        let co = Object::builder()
+        Object::builder()
             .property("title", title)
             .property("passwords", passwords)
             .property("store", PasswordStoreBoxed(store))
@@ -39,9 +39,7 @@ impl CollectionObject {
                     .to_str()
                     .expect("can't have non-utf8 in path"),
             )
-            .build();
-
-        co
+            .build()
     }
 
     pub fn passwords(&self) -> gio::ListStore {

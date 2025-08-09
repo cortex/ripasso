@@ -1312,10 +1312,10 @@ fn get_translation_catalog() -> gettext::Catalog {
 
             if let Ok(langid) = langid_res {
                 let file = std::fs::File::open(format!("{}/{}.mo", loc, langid.language));
-                if let Ok(file) = file {
-                    if let Ok(catalog) = gettext::Catalog::parse(file) {
-                        return catalog;
-                    }
+                if let Ok(file) = file
+                    && let Ok(catalog) = gettext::Catalog::parse(file)
+                {
+                    return catalog;
                 }
             }
         }
@@ -1329,10 +1329,10 @@ fn get_translation_catalog() -> gettext::Catalog {
                 "/usr/share/locale/{}/LC_MESSAGES/ripasso-cursive.mo",
                 langid.language
             ));
-            if let Ok(file) = file {
-                if let Ok(catalog) = gettext::Catalog::parse(file) {
-                    return catalog;
-                }
+            if let Ok(file) = file
+                && let Ok(catalog) = gettext::Catalog::parse(file)
+            {
+                return catalog;
             }
         }
     }

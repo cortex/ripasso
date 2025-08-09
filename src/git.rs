@@ -75,7 +75,7 @@ pub fn commit(
     }
 }
 
-pub fn find_last_commit(repo: &Repository) -> Result<git2::Commit> {
+pub fn find_last_commit(repo: &Repository) -> Result<git2::Commit<'_>> {
     let obj = repo.head()?.resolve()?.peel(git2::ObjectType::Commit)?;
     obj.into_commit()
         .map_err(|_| Error::Generic("Couldn't find commit"))
@@ -205,7 +205,7 @@ pub fn move_and_commit(
 /// find the origin of the git repo, with the following strategy:
 /// find the branch that HEAD points to, and read the remote configured for that branch
 /// returns the remote and the name of the local branch
-fn find_origin(repo: &Repository) -> Result<(git2::Remote, String)> {
+fn find_origin(repo: &Repository) -> Result<(git2::Remote<'_>, String)> {
     for branch in repo.branches(Some(git2::BranchType::Local))? {
         let b = branch?.0;
         if b.is_head() {
