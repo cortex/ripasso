@@ -355,12 +355,12 @@ impl PasswordStore {
             if path_iter.peek().is_some() {
                 path.push(p);
                 let c_file_res = fs::canonicalize(path.as_path());
-                if let Ok(c_file) = c_file_res {
-                    if !c_file.starts_with(c_path.as_path()) {
-                        return Err(Error::Generic(
-                            "trying to write outside of password store directory",
-                        ));
-                    }
+                if let Ok(c_file) = c_file_res
+                    && !c_file.starts_with(c_path.as_path())
+                {
+                    return Err(Error::Generic(
+                        "trying to write outside of password store directory",
+                    ));
                 }
                 if !path.exists() {
                     fs::create_dir(&path)?;
@@ -452,12 +452,12 @@ impl PasswordStore {
             return true;
         }
 
-        if let Ok(repo) = self.repo() {
-            if let Ok(config) = repo.config() {
-                let user_name = config.get_string("user.name");
-                if user_name.is_ok() {
-                    return true;
-                }
+        if let Ok(repo) = self.repo()
+            && let Ok(config) = repo.config()
+        {
+            let user_name = config.get_string("user.name");
+            if user_name.is_ok() {
+                return true;
             }
         }
 

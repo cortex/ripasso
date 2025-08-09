@@ -477,10 +477,10 @@ impl VerificationHelper for Helper<'_> {
         }
 
         for layer in structure {
-            if let MessageLayer::SignatureGroup { results } = layer {
-                if results.iter().any(std::result::Result::is_ok) {
-                    return Ok(());
-                }
+            if let MessageLayer::SignatureGroup { results } = layer
+                && results.iter().any(std::result::Result::is_ok)
+            {
+                return Ok(());
             }
         }
         Err(anyhow::anyhow!("No valid signature"))
