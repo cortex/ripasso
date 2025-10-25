@@ -36,6 +36,7 @@ use cursive::{
 use hex::FromHex;
 use pass::Result;
 use ripasso::{
+    password_generator::password_generator,
     crypto::CryptoImpl,
     git::{pull, push},
     pass,
@@ -443,7 +444,7 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
 
         })
         .button(CATALOG.gettext("Generate"), move |s| {
-            let mut new_password = ripasso::words::generate_password(6);
+            let mut new_password = password_generator(20, 0);
             s.call_on_name("editbox", |e: &mut TextArea| {
                 e.set_content(&new_password);
             });
@@ -695,7 +696,7 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
     let d = Dialog::around(fields)
         .title(CATALOG.gettext("Add new password"))
         .button(CATALOG.gettext("Generate"), move |s| {
-            let new_password = ripasso::words::generate_password(6);
+            let new_password = password_generator(20, 1);
             s.call_on_name("new_password_input", |e: &mut EditView| {
                 e.set_content(new_password);
             });
@@ -2309,6 +2310,30 @@ fn main() -> Result<()> {
                     pgp_pull(ui, store.clone(), &xdg_data_home);
                 }
             })
+
+            .leaf(CATALOG.gettext("Logout"), {
+                let store = store.clone();
+                move |ui: &mut Cursive| {
+                    create(ui, store.clone());
+                }
+            })
+
+            .leaf(CATALOG.gettext("Edit Notes"), {
+                let store = store.clone();
+                move |ui: &mut Cursive| {
+                    create(ui, store.clone());
+                }
+            })
+            
+            .leaf(CATALOG.gettext("Edit Username"), {
+                let store = store.clone();
+                move |ui: &mut Cursive| {
+                    create(ui, store.clone());
+                }
+            }) 
+
+                
+
             .leaf(CATALOG.gettext("Import PGP Certificate from text"), {
                 let store = store.clone();
                 move |ui: &mut Cursive| {
