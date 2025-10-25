@@ -67,7 +67,7 @@ fn get_password_dir_no_env() {
         env::remove_var("PASSWORD_STORE_DIR");
     }
 
-    let path = password_dir(&None, &Some(dir.into_path()));
+    let path = password_dir(&None, &Some(dir.keep()));
 
     assert_eq!(
         path.unwrap_err(),
@@ -339,7 +339,7 @@ fn home_exists_missing_home_env() {
 #[test]
 fn home_exists_home_dir_without_config_dir() {
     let dir = tempdir().unwrap();
-    let result = home_exists(&Some(dir.into_path()), &Config::default());
+    let result = home_exists(&Some(dir.keep()), &Config::default());
 
     assert!(!result);
 }
@@ -348,7 +348,7 @@ fn home_exists_home_dir_without_config_dir() {
 fn home_exists_home_dir_with_file_instead_of_dir() -> Result<()> {
     let dir = tempdir()?;
     File::create(dir.path().join(".password-store"))?;
-    let result = home_exists(&Some(dir.into_path()), &Config::default());
+    let result = home_exists(&Some(dir.keep()), &Config::default());
 
     assert!(!result);
 
@@ -359,7 +359,7 @@ fn home_exists_home_dir_with_file_instead_of_dir() -> Result<()> {
 fn home_exists_home_dir_with_config_dir() -> Result<()> {
     let dir = tempdir()?;
     fs::create_dir(dir.path().join(".password-store"))?;
-    let result = home_exists(&Some(dir.into_path()), &Config::default());
+    let result = home_exists(&Some(dir.keep()), &Config::default());
 
     assert!(result);
 
@@ -492,7 +492,7 @@ fn file_settings_simple_file() -> Result<()> {
     let mut settings = ConfigBuilder::default();
     settings = config::ConfigBuilder::<config::builder::DefaultState>::add_source(
         settings,
-        file_settings(&xdg_config_file_location(&Some(dir.into_path()), &None)?),
+        file_settings(&xdg_config_file_location(&Some(dir.keep()), &None)?),
     );
     let settings = settings.build()?;
 
@@ -527,7 +527,7 @@ fn file_settings_file_in_xdg_config_home() -> Result<()> {
     settings = config::ConfigBuilder::<config::builder::DefaultState>::add_source(
         settings,
         file_settings(&xdg_config_file_location(
-            &Some(dir.into_path()),
+            &Some(dir.keep()),
             &Some(dir2.path().join(".random_config")),
         )?),
     );
@@ -749,7 +749,7 @@ fn read_config_default_path_in_env_var() -> Result<()> {
     let (settings, _) = read_config(
         &Some("/tmp/t2".to_owned()),
         &None,
-        &Some(dir.into_path()),
+        &Some(dir.keep()),
         &None,
     )?;
 
@@ -791,7 +791,7 @@ fn read_config_default_path_in_env_var_with_pgp_setting() -> Result<()> {
     let (settings, _) = read_config(
         &Some("/tmp/t2".to_owned()),
         &None,
-        &Some(dir.into_path()),
+        &Some(dir.keep()),
         &None,
     )?;
 
