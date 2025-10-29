@@ -2308,24 +2308,6 @@ fn main() -> Result<()> {
                     pgp_pull(ui, store.clone(), &xdg_data_home);
                 }
             })
-            .leaf(CATALOG.gettext("Logout"), {
-                let store = store.clone();
-                move |ui: &mut Cursive| {
-                    create(ui, store.clone());
-                }
-            })
-            .leaf(CATALOG.gettext("Edit Notes"), {
-                let store = store.clone();
-                move |ui: &mut Cursive| {
-                    create(ui, store.clone());
-                }
-            })
-            .leaf(CATALOG.gettext("Edit Username"), {
-                let store = store.clone();
-                move |ui: &mut Cursive| {
-                    create(ui, store.clone());
-                }
-            }) 
             .leaf(CATALOG.gettext("Import PGP Certificate from text"), {
                 let store = store.clone();
                 move |ui: &mut Cursive| {
