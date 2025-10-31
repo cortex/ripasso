@@ -39,10 +39,12 @@
           export OPENSSL_LIB_DIR=${opensslOut}/lib
           export OPENSSL_INCLUDE_DIR=${opensslDev}/include
 
+          echo "🔧 Environment configured:"
           echo "  LIBCLANG_PATH         = $LIBCLANG_PATH"
           echo "  LD_LIBRARY_PATH       = $LD_LIBRARY_PATH"
           echo "  OPENSSL_LIB_DIR       = $OPENSSL_LIB_DIR"
           echo "  OPENSSL_INCLUDE_DIR   = $OPENSSL_INCLUDE_DIR"
+          echo "🚀 Welcome to the Rust dev shell"
         '';
       };
     };

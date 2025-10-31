@@ -14,6 +14,8 @@ pub mod pass;
 pub(crate) mod signature;
 /// Generates ASCII and non ASCII passwords
 pub mod password_generator;
+/// Generates passphrases
+pub mod passphrase_generator;
 #[cfg(test)]
 #[path = "tests/test_helpers.rs"]
 pub mod test_helpers;

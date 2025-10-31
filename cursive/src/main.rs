@@ -36,6 +36,7 @@ use cursive::{
 use pass::Result;
 use ripasso::{
     password_generator::password_generator,
+    passphrase_generator::passphrase_generator,
     crypto::CryptoImpl,
     git::{pull, push},
     pass,
@@ -442,8 +443,23 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
             new_secret.zeroize();
 
         })
-        .button(CATALOG.gettext("Generate"), move |s| {
+        .button(CATALOG.gettext("Generate Password"), move |s| {
             let mut new_password = password_generator(20, 0);
+            s.call_on_name("editbox", |e: &mut TextArea| {
+                e.set_content(&new_password);
+            });
+            new_password.zeroize()
+        })
+
+
+        .button(CATALOG.gettext("Generate Passphrase"), move |s| {
+            let mut new_password = match passphrase_generator(8) {
+                Ok(words) => words.join(" "),
+                Err(err) => {
+                    eprintln!("Error generating passphrase: {}", err);
+                    return;
+                }
+            };
             s.call_on_name("editbox", |e: &mut TextArea| {
                 e.set_content(&new_password);
             });
@@ -694,8 +710,20 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
 
     let d = Dialog::around(fields)
         .title(CATALOG.gettext("Add new password"))
-        .button(CATALOG.gettext("Generate"), move |s| {
-            let new_password = password_generator(20, 1);
+        .button(CATALOG.gettext("Generate Password"), move |s| {
+            let new_password = ripasso::password_generator::password_generator(20, 1);
+            s.call_on_name("new_password_input", |e: &mut EditView| {
+                e.set_content(new_password);
+            });
+        })
+        .button(CATALOG.gettext("Generate Passphrase"), move |s| {
+            let new_password = match ripasso::passphrase_generator::passphrase_generator(10) {
+                Ok(words) => words.join(" "),
+                Err(err) => {
+                    eprintln!("Error generating passphrase: {}", err);
+                    "error".to_string()
+                }
+            };
             s.call_on_name("new_password_input", |e: &mut EditView| {
                 e.set_content(new_password);
             });
@@ -715,7 +743,6 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
 
     ui.add_layer(ev);
 }
-
 fn delete_recipient(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
     let mut l = ui
         .find_name::<SelectView<Option<(PathBuf, Recipient)>>>("recipients")
