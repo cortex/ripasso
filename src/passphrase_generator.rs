@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::{self, BufRead};
-use rand::seq::SliceRandom; // Add rand = "0.8" (or latest) in Cargo.toml
+use rand::seq::SliceRandom;
 
 pub fn passphrase_generator(wordcount: i32) -> io::Result<Vec<String>> {
     let filename = "share/wordlists/eff_large.wordlist";
