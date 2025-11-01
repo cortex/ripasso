@@ -454,7 +454,7 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
 
 
         .button(CATALOG.gettext("Generate Passphrase"), move |s| {
-            let mut new_password = match passphrase_generator(8) {
+            let mut new_password = match passphrase_generator(6) {
                 Ok(words) => words.join(" "),
                 Err(err) => {
                     eprintln!("Error generating passphrase: {}", err);
@@ -712,13 +712,13 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
     let d = Dialog::around(fields)
         .title(CATALOG.gettext("Add new password"))
         .button(CATALOG.gettext("Generate Password"), move |s| {
-            let new_password = ripasso::password_generator::password_generator(20, 1);
+            let new_password = ripasso::password_generator::password_generator(20, 0);
             s.call_on_name("new_password_input", |e: &mut EditView| {
                 e.set_content(new_password);
             });
         })
         .button(CATALOG.gettext("Generate Passphrase"), move |s| {
-            let new_password = match ripasso::passphrase_generator::passphrase_generator(10) {
+            let new_password = match ripasso::passphrase_generator::passphrase_generator(6) {
                 Ok(words) => words.join(" "),
                 Err(err) => {
                     eprintln!("Error generating passphrase: {}", err);
