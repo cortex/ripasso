@@ -7,7 +7,6 @@ pub fn passphrase_generator(wordcount: i32) -> io::Result<Vec<String>> {
     let file = File::open(filename)?;
     let reader = io::BufReader::new(file);
 
-
     let words: Vec<String> = reader
         .lines()
         .map_while(Result::ok)
@@ -33,5 +32,3 @@ pub fn passphrase_generator(wordcount: i32) -> io::Result<Vec<String>> {
 
     Ok(selected)
 }
-
-

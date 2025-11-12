@@ -10,12 +10,12 @@ pub mod git;
 /// This is the library part of ripasso, it implements the functions needed to manipulate a pass
 /// directory.
 pub mod pass;
-/// All functions and structs related to handling the identity and signing of things
-pub(crate) mod signature;
-/// Generates ASCII and non ASCII passwords
-pub mod password_generator;
 /// Generates passphrases
 pub mod passphrase_generator;
+/// Generates ASCII and non ASCII passwords
+pub mod password_generator;
+/// All functions and structs related to handling the identity and signing of things
+pub(crate) mod signature;
 #[cfg(test)]
 #[path = "tests/test_helpers.rs"]
 pub mod test_helpers;
