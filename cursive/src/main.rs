@@ -456,7 +456,7 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
             let mut new_password = match passphrase_generator(6) {
                 Ok(words) => words.join(" "),
                 Err(err) => {
-                    helpers::errorbox(s, &err);
+                    helpers::errorbox(s, &ripasso::pass::Error::from(err));
                     return;
                 }
             };
