@@ -35,14 +35,14 @@ use cursive::{
 };
 use pass::Result;
 use ripasso::{
+    password_generator::password_generator,
+    passphrase_generator::passphrase_generator,
     crypto::CryptoImpl,
     git::{pull, push},
     pass,
     pass::{
         OwnerTrustLevel, PasswordStore, Recipient, SignatureStatus, all_recipients_from_stores,
     },
-    passphrase_generator::passphrase_generator,
-    password_generator::password_generator,
 };
 use unic_langid::LanguageIdentifier;
 
@@ -456,8 +456,8 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
             let mut new_password = match passphrase_generator(6) {
                 Ok(words) => words.join(" "),
                 Err(err) => {
-                    helpers::errorbox(s, &ripasso::pass::Error::from(err));
-                        return;
+                    helpers::errorbox(s, &err);
+                    return;
                 }
             };
             s.call_on_name("editbox", |e: &mut TextArea| {
@@ -720,8 +720,8 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
             let new_password = match ripasso::passphrase_generator::passphrase_generator(6) {
                 Ok(words) => words.join(" "),
                 Err(err) => {
-                    eprintln!("Error generating passphrase: {}", err);
-                    "error".to_string()
+                    helpers::errorbox(s, &ripasso::pass::Error::from(err));
+                        return;
                 }
             };
             s.call_on_name("new_password_input", |e: &mut EditView| {
