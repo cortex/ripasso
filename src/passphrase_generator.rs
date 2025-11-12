@@ -10,7 +10,7 @@ pub fn passphrase_generator(wordcount: i32) -> io::Result<Vec<String>> {
 
     let words: Vec<String> = reader
         .lines()
-        .filter_map(Result::ok)
+        .map_while(Result::ok)
         .map(|line| line.trim().to_string())
         .filter(|line| !line.is_empty())
         .collect();
