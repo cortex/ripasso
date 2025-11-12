@@ -744,6 +744,7 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
 
     ui.add_layer(ev);
 }
+
 fn delete_recipient(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
     let mut l = ui
         .find_name::<SelectView<Option<(PathBuf, Recipient)>>>("recipients")
