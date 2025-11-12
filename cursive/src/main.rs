@@ -457,8 +457,8 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
             let mut new_password = match passphrase_generator(6) {
                 Ok(words) => words.join(" "),
                 Err(err) => {
-                    eprintln!("Error generating passphrase: {}", err);
-                    return;
+                    helpers::errorbox(s, &ripasso::pass::Error::from(err));
+                        return;
                 }
             };
             s.call_on_name("editbox", |e: &mut TextArea| {
