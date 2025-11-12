@@ -2,15 +2,15 @@ use rand::Rng;
 
 pub fn password_generator(length: usize, category: usize) -> String {
     let mut rng = rand::rng();
-    if category == 0 { 
+
+    if category == 0 {
         (0..length)
             .map(|_| {
                 let ascii_val = rng.random_range(33..=126);
                 ascii_val as u8 as char
             })
             .collect()
-    }
-    else {
+    } else {
         (0..length)
             .map(|_| {
                 let ascii_val = rng.random_range(33..=255);
