@@ -1,5 +1,8 @@
-use std::fs::File;
-use std::io::{self, BufRead};
+use std::{
+    fs::File,
+    io::{self, BufRead},
+};
+
 use rand::prelude::IndexedRandom;
 
 pub fn passphrase_generator(wordcount: i32) -> io::Result<Vec<String>> {

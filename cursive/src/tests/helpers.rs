@@ -1,15 +1,17 @@
 use std::sync::Arc;
 
-use crate::helpers::{
-    get_value_from_input, is_checkbox_checked, is_radio_button_selected, recipients_widths,
-};
 use cursive::{
     view::Nameable,
     views::{Checkbox, EditView, LinearLayout, RadioButton, RadioGroup},
 };
 use hex::FromHex;
-use ripasso::crypto::{CryptoImpl, Fingerprint};
-use ripasso::pass::{Comment, KeyRingStatus, OwnerTrustLevel, Recipient};
+use ripasso::{
+    crypto::{CryptoImpl, Fingerprint},
+    pass::{Comment, KeyRingStatus, OwnerTrustLevel, Recipient},
+};
+use crate::helpers::{
+    get_value_from_input, is_checkbox_checked, is_radio_button_selected, recipients_widths,
+};
 
 #[test]
 fn test_get_value_from_input() {
