@@ -1,6 +1,9 @@
+use std::{
+    fs::File,
+    io::{self, BufRead},
+};
+
 use rand::seq::SliceRandom;
-use std::fs::File;
-use std::io::{self, BufRead};
 
 pub fn passphrase_generator(wordcount: i32) -> io::Result<Vec<String>> {
     let filename = "share/wordlists/eff_large.wordlist";

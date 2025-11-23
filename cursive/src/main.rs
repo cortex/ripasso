@@ -734,8 +734,8 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
                     .with_name("password_length")
                     .fixed_width(5);
 
-                let reveal_checkbox = LinearLayout::horizontal().child(
-                    cursive::views::Checkbox::new().on_change({
+                let reveal_checkbox = LinearLayout::horizontal()
+                    .child(cursive::views::Checkbox::new().on_change({
                         let reveal_flag = reveal_flag.clone();
                         move |siv, checked| {
                             siv.call_on_name("new_password_input", |e: &mut EditView| {
@@ -743,15 +743,15 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
                             });
                             *reveal_flag.lock().unwrap() = checked;
                         }
-                    }),
-                ).child(TextView::new("Reveal password"));
+                    }))
+                    .child(TextView::new("Reveal password"));
 
                 let dialog_content = LinearLayout::vertical()
                     .child(select.scrollable().fixed_size((30, 5)))
                     .child(
                         LinearLayout::horizontal()
                             .child(TextView::new("Length: "))
-                            .child(length_input)
+                            .child(length_input),
                     )
                     .child(reveal_checkbox);
 
@@ -792,7 +792,8 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
             move |s| {
                 let category = *category_value.lock().unwrap();
                 let length = *password_length.lock().unwrap();
-                let new_password = ripasso::password_generator::password_generator(length, category);
+                let new_password =
+                    ripasso::password_generator::password_generator(length, category);
 
                 s.call_on_name("new_password_input", |e: &mut EditView| {
                     e.set_content(new_password);
@@ -800,8 +801,7 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
             }
         })
         .button(CATALOG.gettext("Generate Passphrase"), move |s| {
-            let new_password = match ripasso::passphrase_generator::passphrase_generator(6)
-            {
+            let new_password = match ripasso::passphrase_generator::passphrase_generator(6) {
                 Ok(words) => words.join(" "),
                 Err(err) => {
                     helpers::errorbox(s, &ripasso::pass::Error::from(err));
@@ -829,7 +829,6 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
 
     ui.add_layer(ev);
 }
-
 
 fn delete_recipient(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
     let mut l = ui

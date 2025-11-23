@@ -1,3 +1,5 @@
+use std::{env, fs::File, path::PathBuf};
+
 use config::ConfigBuilder;
 use git2::Repository;
 use hex::FromHex;
@@ -8,7 +10,6 @@ use sequoia_openpgp::{
         stream::{Armorer, Message, Signer},
     },
 };
-use std::{env, fs::File, path::PathBuf};
 use tempfile::tempdir;
 
 use super::*;
