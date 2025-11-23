@@ -25,7 +25,7 @@ use std::{
 use cursive::{
     Cursive, CursiveExt,
     direction::Orientation,
-    event::{Event, Key, EventResult},
+    event::{Event, Key},
     menu::Tree,
     traits::*,
     views::{
@@ -711,21 +711,27 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
 
     let store2 = store.clone();
 
-    // Shared category and reveal flag
     let category_value = Arc::new(Mutex::new(0));
     let reveal_flag = Arc::new(Mutex::new(false));
+    let password_length = Arc::new(Mutex::new(20_usize));
 
     let d = Dialog::around(fields)
         .title(CATALOG.gettext("Add new password"))
         .button(CATALOG.gettext("Password Options"), {
             let category_value = category_value.clone();
             let reveal_flag = reveal_flag.clone();
+            let password_length = password_length.clone();
             move |s| {
                 let mut select = SelectView::<usize>::new();
                 select.add_item("Category 0 (ASCII 33–126)", 0);
                 select.add_item("Category 1 (ASCII 33–255)", 1);
                 select.set_selection(*category_value.lock().unwrap());
                 let select = select.with_name("password_category");
+
+                let length_input = EditView::new()
+                    .content(password_length.lock().unwrap().to_string())
+                    .with_name("password_length")
+                    .fixed_width(5);
 
                 let reveal_checkbox = LinearLayout::horizontal().child(
                     cursive::views::Checkbox::new().on_change({
@@ -741,16 +747,29 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
 
                 let dialog_content = LinearLayout::vertical()
                     .child(select.scrollable().fixed_size((30, 5)))
+                    .child(
+                        LinearLayout::horizontal()
+                            .child(TextView::new("Length: "))
+                            .child(length_input)
+                    )
                     .child(reveal_checkbox);
 
                 let save_selection = {
                     let category_value = category_value.clone();
+                    let password_length = password_length.clone();
                     move |s: &mut Cursive| {
                         s.call_on_name("password_category", |view: &mut SelectView<usize>| {
                             if let Some(sel) = view.selection() {
                                 *category_value.lock().unwrap() = *sel;
                             }
                         });
+
+                        s.call_on_name("password_length", |view: &mut EditView| {
+                            if let Ok(len) = view.get_content().parse::<usize>() {
+                                *password_length.lock().unwrap() = len;
+                            }
+                        });
+
                         s.pop_layer();
                     }
                 };
@@ -768,10 +787,11 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
         })
         .button(CATALOG.gettext("Generate Password"), {
             let category_value = category_value.clone();
+            let password_length = password_length.clone();
             move |s| {
                 let category = *category_value.lock().unwrap();
-                let new_password =
-                    ripasso::password_generator::password_generator(20, category);
+                let length = *password_length.lock().unwrap();
+                let new_password = ripasso::password_generator::password_generator(length, category);
 
                 s.call_on_name("new_password_input", |e: &mut EditView| {
                     e.set_content(new_password);
@@ -808,6 +828,7 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
 
     ui.add_layer(ev);
 }
+
 
 fn delete_recipient(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
     let mut l = ui
