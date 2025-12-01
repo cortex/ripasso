@@ -366,7 +366,7 @@ impl DecryptionHelper for &mut KeyLister {
             pkesks
                 .iter()
                 .map(|p| match p.recipient().clone().unwrap() {
-                    KeyHandle::Fingerprint(fpr) => Ok(fpr.into()),
+                    KeyHandle::Fingerprint(fingerprint) => Ok(fingerprint.into()),
                     KeyHandle::KeyID(key_id) => Ok(key_id),
                 })
                 .collect::<std::result::Result<Vec<KeyID>, anyhow::Error>>()?,

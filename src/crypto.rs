@@ -316,14 +316,14 @@ impl Crypto for GpgMe {
         let mut sig_sum = None;
 
         for (i, s) in result.signatures().enumerate() {
-            let fpr = s
+            let fingerprint_hex = s
                 .fingerprint()
                 .map_err(|e| InfrastructureError(format!("{e:?}")))?;
 
-            let fpr =
-                <[u8; 20]>::from_hex(fpr).map_err(|e| InfrastructureError(format!("{e:?}")))?;
+            let fingerprint_bytes = <[u8; 20]>::from_hex(fingerprint_hex)
+                .map_err(|e| InfrastructureError(format!("{e:?}")))?;
 
-            if !valid_signing_keys.contains(&fpr) {
+            if !valid_signing_keys.contains(&fingerprint_bytes) {
                 return Err(VerificationError::SignatureFromWrongRecipient);
             }
             if i == 0 {
@@ -494,8 +494,8 @@ fn find(
     let recipient = recipient.as_ref().ok_or(Error::Generic("No recipient"))?;
 
     match recipient {
-        KeyHandle::Fingerprint(fpr) => {
-            match fpr {
+        KeyHandle::Fingerprint(fingerprint) => {
+            match fingerprint {
                 Fingerprint::V6(_v6) => {
                     return Err(Error::Generic("v6 keys not supported yet"));
                 }

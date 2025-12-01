@@ -1672,7 +1672,7 @@ fn test_verify_git_signature() -> Result<()> {
 
     assert_eq!(
         Error::Generic(
-            "the commit wasn\'t signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY"
+            "the commit wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY"
         ),
         result.err().unwrap()
     );

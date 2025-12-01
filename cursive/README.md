@@ -11,12 +11,14 @@ A curses password manager written in Rust.
 
 TUI interface based on [cursive](https://github.com/gyscos/Cursive)
 
+This requires the ncurses libraries to be available on your system.
+
 #### Install
 ```
 cargo install ripasso-cursive
 ```
 
-Or get it from your package system if it's availible.
+Or get it from your package system if it's available.
 
 ## Translations
 
