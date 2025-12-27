@@ -1,20 +1,14 @@
-use std::{
-    fs::File,
-    io::{self, BufRead},
-};
-
 use rand::seq::SliceRandom;
+use std::io;
+
+static WORDLIST: &str = include_str!("wordlists/eff_large.wordlist");
 
 pub fn passphrase_generator(wordcount: i32) -> io::Result<Vec<String>> {
-    let filename = "share/wordlists/eff_large.wordlist";
-    let file = File::open(filename)?;
-    let reader = io::BufReader::new(file);
-
-    let words: Vec<String> = reader
+    let words: Vec<String> = WORDLIST
         .lines()
-        .map_while(Result::ok)
-        .map(|line| line.trim().to_string())
+        .map(|line| line.trim())
         .filter(|line| !line.is_empty())
+        .map(String::from)
         .collect();
 
     if words.is_empty() {
@@ -24,7 +18,7 @@ pub fn passphrase_generator(wordcount: i32) -> io::Result<Vec<String>> {
 
     let mut rng = rand::thread_rng();
 
-    let selected: Vec<String> = if (words.len() as i32) <= wordcount {
+    let selected = if words.len() <= wordcount as usize {
         words.clone()
     } else {
         words
@@ -35,3 +29,4 @@ pub fn passphrase_generator(wordcount: i32) -> io::Result<Vec<String>> {
 
     Ok(selected)
 }
+
