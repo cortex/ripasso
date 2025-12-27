@@ -747,12 +747,7 @@ fn read_config_default_path_in_env_var() -> Result<()> {
     )?;
     file.flush()?;
 
-    let (settings, _) = read_config(
-        &Some("/tmp/t2".to_owned()),
-        &None,
-        &Some(dir.keep()),
-        &None,
-    )?;
+    let (settings, _) = read_config(&Some("/tmp/t2".to_owned()), &None, &Some(dir.keep()), &None)?;
 
     let stores = settings.get_table("stores")?;
 
@@ -789,12 +784,7 @@ fn read_config_default_path_in_env_var_with_pgp_setting() -> Result<()> {
     )?;
     file.flush()?;
 
-    let (settings, _) = read_config(
-        &Some("/tmp/t2".to_owned()),
-        &None,
-        &Some(dir.keep()),
-        &None,
-    )?;
+    let (settings, _) = read_config(&Some("/tmp/t2".to_owned()), &None, &Some(dir.keep()), &None)?;
 
     let stores = settings.get_table("stores")?;
 
