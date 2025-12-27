@@ -24,8 +24,7 @@ use cursive::{
 };
 use lazy_static::lazy_static;
 use pass::Result;
-use ripasso::pass::Recipient;
-use ripasso::{crypto::CryptoImpl, pass};
+use ripasso::{crypto::CryptoImpl, pass, pass::Recipient};
 
 lazy_static! {
     static ref CLIPBOARD: Arc<Mutex<Clipboard>> = Arc::new(Mutex::new(Clipboard::new().unwrap()));
