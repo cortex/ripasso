@@ -1,5 +1,6 @@
-use rand::seq::SliceRandom;
 use std::io;
+
+use rand::seq::SliceRandom;
 
 static WORDLIST: &str = include_str!("wordlists/eff_large.wordlist");
 
@@ -29,4 +30,3 @@ pub fn passphrase_generator(wordcount: i32) -> io::Result<Vec<String>> {
 
     Ok(selected)
 }
-
