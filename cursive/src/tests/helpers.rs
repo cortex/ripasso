@@ -8,7 +8,7 @@ use cursive::{
     views::{Checkbox, EditView, LinearLayout, RadioButton, RadioGroup},
 };
 use hex::FromHex;
-use ripasso::crypto::CryptoImpl;
+use ripasso::crypto::{CryptoImpl, Fingerprint};
 use ripasso::pass::{Comment, KeyRingStatus, OwnerTrustLevel, Recipient};
 
 #[test]
@@ -100,9 +100,9 @@ pub fn recipient_alex() -> Recipient {
             post_comment: None,
         },
         key_id: "1D108E6C07CBC406".to_owned(),
-        fingerprint: Some(
+        fingerprint: Some(Fingerprint::V4(
             <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
-        ),
+        )),
         key_ring_status: KeyRingStatus::InKeyRing,
         trust_level: OwnerTrustLevel::Ultimate,
         not_usable: false,

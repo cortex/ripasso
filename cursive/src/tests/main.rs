@@ -1,6 +1,7 @@
 use std::{fs::File, io::Write};
 
 use chrono::Local;
+use hex::FromHex;
 use ripasso::pass::{PasswordEntry, RepositoryStatus};
 use tempfile::tempdir;
 
@@ -168,9 +169,9 @@ fn render_recipient_label_ultimate() {
             post_comment: None,
         },
         key_id: "1D108E6C07CBC406".to_owned(),
-        fingerprint: Some(
+        fingerprint: Some(Fingerprint::V4(
             <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
-        ),
+        )),
         key_ring_status: pass::KeyRingStatus::InKeyRing,
         trust_level: OwnerTrustLevel::Ultimate,
         not_usable: false,

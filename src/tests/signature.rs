@@ -1,5 +1,6 @@
 use hex::FromHex;
 
+use crate::crypto::Fingerprint;
 use crate::{
     pass::{KeyRingStatus, OwnerTrustLevel, Recipient},
     signature::{Comment, parse_signing_keys},
@@ -9,14 +10,8 @@ use crate::{
 #[test]
 fn test_parse_signing_keys_two_keys() {
     let crypto = MockCrypto::new()
-        .with_get_key_result(
-            "7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_owned(),
-            MockKey::new(),
-        )
-        .with_get_key_result(
-            "E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_owned(),
-            MockKey::new(),
-        );
+        .with_get_key_result("7E068070D5EF794B00C8A9D91D108E6C07CBC406", MockKey::new())
+        .with_get_key_result("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F", MockKey::new());
 
     let file_content =
         "7E068070D5EF794B00C8A9D91D108E6C07CBC406,E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F"
@@ -25,25 +20,19 @@ fn test_parse_signing_keys_two_keys() {
     let result = parse_signing_keys(&Some(file_content), &crypto).unwrap();
 
     assert_eq!(2, result.len());
-    assert!(
-        result.contains(&<[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap())
-    );
-    assert!(
-        result.contains(&<[u8; 20]>::from_hex("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F").unwrap())
-    );
+    assert!(result.contains(&Fingerprint::V4(
+        <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap()
+    )));
+    assert!(result.contains(&Fingerprint::V4(
+        <[u8; 20]>::from_hex("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F").unwrap()
+    )));
 }
 
 #[test]
 fn test_parse_signing_keys_two_keys_with_0x() {
     let crypto = MockCrypto::new()
-        .with_get_key_result(
-            "0x7E068070D5EF794B00C8A9D91D108E6C07CBC406".to_owned(),
-            MockKey::new(),
-        )
-        .with_get_key_result(
-            "0xE6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_owned(),
-            MockKey::new(),
-        );
+        .with_get_key_result("0x7E068070D5EF794B00C8A9D91D108E6C07CBC406", MockKey::new())
+        .with_get_key_result("0xE6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F", MockKey::new());
 
     let file_content =
         "0x7E068070D5EF794B00C8A9D91D108E6C07CBC406,0xE6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F"
@@ -52,17 +41,54 @@ fn test_parse_signing_keys_two_keys_with_0x() {
     let result = parse_signing_keys(&Some(file_content), &crypto).unwrap();
 
     assert_eq!(2, result.len());
+    assert!(result.contains(&Fingerprint::V4(
+        <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap()
+    )));
+    assert!(result.contains(&Fingerprint::V4(
+        <[u8; 20]>::from_hex("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F").unwrap()
+    )));
+}
+
+#[test]
+fn test_parse_signing_keys_two_v6_keys_with_0x() {
+    let crypto = MockCrypto::new()
+        .with_get_key_result(
+            "0x211d3c737301f0540dbdfee64485573555beedac5bd5fe1d53293f6dcb0150fb",
+            MockKey::new(),
+        )
+        .with_get_key_result(
+            "0x338b0a9792bd6c858bfecf527080123e69c3a4b787cb2b401bb5565465a9cbfb",
+            MockKey::new(),
+        );
+
+    let file_content =
+        "0x211d3c737301f0540dbdfee64485573555beedac5bd5fe1d53293f6dcb0150fb,0x338b0a9792bd6c858bfecf527080123e69c3a4b787cb2b401bb5565465a9cbfb"
+            .to_owned();
+
+    let result = parse_signing_keys(&Some(file_content), &crypto).unwrap();
+
+    assert_eq!(2, result.len());
     assert!(
-        result.contains(&<[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap())
+        result.contains(&Fingerprint::V6(
+            <[u8; 32]>::from_hex(
+                "211d3c737301f0540dbdfee64485573555beedac5bd5fe1d53293f6dcb0150fb"
+            )
+            .unwrap()
+        ))
     );
     assert!(
-        result.contains(&<[u8; 20]>::from_hex("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F").unwrap())
+        result.contains(&Fingerprint::V6(
+            <[u8; 32]>::from_hex(
+                "338b0a9792bd6c858bfecf527080123e69c3a4b787cb2b401bb5565465a9cbfb"
+            )
+            .unwrap()
+        ))
     );
 }
 
 #[test]
 fn parse_signing_keys_key_error() {
-    let crypto = MockCrypto::new().with_get_key_error("unit test error".to_owned());
+    let crypto = MockCrypto::new().with_get_key_error("unit test error");
 
     let file_content =
         "0x7E068070D5EF794B00C8A9D91D108E6C07CBC406,0xE6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F"
@@ -93,7 +119,7 @@ fn parse_signing_keys_short() {
 
 #[test]
 fn recipient_from_key_error() {
-    let crypto = MockCrypto::new().with_get_key_error("unit test error".to_owned());
+    let crypto = MockCrypto::new().with_get_key_error("unit test error");
 
     let result = Recipient::from("0x1D108E6C07CBC406", &[], None, &crypto);
 
@@ -105,9 +131,11 @@ fn recipient_from_key_error() {
 #[test]
 fn all_recipients() {
     let crypto = MockCrypto::new().with_get_key_result(
-        "0x1D108E6C07CBC406".to_owned(),
+        "0x1D108E6C07CBC406",
         MockKey::from_args(
-            <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+            Fingerprint::V4(
+                <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+            ),
             vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()],
         ),
     );
@@ -132,9 +160,11 @@ fn all_recipients() {
 #[test]
 fn all_recipients_with_one_comment_line() {
     let crypto = MockCrypto::new().with_get_key_result(
-        "0x1D108E6C07CBC406".to_owned(),
+        "0x1D108E6C07CBC406",
         MockKey::from_args(
-            <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+            Fingerprint::V4(
+                <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+            ),
             vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()],
         ),
     );
@@ -164,9 +194,11 @@ fn all_recipients_with_one_comment_line() {
 #[test]
 fn all_recipients_with_multiple_comment_lines() {
     let crypto = MockCrypto::new().with_get_key_result(
-        "0x1D108E6C07CBC406".to_owned(),
+        "0x1D108E6C07CBC406",
         MockKey::from_args(
-            <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+            Fingerprint::V4(
+                <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+            ),
             vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()],
         ),
     );
@@ -200,9 +232,11 @@ fn all_recipients_with_multiple_comment_lines() {
 #[test]
 fn all_recipients_with_comment_lines_pre_and_post() {
     let crypto = MockCrypto::new().with_get_key_result(
-        "0x1D108E6C07CBC406".to_owned(),
+        "0x1D108E6C07CBC406",
         MockKey::from_args(
-            <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+            Fingerprint::V4(
+                <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+            ),
             vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()],
         ),
     );
@@ -234,7 +268,7 @@ fn all_recipients_with_comment_lines_pre_and_post() {
 
 #[test]
 fn all_recipients_error() {
-    let crypto = MockCrypto::new().with_get_key_error("unit test error".to_owned());
+    let crypto = MockCrypto::new().with_get_key_error("unit test error");
 
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join(".gpg-id");
@@ -461,10 +495,11 @@ fn write_recipients_file_one_and_signed() {
     let recipients_file = dir.path().join(".gpg-id");
     let signature_file = dir.path().join(".gpg-id.sig");
 
-    let valid_gpg_signing_keys =
-        vec![<[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap()];
+    let valid_gpg_signing_keys = vec![Fingerprint::V4(
+        <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
+    )];
 
-    let crypto = MockCrypto::new().with_sign_string_return("unit test sign string".to_owned());
+    let crypto = MockCrypto::new().with_sign_string_return("unit test sign string");
 
     assert!(!recipients_file.exists());
     assert!(!signature_file.exists());
@@ -545,11 +580,11 @@ fn remove_recipient_from_file_two() {
 
     let crypto = MockCrypto::new()
         .with_get_key_result(
-            r.key_id.clone(),
+            &r.key_id,
             MockKey::from_args(r.fingerprint.unwrap(), vec![r.name.clone()]),
         )
         .with_get_key_result(
-            r2.key_id.clone(),
+            &r2.key_id,
             MockKey::from_args(r2.fingerprint.unwrap(), vec![r2.name.clone()]),
         );
 
@@ -594,9 +629,9 @@ fn remove_recipient_from_file_same_key_id_different_fingerprint() {
             post_comment: None,
         },
         key_id: "DF0C3D316B7312D5".to_owned(),
-        fingerprint: Some(
+        fingerprint: Some(Fingerprint::V4(
             <[u8; 20]>::from_hex("DB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5").unwrap(),
-        ),
+        )),
         key_ring_status: KeyRingStatus::InKeyRing,
         trust_level: OwnerTrustLevel::Ultimate,
         not_usable: false,
@@ -608,9 +643,9 @@ fn remove_recipient_from_file_same_key_id_different_fingerprint() {
             post_comment: None,
         },
         key_id: "DF0C3D316B7312D5".to_owned(),
-        fingerprint: Some(
+        fingerprint: Some(Fingerprint::V4(
             <[u8; 20]>::from_hex("88283D2EF664DD5F6AEBB51CDF0C3D316B7312D5").unwrap(),
-        ),
+        )),
         key_ring_status: KeyRingStatus::InKeyRing,
         trust_level: OwnerTrustLevel::Ultimate,
         not_usable: false,
@@ -626,16 +661,20 @@ fn remove_recipient_from_file_same_key_id_different_fingerprint() {
 
     let crypto = MockCrypto::new()
         .with_get_key_result(
-            "0xDB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5".to_owned(),
+            "0xDB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5",
             MockKey::from_args(
-                <[u8; 20]>::from_hex("DB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5").unwrap(),
+                Fingerprint::V4(
+                    <[u8; 20]>::from_hex("DB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5").unwrap(),
+                ),
                 vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()],
             ),
         )
         .with_get_key_result(
-            "0x88283D2EF664DD5F6AEBB51CDF0C3D316B7312D5".to_owned(),
+            "0x88283D2EF664DD5F6AEBB51CDF0C3D316B7312D5",
             MockKey::from_args(
-                <[u8; 20]>::from_hex("88283D2EF664DD5F6AEBB51CDF0C3D316B7312D5").unwrap(),
+                Fingerprint::V4(
+                    <[u8; 20]>::from_hex("88283D2EF664DD5F6AEBB51CDF0C3D316B7312D5").unwrap(),
+                ),
                 vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()],
             ),
         );
@@ -685,11 +724,11 @@ fn add_recipient_from_file_one_plus_one() {
 
     let crypto = MockCrypto::new()
         .with_get_key_result(
-            r.key_id.clone(),
+            &r.key_id,
             MockKey::from_args(r.fingerprint.unwrap(), vec![r.name.clone()]),
         )
         .with_get_key_result(
-            r2.key_id.clone(),
+            &r2.key_id,
             MockKey::from_args(r2.fingerprint.unwrap(), vec![r2.name.clone()]),
         );
 
@@ -770,9 +809,9 @@ fn recipient_one_none() {
             post_comment: None,
         },
         key_id: "DF0C3D316B7312D5".to_owned(),
-        fingerprint: Some(
+        fingerprint: Some(Fingerprint::V4(
             <[u8; 20]>::from_hex("DB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5").unwrap(),
-        ),
+        )),
         key_ring_status: KeyRingStatus::InKeyRing,
         trust_level: OwnerTrustLevel::Ultimate,
         not_usable: false,
@@ -803,9 +842,9 @@ fn recipient_same_fingerprint_different_key_id() {
             post_comment: None,
         },
         key_id: "DF0C3D316B7312D5".to_owned(),
-        fingerprint: Some(
+        fingerprint: Some(Fingerprint::V4(
             <[u8; 20]>::from_hex("DB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5").unwrap(),
-        ),
+        )),
         key_ring_status: KeyRingStatus::InKeyRing,
         trust_level: OwnerTrustLevel::Ultimate,
         not_usable: false,
@@ -817,9 +856,9 @@ fn recipient_same_fingerprint_different_key_id() {
             post_comment: None,
         },
         key_id: "DB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5".to_owned(),
-        fingerprint: Some(
+        fingerprint: Some(Fingerprint::V4(
             <[u8; 20]>::from_hex("DB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5").unwrap(),
-        ),
+        )),
         key_ring_status: KeyRingStatus::InKeyRing,
         trust_level: OwnerTrustLevel::Ultimate,
         not_usable: false,
