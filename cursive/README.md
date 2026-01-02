@@ -16,7 +16,7 @@ TUI interface based on [cursive](https://github.com/gyscos/Cursive)
 cargo install ripasso-cursive
 ```
 
-Or get it from your package system if it's availible.
+Or get it from your package system if it's available.
 
 ## Translations
 

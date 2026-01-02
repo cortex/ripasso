@@ -1,9 +1,9 @@
-use rand::distributions::{Distribution, Uniform};
+use rand::distr::{Distribution, Uniform};
 
 /// Generate a random password, consisting of `number_of_words` words.
 pub fn generate_password(number_of_words: isize) -> String {
-    let mut rng = rand::thread_rng();
-    let die = Uniform::from(0..7776);
+    let mut rng = rand::rng();
+    let die = Uniform::try_from(0..7776).expect("Failed to generate words");
 
     let mut rand_words = vec![];
     for _ in 0..number_of_words {
