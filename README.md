@@ -100,10 +100,10 @@ apk add ripasso-cursive
 
 ## Build instructions
 
-[See here](https://github.com/cortex/ripasso/blob/master/BUILD_INSTRUCTIONS.md)
+[See here](https://github.com/cortex/ripasso/blob/main/BUILD_INSTRUCTIONS.md)
 
 ## Translations
 
 Do you want to have ripasso in your native language? Help out with a translation:
 
-[See here](https://github.com/cortex/ripasso/blob/master/TRANSLATIONS.md)
+[See here](https://github.com/cortex/ripasso/blob/main/TRANSLATIONS.md)

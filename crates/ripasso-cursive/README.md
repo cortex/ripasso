@@ -22,4 +22,4 @@ Or get it from your package system if it's available.
 
 Do you want to have ripasso in your native language? Help out with a translation:
 
-[See here](https://github.com/cortex/ripasso/blob/master/TRANSLATIONS.md)
+[See here](https://github.com/cortex/ripasso/blob/main/TRANSLATIONS.md)
