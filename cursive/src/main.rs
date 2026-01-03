@@ -41,6 +41,8 @@ use ripasso::{
     pass::{
         OwnerTrustLevel, PasswordStore, Recipient, SignatureStatus, all_recipients_from_stores,
     },
+    passphrase_generator::passphrase_generator,
+    password_generator::password_generator,
 };
 use unic_langid::LanguageIdentifier;
 
@@ -441,8 +443,23 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
             new_secret.zeroize();
 
         })
-        .button(CATALOG.gettext("Generate"), move |s| {
-            let mut new_password = ripasso::words::generate_password(6);
+        .button(CATALOG.gettext("Generate Password"), move |s| {
+            let mut new_password = password_generator(20, 0);
+            s.call_on_name("editbox", |e: &mut TextArea| {
+                e.set_content(&new_password);
+            });
+            new_password.zeroize()
+        })
+
+
+        .button(CATALOG.gettext("Generate Passphrase"), move |s| {
+            let mut new_password = match passphrase_generator(6) {
+                Ok(words) => words.join(" "),
+                Err(err) => {
+                    helpers::errorbox(s, &ripasso::pass::Error::from(err));
+                    return;
+                }
+            };
             s.call_on_name("editbox", |e: &mut TextArea| {
                 e.set_content(&new_password);
             });
@@ -652,12 +669,12 @@ fn create_save(s: &mut Cursive, store: PasswordStoreType) {
         do_new_password_save(s, path.as_ref(), password.as_ref(), store, false);
     }
 }
-
 fn create(ui: &mut Cursive, store: PasswordStoreType) {
     let mut fields = LinearLayout::vertical();
     let mut path_fields = LinearLayout::horizontal();
     let mut password_fields = LinearLayout::horizontal();
     let mut note_fields = LinearLayout::horizontal();
+
     path_fields.add_child(
         TextView::new(CATALOG.gettext("Path: "))
             .with_name("path_name")
@@ -668,6 +685,7 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
             .with_name("new_path_input")
             .fixed_size((50_usize, 1_usize)),
     );
+
     password_fields.add_child(
         TextView::new(CATALOG.gettext("Password: "))
             .with_name("password_name")
@@ -679,22 +697,116 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
             .with_name("new_password_input")
             .fixed_size((50_usize, 1_usize)),
     );
+
     note_fields.add_child(
         TextView::new(CATALOG.gettext("Note: "))
             .with_name("note_name")
             .fixed_size((10_usize, 1_usize)),
     );
     note_fields.add_child(TextArea::new().with_name("note_input").min_size((50, 1)));
+
     fields.add_child(path_fields);
     fields.add_child(password_fields);
     fields.add_child(note_fields);
 
     let store2 = store.clone();
 
+    let category_value = Arc::new(Mutex::new(0));
+    let reveal_flag = Arc::new(Mutex::new(false));
+    let password_length = Arc::new(Mutex::new(20_usize));
+
     let d = Dialog::around(fields)
         .title(CATALOG.gettext("Add new password"))
-        .button(CATALOG.gettext("Generate"), move |s| {
-            let new_password = ripasso::words::generate_password(6);
+        .button(CATALOG.gettext("Password Options"), {
+            let category_value = category_value.clone();
+            let reveal_flag = reveal_flag.clone();
+            let password_length = password_length.clone();
+            move |s| {
+                let mut select = SelectView::<usize>::new();
+                select.add_item("Category 0 (ASCII 33–126)", 0);
+                select.add_item("Category 1 (ASCII 33–255)", 1);
+                select.set_selection(*category_value.lock().unwrap());
+                let select = select.with_name("password_category");
+
+                let length_input = EditView::new()
+                    .content(password_length.lock().unwrap().to_string())
+                    .with_name("password_length")
+                    .fixed_width(5);
+
+                let reveal_checkbox = LinearLayout::horizontal()
+                    .child(cursive::views::Checkbox::new().on_change({
+                        let reveal_flag = reveal_flag.clone();
+                        move |siv, checked| {
+                            siv.call_on_name("new_password_input", |e: &mut EditView| {
+                                e.set_secret(!checked);
+                            });
+                            *reveal_flag.lock().unwrap() = checked;
+                        }
+                    }))
+                    .child(TextView::new("Reveal password"));
+
+                let dialog_content = LinearLayout::vertical()
+                    .child(select.scrollable().fixed_size((30, 5)))
+                    .child(
+                        LinearLayout::horizontal()
+                            .child(TextView::new("Length: "))
+                            .child(length_input),
+                    )
+                    .child(reveal_checkbox);
+
+                let save_selection = {
+                    let category_value = category_value.clone();
+                    let password_length = password_length.clone();
+                    move |s: &mut Cursive| {
+                        s.call_on_name("password_category", |view: &mut SelectView<usize>| {
+                            if let Some(sel) = view.selection() {
+                                *category_value.lock().unwrap() = *sel;
+                            }
+                        });
+
+                        s.call_on_name("password_length", |view: &mut EditView| {
+                            if let Ok(len) = view.get_content().parse::<usize>() {
+                                *password_length.lock().unwrap() = len;
+                            }
+                        });
+
+                        s.pop_layer();
+                    }
+                };
+
+                let popup = OnEventView::new(
+                    Dialog::around(dialog_content)
+                        .title("Password Options")
+                        .button("OK", save_selection.clone())
+                        .dismiss_button("Cancel"),
+                )
+                .on_event(Key::Enter, save_selection);
+
+                s.add_layer(popup);
+            }
+        })
+        .button(CATALOG.gettext("Generate Password"), {
+            let category_value = category_value.clone();
+            let password_length = password_length.clone();
+            move |s| {
+                let category = *category_value.lock().unwrap();
+                let length = *password_length.lock().unwrap();
+                let new_password =
+                    ripasso::password_generator::password_generator(length, category);
+
+                s.call_on_name("new_password_input", |e: &mut EditView| {
+                    e.set_content(new_password);
+                });
+            }
+        })
+        .button(CATALOG.gettext("Generate Passphrase"), move |s| {
+            let new_password = match ripasso::passphrase_generator::passphrase_generator(6) {
+                Ok(words) => words.join(" "),
+                Err(err) => {
+                    helpers::errorbox(s, &ripasso::pass::Error::from(err));
+                    return;
+                }
+            };
             s.call_on_name("new_password_input", |e: &mut EditView| {
                 e.set_content(new_password);
             });
@@ -709,7 +821,9 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
             s.pop_layer();
         })
         .on_event(Key::Enter, move |ui: &mut Cursive| {
-            create_save(ui, store2.clone())
+            if ui.screen_mut().len() == 1 {
+                create_save(ui, store2.clone());
+            }
         });
 
     ui.add_layer(ev);

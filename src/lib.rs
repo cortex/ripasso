@@ -10,12 +10,12 @@ pub mod git;
 /// This is the library part of ripasso, it implements the functions needed to manipulate a pass
 /// directory.
 pub mod pass;
+/// Generates passphrases
+pub mod passphrase_generator;
+/// Generates ASCII and non ASCII passwords
+pub mod password_generator;
 /// All functions and structs related to handling the identity and signing of things
 pub(crate) mod signature;
-/// This is the library that handles password generation, based on the long word list from EFF
-/// <https://www.eff.org/sv/deeplinks/2016/07/new-wordlists-random-passphrases>
-pub mod words;
-
 #[cfg(test)]
 #[path = "tests/test_helpers.rs"]
 pub mod test_helpers;
