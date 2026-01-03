@@ -8,8 +8,10 @@ use cursive::{
     views::{Checkbox, EditView, LinearLayout, RadioButton, RadioGroup},
 };
 use hex::FromHex;
-use ripasso::crypto::{CryptoImpl, Fingerprint};
-use ripasso::pass::{Comment, KeyRingStatus, OwnerTrustLevel, Recipient};
+use ripasso::{
+    crypto::{CryptoImpl, Fingerprint},
+    pass::{Comment, KeyRingStatus, OwnerTrustLevel, Recipient},
+};
 
 #[test]
 fn test_get_value_from_input() {

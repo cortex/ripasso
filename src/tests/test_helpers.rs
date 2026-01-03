@@ -7,17 +7,17 @@ use std::{
 
 use flate2::read::GzDecoder;
 use hex::FromHex;
-use sequoia_openpgp::crypto::SessionKey;
-use sequoia_openpgp::packet::UserID;
-use sequoia_openpgp::types::SymmetricAlgorithm;
 use sequoia_openpgp::{
     Cert, KeyHandle, KeyID,
     cert::CertBuilder,
+    crypto::SessionKey,
+    packet::UserID,
     parse::{
         Parse,
         stream::{DecryptionHelper, DecryptorBuilder, MessageStructure, VerificationHelper},
     },
     policy::StandardPolicy,
+    types::SymmetricAlgorithm,
 };
 use tar::Archive;
 
