@@ -1035,8 +1035,8 @@ fn render_recipient_label(
     )
 }
 
-fn get_sub_dirs(dir: &PathBuf) -> Result<Vec<PathBuf>> {
-    let mut to_visit = vec![dir.clone()];
+fn get_sub_dirs(dir: &Path) -> Result<Vec<PathBuf>> {
+    let mut to_visit = vec![dir.to_path_buf()];
     let mut all = vec![PathBuf::from("./")];
     while let Some(d) = to_visit.pop() {
         for entry in std::fs::read_dir(d)? {
@@ -1483,7 +1483,7 @@ fn get_translation_catalog() -> gettext::Catalog {
     gettext::Catalog::empty()
 }
 
-fn get_stores(config: &config::Config, home: Option<&PathBuf>) -> Result<Vec<PasswordStore>> {
+fn get_stores(config: &config::Config, home: Option<&Path>) -> Result<Vec<PasswordStore>> {
     let mut final_stores: Vec<PasswordStore> = vec![];
     let stores_res = config.get("stores");
     if let Ok(stores) = stores_res {
@@ -1532,10 +1532,10 @@ fn get_stores(config: &config::Config, home: Option<&PathBuf>) -> Result<Vec<Pas
 
                 final_stores.push(PasswordStore::new(
                     store_name,
-                    password_store_dir.as_ref(),
+                    password_store_dir.as_deref(),
                     valid_signing_keys.as_deref(),
                     home,
-                    style_path_opt.as_ref(),
+                    style_path_opt.as_deref(),
                     &pgp_impl,
                     own_fingerprint.as_ref(),
                 )?);
@@ -1563,7 +1563,7 @@ fn get_stores(config: &config::Config, home: Option<&PathBuf>) -> Result<Vec<Pas
 
 /// Validates the config for password stores.
 /// Returns a list of paths that the new store wizard should be run for
-fn validate_stores_config(settings: &config::Config, home: Option<&PathBuf>) -> Vec<PathBuf> {
+fn validate_stores_config(settings: &config::Config, home: Option<&Path>) -> Vec<PathBuf> {
     let mut incomplete_stores: Vec<PathBuf> = vec![];
 
     let stores_res = settings.get("stores");
@@ -1603,7 +1603,7 @@ fn do_save_edit_config(
     stores: &StoreListType,
     name: &str,
     config_file_location: &Path,
-    home: Option<&PathBuf>,
+    home: Option<&Path>,
 ) {
     let res = save_edit_config(ui, stores, name, config_file_location, home);
     if let Err(err) = res {
@@ -1616,7 +1616,7 @@ fn save_edit_config(
     stores: &StoreListType,
     name: &str,
     config_file_location: &Path,
-    home: Option<&PathBuf>,
+    home: Option<&Path>,
 ) -> Result<()> {
     let e_n = &*get_value_from_input(ui, "edit_name_input").unwrap();
     let e_d = &*get_value_from_input(ui, "edit_directory_input").unwrap();
@@ -1651,7 +1651,7 @@ fn save_edit_config(
 
     let new_store = PasswordStore::new(
         e_n,
-        Some(&PathBuf::from(e_d.clone())),
+        Some(Path::new(e_d)),
         e_k.as_deref(),
         home,
         None,
@@ -1694,7 +1694,7 @@ fn save_new_config(
     ui: &mut Cursive,
     stores: &StoreListType,
     config_file_location: &Path,
-    home: Option<&PathBuf>,
+    home: Option<&Path>,
     all_recipients: &[Recipient],
 ) -> Result<()> {
     let e_n = &*get_value_from_input(ui, "new_name_input").unwrap();
@@ -1708,14 +1708,7 @@ fn save_new_config(
         }
     }
 
-    let new_store = PasswordStore::create(
-        e_n,
-        Some(&PathBuf::from(e_d.clone())),
-        &recipients,
-        e_k,
-        home,
-        None,
-    )?;
+    let new_store = PasswordStore::create(e_n, Some(Path::new(e_d)), &recipients, e_k, home, None)?;
 
     {
         let mut stores_borrowed = stores.lock()?;
@@ -1831,7 +1824,7 @@ fn edit_store_in_config(
     ui: &mut Cursive,
     stores: &StoreListType,
     config_file_location: &Path,
-    home: Option<&PathBuf>,
+    home: Option<&Path>,
 ) -> Result<()> {
     let all_recipients = all_recipients_from_stores(stores)?;
 
@@ -1892,13 +1885,13 @@ fn edit_store_in_config(
     let name3 = store.get_name().clone();
     let config_file_location = config_file_location.to_path_buf();
     let config_file_location2 = config_file_location.clone();
-    let home = home.cloned();
+    let home = home.map(ToOwned::to_owned);
     let home2 = home.clone();
 
     let d = Dialog::around(fields)
         .title(CATALOG.gettext("Edit store config"))
         .button(CATALOG.gettext("Save"), move |ui: &mut Cursive| {
-            do_save_edit_config(ui, &stores2, &name2, &config_file_location, home.as_ref());
+            do_save_edit_config(ui, &stores2, &name2, &config_file_location, home.as_deref());
             ui.pop_layer();
         })
         .dismiss_button(CATALOG.gettext("Cancel"));
@@ -1908,7 +1901,13 @@ fn edit_store_in_config(
             s.pop_layer();
         })
         .on_event(Key::Enter, move |ui: &mut Cursive| {
-            do_save_edit_config(ui, &stores3, &name3, &config_file_location2, home2.as_ref());
+            do_save_edit_config(
+                ui,
+                &stores3,
+                &name3,
+                &config_file_location2,
+                home2.as_deref(),
+            );
             ui.pop_layer();
         });
 
@@ -2017,7 +2016,7 @@ fn add_store_to_config(
     ui: &mut Cursive,
     stores: StoreListType,
     config_file_location: &Path,
-    home: Option<&PathBuf>,
+    home: Option<&Path>,
 ) -> Result<()> {
     let all_recipients = all_recipients_from_stores(&stores)?;
 
@@ -2055,7 +2054,7 @@ fn add_store_to_config(
                 ui,
                 &stores,
                 &config_file_location,
-                home.as_ref(),
+                home.as_deref(),
                 &all_recipients,
             );
             if let Err(err) = res {
@@ -2075,7 +2074,7 @@ fn add_store_to_config(
                 ui,
                 &stores2,
                 &config_file_location2,
-                home2.as_ref(),
+                home2.as_deref(),
                 &all_recipients2,
             );
             if let Err(err) = res {
@@ -2094,7 +2093,7 @@ fn do_show_manage_config_dialog(
     ui: &mut Cursive,
     stores: StoreListType,
     config_file_location: PathBuf,
-    home: Option<&PathBuf>,
+    home: Option<&Path>,
 ) {
     let res = show_manage_config_dialog(ui, stores, config_file_location, home);
     if let Err(err) = res {
@@ -2106,7 +2105,7 @@ fn show_manage_config_dialog(
     ui: &mut Cursive,
     stores: StoreListType,
     config_file_location: PathBuf,
-    home: Option<&PathBuf>,
+    home: Option<&Path>,
 ) -> Result<()> {
     let mut stores_view = SelectView::<String>::new()
         .h_align(cursive::align::HAlign::Left)
@@ -2140,7 +2139,7 @@ fn show_manage_config_dialog(
 
     let recipients_event = OnEventView::new(ll)
         .on_event(Event::CtrlChar('e'), move |ui: &mut Cursive| {
-            let res = edit_store_in_config(ui, &stores, &config_file_location, home.as_ref());
+            let res = edit_store_in_config(ui, &stores, &config_file_location, home.as_deref());
             if let Err(err) = res {
                 helpers::errorbox(ui, &err);
             }
@@ -2152,8 +2151,12 @@ fn show_manage_config_dialog(
             }
         })
         .on_event(Key::Ins, move |ui: &mut Cursive| {
-            let res =
-                add_store_to_config(ui, stores3.clone(), &config_file_location3, home2.as_ref());
+            let res = add_store_to_config(
+                ui,
+                stores3.clone(),
+                &config_file_location3,
+                home2.as_deref(),
+            );
             if let Err(err) = res {
                 helpers::errorbox(ui, &err);
             }
@@ -2166,7 +2169,7 @@ fn show_manage_config_dialog(
     Ok(())
 }
 
-fn get_style(style_file: Option<&PathBuf>) -> String {
+fn get_style(style_file: Option<&Path>) -> String {
     if let Some(style_file) = style_file {
         let content = std::fs::read_to_string(style_file);
         if let Ok(content) = content {
@@ -2177,7 +2180,7 @@ fn get_style(style_file: Option<&PathBuf>) -> String {
     include_str!("../res/style.toml").to_string()
 }
 
-fn load_config(home: Option<&PathBuf>) -> Result<(Config, PathBuf)> {
+fn load_config(home: Option<&Path>) -> Result<(Config, PathBuf)> {
     let config_res = {
         let password_store_dir = std::env::var("PASSWORD_STORE_DIR").ok();
         let password_store_signing_key = std::env::var("PASSWORD_STORE_SIGNING_KEY").ok();
@@ -2190,7 +2193,7 @@ fn load_config(home: Option<&PathBuf>) -> Result<(Config, PathBuf)> {
             password_store_dir.as_deref(),
             password_store_signing_key.as_deref(),
             home,
-            xdg_config_home.as_ref(),
+            xdg_config_home.as_deref(),
         )
     };
     if let Err(err) = config_res {
@@ -2202,7 +2205,7 @@ fn load_config(home: Option<&PathBuf>) -> Result<(Config, PathBuf)> {
 
 fn validate_setup(
     config: &Config,
-    home: Option<&PathBuf>,
+    home: Option<&Path>,
     config_file_location: &Path,
 ) -> Result<(StoreListType, PasswordStoreType)> {
     let stores = get_stores(config, home);
@@ -2433,7 +2436,7 @@ fn switch_store(
             .lock()
             .unwrap()
             .get_style_file()
-            .as_ref(),
+            .as_deref(),
     )) {
         eprintln!("Error {err:?}");
         process::exit(1);
@@ -2449,11 +2452,11 @@ fn create_stores_tree(
     store: &PasswordStoreType,
     stores: &StoreListType,
     config_file_location: &Path,
-    home: Option<&PathBuf>,
+    home: Option<&Path>,
 ) -> Result<Tree> {
     let stores = stores.clone();
     let config_file_location = config_file_location.to_path_buf();
-    let home = home.cloned();
+    let home = home.map(ToOwned::to_owned);
 
     let mut tree = Tree::new();
 
@@ -2471,7 +2474,7 @@ fn create_stores_tree(
             ui,
             stores.clone(),
             config_file_location.clone(),
-            home.as_ref(),
+            home.as_deref(),
         );
     });
 
@@ -2483,7 +2486,7 @@ fn add_menubar(
     stores: &StoreListType,
     xdg_data_home: &Path,
     config_file_location: &Path,
-    home: Option<&PathBuf>,
+    home: Option<&Path>,
 ) -> Result<()> {
     let xdg_data_home = xdg_data_home.to_path_buf();
     let config_file_location = config_file_location.to_path_buf();
@@ -2596,19 +2599,21 @@ fn main() -> Result<()> {
         Ok(data_home_path) => PathBuf::from(data_home_path),
     };
 
-    let (config, config_file_location) = load_config(home.as_ref())?;
+    let (config, config_file_location) = load_config(home.as_deref())?;
 
-    for path in validate_stores_config(&config, home.as_ref()) {
-        wizard::show_init_menu(Some(&path), home.as_ref());
+    for path in validate_stores_config(&config, home.as_deref()) {
+        wizard::show_init_menu(Some(&path), home.as_deref());
     }
 
-    let (stores, store) = validate_setup(&config, home.as_ref(), &config_file_location)?;
+    let (stores, store) = validate_setup(&config, home.as_deref(), &config_file_location)?;
 
     let mut ui = Cursive::default();
 
     add_global_callbacks(&mut ui, &store, &xdg_data_home);
 
-    if let Err(err) = ui.load_toml(&get_style(store.lock()?.lock()?.get_style_file().as_ref())) {
+    if let Err(err) = ui.load_toml(&get_style(
+        store.lock()?.lock()?.get_style_file().as_deref(),
+    )) {
         eprintln!("Error {err:?}");
         process::exit(1);
     }
@@ -2620,7 +2625,7 @@ fn main() -> Result<()> {
         &stores,
         &xdg_data_home,
         &config_file_location,
-        home.as_ref(),
+        home.as_deref(),
     )?;
 
     ui.add_global_callback(Key::F1, Cursive::select_menubar);

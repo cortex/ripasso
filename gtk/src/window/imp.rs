@@ -76,7 +76,7 @@ impl ObjectImpl for Window {
         // Setup
         let obj = self.obj();
         obj.setup_collections();
-        obj.restore_data(home_dir.as_ref(), user_config_dir.as_ref());
+        obj.restore_data(home_dir.as_deref(), user_config_dir.as_deref());
         obj.setup_callbacks();
         obj.setup_actions();
     }

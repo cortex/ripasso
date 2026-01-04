@@ -1,11 +1,5 @@
 mod imp;
 
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
-
 use crate::{collection_object::CollectionObject, password_object::PasswordObject};
 use adw::{ActionRow, NavigationDirection, prelude::*, subclass::prelude::*};
 use glib::{Object, clone};
@@ -14,6 +8,12 @@ use gtk::{
     ListBoxRow, NoSelection, ResponseType, SelectionMode, gio, glib, glib::BindingFlags, pango,
 };
 use ripasso::{crypto::CryptoImpl, pass::PasswordStore};
+use std::path::Path;
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 
 glib::wrapper! {
     pub struct Window(ObjectSubclass<imp::Window>)
@@ -101,7 +101,7 @@ impl Window {
         )
     }
 
-    fn restore_data(&self, home_dir: Option<&PathBuf>, user_config_dir: Option<&PathBuf>) {
+    fn restore_data(&self, home_dir: Option<&Path>, user_config_dir: Option<&Path>) {
         let (config, home) = ripasso::pass::read_config(None, None, home_dir, user_config_dir)
             .expect("No config file present");
 
@@ -585,10 +585,10 @@ fn get_stores(
 
                 final_stores.push(PasswordStore::new(
                     store_name,
-                    password_store_dir.as_ref(),
+                    password_store_dir.as_deref(),
                     valid_signing_keys.as_deref(),
-                    home.as_ref(),
-                    style_path_opt.as_ref(),
+                    home.as_deref(),
+                    style_path_opt.as_deref(),
                     &pgp_impl,
                     own_fingerprint.as_ref(),
                 )?);
@@ -601,7 +601,7 @@ fn get_stores(
                 "default",
                 Some(&default_path),
                 None,
-                home.as_ref(),
+                home.as_deref(),
                 None,
                 &CryptoImpl::GpgMe,
                 None,

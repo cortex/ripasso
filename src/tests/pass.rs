@@ -85,21 +85,21 @@ fn get_password_dir_raw_none_none() {
 
 #[test]
 fn get_password_dir_raw_some_none() {
-    let result = password_dir_raw(Some(&PathBuf::from("/tmp/")), None);
+    let result = password_dir_raw(Some(Path::new("/tmp/")), None);
 
     assert_eq!(PathBuf::from("/tmp/"), result);
 }
 
 #[test]
 fn get_password_dir_raw_none_some() {
-    let result = password_dir_raw(None, Some(&PathBuf::from("/tmp/")));
+    let result = password_dir_raw(None, Some(Path::new("/tmp/")));
 
     assert_eq!(PathBuf::from("/tmp/.password-store"), result);
 }
 
 #[test]
 fn get_password_dir_raw_some_some() {
-    let result = password_dir_raw(Some(&PathBuf::from("/tmp/")), Some(&PathBuf::from("/tmp/")));
+    let result = password_dir_raw(Some(Path::new("/tmp/")), Some(Path::new("/tmp/")));
 
     assert_eq!(PathBuf::from("/tmp/"), result);
 }
@@ -402,7 +402,7 @@ fn home_settings_dir_exists() -> Result<()> {
     let dir = tempdir()?;
     fs::create_dir(dir.path().join(".password-store"))?;
 
-    let settings = home_settings(Some(&PathBuf::from(dir.path())))?;
+    let settings = home_settings(Some(dir.path()))?;
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
@@ -418,7 +418,7 @@ fn home_settings_dir_exists() -> Result<()> {
 fn home_settings_dir_doesnt_exists() -> Result<()> {
     let dir = tempdir()?;
 
-    let settings = home_settings(Some(&PathBuf::from(dir.path())))?;
+    let settings = home_settings(Some(dir.path()))?;
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
@@ -532,7 +532,7 @@ fn read_config_empty_config_file() -> Result<()> {
             .join("settings.toml"),
     )?;
 
-    let (settings, _) = read_config(None, None, Some(&PathBuf::from(dir.path())), None)?;
+    let (settings, _) = read_config(None, None, Some(dir.path()), None)?;
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
@@ -551,7 +551,7 @@ fn read_config_empty_config_file_with_keys_env() -> Result<()> {
     let (settings, _) = read_config(
         None,
         Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F"),
-        Some(&PathBuf::from(dir.path())),
+        Some(dir.path()),
         None,
     )?;
 
@@ -583,7 +583,7 @@ fn read_config_env_vars() -> Result<()> {
                 .unwrap(),
         ),
         Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F"),
-        Some(&PathBuf::from(dir.path())),
+        Some(dir.path()),
         None,
     )?;
 
@@ -623,7 +623,7 @@ fn read_config_home_and_env_vars() -> Result<()> {
                 .unwrap(),
         ),
         Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F"),
-        Some(&PathBuf::from(dir.path())),
+        Some(dir.path()),
         None,
     )?;
 
@@ -671,7 +671,7 @@ fn read_config_default_path_in_config_file() -> Result<()> {
     )?;
     file.flush()?;
 
-    let (settings, _) = read_config(None, None, Some(&PathBuf::from(dir.path())), None)?;
+    let (settings, _) = read_config(None, None, Some(dir.path()), None)?;
 
     let stores = settings.get_table("stores")?;
 
@@ -771,10 +771,10 @@ fn save_config_one_store() {
 
     let s1 = PasswordStore::new(
         "s1 name",
-        Some(&passdir.path().to_path_buf()),
+        Some(passdir.path()),
         None,
-        Some(&home.path().to_path_buf()),
-        Some(&style_file.path().to_path_buf()),
+        Some(home.path()),
+        Some(style_file.path()),
         &CryptoImpl::Sequoia,
         Some(&Fingerprint::V4([0; 20])),
     )
@@ -804,9 +804,9 @@ fn save_config_one_store_with_pgp_impl() {
 
     let store = PasswordStore::new(
         "default",
-        Some(&dir.path().to_path_buf()),
+        Some(dir.path()),
         None,
-        Some(&dir.path().to_path_buf()),
+        Some(dir.path()),
         None,
         &CryptoImpl::GpgMe,
         None,
@@ -832,9 +832,9 @@ fn save_config_one_store_with_fingerprint() {
 
     let store = PasswordStore::new(
         "default",
-        Some(&dir.path().to_path_buf()),
+        Some(dir.path()),
         None,
-        Some(&dir.path().to_path_buf()),
+        Some(dir.path()),
         None,
         &CryptoImpl::Sequoia,
         Some(&Fingerprint::V4(
@@ -965,7 +965,7 @@ fn decrypt_secret_empty_file() -> Result<()> {
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -1000,7 +1000,7 @@ fn decrypt_secret_missing_file() -> Result<()> {
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -1042,7 +1042,7 @@ fn decrypt_secret() -> Result<()> {
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -1081,7 +1081,7 @@ fn decrypt_password_empty_file() -> Result<()> {
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -1120,7 +1120,7 @@ fn decrypt_password_multiline() -> Result<()> {
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -1160,7 +1160,7 @@ fn mfa_setup(payload: &str) -> Result<(tempfile::TempDir, PasswordEntry, Passwor
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -1249,7 +1249,7 @@ fn update() -> Result<()> {
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -1304,7 +1304,7 @@ fn delete_file() -> Result<()> {
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -1343,7 +1343,7 @@ fn get_history_no_repo() -> Result<()> {
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -1692,11 +1692,11 @@ fn test_remove_and_commit() -> Result<()> {
 
 #[test]
 fn test_to_name() {
-    assert_eq!("name", to_name(&PathBuf::from("name.gpg")));
-    assert_eq!("dir/name", to_name(&PathBuf::from("dir/name.gpg")));
+    assert_eq!("name", to_name(Path::new("name.gpg")));
+    assert_eq!("dir/name", to_name(Path::new("dir/name.gpg")));
     assert_eq!(
         "dir/name without gpg on end",
-        to_name(&PathBuf::from("dir/name without gpg on end"))
+        to_name(Path::new("dir/name without gpg on end"))
     );
 }
 
@@ -2163,7 +2163,7 @@ fn test_add_recipient_different_sub_permissions() -> Result<()> {
 
     store.add_recipient(
         &crate::test_helpers::recipient_from_cert(&users[2]),
-        &PathBuf::from("./"),
+        Path::new("./"),
         config_path.path(),
     )?;
 
@@ -2203,7 +2203,7 @@ fn test_add_recipient_to_sub_dir() -> Result<()> {
 
     store.add_recipient(
         &crate::test_helpers::recipient_from_cert(&users[2]),
-        &PathBuf::from("dir/"),
+        Path::new("dir/"),
         config_path.path(),
     )?;
 
@@ -2228,7 +2228,7 @@ fn test_add_recipient_to_sub_dir_path_traversal() -> Result<()> {
 
     let res = store.add_recipient(
         &crate::test_helpers::recipient_from_cert(&users[2]),
-        &PathBuf::from("/tmp/"),
+        Path::new("/tmp/"),
         config_path.path(),
     );
 
@@ -2251,7 +2251,7 @@ fn test_add_recipient_to_sub_dir_unknown_path() -> Result<()> {
 
     let res = store.add_recipient(
         &crate::test_helpers::recipient_from_cert(&users[2]),
-        &PathBuf::from("path_that_doesnt_exist/"),
+        Path::new("path_that_doesnt_exist/"),
         config_path.path(),
     );
 
@@ -2286,7 +2286,7 @@ fn test_add_recipient_not_in_key_ring() -> Result<()> {
     let gpg_id_file_pre = fs::read_to_string(td.path().join(".gpg-id"))?;
     let res = store.add_recipient(
         &external_user_recipient,
-        &PathBuf::from("./"),
+        Path::new("./"),
         config_path.path(),
     );
     let gpg_id_file_post = fs::read_to_string(td.path().join(".gpg-id"))?;
@@ -2317,10 +2317,10 @@ fn test_remove_last_recipient_with_decryption_rights() -> Result<()> {
     assert_eq!(0, store.passwords.len());
 
     store.new_password_file("file", "password")?;
-    store.add_recipient(&user3_recipient, &PathBuf::from("./"), config_path.path())?;
+    store.add_recipient(&user3_recipient, Path::new("./"), config_path.path())?;
 
     let gpg_id_file_pre = fs::read_to_string(td.path().join(".gpg-id"))?;
-    let res = store.remove_recipient(&user0_recipient, &PathBuf::from("./"));
+    let res = store.remove_recipient(&user0_recipient, Path::new("./"));
     let gpg_id_file_post = fs::read_to_string(td.path().join(".gpg-id"))?;
 
     assert!(res.is_ok());
@@ -2357,7 +2357,7 @@ fn test_remove_last_recipient_from_sub_folder() -> Result<()> {
     store.new_password_file("dir/file", "password")?;
 
     let gpg_id_file_pre = fs::read_to_string(td.path().join(".gpg-id"))?;
-    let res = store.remove_recipient(&user0_recipient, &PathBuf::from("dir"));
+    let res = store.remove_recipient(&user0_recipient, Path::new("dir"));
     let gpg_id_file_post = fs::read_to_string(td.path().join(".gpg-id"))?;
 
     assert!(res.is_ok());
@@ -2417,7 +2417,7 @@ fn test_remove_recipient_root() -> Result<()> {
 
     store.remove_recipient(
         &crate::test_helpers::recipient_from_cert(&users[1]),
-        &PathBuf::from("./"),
+        Path::new("./"),
     )?;
 
     assert_eq!(2, store.passwords.len());

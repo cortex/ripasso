@@ -85,10 +85,10 @@ impl PasswordStore {
     /// If the configuration or the on disk setup is incorrect
     pub fn new(
         store_name: &str,
-        password_store_dir: Option<&PathBuf>,
+        password_store_dir: Option<&Path>,
         password_store_signing_key: Option<&str>,
-        home: Option<&PathBuf>,
-        style_file: Option<&PathBuf>,
+        home: Option<&Path>,
+        style_file: Option<&Path>,
         crypto_impl: &CryptoImpl,
         own_fingerprint: Option<&Fingerprint>,
     ) -> Result<Self> {
@@ -138,11 +138,11 @@ impl PasswordStore {
     /// wasn't specified.
     pub fn create(
         store_name: &str,
-        password_store_dir: Option<&PathBuf>,
+        password_store_dir: Option<&Path>,
         recipients: &[Recipient],
         recipients_as_signers: bool,
-        home: Option<&PathBuf>,
-        style_file: Option<&PathBuf>,
+        home: Option<&Path>,
+        style_file: Option<&Path>,
     ) -> Result<Self> {
         let pass_home = password_dir_raw(password_store_dir, home);
         if pass_home.exists() {
@@ -586,7 +586,7 @@ impl PasswordStore {
         for not_found in files_to_find {
             passwords.push(PasswordEntry::new(
                 &self.root,
-                &not_found.clone(),
+                &not_found,
                 Err(Error::Generic("")),
                 Err(Error::Generic("")),
                 Err(Error::Generic("")),
@@ -1272,10 +1272,7 @@ pub fn search(store: &PasswordStore, query: &str) -> Vec<PasswordEntry> {
 ///
 /// # Errors
 /// If the home directory doesn't exist.
-pub fn password_dir(
-    password_store_dir: Option<&PathBuf>,
-    home: Option<&PathBuf>,
-) -> Result<PathBuf> {
+pub fn password_dir(password_store_dir: Option<&Path>, home: Option<&Path>) -> Result<PathBuf> {
     let pass_home = password_dir_raw(password_store_dir, home);
     if !pass_home.exists() {
         return Err(Error::Generic("failed to locate password directory"));
@@ -1285,10 +1282,10 @@ pub fn password_dir(
 
 /// Determine password directory.
 #[must_use]
-pub fn password_dir_raw(password_store_dir: Option<&PathBuf>, home: Option<&PathBuf>) -> PathBuf {
+pub fn password_dir_raw(password_store_dir: Option<&Path>, home: Option<&Path>) -> PathBuf {
     // If a directory is provided via env var, use it
     match password_store_dir {
-        Some(p) => p.clone(),
+        Some(p) => p.to_path_buf(),
         None => match home {
             Some(h) => h.join(".password-store"),
             None => PathBuf::new().join(".password-store"),
@@ -1296,7 +1293,7 @@ pub fn password_dir_raw(password_store_dir: Option<&PathBuf>, home: Option<&Path
     }
 }
 
-fn home_exists(home: Option<&PathBuf>, settings: &Config) -> bool {
+fn home_exists(home: Option<&Path>, settings: &Config) -> bool {
     if home.is_none() {
         return false;
     }
@@ -1337,7 +1334,7 @@ fn env_var_exists(store_dir: Option<&str>, signing_keys: Option<&str>) -> bool {
     store_dir.is_some() || signing_keys.is_some()
 }
 
-fn settings_file_exists(home: Option<&PathBuf>, xdg_config_home: Option<&PathBuf>) -> bool {
+fn settings_file_exists(home: Option<&Path>, xdg_config_home: Option<&Path>) -> bool {
     if home.is_none() {
         return false;
     }
@@ -1356,7 +1353,7 @@ fn settings_file_exists(home: Option<&PathBuf>, xdg_config_home: Option<&PathBuf
     false
 }
 
-fn home_settings(home: Option<&PathBuf>) -> Result<Config> {
+fn home_settings(home: Option<&Path>) -> Result<Config> {
     let mut default_store = HashMap::new();
 
     let home = home.as_ref().ok_or("no home directory set")?;
@@ -1401,8 +1398,8 @@ fn var_settings(store_dir: Option<&str>, signing_keys: Option<&str>) -> Result<C
 }
 
 fn xdg_config_file_location(
-    home: Option<&PathBuf>,
-    xdg_config_home: Option<&PathBuf>,
+    home: Option<&Path>,
+    xdg_config_home: Option<&Path>,
 ) -> Result<PathBuf> {
     match xdg_config_home {
         Some(p) => Ok(p.join("ripasso/settings.toml")),
@@ -1435,8 +1432,8 @@ fn append_extension(path: PathBuf, extension: &str) -> PathBuf {
 pub fn read_config(
     store_dir: Option<&str>,
     signing_keys: Option<&str>,
-    home: Option<&PathBuf>,
-    xdg_config_home: Option<&PathBuf>,
+    home: Option<&Path>,
+    xdg_config_home: Option<&Path>,
 ) -> Result<(Config, PathBuf)> {
     let mut settings = config::ConfigBuilder::default();
     let config_file_location = xdg_config_file_location(home, xdg_config_home)?;
