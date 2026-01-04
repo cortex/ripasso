@@ -101,15 +101,15 @@ impl Window {
         )
     }
 
-    fn restore_data(&self, home_dir: Option<PathBuf>, user_config_dir: Option<PathBuf>) {
-        let (config, home) = ripasso::pass::read_config(&None, &None, &home_dir, &user_config_dir)
+    fn restore_data(&self, home_dir: Option<&PathBuf>, user_config_dir: Option<&PathBuf>) {
+        let (config, home) = ripasso::pass::read_config(None, None, home_dir, user_config_dir)
             .expect("No config file present");
 
         let stores = get_stores(&config, &Some(home)).expect("Problem constructing stores");
         // Convert `Vec<CollectionData>` to `Vec<CollectionObject>`
         let collections: Vec<CollectionObject> = stores
             .into_iter()
-            .map(|s| CollectionObject::from_store_data(s, &user_config_dir.clone().unwrap()))
+            .map(|s| CollectionObject::from_store_data(s, user_config_dir.unwrap()))
             .collect();
 
         // Insert restored objects into model

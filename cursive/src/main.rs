@@ -54,6 +54,7 @@ use crate::helpers::{
 };
 use lazy_static::lazy_static;
 use ripasso::crypto::Fingerprint;
+use ripasso::password_generator::PasswordGenerationCategory;
 use zeroize::Zeroize;
 
 /// The 'pointer' to the current PasswordStore is of this convoluted type.
@@ -444,7 +445,7 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
 
         })
         .button(CATALOG.gettext("Generate Password"), move |s| {
-            let mut new_password = password_generator(20, 0);
+            let mut new_password = password_generator(20, PasswordGenerationCategory::AsciiOnly);
             s.call_on_name("editbox", |e: &mut TextArea| {
                 e.set_content(&new_password);
             });
@@ -456,7 +457,7 @@ fn open(ui: &mut Cursive, store: PasswordStoreType) -> Result<()> {
             let mut new_password = match passphrase_generator(6) {
                 Ok(words) => words.join(" "),
                 Err(err) => {
-                    helpers::errorbox(s, &ripasso::pass::Error::from(err));
+                    helpers::errorbox(s, &err);
                     return;
                 }
             };
@@ -791,8 +792,12 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
             move |s| {
                 let category = *category_value.lock().unwrap();
                 let length = *password_length.lock().unwrap();
-                let new_password =
-                    ripasso::password_generator::password_generator(length, category);
+                let category = if category == 0 {
+                    PasswordGenerationCategory::AsciiOnly
+                } else {
+                    PasswordGenerationCategory::AsciiExtended
+                };
+                let new_password = password_generator(length, category);
 
                 s.call_on_name("new_password_input", |e: &mut EditView| {
                     e.set_content(new_password);
@@ -803,7 +808,7 @@ fn create(ui: &mut Cursive, store: PasswordStoreType) {
             let new_password = match ripasso::passphrase_generator::passphrase_generator(6) {
                 Ok(words) => words.join(" "),
                 Err(err) => {
-                    helpers::errorbox(s, &ripasso::pass::Error::from(err));
+                    helpers::errorbox(s, &err);
                     return;
                 }
             };
@@ -1592,10 +1597,7 @@ fn save_edit_config(
 
     let e_k = if e_k_bool {
         let mut recipients: Vec<Recipient> = vec![];
-        for (i, r) in all_recipients_from_stores(stores.clone())?
-            .iter()
-            .enumerate()
-        {
+        for (i, r) in all_recipients_from_stores(&stores)?.iter().enumerate() {
             if is_checkbox_checked(ui, &format!("edit_recipient_{i}")) && r.fingerprint.is_some() {
                 recipients.push(r.clone());
             }
@@ -1648,7 +1650,7 @@ fn save_edit_config(
         }
     }
 
-    let save_res = pass::save_config(stores, config_file_location);
+    let save_res = pass::save_config(&stores, config_file_location);
     if let Err(err) = save_res {
         helpers::errorbox(ui, &err);
     }
@@ -1692,7 +1694,7 @@ fn save_new_config(
         stores_borrowed.push(Arc::new(Mutex::new(new_store)));
     }
 
-    pass::save_config(stores, config_file_location)?;
+    pass::save_config(&stores, config_file_location)?;
 
     let mut l = ui.find_name::<SelectView<String>>("stores").unwrap();
 
@@ -1711,7 +1713,7 @@ fn edit_store_in_config(
     config_file_location: &Path,
     home: &Option<PathBuf>,
 ) -> Result<()> {
-    let all_recipients = all_recipients_from_stores(stores.clone())?;
+    let all_recipients = all_recipients_from_stores(&stores)?;
 
     let l = ui.find_name::<SelectView<String>>("stores").unwrap();
 
@@ -1881,7 +1883,7 @@ fn delete_store_from_config(
         stores_borrowed.retain(|store| store.lock().unwrap().get_name() != name);
     }
 
-    let save_res = pass::save_config(stores, config_file_location);
+    let save_res = pass::save_config(&stores, config_file_location);
     if let Err(err) = save_res {
         helpers::errorbox(ui, &err);
         return Ok(());
@@ -1903,7 +1905,7 @@ fn add_store_to_config(
     config_file_location: &Path,
     home: &Option<PathBuf>,
 ) -> Result<()> {
-    let all_recipients = all_recipients_from_stores(stores.clone())?;
+    let all_recipients = all_recipients_from_stores(&stores)?;
 
     let mut fields = LinearLayout::vertical();
     let mut name_fields = LinearLayout::horizontal();
@@ -2153,10 +2155,10 @@ fn main() -> Result<()> {
         };
 
         pass::read_config(
-            &password_store_dir,
-            &password_store_signing_key,
-            &home,
-            &xdg_config_home,
+            password_store_dir.as_deref(),
+            password_store_signing_key.as_deref(),
+            home.as_ref(),
+            xdg_config_home.as_ref(),
         )
     };
     if let Err(err) = config_res {
@@ -2189,7 +2191,7 @@ fn main() -> Result<()> {
             eprintln!("Error {err}");
             process::exit(1);
         }
-        if let Err(err) = pass::save_config(stores.clone(), &config_file_location) {
+        if let Err(err) = pass::save_config(&stores, &config_file_location) {
             eprintln!("Error {err}");
             process::exit(1);
         }

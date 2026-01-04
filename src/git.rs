@@ -31,6 +31,9 @@ fn git_branch_name(repo: &Repository) -> Result<String> {
 }
 
 /// Apply the changes to the git repository.
+///
+/// # Errors
+/// If there is io problems.
 pub fn commit(
     repo: &Repository,
     signature: &git2::Signature,
@@ -75,6 +78,10 @@ pub fn commit(
     }
 }
 
+/// Gets the last commit of the repo.
+///
+/// # Errors
+/// If there is io problems or no commits.
 pub fn find_last_commit(repo: &Repository) -> Result<git2::Commit<'_>> {
     let obj = repo.head()?.resolve()?.peel(git2::ObjectType::Commit)?;
     obj.into_commit()
@@ -89,6 +96,9 @@ fn should_sign(repo: &Repository) -> bool {
 
 /// returns true if the diff between the two commits contains the path that the `DiffOptions`
 /// have been prepared with
+///
+/// # Errors
+/// If there is io problems.
 pub fn match_with_parent(
     repo: &Repository,
     commit: &git2::Commit,
@@ -102,6 +112,9 @@ pub fn match_with_parent(
 }
 
 /// Add a file to the store, and commit it to the supplied git repository.
+///
+/// # Errors
+/// If there is io problems.
 pub fn add_and_commit_internal(
     repo: &Repository,
     paths: &[PathBuf],
@@ -130,6 +143,9 @@ pub fn add_and_commit_internal(
 }
 
 /// Remove a file from the store, and commit the deletion to the supplied git repository.
+///
+/// # Errors
+/// If there is io problems.
 pub fn remove_and_commit(store: &PasswordStore, paths: &[PathBuf], message: &str) -> Result<Oid> {
     let repo = store
         .repo()
@@ -165,6 +181,9 @@ pub fn remove_and_commit(store: &PasswordStore, paths: &[PathBuf], message: &str
 }
 
 /// Move a file to a new place in the store, and commit the move to the supplied git repository.
+///
+/// # Errors
+/// If there is io problems.
 pub fn move_and_commit(
     store: &PasswordStore,
     old_name: &Path,
@@ -259,9 +278,8 @@ pub fn push(store: &PasswordStore) -> Result<()> {
     let res = {
         let mut callbacks = git2::RemoteCallbacks::new();
         let mut tried_ssh_key = false;
-        callbacks.credentials(|_url, username, allowed| {
-            cred(&mut tried_ssh_key, _url, username, allowed)
-        });
+        callbacks
+            .credentials(|url, username, allowed| cred(&mut tried_ssh_key, url, username, allowed));
         callbacks.push_update_reference(|_refname, status| {
             ref_status = status.map(std::borrow::ToOwned::to_owned);
             Ok(())
@@ -291,7 +309,7 @@ pub fn pull(store: &PasswordStore) -> Result<()> {
 
     let mut cb = git2::RemoteCallbacks::new();
     let mut tried_ssh_key = false;
-    cb.credentials(|_url, username, allowed| cred(&mut tried_ssh_key, _url, username, allowed));
+    cb.credentials(|url, username, allowed| cred(&mut tried_ssh_key, url, username, allowed));
 
     let mut opts = git2::FetchOptions::new();
     opts.remote_callbacks(cb);
@@ -345,6 +363,10 @@ fn triple<T: Display>(
     )
 }
 
+/// Returns meta-data for a file in git.
+///
+/// # Panics
+/// Should not panic.
 pub fn read_git_meta_data(
     base: &Path,
     path: &Path,
@@ -390,6 +412,10 @@ pub fn read_git_meta_data(
     (time_return, name_return, signature_return)
 }
 
+/// Verifies a signature of a git commit.
+///
+/// # Errors
+/// If the signature can't be verified.
 pub fn verify_git_signature(
     repo: &Repository,
     id: &Oid,

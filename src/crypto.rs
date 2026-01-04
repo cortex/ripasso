@@ -182,13 +182,16 @@ impl AsRef<[u8]> for Fingerprint {
 
 /// Models the interactions that can be done on a pgp key
 pub trait Key {
-    /// returns a list of names associated with the key
+    /// Returns a list of names associated with the key.
     fn user_id_names(&self) -> Vec<String>;
 
-    /// returns the keys fingerprint
+    /// Returns the keys fingerprint.
+    ///
+    /// # Errors
+    /// If a gpg context can't be created, and the gpg backend is chosen.
     fn fingerprint(&self) -> Result<Fingerprint>;
 
-    /// returns if the key isn't usable
+    /// Returns if the key isn't usable.
     fn is_not_usable(&self) -> bool;
 }
 
@@ -228,6 +231,7 @@ pub trait Crypto {
     /// Will return `Err` if decryption fails, for example if the current user isn't the
     /// recipient of the message.
     fn decrypt_string(&self, ciphertext: &[u8]) -> Result<String>;
+
     /// Encrypts a string
     /// # Errors
     /// Will return `Err` if encryption fails, for example if the current users key
@@ -256,6 +260,9 @@ pub trait Crypto {
     ) -> std::result::Result<SignatureStatus, VerificationError>;
 
     /// Returns true if a recipient is in the user's keyring.
+    ///
+    /// # Errors
+    /// If a gpg context can't be created, and the gpg backend is chosen.
     fn is_key_in_keyring(&self, recipient: &Recipient) -> Result<bool>;
 
     /// Pull keys from the keyserver for those recipients.
@@ -273,7 +280,7 @@ pub trait Crypto {
     /// Will return `Err` if `key_id` didn't correspond to a key.
     fn get_key(&self, key_id: &str) -> Result<Box<dyn Key>>;
 
-    /// Returns a map from key fingerprints to OwnerTrustLevel's
+    /// Returns a map from key fingerprints to `OwnerTrustLevel`'s
     /// # Errors
     /// Will return `Err` on failure to obtain trust levels.
     fn get_all_trust_items(&self) -> Result<HashMap<Fingerprint, OwnerTrustLevel>>;
@@ -294,7 +301,7 @@ impl Crypto for GpgMe {
         let mut ctx = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
         let mut output = Vec::new();
         ctx.decrypt(ciphertext, &mut output)?;
-        let result = String::from_utf8(output.to_vec())?;
+        let result = String::from_utf8(output.clone())?;
         output.zeroize();
         Ok(result)
     }
@@ -514,7 +521,7 @@ struct Helper<'a> {
     key_ring: &'a HashMap<Fingerprint, Arc<Cert>>,
     /// This is all the certificates that are allowed to sign something
     public_keys: Vec<Arc<Cert>>,
-    /// context if talking to gpg_agent for example
+    /// context if talking to `gpg_agent` for example
     ctx: Option<sequoia_gpg_agent::gnupg::Context>,
     /// to do verification or not
     do_signature_verification: bool,
@@ -555,29 +562,27 @@ impl VerificationHelper for Helper<'_> {
 
 fn find(
     key_ring: &HashMap<Fingerprint, Arc<Cert>>,
-    recipient: &Option<KeyHandle>,
+    recipient: Option<&KeyHandle>,
 ) -> Result<Arc<Cert>> {
     let recipient = recipient.as_ref().ok_or(Error::Generic("No recipient"))?;
 
     match recipient {
-        KeyHandle::Fingerprint(fpr) => {
-            match fpr {
-                sequoia_openpgp::Fingerprint::V6(v6) => {
-                    if let Some(key_handle) = key_ring.get(&Fingerprint::V6(*v6)) {
-                        return Ok(key_handle.clone());
-                    }
+        KeyHandle::Fingerprint(fpr) => match fpr {
+            sequoia_openpgp::Fingerprint::V6(v6) => {
+                if let Some(key_handle) = key_ring.get(&Fingerprint::V6(*v6)) {
+                    return Ok(key_handle.clone());
                 }
-                sequoia_openpgp::Fingerprint::V4(v4) => {
-                    if let Some(key_handle) = key_ring.get(&Fingerprint::V4(*v4)) {
-                        return Ok(key_handle.clone());
-                    }
+            }
+            sequoia_openpgp::Fingerprint::V4(v4) => {
+                if let Some(key_handle) = key_ring.get(&Fingerprint::V4(*v4)) {
+                    return Ok(key_handle.clone());
                 }
-                sequoia_openpgp::Fingerprint::Unknown { .. } => {
-                    return Err(Error::Generic("unknown fingerprint version"));
-                }
-                _ => {}
-            };
-        }
+            }
+            sequoia_openpgp::Fingerprint::Unknown { .. } => {
+                return Err(Error::Generic("unknown fingerprint version"));
+            }
+            _ => {}
+        },
         KeyHandle::KeyID(key_id) => match key_id {
             KeyID::Long(bytes) => {
                 for (key, value) in key_ring {
@@ -608,7 +613,7 @@ impl DecryptionHelper for Helper<'_> {
             // we don't know which key is the users own key, so lets try them all
             let mut selected_fingerprint: Option<Arc<Cert>> = None;
             for pkesk in pkesks {
-                if let Ok(cert) = find(self.key_ring, &pkesk.recipient()) {
+                if let Ok(cert) = find(self.key_ring, pkesk.recipient().as_ref()) {
                     let key = cert.primary_key().key();
                     let mut pair = sequoia_gpg_agent::KeyPair::new_for_gnupg_context(
                         self.ctx
@@ -648,8 +653,7 @@ impl DecryptionHelper for Helper<'_> {
         for pkesk in pkesks {
             if pkesk
                 .decrypt(&mut pair, sym_algo)
-                .map(|(algo, sk)| decrypt(algo, &sk))
-                .unwrap_or(false)
+                .is_some_and(|(algo, sk)| decrypt(algo, &sk))
             {
                 return Ok(Some(
                     (*self
@@ -688,9 +692,8 @@ impl Key for SequoiaKey {
     fn is_not_usable(&self) -> bool {
         let p = sequoia_openpgp::policy::StandardPolicy::new();
 
-        let policy = match self.cert.with_policy(&p, None) {
-            Err(_) => return true,
-            Ok(p) => p,
+        let Ok(policy) = self.cert.with_policy(&p, None) else {
+            return true;
         };
 
         self.cert.revocation_status(&p, None) != RevocationStatus::NotAsFarAsWeKnow
@@ -737,6 +740,7 @@ impl Sequoia {
         })
     }
 
+    #[must_use]
     pub fn from_values(
         user_key_id: Fingerprint,
         key_ring: HashMap<Fingerprint, Arc<Cert>>,
@@ -756,8 +760,8 @@ impl Sequoia {
         let mut result = vec![];
 
         for recipient in input {
-            match &recipient.fingerprint {
-                Some(fp) => match self.key_ring.get(fp) {
+            if let Some(fp) = &recipient.fingerprint {
+                match self.key_ring.get(fp) {
                     Some(cert) => result.push(cert.clone()),
                     None => {
                         return Err(Error::GenericDyn(format!(
@@ -765,17 +769,16 @@ impl Sequoia {
                             recipient.key_id
                         )));
                     }
-                },
-                None => {
-                    let kh: KeyHandle = recipient.key_id.parse()?;
+                }
+            } else {
+                let kh: KeyHandle = recipient.key_id.parse()?;
 
-                    for cert in self.key_ring.values() {
-                        if cert.key_handle().aliases(&kh) {
-                            result.push(cert.clone());
-                        }
+                for cert in self.key_ring.values() {
+                    if cert.key_handle().aliases(&kh) {
+                        result.push(cert.clone());
                     }
                 }
-            };
+            }
         }
 
         Ok(result)

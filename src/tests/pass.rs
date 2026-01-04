@@ -20,7 +20,7 @@ use crate::test_helpers::{
 
 impl PartialEq for Error {
     fn eq(&self, other: &Error) -> bool {
-        format!("{:?}", self) == format!("{:?}", *other)
+        format!("{self:?}") == format!("{:?}", *other)
     }
 }
 
@@ -334,13 +334,13 @@ fn password_store_with_symlink() -> Result<()> {
 
 #[test]
 fn home_exists_missing_home_env() {
-    assert!(!home_exists(&None, &Config::default()));
+    assert!(!home_exists(None, &Config::default()));
 }
 
 #[test]
 fn home_exists_home_dir_without_config_dir() {
     let dir = tempdir().unwrap();
-    let result = home_exists(&Some(dir.keep()), &Config::default());
+    let result = home_exists(Some(&dir.keep()), &Config::default());
 
     assert!(!result);
 }
@@ -349,7 +349,7 @@ fn home_exists_home_dir_without_config_dir() {
 fn home_exists_home_dir_with_file_instead_of_dir() -> Result<()> {
     let dir = tempdir()?;
     File::create(dir.path().join(".password-store"))?;
-    let result = home_exists(&Some(dir.keep()), &Config::default());
+    let result = home_exists(Some(&dir.keep()), &Config::default());
 
     assert!(!result);
 
@@ -360,7 +360,7 @@ fn home_exists_home_dir_with_file_instead_of_dir() -> Result<()> {
 fn home_exists_home_dir_with_config_dir() -> Result<()> {
     let dir = tempdir()?;
     fs::create_dir(dir.path().join(".password-store"))?;
-    let result = home_exists(&Some(dir.keep()), &Config::default());
+    let result = home_exists(Some(&dir.keep()), &Config::default());
 
     assert!(result);
 
@@ -369,7 +369,7 @@ fn home_exists_home_dir_with_config_dir() -> Result<()> {
 
 #[test]
 fn env_var_exists_test_none() {
-    assert!(!env_var_exists(&None, &None));
+    assert!(!env_var_exists(None, None));
 }
 
 #[test]
@@ -377,14 +377,8 @@ fn env_var_exists_test_without_dir() {
     let dir = tempdir().unwrap();
 
     assert!(env_var_exists(
-        &Some(
-            dir.path()
-                .join(".password-store")
-                .to_str()
-                .unwrap()
-                .to_owned()
-        ),
-        &None
+        Some(dir.path().join(".password-store").to_str().unwrap()),
+        None
     ));
 }
 
@@ -392,17 +386,14 @@ fn env_var_exists_test_without_dir() {
 fn env_var_exists_test_with_dir() {
     let dir = tempdir().unwrap();
 
-    assert!(env_var_exists(
-        &Some(dir.path().to_str().unwrap().to_owned()),
-        &None
-    ));
+    assert!(env_var_exists(Some(dir.path().to_str().unwrap()), None));
 }
 
 #[test]
 fn home_settings_missing() {
     assert_eq!(
         Error::GenericDyn("no home directory set".to_owned()),
-        home_settings(&None).err().unwrap()
+        home_settings(None).err().unwrap()
     );
 }
 
@@ -411,20 +402,13 @@ fn home_settings_dir_exists() -> Result<()> {
     let dir = tempdir()?;
     fs::create_dir(dir.path().join(".password-store"))?;
 
-    let settings = home_settings(&Some(PathBuf::from(dir.path())))?;
+    let settings = home_settings(Some(&PathBuf::from(dir.path())))?;
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
     let path = work["path"].clone().into_string()?;
 
-    assert_eq!(
-        dir.path()
-            .join(".password-store/")
-            .to_str()
-            .unwrap()
-            .to_owned(),
-        path
-    );
+    assert_eq!(dir.path().join(".password-store/").to_str().unwrap(), path);
 
     Ok(())
 }
@@ -434,20 +418,13 @@ fn home_settings_dir_exists() -> Result<()> {
 fn home_settings_dir_doesnt_exists() -> Result<()> {
     let dir = tempdir()?;
 
-    let settings = home_settings(&Some(PathBuf::from(dir.path())))?;
+    let settings = home_settings(Some(&PathBuf::from(dir.path())))?;
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
     let path = work["path"].clone().into_string()?;
 
-    assert_eq!(
-        dir.path()
-            .join(".password-store/")
-            .to_str()
-            .unwrap()
-            .to_owned(),
-        path
-    );
+    assert_eq!(dir.path().join(".password-store/").to_str().unwrap(), path);
 
     Ok(())
 }
@@ -455,8 +432,8 @@ fn home_settings_dir_doesnt_exists() -> Result<()> {
 #[test]
 fn var_settings_test() -> Result<()> {
     let settings = var_settings(
-        &Some("/home/user/.password-store".to_owned()),
-        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_owned()),
+        Some("/home/user/.password-store"),
+        Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F"),
     )?;
 
     let stores = settings.get_table("stores")?;
@@ -493,7 +470,7 @@ fn file_settings_simple_file() -> Result<()> {
     let mut settings = ConfigBuilder::default();
     settings = config::ConfigBuilder::<config::builder::DefaultState>::add_source(
         settings,
-        file_settings(&xdg_config_file_location(&Some(dir.keep()), &None)?),
+        file_settings(&xdg_config_file_location(Some(&dir.keep()), None)?),
     );
     let settings = settings.build()?;
 
@@ -528,8 +505,8 @@ fn file_settings_file_in_xdg_config_home() -> Result<()> {
     settings = config::ConfigBuilder::<config::builder::DefaultState>::add_source(
         settings,
         file_settings(&xdg_config_file_location(
-            &Some(dir.keep()),
-            &Some(dir2.path().join(".random_config")),
+            Some(&dir.keep()),
+            Some(&dir2.path().join(".random_config")),
         )?),
     );
     let settings = settings.build()?;
@@ -555,20 +532,13 @@ fn read_config_empty_config_file() -> Result<()> {
             .join("settings.toml"),
     )?;
 
-    let (settings, _) = read_config(&None, &None, &Some(PathBuf::from(dir.path())), &None)?;
+    let (settings, _) = read_config(None, None, Some(&PathBuf::from(dir.path())), None)?;
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
     let path = work["path"].clone().into_string()?;
 
-    assert_eq!(
-        dir.path()
-            .join(".password-store/")
-            .to_str()
-            .unwrap()
-            .to_owned(),
-        path
-    );
+    assert_eq!(dir.path().join(".password-store/").to_str().unwrap(), path);
 
     Ok(())
 }
@@ -579,10 +549,10 @@ fn read_config_empty_config_file_with_keys_env() -> Result<()> {
     create_dir_all(dir.path().join(".password-store"))?;
 
     let (settings, _) = read_config(
-        &None,
-        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_owned()),
-        &Some(PathBuf::from(dir.path())),
-        &None,
+        None,
+        Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F"),
+        Some(&PathBuf::from(dir.path())),
+        None,
     )?;
 
     let stores = settings.get_table("stores")?;
@@ -590,14 +560,7 @@ fn read_config_empty_config_file_with_keys_env() -> Result<()> {
     let path = work["path"].clone().into_string()?;
     let valid_signing_keys = work["valid_signing_keys"].clone().into_string()?;
 
-    assert_eq!(
-        dir.path()
-            .join(".password-store/")
-            .to_str()
-            .unwrap()
-            .to_owned(),
-        path
-    );
+    assert_eq!(dir.path().join(".password-store/").to_str().unwrap(), path);
     assert_eq!(
         "E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F",
         valid_signing_keys
@@ -612,17 +575,16 @@ fn read_config_env_vars() -> Result<()> {
     create_dir_all(dir.path().join("env_var").join(".password-store"))?;
 
     let (settings, _) = read_config(
-        &Some(
+        Some(
             dir.path()
                 .join("env_var")
                 .join(".password-store")
                 .to_str()
-                .unwrap()
-                .to_owned(),
+                .unwrap(),
         ),
-        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_owned()),
-        &Some(PathBuf::from(dir.path())),
-        &None,
+        Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F"),
+        Some(&PathBuf::from(dir.path())),
+        None,
     )?;
 
     let stores = settings.get_table("stores")?;
@@ -635,8 +597,7 @@ fn read_config_env_vars() -> Result<()> {
             .join("env_var")
             .join(".password-store/")
             .to_str()
-            .unwrap()
-            .to_owned(),
+            .unwrap(),
         path
     );
     assert_eq!(
@@ -654,17 +615,16 @@ fn read_config_home_and_env_vars() -> Result<()> {
     create_dir_all(dir.path().join("env_var").join(".password-store"))?;
 
     let (settings, _) = read_config(
-        &Some(
+        Some(
             dir.path()
                 .join("env_var")
                 .join(".password-store")
                 .to_str()
-                .unwrap()
-                .to_owned(),
+                .unwrap(),
         ),
-        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_owned()),
-        &Some(PathBuf::from(dir.path())),
-        &None,
+        Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F"),
+        Some(&PathBuf::from(dir.path())),
+        None,
     )?;
 
     let stores = settings.get_table("stores")?;
@@ -677,8 +637,7 @@ fn read_config_home_and_env_vars() -> Result<()> {
             .join("env_var")
             .join(".password-store/")
             .to_str()
-            .unwrap()
-            .to_owned(),
+            .unwrap(),
         path
     );
     assert_eq!(
@@ -712,7 +671,7 @@ fn read_config_default_path_in_config_file() -> Result<()> {
     )?;
     file.flush()?;
 
-    let (settings, _) = read_config(&None, &None, &Some(PathBuf::from(dir.path())), &None)?;
+    let (settings, _) = read_config(None, None, Some(&PathBuf::from(dir.path())), None)?;
 
     let stores = settings.get_table("stores")?;
 
@@ -747,7 +706,7 @@ fn read_config_default_path_in_env_var() -> Result<()> {
     )?;
     file.flush()?;
 
-    let (settings, _) = read_config(&Some("/tmp/t2".to_owned()), &None, &Some(dir.keep()), &None)?;
+    let (settings, _) = read_config(Some("/tmp/t2"), None, Some(&dir.keep()), None)?;
 
     let stores = settings.get_table("stores")?;
 
@@ -784,7 +743,7 @@ fn read_config_default_path_in_env_var_with_pgp_setting() -> Result<()> {
     )?;
     file.flush()?;
 
-    let (settings, _) = read_config(&Some("/tmp/t2".to_owned()), &None, &Some(dir.keep()), &None)?;
+    let (settings, _) = read_config(Some("/tmp/t2"), None, Some(&dir.keep()), None)?;
 
     let stores = settings.get_table("stores")?;
 
@@ -822,7 +781,7 @@ fn save_config_one_store() {
     .unwrap();
 
     save_config(
-        Arc::new(Mutex::new(vec![Arc::new(Mutex::new(s1))])),
+        &Arc::new(Mutex::new(vec![Arc::new(Mutex::new(s1))])),
         config_file.path(),
     )
     .unwrap();
@@ -855,7 +814,7 @@ fn save_config_one_store_with_pgp_impl() {
     .unwrap();
 
     save_config(
-        Arc::new(Mutex::new(vec![Arc::new(Mutex::new(store))])),
+        &Arc::new(Mutex::new(vec![Arc::new(Mutex::new(store))])),
         &dir.path().join("file.toml"),
     )
     .unwrap();
@@ -885,7 +844,7 @@ fn save_config_one_store_with_fingerprint() {
     .unwrap();
 
     save_config(
-        Arc::new(Mutex::new(vec![Arc::new(Mutex::new(store))])),
+        &Arc::new(Mutex::new(vec![Arc::new(Mutex::new(store))])),
         &dir.path().join("file.toml"),
     )
     .unwrap();
@@ -1188,7 +1147,7 @@ fn decrypt_password_multiline() -> Result<()> {
     Ok(())
 }
 
-fn mfa_setup(payload: String) -> Result<(tempfile::TempDir, PasswordEntry, PasswordStore)> {
+fn mfa_setup(payload: &str) -> Result<(tempfile::TempDir, PasswordEntry, PasswordStore)> {
     let dir = tempdir()?;
     create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
@@ -1208,7 +1167,7 @@ fn mfa_setup(payload: String) -> Result<(tempfile::TempDir, PasswordEntry, Passw
         RepositoryStatus::NoRepo,
     );
 
-    let crypto = MockCrypto::new().with_decrypt_string_return(&payload);
+    let crypto = MockCrypto::new().with_decrypt_string_return(payload);
 
     let store = PasswordStore {
         name: "store_name".to_owned(),
@@ -1225,43 +1184,49 @@ fn mfa_setup(payload: String) -> Result<(tempfile::TempDir, PasswordEntry, Passw
 
 #[test]
 fn mfa_example1() -> Result<()> {
-    let (_dir, pe, store) = mfa_setup("otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example".to_owned())?;
+    let (_dir, pe, store) = mfa_setup(
+        "otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example",
+    )?;
 
     let res = pe.mfa(&store)?;
 
     assert_eq!(6, res.len());
-    assert_eq!(6, res.chars().filter(|c| c.is_ascii_digit()).count());
+    assert_eq!(6, res.chars().filter(char::is_ascii_digit).count());
 
     Ok(())
 }
 
 #[test]
 fn mfa_example2() -> Result<()> {
-    let (_dir, pe, store) = mfa_setup("some text\n otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example\nmore txt\n\n".to_owned())?;
+    let (_dir, pe, store) = mfa_setup(
+        "some text\n otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example\nmore txt\n\n",
+    )?;
 
     let res = pe.mfa(&store)?;
 
     assert_eq!(6, res.len());
-    assert_eq!(6, res.chars().filter(|c| c.is_ascii_digit()).count());
+    assert_eq!(6, res.chars().filter(char::is_ascii_digit).count());
 
     Ok(())
 }
 
 #[test]
 fn mfa_example3() -> Result<()> {
-    let (_dir, pe, store) = mfa_setup("lots and lots and lots and lots and lots and lots and lots and lots and lots and lots of text\n otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example\nmore txt\n\n".to_owned())?;
+    let (_dir, pe, store) = mfa_setup(
+        "lots and lots and lots and lots and lots and lots and lots and lots and lots and lots of text\n otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example\nmore txt\n\n",
+    )?;
 
     let res = pe.mfa(&store)?;
 
     assert_eq!(6, res.len());
-    assert_eq!(6, res.chars().filter(|c| c.is_ascii_digit()).count());
+    assert_eq!(6, res.chars().filter(char::is_ascii_digit).count());
 
     Ok(())
 }
 
 #[test]
 fn mfa_no_otpauth_url() -> Result<()> {
-    let (_dir, pe, store) = mfa_setup("password".to_owned())?;
+    let (_dir, pe, store) = mfa_setup("password")?;
 
     let res = pe.mfa(&store);
 
@@ -1592,10 +1557,10 @@ fn test_move_and_commit_signed() -> Result<()> {
 }
 
 #[test]
-fn test_search() -> Result<()> {
+fn test_search() {
     let p1 = PasswordEntry {
         name: "no/match/check".to_owned(),
-        path: Default::default(),
+        path: PathBuf::default(),
         updated: None,
         committed_by: None,
         signature_status: None,
@@ -1603,7 +1568,7 @@ fn test_search() -> Result<()> {
     };
     let p2 = PasswordEntry {
         name: "dir/test/middle".to_owned(),
-        path: Default::default(),
+        path: PathBuf::default(),
         updated: None,
         committed_by: None,
         signature_status: None,
@@ -1611,7 +1576,7 @@ fn test_search() -> Result<()> {
     };
     let p3 = PasswordEntry {
         name: " space test ".to_owned(),
-        path: Default::default(),
+        path: PathBuf::default(),
         updated: None,
         committed_by: None,
         signature_status: None,
@@ -1633,8 +1598,6 @@ fn test_search() -> Result<()> {
     assert_eq!(2, result.len());
     assert_eq!("dir/test/middle", result[0].name);
     assert_eq!(" space test ", result[1].name);
-
-    Ok(())
 }
 
 #[test]
@@ -1895,7 +1858,7 @@ fn test_verify_gpg_id_files_untrusted_key_in_keyring() {
 
     let store = PasswordStore {
         name: "store_name".to_owned(),
-        root: password_store_dir.to_path_buf(),
+        root: password_store_dir.clone(),
         valid_gpg_signing_keys: vec![sofp],
         passwords: [].to_vec(),
         style_file: None,
@@ -2545,7 +2508,7 @@ fn all_recipients_from_stores_plain() -> Result<()> {
         user_home: None,
     };
 
-    let result = all_recipients_from_stores(Arc::new(Mutex::new(vec![Arc::new(Mutex::new(s1))])))?;
+    let result = all_recipients_from_stores(&Arc::new(Mutex::new(vec![Arc::new(Mutex::new(s1))])))?;
 
     assert_eq!(1, result.len());
     assert_eq!("7E068070D5EF794B00C8A9D91D108E6C07CBC406", result[0].key_id);

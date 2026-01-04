@@ -40,6 +40,10 @@ impl Drop for UnpackedDir {
 }
 
 impl UnpackedDir {
+    /// Unpacks a `tar.gz` file and returns a reference to the directory.
+    ///
+    /// # Errors
+    /// On io errors and similar.
     pub fn new(name: &str) -> Result<UnpackedDir> {
         let base_path: PathBuf = get_testres_path();
 
@@ -55,10 +59,12 @@ impl UnpackedDir {
         })
     }
 
+    #[must_use]
     pub fn path(&self) -> &Path {
         self.dir.as_path()
     }
 
+    #[must_use]
     pub fn dir(&self) -> PathBuf {
         self.dir.clone()
     }
@@ -102,19 +108,22 @@ impl Default for MockKey {
 }
 
 impl MockKey {
+    #[must_use]
     pub fn new() -> MockKey {
         MockKey {
-            fingerprint: Fingerprint::V4(
-                <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
-            ),
+            fingerprint: Fingerprint::V4([
+                0x7E, 0x06, 0x80, 0x70, 0xD5, 0xEF, 0x79, 0x4B, 0x00, 0xC8, 0xA9, 0xD9, 0x1D, 0x10,
+                0x8E, 0x6C, 0x07, 0xCB, 0xC4, 0x06,
+            ]),
             user_id_names: vec!["Alexander Kjäll <alexander.kjall@gmail.com>".to_owned()],
         }
     }
 
+    #[must_use]
     pub fn from_args(fingerprint: Fingerprint, user_id_names: Vec<String>) -> MockKey {
         MockKey {
-            user_id_names,
             fingerprint,
+            user_id_names,
         }
     }
 }
@@ -140,6 +149,7 @@ impl Default for MockCrypto {
 }
 
 impl MockCrypto {
+    #[must_use]
     pub fn new() -> MockCrypto {
         MockCrypto {
             decrypt_called: RefCell::new(false),
@@ -155,36 +165,42 @@ impl MockCrypto {
         }
     }
 
+    #[must_use]
     pub fn with_encrypt_string_return(mut self, data: Vec<u8>) -> MockCrypto {
         self.encrypt_string_return = data;
 
         self
     }
 
+    #[must_use]
     pub fn with_decrypt_string_return(mut self, data: &str) -> MockCrypto {
         self.decrypt_string_return = Some(data.to_string());
 
         self
     }
 
+    #[must_use]
     pub fn with_encrypt_error(mut self, err_str: &str) -> MockCrypto {
         self.encrypt_string_error = Some(err_str.to_string());
 
         self
     }
 
+    #[must_use]
     pub fn with_get_key_error(mut self, err_str: &str) -> MockCrypto {
         self.get_key_string_error = Some(err_str.to_string());
 
         self
     }
 
+    #[must_use]
     pub fn with_get_key_result(mut self, key_id: &str, key: MockKey) -> MockCrypto {
         self.get_key_answers.insert(key_id.to_string(), key);
 
         self
     }
 
+    #[must_use]
     pub fn with_sign_string_return(mut self, sign_str: &str) -> MockCrypto {
         self.sign_string_return = Some(sign_str.to_string());
 
@@ -273,6 +289,7 @@ impl Crypto for MockCrypto {
     }
 }
 
+#[must_use]
 pub fn recipient_alex() -> Recipient {
     Recipient {
         name: "Alexander Kjäll <alexander.kjall@gmail.com>".to_owned(),
@@ -281,14 +298,17 @@ pub fn recipient_alex() -> Recipient {
             post_comment: None,
         },
         key_id: "1D108E6C07CBC406".to_owned(),
-        fingerprint: Some(Fingerprint::V4(
-            <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
-        )),
+        fingerprint: Some(Fingerprint::V4([
+            0x7E, 0x06, 0x80, 0x70, 0xD5, 0xEF, 0x79, 0x4B, 0x00, 0xC8, 0xA9, 0xD9, 0x1D, 0x10,
+            0x8E, 0x6C, 0x07, 0xCB, 0xC4, 0x06,
+        ])),
         key_ring_status: KeyRingStatus::InKeyRing,
         trust_level: OwnerTrustLevel::Ultimate,
         not_usable: false,
     }
 }
+
+#[must_use]
 pub fn recipient_alex_old() -> Recipient {
     Recipient {
         name: "Alexander Kjäll <alexander.kjall@gmail.com>".to_owned(),
@@ -297,14 +317,20 @@ pub fn recipient_alex_old() -> Recipient {
             post_comment: None,
         },
         key_id: "DF0C3D316B7312D5".to_owned(),
-        fingerprint: Some(Fingerprint::V4(
-            <[u8; 20]>::from_hex("DB07DAC5B3882EAB659E1D2FDF0C3D316B7312D5").unwrap(),
-        )),
+        fingerprint: Some(Fingerprint::V4([
+            0xDB, 0x07, 0xDA, 0xC5, 0xB3, 0x88, 0x2E, 0xAB, 0x65, 0x9E, 0x1D, 0x2F, 0xDF, 0x0C,
+            0x3D, 0x31, 0x6B, 0x73, 0x12, 0xD5,
+        ])),
         key_ring_status: KeyRingStatus::InKeyRing,
         trust_level: OwnerTrustLevel::Ultimate,
         not_usable: false,
     }
 }
+
+/// Generate a Recipient object from a cert
+///
+/// # Panics
+/// If the generation fails.
 pub fn recipient_from_cert(cert: &Cert) -> Recipient {
     Recipient {
         name: String::from_utf8(cert.userids().next().unwrap().userid().value().to_vec()).unwrap(),
@@ -322,6 +348,7 @@ pub fn recipient_from_cert(cert: &Cert) -> Recipient {
     }
 }
 
+#[must_use]
 pub fn append_file_name(file: &Path) -> PathBuf {
     let rf = file.to_path_buf();
     let mut sig = rf.into_os_string();
@@ -329,6 +356,11 @@ pub fn append_file_name(file: &Path) -> PathBuf {
     sig.into()
 }
 
+/// Generates a pgp cert.
+///
+/// # Panics
+/// If the generation fails.
+#[must_use]
 pub fn generate_sequoia_cert(email: &str) -> Cert {
     let (cert, _) = CertBuilder::general_purpose([UserID::from(email)])
         .generate()
@@ -337,6 +369,11 @@ pub fn generate_sequoia_cert(email: &str) -> Cert {
     cert
 }
 
+/// Generates a pgp cert.
+///
+/// # Panics
+/// If the generation fails.
+#[must_use]
 pub fn generate_sequoia_cert_without_private_key(email: &str) -> Cert {
     let (cert, _) = CertBuilder::general_purpose([UserID::from(email)])
         .generate()
@@ -380,6 +417,11 @@ impl DecryptionHelper for &mut KeyLister {
     }
 }
 
+/// counts the number of recipients of a pgp packet.
+///
+/// # Panics
+/// if a `DecryptorBuilder` can't be built.
+#[must_use]
 pub fn count_recipients(data: &[u8]) -> usize {
     let p = StandardPolicy::new();
     let mut h = KeyLister { ids: vec![] };

@@ -36,6 +36,9 @@ flate2 = "1"
 tar = "0.4"
 criterion = "0.8"
 
+[lints.clippy]
+pedantic = "warn"
+
 [workspace]
 
 members = [

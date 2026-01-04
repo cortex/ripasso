@@ -1,29 +1,33 @@
-use std::io;
-
+use crate::error::Result;
+use crate::pass::Error;
 use rand::prelude::IndexedRandom;
 
 static WORDLIST: &str = include_str!("wordlists/eff_large.wordlist");
 
-pub fn passphrase_generator(wordcount: i32) -> io::Result<Vec<String>> {
+/// Returns a pass phrase consisting of `word_count` number of
+///words from the large wordlist from EFF.
+///
+/// # Errors
+/// Fails if the loading of the wordlist fails.
+pub fn passphrase_generator(word_count: usize) -> Result<Vec<String>> {
     let words: Vec<String> = WORDLIST
         .lines()
-        .map(|line| line.trim())
+        .map(str::trim)
         .filter(|line| !line.is_empty())
         .map(String::from)
         .collect();
 
     if words.is_empty() {
-        eprintln!("The word list is empty!");
-        return Ok(Vec::new());
+        return Err(Error::Generic("empty wordlist"));
     }
 
     let mut rng = rand::rng();
 
-    let selected = if words.len() <= wordcount as usize {
+    let selected = if words.len() <= word_count {
         words.clone()
     } else {
         words
-            .choose_multiple(&mut rng, wordcount as usize)
+            .choose_multiple(&mut rng, word_count)
             .cloned()
             .collect()
     };
