@@ -43,7 +43,7 @@ fn create_git_repo(ui: &mut Cursive, password_store_dir: Option<&Path>, home: Op
             None,
             home,
             None,
-            &CryptoImpl::GpgMe,
+            CryptoImpl::GpgMe,
             None,
         ) {
             Err(err) => helpers::errorbox(ui, &err),

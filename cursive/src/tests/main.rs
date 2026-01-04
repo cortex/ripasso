@@ -36,7 +36,7 @@ fn do_delete_normal() {
         None,
         None,
         None,
-        &CryptoImpl::GpgMe,
+        CryptoImpl::GpgMe,
         None,
     )
     .unwrap();
@@ -124,7 +124,7 @@ fn do_delete_one_entry() {
         None,
         None,
         None,
-        &CryptoImpl::GpgMe,
+        CryptoImpl::GpgMe,
         None,
     )
     .unwrap();

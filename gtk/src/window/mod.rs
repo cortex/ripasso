@@ -512,7 +512,7 @@ impl Window {
                             None,
                             None,
                             None,
-                            &CryptoImpl::GpgMe,
+                            CryptoImpl::GpgMe,
                             None,
                         )
                         .expect("Created store"),
@@ -589,7 +589,7 @@ fn get_stores(
                     valid_signing_keys.as_deref(),
                     home.as_deref(),
                     style_path_opt.as_deref(),
-                    &pgp_impl,
+                    pgp_impl,
                     own_fingerprint.as_ref(),
                 )?);
             }
@@ -603,7 +603,7 @@ fn get_stores(
                 None,
                 home.as_deref(),
                 None,
-                &CryptoImpl::GpgMe,
+                CryptoImpl::GpgMe,
                 None,
             )?);
         }

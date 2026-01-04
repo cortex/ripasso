@@ -1536,7 +1536,7 @@ fn get_stores(config: &config::Config, home: Option<&Path>) -> Result<Vec<Passwo
                     valid_signing_keys.as_deref(),
                     home,
                     style_path_opt.as_deref(),
-                    &pgp_impl,
+                    pgp_impl,
                     own_fingerprint.as_ref(),
                 )?);
             }
@@ -1552,7 +1552,7 @@ fn get_stores(config: &config::Config, home: Option<&Path>) -> Result<Vec<Passwo
                 None,
                 Some(home),
                 None,
-                &CryptoImpl::GpgMe,
+                CryptoImpl::GpgMe,
                 None,
             )?);
         }
@@ -1655,7 +1655,7 @@ fn save_edit_config(
         e_k.as_deref(),
         home,
         None,
-        &pgp_impl,
+        pgp_impl,
         Some(&own_fingerprint),
     );
     if let Err(err) = new_store {

@@ -89,7 +89,7 @@ impl PasswordStore {
         password_store_signing_key: Option<&str>,
         home: Option<&Path>,
         style_file: Option<&Path>,
-        crypto_impl: &CryptoImpl,
+        crypto_impl: CryptoImpl,
         own_fingerprint: Option<&Fingerprint>,
     ) -> Result<Self> {
         let pass_home = password_dir_raw(password_store_dir, home);

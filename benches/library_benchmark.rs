@@ -34,7 +34,7 @@ fn pop_list(password_dir: PathBuf) -> pass::Result<()> {
         None,
         None,
         None,
-        &CryptoImpl::GpgMe,
+        CryptoImpl::GpgMe,
         None,
     )?;
     let results = store.all_passwords().unwrap();

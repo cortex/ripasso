@@ -114,7 +114,7 @@ fn populate_password_list_small_repo() -> Result<()> {
         None,
         Some(&dir.dir()),
         None,
-        &CryptoImpl::GpgMe,
+        CryptoImpl::GpgMe,
         None,
     )?;
     let results = store.all_passwords()?;
@@ -136,7 +136,7 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
         None,
         Some(&dir.dir()),
         None,
-        &CryptoImpl::GpgMe,
+        CryptoImpl::GpgMe,
         None,
     )?;
     let results = store.all_passwords()?;
@@ -158,7 +158,7 @@ fn populate_password_list_directory_without_git() -> Result<()> {
         None,
         Some(&dir.dir()),
         None,
-        &CryptoImpl::GpgMe,
+        CryptoImpl::GpgMe,
         None,
     )?;
     let results = store.all_passwords()?;
@@ -191,7 +191,7 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
         None,
         Some(&dir.dir()),
         None,
-        &CryptoImpl::GpgMe,
+        CryptoImpl::GpgMe,
         None,
     )?;
     let results = store.all_passwords()?;
@@ -218,7 +218,7 @@ fn password_store_with_relative_path() -> Result<()> {
         None,
         Some(&dir.dir()),
         None,
-        &CryptoImpl::GpgMe,
+        CryptoImpl::GpgMe,
         None,
     )?;
 
@@ -250,7 +250,7 @@ fn password_store_with_shallow_checkout() -> Result<()> {
         None,
         Some(&dir.dir()),
         None,
-        &CryptoImpl::GpgMe,
+        CryptoImpl::GpgMe,
         None,
     )?;
     let results = store.all_passwords()?;
@@ -273,7 +273,7 @@ fn password_store_with_sparse_checkout() -> Result<()> {
         None,
         Some(&dir.dir()),
         None,
-        &CryptoImpl::GpgMe,
+        CryptoImpl::GpgMe,
         None,
     )?;
     let results = store.all_passwords()?;
@@ -310,7 +310,7 @@ fn password_store_with_symlink() -> Result<()> {
         None,
         Some(&link_dir),
         None,
-        &CryptoImpl::GpgMe,
+        CryptoImpl::GpgMe,
         None,
     )?;
     let results = store.all_passwords()?;
@@ -775,7 +775,7 @@ fn save_config_one_store() {
         None,
         Some(home.path()),
         Some(style_file.path()),
-        &CryptoImpl::Sequoia,
+        CryptoImpl::Sequoia,
         Some(&Fingerprint::V4([0; 20])),
     )
     .unwrap();
@@ -808,7 +808,7 @@ fn save_config_one_store_with_pgp_impl() {
         None,
         Some(dir.path()),
         None,
-        &CryptoImpl::GpgMe,
+        CryptoImpl::GpgMe,
         None,
     )
     .unwrap();
@@ -836,7 +836,7 @@ fn save_config_one_store_with_fingerprint() {
         None,
         Some(dir.path()),
         None,
-        &CryptoImpl::Sequoia,
+        CryptoImpl::Sequoia,
         Some(&Fingerprint::V4(
             <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
         )),
@@ -911,7 +911,7 @@ fn rename_file_absolute_path() -> Result<()> {
         None,
         Some(&dir.dir()),
         None,
-        &CryptoImpl::GpgMe,
+        CryptoImpl::GpgMe,
         None,
     )?;
     store.reload_password_list()?;
@@ -1298,7 +1298,7 @@ fn delete_file() -> Result<()> {
         None,
         None,
         None,
-        &CryptoImpl::GpgMe,
+        CryptoImpl::GpgMe,
         None,
     )?;
 
@@ -1337,7 +1337,7 @@ fn get_history_no_repo() -> Result<()> {
         None,
         None,
         None,
-        &CryptoImpl::GpgMe,
+        CryptoImpl::GpgMe,
         None,
     )?;
 
@@ -1367,7 +1367,7 @@ fn get_history_with_repo() -> Result<()> {
         None,
         Some(&dir.dir()),
         None,
-        &CryptoImpl::GpgMe,
+        CryptoImpl::GpgMe,
         None,
     )?;
     let results = store.all_passwords()?;
