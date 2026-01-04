@@ -37,7 +37,7 @@ use crate::{
 
 /// The different pgp implementations we support
 #[non_exhaustive]
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Copy, Clone, Debug, Eq)]
 pub enum CryptoImpl {
     /// Implemented with the help of the gpgme crate
     GpgMe,

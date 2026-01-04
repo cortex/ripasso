@@ -68,7 +68,7 @@ fn get_password_dir_no_env() {
         env::remove_var("PASSWORD_STORE_DIR");
     }
 
-    let path = password_dir(&None, &Some(dir.keep()));
+    let path = password_dir(None, Some(&dir.keep()));
 
     assert_eq!(
         path.unwrap_err(),
@@ -78,28 +78,28 @@ fn get_password_dir_no_env() {
 
 #[test]
 fn get_password_dir_raw_none_none() {
-    let result = password_dir_raw(&None, &None);
+    let result = password_dir_raw(None, None);
 
     assert_eq!(PathBuf::new().join(".password-store"), result);
 }
 
 #[test]
 fn get_password_dir_raw_some_none() {
-    let result = password_dir_raw(&Some(PathBuf::from("/tmp/")), &None);
+    let result = password_dir_raw(Some(&PathBuf::from("/tmp/")), None);
 
     assert_eq!(PathBuf::from("/tmp/"), result);
 }
 
 #[test]
 fn get_password_dir_raw_none_some() {
-    let result = password_dir_raw(&None, &Some(PathBuf::from("/tmp/")));
+    let result = password_dir_raw(None, Some(&PathBuf::from("/tmp/")));
 
     assert_eq!(PathBuf::from("/tmp/.password-store"), result);
 }
 
 #[test]
 fn get_password_dir_raw_some_some() {
-    let result = password_dir_raw(&Some(PathBuf::from("/tmp/")), &Some(PathBuf::from("/tmp/")));
+    let result = password_dir_raw(Some(&PathBuf::from("/tmp/")), Some(&PathBuf::from("/tmp/")));
 
     assert_eq!(PathBuf::from("/tmp/"), result);
 }
@@ -110,12 +110,12 @@ fn populate_password_list_small_repo() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
         &CryptoImpl::GpgMe,
-        &None,
+        None,
     )?;
     let results = store.all_passwords()?;
 
@@ -132,12 +132,12 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
         &CryptoImpl::GpgMe,
-        &None,
+        None,
     )?;
     let results = store.all_passwords()?;
 
@@ -154,12 +154,12 @@ fn populate_password_list_directory_without_git() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
         &CryptoImpl::GpgMe,
-        &None,
+        None,
     )?;
     let results = store.all_passwords()?;
 
@@ -187,12 +187,12 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
         &CryptoImpl::GpgMe,
-        &None,
+        None,
     )?;
     let results = store.all_passwords()?;
 
@@ -214,12 +214,12 @@ fn password_store_with_relative_path() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
         &CryptoImpl::GpgMe,
-        &None,
+        None,
     )?;
 
     let results = store.all_passwords()?;
@@ -246,12 +246,12 @@ fn password_store_with_shallow_checkout() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
         &CryptoImpl::GpgMe,
-        &None,
+        None,
     )?;
     let results = store.all_passwords()?;
 
@@ -269,12 +269,12 @@ fn password_store_with_sparse_checkout() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
         &CryptoImpl::GpgMe,
-        &None,
+        None,
     )?;
     let results = store.all_passwords()?;
 
@@ -306,12 +306,12 @@ fn password_store_with_symlink() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(link_dir.clone()),
-        &None,
-        &Some(link_dir.clone()),
-        &None,
+        Some(&link_dir),
+        None,
+        Some(&link_dir),
+        None,
         &CryptoImpl::GpgMe,
-        &None,
+        None,
     )?;
     let results = store.all_passwords()?;
 
@@ -771,12 +771,12 @@ fn save_config_one_store() {
 
     let s1 = PasswordStore::new(
         "s1 name",
-        &Some(passdir.path().to_path_buf()),
-        &None,
-        &Some(home.path().to_path_buf()),
-        &Some(style_file.path().to_path_buf()),
+        Some(&passdir.path().to_path_buf()),
+        None,
+        Some(&home.path().to_path_buf()),
+        Some(&style_file.path().to_path_buf()),
         &CryptoImpl::Sequoia,
-        &Some(Fingerprint::V4([0; 20])),
+        Some(&Fingerprint::V4([0; 20])),
     )
     .unwrap();
 
@@ -804,12 +804,12 @@ fn save_config_one_store_with_pgp_impl() {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.path().to_path_buf()),
-        &None,
-        &Some(dir.path().to_path_buf()),
-        &None,
+        Some(&dir.path().to_path_buf()),
+        None,
+        Some(&dir.path().to_path_buf()),
+        None,
         &CryptoImpl::GpgMe,
-        &None,
+        None,
     )
     .unwrap();
 
@@ -832,12 +832,12 @@ fn save_config_one_store_with_fingerprint() {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.path().to_path_buf()),
-        &None,
-        &Some(dir.path().to_path_buf()),
-        &None,
+        Some(&dir.path().to_path_buf()),
+        None,
+        Some(&dir.path().to_path_buf()),
+        None,
         &CryptoImpl::Sequoia,
-        &Some(Fingerprint::V4(
+        Some(&Fingerprint::V4(
             <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
         )),
     )
@@ -907,12 +907,12 @@ fn rename_file_absolute_path() -> Result<()> {
 
     let mut store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
         &CryptoImpl::GpgMe,
-        &None,
+        None,
     )?;
     store.reload_password_list()?;
     let res = store.rename_file("1/test", "/2/test");
@@ -1294,12 +1294,12 @@ fn delete_file() -> Result<()> {
 
     let store = PasswordStore::new(
         "test",
-        &Some(dir.path().join(".password-store")),
-        &None,
-        &None,
-        &None,
+        Some(&dir.path().join(".password-store")),
+        None,
+        None,
+        None,
         &CryptoImpl::GpgMe,
-        &None,
+        None,
     )?;
 
     let pe = PasswordEntry::new(
@@ -1333,12 +1333,12 @@ fn get_history_no_repo() -> Result<()> {
 
     let store = PasswordStore::new(
         "test",
-        &Some(dir.path().join(".password-store")),
-        &None,
-        &None,
-        &None,
+        Some(&dir.path().join(".password-store")),
+        None,
+        None,
+        None,
         &CryptoImpl::GpgMe,
-        &None,
+        None,
     )?;
 
     let pe = PasswordEntry::new(
@@ -1363,12 +1363,12 @@ fn get_history_with_repo() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
         &CryptoImpl::GpgMe,
-        &None,
+        None,
     )?;
     let results = store.all_passwords()?;
 
@@ -1408,9 +1408,8 @@ fn test_format_error() {
         "git error"
     );
 
-    #[allow(invalid_from_utf8)]
     let utf8_error = String::from_utf8(vec![255]).err().unwrap();
-    #[allow(invalid_from_utf8)]
+    #[expect(invalid_from_utf8)]
     let str_utf8_error = str::from_utf8(&[255]).err().unwrap();
 
     assert_eq!(

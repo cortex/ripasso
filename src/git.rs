@@ -250,7 +250,8 @@ fn cred(
     username: Option<&str>,
     allowed: git2::CredentialType,
 ) -> std::result::Result<git2::Cred, git2::Error> {
-    let sys_username = whoami::username();
+    let sys_username =
+        whoami::username().map_err(|e| git2::Error::from_str(e.to_string().as_str()))?;
     let user: &str = username.map_or(&sys_username, |name| name);
 
     if allowed.contains(git2::CredentialType::USERNAME) {

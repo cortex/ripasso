@@ -17,7 +17,6 @@ ripasso = { path = "../", version = "0.8.0" }
 locale_config = "0.3"
 unic-langid = "0.9"
 gettext = "0.4"
-lazy_static = "1"
 terminal_size = "0.4"
 hex = "0.4"
 zeroize = { version = "1", features = ["zeroize_derive", "alloc"] }
@@ -28,9 +27,12 @@ default-features = false
 features = ["toml"]
 
 [dev-dependencies]
-tempfile = "3.10.1"
+tempfile = "3"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 
 [build-dependencies]
 glob = "0.3"
 man = "0.3"
+
+[lints.clippy]
+pedantic = "warn"

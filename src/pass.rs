@@ -85,12 +85,12 @@ impl PasswordStore {
     /// If the configuration or the on disk setup is incorrect
     pub fn new(
         store_name: &str,
-        password_store_dir: &Option<PathBuf>,
-        password_store_signing_key: &Option<String>,
-        home: &Option<PathBuf>,
-        style_file: &Option<PathBuf>,
+        password_store_dir: Option<&PathBuf>,
+        password_store_signing_key: Option<&str>,
+        home: Option<&PathBuf>,
+        style_file: Option<&PathBuf>,
         crypto_impl: &CryptoImpl,
-        own_fingerprint: &Option<Fingerprint>,
+        own_fingerprint: Option<&Fingerprint>,
     ) -> Result<Self> {
         let pass_home = password_dir_raw(password_store_dir, home);
         if !pass_home.exists() {
@@ -100,12 +100,14 @@ impl PasswordStore {
         let crypto: Box<dyn Crypto + Send> = match crypto_impl {
             CryptoImpl::GpgMe => Box::new(GpgMe {}),
             CryptoImpl::Sequoia => {
-                let home: PathBuf = home.clone().ok_or(Error::Generic(
-                    "no home, required for using Sequoia as pgp implementation",
-                ))?;
+                let home: PathBuf = home
+                    .ok_or(Error::Generic(
+                        "no home, required for using Sequoia as pgp implementation",
+                    ))?
+                    .to_owned();
                 Box::new(Sequoia::new(
                     &home.join(".local"),
-                    own_fingerprint.ok_or_else(|| Error::Generic("own_fingerprint is not configured, required for using Sequoia as pgp implementation"))?,
+                    own_fingerprint.ok_or_else(|| Error::Generic("own_fingerprint is not configured, required for using Sequoia as pgp implementation"))?.to_owned(),
                     &home,
                 )?)
             }
@@ -118,9 +120,9 @@ impl PasswordStore {
             root: pass_home.canonicalize()?,
             valid_gpg_signing_keys: signing_keys,
             passwords: [].to_vec(),
-            style_file: style_file.to_owned(),
+            style_file: style_file.map(ToOwned::to_owned),
             crypto,
-            user_home: home.clone(),
+            user_home: home.map(ToOwned::to_owned),
         };
 
         if !store.valid_gpg_signing_keys.is_empty() {
@@ -136,11 +138,11 @@ impl PasswordStore {
     /// wasn't specified.
     pub fn create(
         store_name: &str,
-        password_store_dir: &Option<PathBuf>,
+        password_store_dir: Option<&PathBuf>,
         recipients: &[Recipient],
         recipients_as_signers: bool,
-        home: &Option<PathBuf>,
-        style_file: &Option<PathBuf>,
+        home: Option<&PathBuf>,
+        style_file: Option<&PathBuf>,
     ) -> Result<Self> {
         let pass_home = password_dir_raw(password_store_dir, home);
         if pass_home.exists() {
@@ -211,9 +213,9 @@ impl PasswordStore {
             root: pass_home.canonicalize()?,
             valid_gpg_signing_keys: signing_keys,
             passwords: [].to_vec(),
-            style_file: style_file.to_owned(),
+            style_file: style_file.map(ToOwned::to_owned),
             crypto,
-            user_home: home.clone(),
+            user_home: home.map(ToOwned::to_owned),
         };
 
         Ok(store)
@@ -891,12 +893,10 @@ pub fn all_recipients_from_stores(
         let stores = stores
             .lock()
             .map_err(|_e| Error::Generic("problem locking the mutex"))?;
-        #[allow(clippy::significant_drop_in_scrutinee)]
         for store in stores.iter() {
             let store = store
                 .lock()
                 .map_err(|_e| Error::Generic("problem locking the mutex"))?;
-            #[allow(clippy::significant_drop_in_scrutinee)]
             for recipient in store.all_recipients()? {
                 let key = match recipient.fingerprint.as_ref() {
                     None => recipient.key_id.clone(),
@@ -1273,8 +1273,8 @@ pub fn search(store: &PasswordStore, query: &str) -> Vec<PasswordEntry> {
 /// # Errors
 /// If the home directory doesn't exist.
 pub fn password_dir(
-    password_store_dir: &Option<PathBuf>,
-    home: &Option<PathBuf>,
+    password_store_dir: Option<&PathBuf>,
+    home: Option<&PathBuf>,
 ) -> Result<PathBuf> {
     let pass_home = password_dir_raw(password_store_dir, home);
     if !pass_home.exists() {
@@ -1285,9 +1285,9 @@ pub fn password_dir(
 
 /// Determine password directory.
 #[must_use]
-pub fn password_dir_raw(password_store_dir: &Option<PathBuf>, home: &Option<PathBuf>) -> PathBuf {
+pub fn password_dir_raw(password_store_dir: Option<&PathBuf>, home: Option<&PathBuf>) -> PathBuf {
     // If a directory is provided via env var, use it
-    match password_store_dir.as_ref() {
+    match password_store_dir {
         Some(p) => p.clone(),
         None => match home {
             Some(h) => h.join(".password-store"),

@@ -65,7 +65,7 @@ fn generate_man_page_file() {
     dest_path.pop();
     dest_path.pop();
     dest_path.push("man-page");
-    print!("creating directory: {:?} ", &dest_path);
+    print!("creating directory: {} ", dest_path.display());
     let res = std::fs::create_dir(&dest_path);
     if res.is_ok() {
         println!("success");
@@ -73,7 +73,7 @@ fn generate_man_page_file() {
         println!("error: {:?}", res.err().unwrap());
     }
     dest_path.push("cursive");
-    print!("creating directory: {:?} ", &dest_path);
+    print!("creating directory: {} ", dest_path.display());
     let res = std::fs::create_dir(&dest_path);
     if res.is_ok() {
         println!("success");
@@ -94,7 +94,7 @@ fn generate_translation_files() {
     dest_path.pop();
     dest_path.pop();
     dest_path.push("translations");
-    print!("creating directory: {:?} ", &dest_path);
+    print!("creating directory: {} ", dest_path.display());
     let res = std::fs::create_dir(&dest_path);
     if res.is_ok() {
         println!("success");
@@ -102,7 +102,7 @@ fn generate_translation_files() {
         println!("error: {:?}", res.err().unwrap());
     }
     dest_path.push("cursive");
-    print!("creating directory: {:?} ", &dest_path);
+    print!("creating directory: {} ", dest_path.display());
     let res = std::fs::create_dir(&dest_path);
     if res.is_ok() {
         println!("success");
@@ -128,8 +128,8 @@ fn generate_translation_files() {
         filename.replace_range(3..4, "m");
 
         print!(
-            "generating .mo file for {:?} to {}/{} ",
-            &file,
+            "generating .mo file for {} to {}/{} ",
+            file.display(),
             dest_path.display(),
             &filename
         );

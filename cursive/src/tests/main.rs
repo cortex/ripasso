@@ -32,12 +32,12 @@ fn do_delete_normal() {
 
     let mut store = PasswordStore::new(
         "",
-        &Some(td.path().to_path_buf()),
-        &None,
-        &None,
-        &None,
+        Some(&td.path().to_path_buf()),
+        None,
+        None,
+        None,
         &CryptoImpl::GpgMe,
-        &None,
+        None,
     )
     .unwrap();
     store.passwords.push(PasswordEntry::new(
@@ -60,7 +60,7 @@ fn do_delete_normal() {
             .passwords
             .clone()
             .into_iter()
-            .map(|p| (format!("{:?}", p), p)),
+            .map(|p| (format!("{p:?}"), p)),
     );
     entries.set_selection(0);
 
@@ -69,7 +69,7 @@ fn do_delete_normal() {
     siv.call_on_name("results", |l: &mut SelectView<PasswordEntry>| {
         assert_eq!(1, l.len());
     });
-    do_delete(&mut siv, store);
+    do_delete(&mut siv, &store);
 
     siv.call_on_name("results", |l: &mut SelectView<PasswordEntry>| {
         assert_eq!(0, l.len());
@@ -120,12 +120,12 @@ fn do_delete_one_entry() {
 
     let mut store = PasswordStore::new(
         "test",
-        &Some(dir.path().join(".password-store")),
-        &None,
-        &None,
-        &None,
+        Some(&dir.path().join(".password-store")),
+        None,
+        None,
+        None,
         &CryptoImpl::GpgMe,
-        &None,
+        None,
     )
     .unwrap();
     store.passwords.push(PasswordEntry::new(
@@ -142,7 +142,7 @@ fn do_delete_one_entry() {
     let mut sv = SelectView::<PasswordEntry>::new();
 
     for (i, item) in store.all_passwords().unwrap().into_iter().enumerate() {
-        sv.add_item(format!("Item {}", i), item);
+        sv.add_item(format!("Item {i}"), item);
     }
 
     assert_eq!(1, sv.len());
@@ -151,7 +151,7 @@ fn do_delete_one_entry() {
     siv.add_layer(SelectView::<PasswordEntry>::new().with_name("just to be popped"));
 
     let store: PasswordStoreType = Arc::new(Mutex::new(Arc::new(Mutex::new(store))));
-    do_delete(&mut siv, store);
+    do_delete(&mut siv, &store);
 
     let cbr = siv.call_on_name("results", |l: &mut SelectView<PasswordEntry>| {
         assert_eq!(0, l.len());

@@ -508,12 +508,12 @@ impl Window {
                     Arc::new(Mutex::new(
                         PasswordStore::new(
                             "default",
-                            &None,
-                            &None,
-                            &None,
-                            &None,
+                            None,
+                            None,
+                            None,
+                            None,
                             &CryptoImpl::GpgMe,
-                            &None,
+                            None,
                         )
                         .expect("Created store"),
                     )),
@@ -585,12 +585,12 @@ fn get_stores(
 
                 final_stores.push(PasswordStore::new(
                     store_name,
-                    &password_store_dir,
-                    &valid_signing_keys,
-                    home,
-                    &style_path_opt,
+                    password_store_dir.as_ref(),
+                    valid_signing_keys.as_deref(),
+                    home.as_ref(),
+                    style_path_opt.as_ref(),
                     &pgp_impl,
-                    &own_fingerprint,
+                    own_fingerprint.as_ref(),
                 )?);
             }
         }
@@ -599,12 +599,12 @@ fn get_stores(
         if default_path.exists() {
             final_stores.push(PasswordStore::new(
                 "default",
-                &Some(default_path),
-                &None,
-                home,
-                &None,
+                Some(&default_path),
+                None,
+                home.as_ref(),
+                None,
                 &CryptoImpl::GpgMe,
-                &None,
+                None,
             )?);
         }
     }

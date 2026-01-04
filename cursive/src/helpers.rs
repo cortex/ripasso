@@ -14,7 +14,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 
 use arboard::Clipboard;
 use cursive::{
@@ -22,13 +22,11 @@ use cursive::{
     event::Key,
     views::{Checkbox, Dialog, EditView, OnEventView, RadioButton, TextView},
 };
-use lazy_static::lazy_static;
 use pass::Result;
 use ripasso::{crypto::CryptoImpl, pass, pass::Recipient};
 
-lazy_static! {
-    static ref CLIPBOARD: Arc<Mutex<Clipboard>> = Arc::new(Mutex::new(Clipboard::new().unwrap()));
-}
+static CLIPBOARD: LazyLock<Arc<Mutex<Clipboard>>> =
+    LazyLock::new(|| Arc::new(Mutex::new(Clipboard::new().unwrap())));
 
 /// Displays an error in a cursive dialog
 pub fn errorbox(ui: &mut Cursive, err: &pass::Error) {

@@ -41,7 +41,7 @@ impl From<gpgme::SignatureSummary> for SignatureStatus {
 /// # Errors
 /// Fails if the signing keys can't be parsed.
 pub fn parse_signing_keys(
-    password_store_signing_key: &Option<String>,
+    password_store_signing_key: Option<&str>,
     crypto: &(dyn crate::crypto::Crypto + Send),
 ) -> Result<Vec<Fingerprint>> {
     if let Some(password_store_signing_key) = password_store_signing_key {
