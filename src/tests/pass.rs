@@ -20,7 +20,7 @@ use crate::test_helpers::{
 
 impl PartialEq for Error {
     fn eq(&self, other: &Error) -> bool {
-        format!("{:?}", self) == format!("{:?}", *other)
+        format!("{self:?}") == format!("{:?}", *other)
     }
 }
 
@@ -68,7 +68,7 @@ fn get_password_dir_no_env() {
         env::remove_var("PASSWORD_STORE_DIR");
     }
 
-    let path = password_dir(&None, &Some(dir.keep()));
+    let path = password_dir(None, Some(&dir.keep()));
 
     assert_eq!(
         path.unwrap_err(),
@@ -78,28 +78,28 @@ fn get_password_dir_no_env() {
 
 #[test]
 fn get_password_dir_raw_none_none() {
-    let result = password_dir_raw(&None, &None);
+    let result = password_dir_raw(None, None);
 
     assert_eq!(PathBuf::new().join(".password-store"), result);
 }
 
 #[test]
 fn get_password_dir_raw_some_none() {
-    let result = password_dir_raw(&Some(PathBuf::from("/tmp/")), &None);
+    let result = password_dir_raw(Some(Path::new("/tmp/")), None);
 
     assert_eq!(PathBuf::from("/tmp/"), result);
 }
 
 #[test]
 fn get_password_dir_raw_none_some() {
-    let result = password_dir_raw(&None, &Some(PathBuf::from("/tmp/")));
+    let result = password_dir_raw(None, Some(Path::new("/tmp/")));
 
     assert_eq!(PathBuf::from("/tmp/.password-store"), result);
 }
 
 #[test]
 fn get_password_dir_raw_some_some() {
-    let result = password_dir_raw(&Some(PathBuf::from("/tmp/")), &Some(PathBuf::from("/tmp/")));
+    let result = password_dir_raw(Some(Path::new("/tmp/")), Some(Path::new("/tmp/")));
 
     assert_eq!(PathBuf::from("/tmp/"), result);
 }
@@ -110,12 +110,12 @@ fn populate_password_list_small_repo() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
-        &CryptoImpl::GpgMe,
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
+        CryptoImpl::GpgMe,
+        None,
     )?;
     let results = store.all_passwords()?;
 
@@ -132,12 +132,12 @@ fn populate_password_list_repo_with_deleted_files() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
-        &CryptoImpl::GpgMe,
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
+        CryptoImpl::GpgMe,
+        None,
     )?;
     let results = store.all_passwords()?;
 
@@ -154,12 +154,12 @@ fn populate_password_list_directory_without_git() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
-        &CryptoImpl::GpgMe,
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
+        CryptoImpl::GpgMe,
+        None,
     )?;
     let results = store.all_passwords()?;
 
@@ -187,12 +187,12 @@ fn password_store_with_files_in_initial_commit() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
-        &CryptoImpl::GpgMe,
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
+        CryptoImpl::GpgMe,
+        None,
     )?;
     let results = store.all_passwords()?;
 
@@ -214,12 +214,12 @@ fn password_store_with_relative_path() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
-        &CryptoImpl::GpgMe,
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
+        CryptoImpl::GpgMe,
+        None,
     )?;
 
     let results = store.all_passwords()?;
@@ -246,12 +246,12 @@ fn password_store_with_shallow_checkout() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
-        &CryptoImpl::GpgMe,
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
+        CryptoImpl::GpgMe,
+        None,
     )?;
     let results = store.all_passwords()?;
 
@@ -269,12 +269,12 @@ fn password_store_with_sparse_checkout() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
-        &CryptoImpl::GpgMe,
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
+        CryptoImpl::GpgMe,
+        None,
     )?;
     let results = store.all_passwords()?;
 
@@ -306,12 +306,12 @@ fn password_store_with_symlink() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(link_dir.clone()),
-        &None,
-        &Some(link_dir.clone()),
-        &None,
-        &CryptoImpl::GpgMe,
-        &None,
+        Some(&link_dir),
+        None,
+        Some(&link_dir),
+        None,
+        CryptoImpl::GpgMe,
+        None,
     )?;
     let results = store.all_passwords()?;
 
@@ -334,13 +334,13 @@ fn password_store_with_symlink() -> Result<()> {
 
 #[test]
 fn home_exists_missing_home_env() {
-    assert!(!home_exists(&None, &Config::default()));
+    assert!(!home_exists(None, &Config::default()));
 }
 
 #[test]
 fn home_exists_home_dir_without_config_dir() {
     let dir = tempdir().unwrap();
-    let result = home_exists(&Some(dir.keep()), &Config::default());
+    let result = home_exists(Some(&dir.keep()), &Config::default());
 
     assert!(!result);
 }
@@ -349,7 +349,7 @@ fn home_exists_home_dir_without_config_dir() {
 fn home_exists_home_dir_with_file_instead_of_dir() -> Result<()> {
     let dir = tempdir()?;
     File::create(dir.path().join(".password-store"))?;
-    let result = home_exists(&Some(dir.keep()), &Config::default());
+    let result = home_exists(Some(&dir.keep()), &Config::default());
 
     assert!(!result);
 
@@ -360,7 +360,7 @@ fn home_exists_home_dir_with_file_instead_of_dir() -> Result<()> {
 fn home_exists_home_dir_with_config_dir() -> Result<()> {
     let dir = tempdir()?;
     fs::create_dir(dir.path().join(".password-store"))?;
-    let result = home_exists(&Some(dir.keep()), &Config::default());
+    let result = home_exists(Some(&dir.keep()), &Config::default());
 
     assert!(result);
 
@@ -369,7 +369,7 @@ fn home_exists_home_dir_with_config_dir() -> Result<()> {
 
 #[test]
 fn env_var_exists_test_none() {
-    assert!(!env_var_exists(&None, &None));
+    assert!(!env_var_exists(None, None));
 }
 
 #[test]
@@ -377,14 +377,8 @@ fn env_var_exists_test_without_dir() {
     let dir = tempdir().unwrap();
 
     assert!(env_var_exists(
-        &Some(
-            dir.path()
-                .join(".password-store")
-                .to_str()
-                .unwrap()
-                .to_owned()
-        ),
-        &None
+        Some(dir.path().join(".password-store").to_str().unwrap()),
+        None
     ));
 }
 
@@ -392,17 +386,14 @@ fn env_var_exists_test_without_dir() {
 fn env_var_exists_test_with_dir() {
     let dir = tempdir().unwrap();
 
-    assert!(env_var_exists(
-        &Some(dir.path().to_str().unwrap().to_owned()),
-        &None
-    ));
+    assert!(env_var_exists(Some(dir.path().to_str().unwrap()), None));
 }
 
 #[test]
 fn home_settings_missing() {
     assert_eq!(
         Error::GenericDyn("no home directory set".to_owned()),
-        home_settings(&None).err().unwrap()
+        home_settings(None).err().unwrap()
     );
 }
 
@@ -411,20 +402,13 @@ fn home_settings_dir_exists() -> Result<()> {
     let dir = tempdir()?;
     fs::create_dir(dir.path().join(".password-store"))?;
 
-    let settings = home_settings(&Some(PathBuf::from(dir.path())))?;
+    let settings = home_settings(Some(dir.path()))?;
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
     let path = work["path"].clone().into_string()?;
 
-    assert_eq!(
-        dir.path()
-            .join(".password-store/")
-            .to_str()
-            .unwrap()
-            .to_owned(),
-        path
-    );
+    assert_eq!(dir.path().join(".password-store/").to_str().unwrap(), path);
 
     Ok(())
 }
@@ -434,20 +418,13 @@ fn home_settings_dir_exists() -> Result<()> {
 fn home_settings_dir_doesnt_exists() -> Result<()> {
     let dir = tempdir()?;
 
-    let settings = home_settings(&Some(PathBuf::from(dir.path())))?;
+    let settings = home_settings(Some(dir.path()))?;
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
     let path = work["path"].clone().into_string()?;
 
-    assert_eq!(
-        dir.path()
-            .join(".password-store/")
-            .to_str()
-            .unwrap()
-            .to_owned(),
-        path
-    );
+    assert_eq!(dir.path().join(".password-store/").to_str().unwrap(), path);
 
     Ok(())
 }
@@ -455,8 +432,8 @@ fn home_settings_dir_doesnt_exists() -> Result<()> {
 #[test]
 fn var_settings_test() -> Result<()> {
     let settings = var_settings(
-        &Some("/home/user/.password-store".to_owned()),
-        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_owned()),
+        Some("/home/user/.password-store"),
+        Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F"),
     )?;
 
     let stores = settings.get_table("stores")?;
@@ -493,7 +470,7 @@ fn file_settings_simple_file() -> Result<()> {
     let mut settings = ConfigBuilder::default();
     settings = config::ConfigBuilder::<config::builder::DefaultState>::add_source(
         settings,
-        file_settings(&xdg_config_file_location(&Some(dir.keep()), &None)?),
+        file_settings(&xdg_config_file_location(Some(&dir.keep()), None)?),
     );
     let settings = settings.build()?;
 
@@ -528,8 +505,8 @@ fn file_settings_file_in_xdg_config_home() -> Result<()> {
     settings = config::ConfigBuilder::<config::builder::DefaultState>::add_source(
         settings,
         file_settings(&xdg_config_file_location(
-            &Some(dir.keep()),
-            &Some(dir2.path().join(".random_config")),
+            Some(&dir.keep()),
+            Some(&dir2.path().join(".random_config")),
         )?),
     );
     let settings = settings.build()?;
@@ -555,20 +532,13 @@ fn read_config_empty_config_file() -> Result<()> {
             .join("settings.toml"),
     )?;
 
-    let (settings, _) = read_config(&None, &None, &Some(PathBuf::from(dir.path())), &None)?;
+    let (settings, _) = read_config(None, None, Some(dir.path()), None)?;
 
     let stores = settings.get_table("stores")?;
     let work = stores["default"].clone().into_table()?;
     let path = work["path"].clone().into_string()?;
 
-    assert_eq!(
-        dir.path()
-            .join(".password-store/")
-            .to_str()
-            .unwrap()
-            .to_owned(),
-        path
-    );
+    assert_eq!(dir.path().join(".password-store/").to_str().unwrap(), path);
 
     Ok(())
 }
@@ -579,10 +549,10 @@ fn read_config_empty_config_file_with_keys_env() -> Result<()> {
     create_dir_all(dir.path().join(".password-store"))?;
 
     let (settings, _) = read_config(
-        &None,
-        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_owned()),
-        &Some(PathBuf::from(dir.path())),
-        &None,
+        None,
+        Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F"),
+        Some(dir.path()),
+        None,
     )?;
 
     let stores = settings.get_table("stores")?;
@@ -590,14 +560,7 @@ fn read_config_empty_config_file_with_keys_env() -> Result<()> {
     let path = work["path"].clone().into_string()?;
     let valid_signing_keys = work["valid_signing_keys"].clone().into_string()?;
 
-    assert_eq!(
-        dir.path()
-            .join(".password-store/")
-            .to_str()
-            .unwrap()
-            .to_owned(),
-        path
-    );
+    assert_eq!(dir.path().join(".password-store/").to_str().unwrap(), path);
     assert_eq!(
         "E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F",
         valid_signing_keys
@@ -612,17 +575,16 @@ fn read_config_env_vars() -> Result<()> {
     create_dir_all(dir.path().join("env_var").join(".password-store"))?;
 
     let (settings, _) = read_config(
-        &Some(
+        Some(
             dir.path()
                 .join("env_var")
                 .join(".password-store")
                 .to_str()
-                .unwrap()
-                .to_owned(),
+                .unwrap(),
         ),
-        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_owned()),
-        &Some(PathBuf::from(dir.path())),
-        &None,
+        Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F"),
+        Some(dir.path()),
+        None,
     )?;
 
     let stores = settings.get_table("stores")?;
@@ -635,8 +597,7 @@ fn read_config_env_vars() -> Result<()> {
             .join("env_var")
             .join(".password-store/")
             .to_str()
-            .unwrap()
-            .to_owned(),
+            .unwrap(),
         path
     );
     assert_eq!(
@@ -654,17 +615,16 @@ fn read_config_home_and_env_vars() -> Result<()> {
     create_dir_all(dir.path().join("env_var").join(".password-store"))?;
 
     let (settings, _) = read_config(
-        &Some(
+        Some(
             dir.path()
                 .join("env_var")
                 .join(".password-store")
                 .to_str()
-                .unwrap()
-                .to_owned(),
+                .unwrap(),
         ),
-        &Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F".to_owned()),
-        &Some(PathBuf::from(dir.path())),
-        &None,
+        Some("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F"),
+        Some(dir.path()),
+        None,
     )?;
 
     let stores = settings.get_table("stores")?;
@@ -677,8 +637,7 @@ fn read_config_home_and_env_vars() -> Result<()> {
             .join("env_var")
             .join(".password-store/")
             .to_str()
-            .unwrap()
-            .to_owned(),
+            .unwrap(),
         path
     );
     assert_eq!(
@@ -712,7 +671,7 @@ fn read_config_default_path_in_config_file() -> Result<()> {
     )?;
     file.flush()?;
 
-    let (settings, _) = read_config(&None, &None, &Some(PathBuf::from(dir.path())), &None)?;
+    let (settings, _) = read_config(None, None, Some(dir.path()), None)?;
 
     let stores = settings.get_table("stores")?;
 
@@ -747,7 +706,7 @@ fn read_config_default_path_in_env_var() -> Result<()> {
     )?;
     file.flush()?;
 
-    let (settings, _) = read_config(&Some("/tmp/t2".to_owned()), &None, &Some(dir.keep()), &None)?;
+    let (settings, _) = read_config(Some("/tmp/t2"), None, Some(&dir.keep()), None)?;
 
     let stores = settings.get_table("stores")?;
 
@@ -784,7 +743,7 @@ fn read_config_default_path_in_env_var_with_pgp_setting() -> Result<()> {
     )?;
     file.flush()?;
 
-    let (settings, _) = read_config(&Some("/tmp/t2".to_owned()), &None, &Some(dir.keep()), &None)?;
+    let (settings, _) = read_config(Some("/tmp/t2"), None, Some(&dir.keep()), None)?;
 
     let stores = settings.get_table("stores")?;
 
@@ -812,17 +771,17 @@ fn save_config_one_store() {
 
     let s1 = PasswordStore::new(
         "s1 name",
-        &Some(passdir.path().to_path_buf()),
-        &None,
-        &Some(home.path().to_path_buf()),
-        &Some(style_file.path().to_path_buf()),
-        &CryptoImpl::Sequoia,
-        &Some(Fingerprint::V4([0; 20])),
+        Some(passdir.path()),
+        None,
+        Some(home.path()),
+        Some(style_file.path()),
+        CryptoImpl::Sequoia,
+        Some(&Fingerprint::V4([0; 20])),
     )
     .unwrap();
 
     save_config(
-        Arc::new(Mutex::new(vec![Arc::new(Mutex::new(s1))])),
+        &Arc::new(Mutex::new(vec![Arc::new(Mutex::new(s1))])),
         config_file.path(),
     )
     .unwrap();
@@ -845,17 +804,17 @@ fn save_config_one_store_with_pgp_impl() {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.path().to_path_buf()),
-        &None,
-        &Some(dir.path().to_path_buf()),
-        &None,
-        &CryptoImpl::GpgMe,
-        &None,
+        Some(dir.path()),
+        None,
+        Some(dir.path()),
+        None,
+        CryptoImpl::GpgMe,
+        None,
     )
     .unwrap();
 
     save_config(
-        Arc::new(Mutex::new(vec![Arc::new(Mutex::new(store))])),
+        &Arc::new(Mutex::new(vec![Arc::new(Mutex::new(store))])),
         &dir.path().join("file.toml"),
     )
     .unwrap();
@@ -873,19 +832,19 @@ fn save_config_one_store_with_fingerprint() {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.path().to_path_buf()),
-        &None,
-        &Some(dir.path().to_path_buf()),
-        &None,
-        &CryptoImpl::Sequoia,
-        &Some(Fingerprint::V4(
+        Some(dir.path()),
+        None,
+        Some(dir.path()),
+        None,
+        CryptoImpl::Sequoia,
+        Some(&Fingerprint::V4(
             <[u8; 20]>::from_hex("7E068070D5EF794B00C8A9D91D108E6C07CBC406").unwrap(),
         )),
     )
     .unwrap();
 
     save_config(
-        Arc::new(Mutex::new(vec![Arc::new(Mutex::new(store))])),
+        &Arc::new(Mutex::new(vec![Arc::new(Mutex::new(store))])),
         &dir.path().join("file.toml"),
     )
     .unwrap();
@@ -948,12 +907,12 @@ fn rename_file_absolute_path() -> Result<()> {
 
     let mut store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
-        &CryptoImpl::GpgMe,
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
+        CryptoImpl::GpgMe,
+        None,
     )?;
     store.reload_password_list()?;
     let res = store.rename_file("1/test", "/2/test");
@@ -1006,7 +965,7 @@ fn decrypt_secret_empty_file() -> Result<()> {
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -1041,7 +1000,7 @@ fn decrypt_secret_missing_file() -> Result<()> {
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -1083,7 +1042,7 @@ fn decrypt_secret() -> Result<()> {
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -1122,7 +1081,7 @@ fn decrypt_password_empty_file() -> Result<()> {
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -1161,7 +1120,7 @@ fn decrypt_password_multiline() -> Result<()> {
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -1188,7 +1147,7 @@ fn decrypt_password_multiline() -> Result<()> {
     Ok(())
 }
 
-fn mfa_setup(payload: String) -> Result<(tempfile::TempDir, PasswordEntry, PasswordStore)> {
+fn mfa_setup(payload: &str) -> Result<(tempfile::TempDir, PasswordEntry, PasswordStore)> {
     let dir = tempdir()?;
     create_dir_all(dir.path().join(".password-store"))?;
     let mut gpg_file = File::create(dir.path().join(".password-store").join(".gpg-id"))?;
@@ -1201,14 +1160,14 @@ fn mfa_setup(payload: String) -> Result<(tempfile::TempDir, PasswordEntry, Passw
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
         RepositoryStatus::NoRepo,
     );
 
-    let crypto = MockCrypto::new().with_decrypt_string_return(&payload);
+    let crypto = MockCrypto::new().with_decrypt_string_return(payload);
 
     let store = PasswordStore {
         name: "store_name".to_owned(),
@@ -1225,43 +1184,49 @@ fn mfa_setup(payload: String) -> Result<(tempfile::TempDir, PasswordEntry, Passw
 
 #[test]
 fn mfa_example1() -> Result<()> {
-    let (_dir, pe, store) = mfa_setup("otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example".to_owned())?;
+    let (_dir, pe, store) = mfa_setup(
+        "otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example",
+    )?;
 
     let res = pe.mfa(&store)?;
 
     assert_eq!(6, res.len());
-    assert_eq!(6, res.chars().filter(|c| c.is_ascii_digit()).count());
+    assert_eq!(6, res.chars().filter(char::is_ascii_digit).count());
 
     Ok(())
 }
 
 #[test]
 fn mfa_example2() -> Result<()> {
-    let (_dir, pe, store) = mfa_setup("some text\n otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example\nmore txt\n\n".to_owned())?;
+    let (_dir, pe, store) = mfa_setup(
+        "some text\n otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example\nmore txt\n\n",
+    )?;
 
     let res = pe.mfa(&store)?;
 
     assert_eq!(6, res.len());
-    assert_eq!(6, res.chars().filter(|c| c.is_ascii_digit()).count());
+    assert_eq!(6, res.chars().filter(char::is_ascii_digit).count());
 
     Ok(())
 }
 
 #[test]
 fn mfa_example3() -> Result<()> {
-    let (_dir, pe, store) = mfa_setup("lots and lots and lots and lots and lots and lots and lots and lots and lots and lots of text\n otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example\nmore txt\n\n".to_owned())?;
+    let (_dir, pe, store) = mfa_setup(
+        "lots and lots and lots and lots and lots and lots and lots and lots and lots and lots of text\n otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXPAAAAAAAAAAAA&issuer=Example\nmore txt\n\n",
+    )?;
 
     let res = pe.mfa(&store)?;
 
     assert_eq!(6, res.len());
-    assert_eq!(6, res.chars().filter(|c| c.is_ascii_digit()).count());
+    assert_eq!(6, res.chars().filter(char::is_ascii_digit).count());
 
     Ok(())
 }
 
 #[test]
 fn mfa_no_otpauth_url() -> Result<()> {
-    let (_dir, pe, store) = mfa_setup("password".to_owned())?;
+    let (_dir, pe, store) = mfa_setup("password")?;
 
     let res = pe.mfa(&store);
 
@@ -1284,7 +1249,7 @@ fn update() -> Result<()> {
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -1329,17 +1294,17 @@ fn delete_file() -> Result<()> {
 
     let store = PasswordStore::new(
         "test",
-        &Some(dir.path().join(".password-store")),
-        &None,
-        &None,
-        &None,
-        &CryptoImpl::GpgMe,
-        &None,
+        Some(&dir.path().join(".password-store")),
+        None,
+        None,
+        None,
+        CryptoImpl::GpgMe,
+        None,
     )?;
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -1368,17 +1333,17 @@ fn get_history_no_repo() -> Result<()> {
 
     let store = PasswordStore::new(
         "test",
-        &Some(dir.path().join(".password-store")),
-        &None,
-        &None,
-        &None,
-        &CryptoImpl::GpgMe,
-        &None,
+        Some(&dir.path().join(".password-store")),
+        None,
+        None,
+        None,
+        CryptoImpl::GpgMe,
+        None,
     )?;
 
     let pe = PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -1398,12 +1363,12 @@ fn get_history_with_repo() -> Result<()> {
 
     let store = PasswordStore::new(
         "default",
-        &Some(dir.dir()),
-        &None,
-        &Some(dir.dir()),
-        &None,
-        &CryptoImpl::GpgMe,
-        &None,
+        Some(&dir.dir()),
+        None,
+        Some(&dir.dir()),
+        None,
+        CryptoImpl::GpgMe,
+        None,
     )?;
     let results = store.all_passwords()?;
 
@@ -1443,9 +1408,8 @@ fn test_format_error() {
         "git error"
     );
 
-    #[allow(invalid_from_utf8)]
     let utf8_error = String::from_utf8(vec![255]).err().unwrap();
-    #[allow(invalid_from_utf8)]
+    #[expect(invalid_from_utf8)]
     let str_utf8_error = str::from_utf8(&[255]).err().unwrap();
 
     assert_eq!(
@@ -1592,10 +1556,10 @@ fn test_move_and_commit_signed() -> Result<()> {
 }
 
 #[test]
-fn test_search() -> Result<()> {
+fn test_search() {
     let p1 = PasswordEntry {
         name: "no/match/check".to_owned(),
-        path: Default::default(),
+        path: PathBuf::default(),
         updated: None,
         committed_by: None,
         signature_status: None,
@@ -1603,7 +1567,7 @@ fn test_search() -> Result<()> {
     };
     let p2 = PasswordEntry {
         name: "dir/test/middle".to_owned(),
-        path: Default::default(),
+        path: PathBuf::default(),
         updated: None,
         committed_by: None,
         signature_status: None,
@@ -1611,7 +1575,7 @@ fn test_search() -> Result<()> {
     };
     let p3 = PasswordEntry {
         name: " space test ".to_owned(),
-        path: Default::default(),
+        path: PathBuf::default(),
         updated: None,
         committed_by: None,
         signature_status: None,
@@ -1633,8 +1597,6 @@ fn test_search() -> Result<()> {
     assert_eq!(2, result.len());
     assert_eq!("dir/test/middle", result[0].name);
     assert_eq!(" space test ", result[1].name);
-
-    Ok(())
 }
 
 #[test]
@@ -1730,11 +1692,11 @@ fn test_remove_and_commit() -> Result<()> {
 
 #[test]
 fn test_to_name() {
-    assert_eq!("name", to_name(&PathBuf::from("name.gpg")));
-    assert_eq!("dir/name", to_name(&PathBuf::from("dir/name.gpg")));
+    assert_eq!("name", to_name(Path::new("name.gpg")));
+    assert_eq!("dir/name", to_name(Path::new("dir/name.gpg")));
     assert_eq!(
         "dir/name without gpg on end",
-        to_name(&PathBuf::from("dir/name without gpg on end"))
+        to_name(Path::new("dir/name without gpg on end"))
     );
 }
 
@@ -1895,7 +1857,7 @@ fn test_verify_gpg_id_files_untrusted_key_in_keyring() {
 
     let store = PasswordStore {
         name: "store_name".to_owned(),
-        root: password_store_dir.to_path_buf(),
+        root: password_store_dir.clone(),
         valid_gpg_signing_keys: vec![sofp],
         passwords: [].to_vec(),
         style_file: None,
@@ -2201,7 +2163,7 @@ fn test_add_recipient_different_sub_permissions() -> Result<()> {
 
     store.add_recipient(
         &crate::test_helpers::recipient_from_cert(&users[2]),
-        &PathBuf::from("./"),
+        Path::new("./"),
         config_path.path(),
     )?;
 
@@ -2241,7 +2203,7 @@ fn test_add_recipient_to_sub_dir() -> Result<()> {
 
     store.add_recipient(
         &crate::test_helpers::recipient_from_cert(&users[2]),
-        &PathBuf::from("dir/"),
+        Path::new("dir/"),
         config_path.path(),
     )?;
 
@@ -2266,7 +2228,7 @@ fn test_add_recipient_to_sub_dir_path_traversal() -> Result<()> {
 
     let res = store.add_recipient(
         &crate::test_helpers::recipient_from_cert(&users[2]),
-        &PathBuf::from("/tmp/"),
+        Path::new("/tmp/"),
         config_path.path(),
     );
 
@@ -2289,7 +2251,7 @@ fn test_add_recipient_to_sub_dir_unknown_path() -> Result<()> {
 
     let res = store.add_recipient(
         &crate::test_helpers::recipient_from_cert(&users[2]),
-        &PathBuf::from("path_that_doesnt_exist/"),
+        Path::new("path_that_doesnt_exist/"),
         config_path.path(),
     );
 
@@ -2324,7 +2286,7 @@ fn test_add_recipient_not_in_key_ring() -> Result<()> {
     let gpg_id_file_pre = fs::read_to_string(td.path().join(".gpg-id"))?;
     let res = store.add_recipient(
         &external_user_recipient,
-        &PathBuf::from("./"),
+        Path::new("./"),
         config_path.path(),
     );
     let gpg_id_file_post = fs::read_to_string(td.path().join(".gpg-id"))?;
@@ -2355,10 +2317,10 @@ fn test_remove_last_recipient_with_decryption_rights() -> Result<()> {
     assert_eq!(0, store.passwords.len());
 
     store.new_password_file("file", "password")?;
-    store.add_recipient(&user3_recipient, &PathBuf::from("./"), config_path.path())?;
+    store.add_recipient(&user3_recipient, Path::new("./"), config_path.path())?;
 
     let gpg_id_file_pre = fs::read_to_string(td.path().join(".gpg-id"))?;
-    let res = store.remove_recipient(&user0_recipient, &PathBuf::from("./"));
+    let res = store.remove_recipient(&user0_recipient, Path::new("./"));
     let gpg_id_file_post = fs::read_to_string(td.path().join(".gpg-id"))?;
 
     assert!(res.is_ok());
@@ -2395,7 +2357,7 @@ fn test_remove_last_recipient_from_sub_folder() -> Result<()> {
     store.new_password_file("dir/file", "password")?;
 
     let gpg_id_file_pre = fs::read_to_string(td.path().join(".gpg-id"))?;
-    let res = store.remove_recipient(&user0_recipient, &PathBuf::from("dir"));
+    let res = store.remove_recipient(&user0_recipient, Path::new("dir"));
     let gpg_id_file_post = fs::read_to_string(td.path().join(".gpg-id"))?;
 
     assert!(res.is_ok());
@@ -2455,7 +2417,7 @@ fn test_remove_recipient_root() -> Result<()> {
 
     store.remove_recipient(
         &crate::test_helpers::recipient_from_cert(&users[1]),
-        &PathBuf::from("./"),
+        Path::new("./"),
     )?;
 
     assert_eq!(2, store.passwords.len());
@@ -2545,7 +2507,7 @@ fn all_recipients_from_stores_plain() -> Result<()> {
         user_home: None,
     };
 
-    let result = all_recipients_from_stores(Arc::new(Mutex::new(vec![Arc::new(Mutex::new(s1))])))?;
+    let result = all_recipients_from_stores(&Arc::new(Mutex::new(vec![Arc::new(Mutex::new(s1))])))?;
 
     assert_eq!(1, result.len());
     assert_eq!("7E068070D5EF794B00C8A9D91D108E6C07CBC406", result[0].key_id);

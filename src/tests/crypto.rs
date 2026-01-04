@@ -392,14 +392,14 @@ fn cert_v6() -> Arc<Cert> {
     Arc::new(cert)
 }
 
-fn fingerprint_from_cert(cert: Arc<Cert>) -> [u8; 32] {
+fn fingerprint_from_cert(cert: &Arc<Cert>) -> [u8; 32] {
     <[u8; 32]>::try_from(cert.fingerprint().as_bytes()).unwrap()
 }
 
 #[test]
 fn test_fingerprint_from_cert() {
     let cert = cert_v6();
-    assert_eq!(32, fingerprint_from_cert(cert).iter().len());
+    assert_eq!(32, fingerprint_from_cert(&cert).iter().len());
 }
 
 #[test]

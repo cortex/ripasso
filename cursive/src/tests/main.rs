@@ -32,17 +32,17 @@ fn do_delete_normal() {
 
     let mut store = PasswordStore::new(
         "",
-        &Some(td.path().to_path_buf()),
-        &None,
-        &None,
-        &None,
-        &CryptoImpl::GpgMe,
-        &None,
+        Some(td.path()),
+        None,
+        None,
+        None,
+        CryptoImpl::GpgMe,
+        None,
     )
     .unwrap();
     store.passwords.push(PasswordEntry::new(
         &td.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -60,7 +60,7 @@ fn do_delete_normal() {
             .passwords
             .clone()
             .into_iter()
-            .map(|p| (format!("{:?}", p), p)),
+            .map(|p| (format!("{p:?}"), p)),
     );
     entries.set_selection(0);
 
@@ -69,7 +69,7 @@ fn do_delete_normal() {
     siv.call_on_name("results", |l: &mut SelectView<PasswordEntry>| {
         assert_eq!(1, l.len());
     });
-    do_delete(&mut siv, store);
+    do_delete(&mut siv, &store);
 
     siv.call_on_name("results", |l: &mut SelectView<PasswordEntry>| {
         assert_eq!(0, l.len());
@@ -94,8 +94,8 @@ fn get_selected_password_entry_some() {
     sv.add_item(
         "Item 1",
         PasswordEntry::new(
-            &PathBuf::from("/tmp/"),
-            &PathBuf::from("file.gpg"),
+            Path::new("/tmp/"),
+            Path::new("file.gpg"),
             Ok(Local::now()),
             Ok(String::new()),
             Ok(SignatureStatus::Good),
@@ -120,17 +120,17 @@ fn do_delete_one_entry() {
 
     let mut store = PasswordStore::new(
         "test",
-        &Some(dir.path().join(".password-store")),
-        &None,
-        &None,
-        &None,
-        &CryptoImpl::GpgMe,
-        &None,
+        Some(&dir.path().join(".password-store")),
+        None,
+        None,
+        None,
+        CryptoImpl::GpgMe,
+        None,
     )
     .unwrap();
     store.passwords.push(PasswordEntry::new(
         &dir.path().join(".password-store"),
-        &PathBuf::from("file.gpg"),
+        Path::new("file.gpg"),
         Ok(Local::now()),
         Ok(String::new()),
         Ok(SignatureStatus::Good),
@@ -142,7 +142,7 @@ fn do_delete_one_entry() {
     let mut sv = SelectView::<PasswordEntry>::new();
 
     for (i, item) in store.all_passwords().unwrap().into_iter().enumerate() {
-        sv.add_item(format!("Item {}", i), item);
+        sv.add_item(format!("Item {i}"), item);
     }
 
     assert_eq!(1, sv.len());
@@ -151,7 +151,7 @@ fn do_delete_one_entry() {
     siv.add_layer(SelectView::<PasswordEntry>::new().with_name("just to be popped"));
 
     let store: PasswordStoreType = Arc::new(Mutex::new(Arc::new(Mutex::new(store))));
-    do_delete(&mut siv, store);
+    do_delete(&mut siv, &store);
 
     let cbr = siv.call_on_name("results", |l: &mut SelectView<PasswordEntry>| {
         assert_eq!(0, l.len());
@@ -202,8 +202,8 @@ fn create_label_basic() {
     // TODO: Fix this test so that time zones don't mess with it.
 
     let p = PasswordEntry::new(
-        &PathBuf::from("/tmp/"),
-        &PathBuf::from("file.gpg"),
+        Path::new("/tmp/"),
+        Path::new("file.gpg"),
         Ok(chrono::DateTime::<Local>::from(
             chrono::DateTime::parse_from_str("2022-08-14 00:00:00+0000", "%Y-%m-%d %H:%M:%S%z")
                 .unwrap(),
@@ -222,7 +222,7 @@ fn create_label_basic() {
 fn get_sub_dirs_empty() {
     let dir = tempdir().unwrap();
 
-    let dirs = get_sub_dirs(&dir.path().to_path_buf()).unwrap();
+    let dirs = get_sub_dirs(dir.path()).unwrap();
 
     assert_eq!(1, dirs.len());
     assert_eq!(PathBuf::from("./"), dirs[0]);
@@ -233,7 +233,7 @@ fn get_sub_dirs_one_dir() {
     let dir = tempdir().unwrap();
     std::fs::create_dir(dir.path().join("one_dir")).unwrap();
 
-    let dirs = get_sub_dirs(&dir.path().to_path_buf()).unwrap();
+    let dirs = get_sub_dirs(dir.path()).unwrap();
 
     assert_eq!(1, dirs.len());
     assert_eq!(PathBuf::from("./"), dirs[0]);
@@ -245,7 +245,7 @@ fn get_sub_dirs_one_dir_with_pgpid() {
     std::fs::create_dir(dir.path().join("one_dir")).unwrap();
     File::create(dir.path().join("one_dir").join(".gpg-id")).unwrap();
 
-    let dirs = get_sub_dirs(&dir.path().to_path_buf()).unwrap();
+    let dirs = get_sub_dirs(dir.path()).unwrap();
 
     assert_eq!(2, dirs.len());
     assert_eq!(PathBuf::from("./"), dirs[0]);

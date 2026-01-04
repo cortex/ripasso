@@ -1,11 +1,5 @@
 mod imp;
 
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
-
 use crate::{collection_object::CollectionObject, password_object::PasswordObject};
 use adw::{ActionRow, NavigationDirection, prelude::*, subclass::prelude::*};
 use glib::{Object, clone};
@@ -14,6 +8,12 @@ use gtk::{
     ListBoxRow, NoSelection, ResponseType, SelectionMode, gio, glib, glib::BindingFlags, pango,
 };
 use ripasso::{crypto::CryptoImpl, pass::PasswordStore};
+use std::path::Path;
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 
 glib::wrapper! {
     pub struct Window(ObjectSubclass<imp::Window>)
@@ -101,15 +101,15 @@ impl Window {
         )
     }
 
-    fn restore_data(&self, home_dir: Option<PathBuf>, user_config_dir: Option<PathBuf>) {
-        let (config, home) = ripasso::pass::read_config(&None, &None, &home_dir, &user_config_dir)
+    fn restore_data(&self, home_dir: Option<&Path>, user_config_dir: Option<&Path>) {
+        let (config, home) = ripasso::pass::read_config(None, None, home_dir, user_config_dir)
             .expect("No config file present");
 
         let stores = get_stores(&config, &Some(home)).expect("Problem constructing stores");
         // Convert `Vec<CollectionData>` to `Vec<CollectionObject>`
         let collections: Vec<CollectionObject> = stores
             .into_iter()
-            .map(|s| CollectionObject::from_store_data(s, &user_config_dir.clone().unwrap()))
+            .map(|s| CollectionObject::from_store_data(s, user_config_dir.unwrap()))
             .collect();
 
         // Insert restored objects into model
@@ -508,12 +508,12 @@ impl Window {
                     Arc::new(Mutex::new(
                         PasswordStore::new(
                             "default",
-                            &None,
-                            &None,
-                            &None,
-                            &None,
-                            &CryptoImpl::GpgMe,
-                            &None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            CryptoImpl::GpgMe,
+                            None,
                         )
                         .expect("Created store"),
                     )),
@@ -585,12 +585,12 @@ fn get_stores(
 
                 final_stores.push(PasswordStore::new(
                     store_name,
-                    &password_store_dir,
-                    &valid_signing_keys,
-                    home,
-                    &style_path_opt,
-                    &pgp_impl,
-                    &own_fingerprint,
+                    password_store_dir.as_deref(),
+                    valid_signing_keys.as_deref(),
+                    home.as_deref(),
+                    style_path_opt.as_deref(),
+                    pgp_impl,
+                    own_fingerprint.as_ref(),
                 )?);
             }
         }
@@ -599,12 +599,12 @@ fn get_stores(
         if default_path.exists() {
             final_stores.push(PasswordStore::new(
                 "default",
-                &Some(default_path),
-                &None,
-                home,
-                &None,
-                &CryptoImpl::GpgMe,
-                &None,
+                Some(&default_path),
+                None,
+                home.as_deref(),
+                None,
+                CryptoImpl::GpgMe,
+                None,
             )?);
         }
     }

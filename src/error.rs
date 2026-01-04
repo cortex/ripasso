@@ -190,21 +190,20 @@ impl std::fmt::Display for Error {
             Self::Gpg(err) => write!(f, "{err}"),
             Self::Utf8(err) => write!(f, "{err}"),
             Self::Generic(err) => write!(f, "{err}"),
-            Self::GenericDyn(err) => write!(f, "{err}"),
+            Self::GenericDyn(err) | Self::RecipientNotInKeyRing(err) => write!(f, "{err}"),
             Self::PathError(err) => write!(f, "{err}"),
             Self::PatternError(err) => write!(f, "{err}"),
             Self::GlobError(err) => write!(f, "{err}"),
             Self::Utf8Error(err) => write!(f, "{err}"),
-            Self::RecipientNotInKeyRing(err) => write!(f, "{err}"),
             Self::ConfigError(err) => write!(f, "{err}"),
             Self::SerError(err) => write!(f, "{err}"),
             Self::ReqwestError(err) => write!(f, "{err}"),
             Self::AnyhowError(err) => write!(f, "{err}"),
-            Self::NoneError => write!(f, "NoneError"),
             Self::HexError(err) => write!(f, "{err}"),
             Self::FmtError(err) => write!(f, "{err}"),
-            Self::TotpUrlError(_err) => write!(f, "TOTP url error"),
             Self::SystemTimeError(err) => write!(f, "{err}"),
+            Self::NoneError => write!(f, "NoneError"),
+            Self::TotpUrlError(_err) => write!(f, "TOTP url error"),
         }
     }
 }
@@ -212,6 +211,10 @@ impl std::fmt::Display for Error {
 /// Convenience type for Results
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Converts a `LocalResult` to a normal `Result`.
+///
+/// # Errors
+/// If the supplied `LocalResult` have no timezone or more than one timezone.
 pub fn to_result<T: chrono::TimeZone>(
     res: chrono::LocalResult<chrono::DateTime<T>>,
 ) -> Result<chrono::DateTime<T>> {

@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::crypto::{FindSigningFingerprintStrategy, Fingerprint};
-pub use crate::error::{Error, Result};
+use crate::error::{Error, Result};
 
 /// A git commit for a password might be signed by a gpg key, and this signature's verification
 /// state is one of these values.
@@ -37,36 +37,39 @@ impl From<gpgme::SignatureSummary> for SignatureStatus {
 /// Turns an optional string into a vec of parsed gpg fingerprints in the form of strings.
 /// If any of the fingerprints isn't a full 40 chars or if they haven't been imported to
 /// the gpg keyring yet, this function instead returns an error.
+///
+/// # Errors
+/// Fails if the signing keys can't be parsed.
 pub fn parse_signing_keys(
-    password_store_signing_key: &Option<String>,
+    password_store_signing_key: Option<&str>,
     crypto: &(dyn crate::crypto::Crypto + Send),
 ) -> Result<Vec<Fingerprint>> {
-    if password_store_signing_key.is_none() {
-        return Ok(vec![]);
-    }
+    if let Some(password_store_signing_key) = password_store_signing_key {
+        let mut signing_keys = vec![];
+        for key in password_store_signing_key.split(',') {
+            let trimmed = key.trim().to_owned();
+            let len = trimmed.len();
+            let have_0x = trimmed.starts_with("0x");
 
-    let mut signing_keys = vec![];
-    for key in password_store_signing_key.as_ref().unwrap().split(',') {
-        let trimmed = key.trim().to_owned();
-        let len = trimmed.len();
-        let have_0x = trimmed.starts_with("0x");
+            if !(len == 40 || len == 64 || len == 42 && have_0x || len == 66 && have_0x) {
+                return Err(Error::Generic(
+                    "signing key isn't in full 40/64 hex character fingerprint format",
+                ));
+            }
 
-        if !(len == 40 || len == 64 || len == 42 && have_0x || len == 66 && have_0x) {
-            return Err(Error::Generic(
-                "signing key isn't in full 40/64 hex character fingerprint format",
-            ));
+            let key_res = crypto.get_key(&trimmed);
+            if let Some(err) = key_res.err() {
+                return Err(Error::GenericDyn(format!(
+                    "signing key not found in keyring, error: {err}",
+                )));
+            }
+
+            signing_keys.push(trimmed.as_str().try_into()?);
         }
-
-        let key_res = crypto.get_key(&trimmed);
-        if let Some(err) = key_res.err() {
-            return Err(Error::GenericDyn(format!(
-                "signing key not found in keyring, error: {err}",
-            )));
-        }
-
-        signing_keys.push(trimmed.as_str().try_into()?);
+        Ok(signing_keys)
+    } else {
+        Ok(vec![])
     }
-    Ok(signing_keys)
 }
 
 /// the GPG trust level for a key
@@ -159,7 +162,7 @@ pub struct Comment {
 
 /// Represents one person on the team.
 ///
-/// All secrets are encrypted with the key_id of the recipients.
+/// All secrets are encrypted with the `key_id` of the recipients.
 #[derive(Clone, Debug)]
 pub struct Recipient {
     /// Human-readable name of the person.
@@ -238,10 +241,7 @@ impl Recipient {
 
         let mut names = real_key.user_id_names();
 
-        let name = match names.len() {
-            0 => "?".to_owned(),
-            _ => names.pop().unwrap(),
-        };
+        let name = names.pop().unwrap_or("?".to_owned());
 
         let trusts: HashMap<Fingerprint, OwnerTrustLevel> = crypto.get_all_trust_items()?;
 
@@ -263,7 +263,7 @@ impl Recipient {
 
     /// Return a list of all the Recipients in the supplied file.
     /// # Errors
-    /// Returns an `Err` if there is a problem reading the .gpg_id file
+    /// Returns an `Err` if there is a problem reading the `.gpg_id` file
     pub fn all_recipients(
         recipients_file: &Path,
         crypto: &(dyn crate::crypto::Crypto + Send),
@@ -279,15 +279,17 @@ impl Recipient {
                     comment_buf.push(key.chars().skip(1).collect());
                 } else if key.contains('#') {
                     let mut splitter = key.splitn(2, '#');
-                    let key = splitter.next().unwrap().trim();
-                    let comment = splitter.next().unwrap();
-
-                    unique_recipients_keys.insert(IdComment {
-                        id: key.to_owned(),
-                        pre_comment: comment_buf.clone(),
-                        post_comment: Some(comment.to_owned()),
-                    });
-                    comment_buf.clear();
+                    if let Some(key) = splitter.next() {
+                        let key = key.trim();
+                        if let Some(comment) = splitter.next() {
+                            unique_recipients_keys.insert(IdComment {
+                                id: key.to_owned(),
+                                pre_comment: comment_buf.clone(),
+                                post_comment: Some(comment.to_owned()),
+                            });
+                            comment_buf.clear();
+                        }
+                    }
                 } else {
                     unique_recipients_keys.insert(IdComment {
                         id: key.to_owned(),
@@ -323,7 +325,7 @@ impl Recipient {
                         )
                     }
                 };
-            recipients.push(recipient)
+            recipients.push(recipient);
         }
 
         Ok(recipients)
@@ -353,8 +355,8 @@ impl Recipient {
                 None => recipient.key_id,
             };
 
-            if recipient.comment.pre_comment.is_some() {
-                for line in recipient.comment.pre_comment.as_ref().unwrap().split('\n') {
+            if let Some(pre_comment) = recipient.comment.pre_comment.as_ref() {
+                for line in pre_comment.split('\n') {
                     file_content.push('#');
                     file_content.push_str(line);
                     file_content.push('\n');
@@ -366,9 +368,9 @@ impl Recipient {
             }
             file_content.push_str(&to_add);
 
-            if recipient.comment.post_comment.is_some() {
+            if let Some(post_comment) = recipient.comment.post_comment.as_ref() {
                 file_content.push_str(" #");
-                file_content.push_str(recipient.comment.post_comment.as_ref().unwrap());
+                file_content.push_str(post_comment);
             }
             file_content.push('\n');
         }
@@ -402,7 +404,7 @@ impl Recipient {
 
     /// Delete one of the persons from the list of team members to encrypt the passwords for.
     /// # Errors
-    /// Return an `Err` if there is an error reading the gpg_id file
+    /// Return an `Err` if there is an error reading the `gpg_id` file
     pub fn remove_recipient_from_file(
         s: &Self,
         recipients_file: &Path,
@@ -438,7 +440,7 @@ impl Recipient {
 
     /// Add a new person to the list of team members to encrypt the passwords for.
     /// # Errors
-    /// Return an `Err` if there is an error reading the gpg_id file
+    /// Return an `Err` if there is an error reading the `gpg_id` file
     pub fn add_recipient_to_file(
         recipient: &Self,
         recipients_file: &Path,

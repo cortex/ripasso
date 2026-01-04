@@ -14,10 +14,9 @@ fn test_parse_signing_keys_two_keys() {
         .with_get_key_result("E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F", MockKey::new());
 
     let file_content =
-        "7E068070D5EF794B00C8A9D91D108E6C07CBC406,E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F"
-            .to_owned();
+        "7E068070D5EF794B00C8A9D91D108E6C07CBC406,E6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F";
 
-    let result = parse_signing_keys(&Some(file_content), &crypto).unwrap();
+    let result = parse_signing_keys(Some(file_content), &crypto).unwrap();
 
     assert_eq!(2, result.len());
     assert!(result.contains(&Fingerprint::V4(
@@ -35,10 +34,9 @@ fn test_parse_signing_keys_two_keys_with_0x() {
         .with_get_key_result("0xE6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F", MockKey::new());
 
     let file_content =
-        "0x7E068070D5EF794B00C8A9D91D108E6C07CBC406,0xE6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F"
-            .to_owned();
+        "0x7E068070D5EF794B00C8A9D91D108E6C07CBC406,0xE6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F";
 
-    let result = parse_signing_keys(&Some(file_content), &crypto).unwrap();
+    let result = parse_signing_keys(Some(file_content), &crypto).unwrap();
 
     assert_eq!(2, result.len());
     assert!(result.contains(&Fingerprint::V4(
@@ -61,11 +59,9 @@ fn test_parse_signing_keys_two_v6_keys_with_0x() {
             MockKey::new(),
         );
 
-    let file_content =
-        "0x211d3c737301f0540dbdfee64485573555beedac5bd5fe1d53293f6dcb0150fb,0x338b0a9792bd6c858bfecf527080123e69c3a4b787cb2b401bb5565465a9cbfb"
-            .to_owned();
+    let file_content = "0x211d3c737301f0540dbdfee64485573555beedac5bd5fe1d53293f6dcb0150fb,0x338b0a9792bd6c858bfecf527080123e69c3a4b787cb2b401bb5565465a9cbfb";
 
-    let result = parse_signing_keys(&Some(file_content), &crypto).unwrap();
+    let result = parse_signing_keys(Some(file_content), &crypto).unwrap();
 
     assert_eq!(2, result.len());
     assert!(
@@ -91,10 +87,9 @@ fn parse_signing_keys_key_error() {
     let crypto = MockCrypto::new().with_get_key_error("unit test error");
 
     let file_content =
-        "0x7E068070D5EF794B00C8A9D91D108E6C07CBC406,0xE6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F"
-            .to_owned();
+        "0x7E068070D5EF794B00C8A9D91D108E6C07CBC406,0xE6A7D758338EC2EF2A8A9F4EE7E3DB4B3217482F";
 
-    let result = parse_signing_keys(&Some(file_content), &crypto);
+    let result = parse_signing_keys(Some(file_content), &crypto);
 
     assert!(result.is_err());
 }
@@ -103,7 +98,7 @@ fn parse_signing_keys_key_error() {
 fn parse_signing_keys_empty() {
     let crypto = MockCrypto::new();
 
-    let result = parse_signing_keys(&None, &crypto).unwrap();
+    let result = parse_signing_keys(None, &crypto).unwrap();
 
     assert_eq!(result.len(), 0);
 }
@@ -112,7 +107,7 @@ fn parse_signing_keys_empty() {
 fn parse_signing_keys_short() {
     let crypto = MockCrypto::new();
 
-    let result = parse_signing_keys(&Some("0x1D108E6C07CBC406".to_string()), &crypto);
+    let result = parse_signing_keys(Some("0x1D108E6C07CBC406"), &crypto);
 
     assert!(result.is_err());
 }
