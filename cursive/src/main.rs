@@ -156,7 +156,7 @@ fn copy(ui: &mut Cursive, store: &PasswordStoreType) {
 
     thread::spawn(|| {
         thread::sleep(time::Duration::from_secs(40));
-        helpers::set_clipboard(&String::new()).unwrap();
+        helpers::set_clipboard("").unwrap();
     });
     ui.call_on_name("status_bar", |l: &mut TextView| {
         l.set_content(CATALOG.gettext("Copied password to copy buffer for 40 seconds"));
@@ -184,7 +184,7 @@ fn copy_first_line(ui: &mut Cursive, store: &PasswordStoreType) {
 
     thread::spawn(|| {
         thread::sleep(time::Duration::from_secs(40));
-        helpers::set_clipboard(&String::new()).unwrap();
+        helpers::set_clipboard("").unwrap();
     });
     ui.call_on_name("status_bar", |l: &mut TextView| {
         l.set_content(
@@ -230,7 +230,7 @@ fn copy_name(ui: &mut Cursive) {
 
     if let Err(err) = || -> Result<()> {
         let name = sel.name.split('/').next_back();
-        helpers::set_clipboard(&name.unwrap_or("").to_string())?;
+        helpers::set_clipboard(name.unwrap_or(""))?;
         Ok(())
     }() {
         helpers::errorbox(ui, &err);
@@ -1256,7 +1256,7 @@ fn search(store: &PasswordStoreType, ui: &mut Cursive, query: &str) -> Result<()
         .find_name::<SelectView<pass::PasswordEntry>>("results")
         .unwrap();
 
-    let r = pass::search(&*store.lock()?.lock()?, &String::from(query));
+    let r = pass::search(&*store.lock()?.lock()?, query);
 
     l.clear();
     for p in &r {
@@ -1881,8 +1881,8 @@ fn edit_store_in_config(
 
     let stores2 = stores.clone();
     let stores3 = stores.clone();
-    let name2 = store.get_name().clone();
-    let name3 = store.get_name().clone();
+    let name2 = store.get_name().to_owned();
+    let name3 = store.get_name().to_owned();
     let config_file_location = config_file_location.to_path_buf();
     let config_file_location2 = config_file_location.clone();
     let home = home.map(ToOwned::to_owned);
@@ -2115,7 +2115,7 @@ fn show_manage_config_dialog(
         let store = store.lock()?;
         stores_view
             .get_mut()
-            .add_item(store.get_name(), store.get_name().clone());
+            .add_item(store.get_name(), store.get_name().to_owned());
     }
 
     let d = Dialog::around(stores_view)
@@ -2462,7 +2462,7 @@ fn create_stores_tree(
 
     for s in stores.lock()?.iter() {
         let s = s.clone();
-        let store_name = s.lock()?.get_name().clone();
+        let store_name = s.lock()?.get_name().to_owned();
         let store = store.clone();
         tree.add_leaf(store_name, move |ui: &mut Cursive| {
             switch_store(ui, &s, &store);

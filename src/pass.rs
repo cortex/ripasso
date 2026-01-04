@@ -223,7 +223,7 @@ impl PasswordStore {
 
     /// Returns the name of the store, configured to the configuration file
     #[must_use]
-    pub fn get_name(&self) -> &String {
+    pub fn get_name(&self) -> &str {
         &self.name
     }
 
@@ -1500,7 +1500,7 @@ pub fn save_config(
         if let Some(fp) = store.crypto.own_fingerprint() {
             store_map.insert("own_fingerprint", hex::encode_upper(fp));
         }
-        all_stores_map.insert(store.get_name().clone(), store_map);
+        all_stores_map.insert(store.get_name().to_owned(), store_map);
     }
 
     let mut settings = HashMap::new();
