@@ -1,5 +1,5 @@
-use std::{io, path, str::Utf8Error, string};
-use std::sync::PoisonError;
+use std::{io, path, str::Utf8Error, string, sync::PoisonError};
+
 use hex::FromHexError;
 use thiserror::Error;
 
