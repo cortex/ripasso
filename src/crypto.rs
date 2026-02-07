@@ -52,7 +52,7 @@ impl TryFrom<&str> for CryptoImpl {
         match value {
             "gpg" => Ok(Self::GpgMe),
             "sequoia" => Ok(Self::Sequoia),
-            _ => Err(Error::Generic(
+            _ => Err(Error::from(
                 "unknown pgp implementation value, valid values are 'gpg' and 'sequoia'",
             )),
         }
@@ -147,7 +147,7 @@ impl TryFrom<&[u8]> for Fingerprint {
             32 => Ok(Fingerprint::V6(
                 b.try_into().expect("slice with incorrect length"),
             )),
-            _ => Err(Error::Generic("slice isn't 20 or 32 bytes")),
+            _ => Err(Error::from("slice isn't 20 or 32 bytes")),
         }
     }
 }
@@ -166,7 +166,7 @@ impl TryFrom<&str> for Fingerprint {
         } else if key.len() == 66 {
             Ok(Fingerprint::from(<[u8; 32]>::from_hex(&key[2..])?))
         } else {
-            Err(Error::Generic("unable to parse fingerprint"))
+            Err(Error::from("unable to parse fingerprint"))
         }
     }
 }
@@ -354,7 +354,7 @@ impl Crypto for GpgMe {
                 if let Some(key) = key_opt {
                     key.fingerprint()?.to_owned()
                 } else {
-                    return Err(Error::Generic("no valid signing key"));
+                    return Err(Error::from("no valid signing key"));
                 }
             }
         };
@@ -505,7 +505,7 @@ fn download_keys(recipient_key_id: &str) -> Result<String> {
             "https://keys.openpgp.org/vks/v1/by-fingerprint/{}",
             &recipient_key_id[2..]
         ),
-        _ => return Err(Error::Generic("key id is not 16 or 40 hex chars")),
+        _ => return Err(Error::from("key id is not 16 or 40 hex chars")),
     };
 
     Ok(reqwest::blocking::get(url)?.text()?)
@@ -564,7 +564,7 @@ fn find(
     key_ring: &HashMap<Fingerprint, Arc<Cert>>,
     recipient: Option<&KeyHandle>,
 ) -> Result<Arc<Cert>> {
-    let recipient = recipient.as_ref().ok_or(Error::Generic("No recipient"))?;
+    let recipient = recipient.as_ref().ok_or(Error::from("No recipient"))?;
 
     match recipient {
         KeyHandle::Fingerprint(fpr) => match fpr {
@@ -579,7 +579,7 @@ fn find(
                 }
             }
             sequoia_openpgp::Fingerprint::Unknown { .. } => {
-                return Err(Error::Generic("unknown fingerprint version"));
+                return Err(Error::from("unknown fingerprint version"));
             }
             _ => {}
         },
@@ -592,13 +592,13 @@ fn find(
                 }
             }
             KeyID::Invalid(_) => {
-                return Err(Error::Generic("Invalid key ID"));
+                return Err(Error::from("Invalid key ID"));
             }
             _ => {}
         },
     }
 
-    Err(Error::Generic("key not found in keyring"))
+    Err(Error::from("key not found in keyring"))
 }
 
 impl DecryptionHelper for Helper<'_> {
@@ -764,7 +764,7 @@ impl Sequoia {
                 match self.key_ring.get(fp) {
                     Some(cert) => result.push(cert.clone()),
                     None => {
-                        return Err(Error::GenericDyn(format!(
+                        return Err(Error::from(format!(
                             "Recipient with key id {} not found",
                             recipient.key_id
                         )));
@@ -820,7 +820,7 @@ impl Crypto for Sequoia {
         let decrypt_key = self
             .key_ring
             .get(&self.user_key_id)
-            .ok_or(Error::Generic("no key for user found"))?;
+            .ok_or(Error::from("no key for user found"))?;
 
         if decrypt_key.is_tsk() {
             // Make a helper that that feeds the recipient's secret key to the
@@ -920,7 +920,7 @@ impl Crypto for Sequoia {
         let tsk = self
             .key_ring
             .get(&self.user_key_id)
-            .ok_or(Error::Generic("no key for user found"))?;
+            .ok_or(Error::from("no key for user found"))?;
 
         // Get the keypair to do the signing from the Cert.
         let keypair = tsk
@@ -1044,7 +1044,7 @@ impl Crypto for Sequoia {
             }
         }
 
-        Err(Error::GenericDyn(format!("no key found for {key_id}")))
+        Err(Error::from(format!("no key found for {key_id}")))
     }
 
     fn get_all_trust_items(&self) -> Result<HashMap<Fingerprint, OwnerTrustLevel>> {

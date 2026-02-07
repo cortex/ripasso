@@ -1,6 +1,11 @@
 mod imp;
 
-use crate::{collection_object::CollectionObject, password_object::PasswordObject};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+};
+
 use adw::{ActionRow, NavigationDirection, prelude::*, subclass::prelude::*};
 use glib::{Object, clone};
 use gtk::{
@@ -8,12 +13,8 @@ use gtk::{
     ListBoxRow, NoSelection, ResponseType, SelectionMode, gio, glib, glib::BindingFlags, pango,
 };
 use ripasso::{crypto::CryptoImpl, pass::PasswordStore};
-use std::path::Path;
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
+
+use crate::{collection_object::CollectionObject, password_object::PasswordObject};
 
 glib::wrapper! {
     pub struct Window(ObjectSubclass<imp::Window>)

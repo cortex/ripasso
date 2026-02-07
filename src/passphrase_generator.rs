@@ -1,6 +1,6 @@
-use crate::error::Result;
-use crate::pass::Error;
 use rand::prelude::IndexedRandom;
+
+use crate::{error::Result, pass::Error};
 
 static WORDLIST: &str = include_str!("wordlists/eff_large.wordlist");
 
@@ -18,7 +18,7 @@ pub fn passphrase_generator(word_count: usize) -> Result<Vec<String>> {
         .collect();
 
     if words.is_empty() {
-        return Err(Error::Generic("empty wordlist"));
+        return Err(Error::from("empty wordlist"));
     }
 
     let mut rng = rand::rng();

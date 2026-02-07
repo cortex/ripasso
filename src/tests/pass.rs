@@ -72,7 +72,7 @@ fn get_password_dir_no_env() {
 
     assert_eq!(
         path.unwrap_err(),
-        Error::Generic("failed to locate password directory")
+        Error::from("failed to locate password directory")
     );
 }
 
@@ -392,7 +392,7 @@ fn env_var_exists_test_with_dir() {
 #[test]
 fn home_settings_missing() {
     assert_eq!(
-        Error::GenericDyn("no home directory set".to_owned()),
+        Error::from("no home directory set"),
         home_settings(None).err().unwrap()
     );
 }
@@ -1230,7 +1230,7 @@ fn mfa_no_otpauth_url() -> Result<()> {
 
     let res = pe.mfa(&store);
 
-    assert_eq!(Err(Error::Generic("No otpauth:// url in secret")), res);
+    assert_eq!(Err(Error::from("No otpauth:// url in secret")), res);
 
     Ok(())
 }
@@ -1621,7 +1621,7 @@ fn test_verify_git_signature() -> Result<()> {
     let result = verify_git_signature(&repo, &oid, &store);
 
     assert_eq!(
-        Error::Generic(
+        Error::from(
             "the commit wasn\'t signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY"
         ),
         result.err().unwrap()
@@ -1726,7 +1726,7 @@ fn test_verify_gpg_id_files_missing_sig_file() -> Result<()> {
     assert!(result.is_err());
 
     assert_eq!(
-        Error::Generic("problem reading .gpg-id.sig, and strict signature checking was asked for"),
+        Error::from("problem reading .gpg-id.sig, and strict signature checking was asked for"),
         result.err().unwrap()
     );
 
@@ -1763,7 +1763,7 @@ fn test_verify_gpg_id_files() -> Result<()> {
     assert!(result.is_err());
 
     assert_eq!(
-        Error::Generic(
+        Error::from(
             "the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY"
         ),
         result.err().unwrap()
@@ -1869,10 +1869,7 @@ fn test_verify_gpg_id_files_untrusted_key_in_keyring() {
 
     assert!(result.is_err());
 
-    assert_eq!(
-        Error::GenericDyn("No valid signature".to_owned()),
-        result.err().unwrap()
-    );
+    assert_eq!(Error::from("No valid signature"), result.err().unwrap());
 }
 
 #[test]

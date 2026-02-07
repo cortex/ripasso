@@ -18,13 +18,13 @@ fn git_branch_name(repo: &Repository) -> Result<String> {
     let head = repo.find_reference("HEAD")?;
     let symbolic = head
         .symbolic_target()
-        .ok_or(Error::Generic("no symbolic target"))?;
+        .ok_or(Error::from("no symbolic target"))?;
 
     let mut parts = symbolic.split('/');
 
     Ok(parts
         .nth(2)
-        .ok_or(Error::Generic(
+        .ok_or(Error::from(
             "symbolic target name should be on format 'refs/heads/main'",
         ))?
         .to_owned())
@@ -85,7 +85,7 @@ pub fn commit(
 pub fn find_last_commit(repo: &Repository) -> Result<git2::Commit<'_>> {
     let obj = repo.head()?.resolve()?.peel(git2::ObjectType::Commit)?;
     obj.into_commit()
-        .map_err(|_| Error::Generic("Couldn't find commit"))
+        .map_err(|_| Error::from("Couldn't find commit"))
 }
 
 /// Returns if a git commit should be gpg signed or not.
@@ -149,7 +149,7 @@ pub fn add_and_commit_internal(
 pub fn remove_and_commit(store: &PasswordStore, paths: &[PathBuf], message: &str) -> Result<Oid> {
     let repo = store
         .repo()
-        .map_err(|_| Error::Generic("must have a repository"))?;
+        .map_err(|_| Error::from("must have a repository"))?;
 
     let mut index = repo.index()?;
     for path in paths {
@@ -192,7 +192,7 @@ pub fn move_and_commit(
 ) -> Result<Oid> {
     let repo = store
         .repo()
-        .map_err(|_| Error::Generic("must have a repository"))?;
+        .map_err(|_| Error::from("must have a repository"))?;
 
     let mut index = repo.index()?;
     index.remove_path(old_name)?;
@@ -240,7 +240,7 @@ fn find_origin(repo: &Repository) -> Result<(git2::Remote<'_>, String)> {
         }
     }
 
-    Err(Error::Generic("no remotes configured"))
+    Err(Error::from("no remotes configured"))
 }
 
 /// function that can be used for callback handling of the ssh interaction in git2
@@ -272,7 +272,7 @@ fn cred(
 pub fn push(store: &PasswordStore) -> Result<()> {
     let repo = store
         .repo()
-        .map_err(|_| Error::Generic("must have a repository"))?;
+        .map_err(|_| Error::from("must have a repository"))?;
 
     let mut ref_status = None;
     let (mut origin, branch_name) = find_origin(&repo)?;
@@ -291,10 +291,10 @@ pub fn push(store: &PasswordStore) -> Result<()> {
     };
     match res {
         Ok(()) if ref_status.is_none() => Ok(()),
-        Ok(()) => Err(Error::GenericDyn(format!(
-            "failed to push a ref: {ref_status:?}",
-        ))),
-        Err(e) => Err(Error::GenericDyn(format!("failure to push: {e}"))),
+        Ok(()) => Err(Error::from(
+            format!("failed to push a ref: {ref_status:?}",),
+        )),
+        Err(e) => Err(Error::from(format!("failure to push: {e}"))),
     }
 }
 
@@ -304,7 +304,7 @@ pub fn push(store: &PasswordStore) -> Result<()> {
 pub fn pull(store: &PasswordStore) -> Result<()> {
     let repo = store
         .repo()
-        .map_err(|_| Error::Generic("must have a repository"))?;
+        .map_err(|_| Error::from("must have a repository"))?;
 
     let (mut origin, branch_name) = find_origin(&repo)?;
 
@@ -358,9 +358,9 @@ fn triple<T: Display>(
     Result<SignatureStatus>,
 ) {
     (
-        Err(Error::GenericDyn(format!("{e}"))),
-        Err(Error::GenericDyn(format!("{e}"))),
-        Err(Error::GenericDyn(format!("{e}"))),
+        Err(Error::from(format!("{e}"))),
+        Err(Error::from(format!("{e}"))),
+        Err(Error::from(format!("{e}"))),
     )
 }
 
@@ -388,9 +388,7 @@ pub fn read_git_meta_data(
         return triple(&e);
     }
     let blame = blame_res.unwrap();
-    let id_res = blame
-        .get_line(1)
-        .ok_or(Error::Generic("no git history found"));
+    let id_res = blame.get_line(1).ok_or(Error::from("no git history found"));
 
     if let Err(e) = id_res {
         return triple(&e);
@@ -428,7 +426,7 @@ pub fn verify_git_signature(
     let signed_data_str = str::from_utf8(&signed_data)?.to_owned();
 
     if store.get_valid_gpg_signing_keys().is_empty() {
-        return Err(Error::Generic(
+        return Err(Error::from(
             "signature not checked as PASSWORD_STORE_SIGNING_KEY is not configured",
         ));
     }
@@ -438,15 +436,15 @@ pub fn verify_git_signature(
         store.get_valid_gpg_signing_keys(),
     ) {
         Ok(r) => Ok(r),
-        Err(VerificationError::InfrastructureError(message)) => Err(Error::GenericDyn(message)),
-        Err(VerificationError::SignatureFromWrongRecipient) => Err(Error::Generic(
+        Err(VerificationError::InfrastructureError(message)) => Err(Error::from(message)),
+        Err(VerificationError::SignatureFromWrongRecipient) => Err(Error::from(
             "the commit wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY",
         )),
-        Err(VerificationError::BadSignature) => Err(Error::Generic("Bad signature for commit")),
+        Err(VerificationError::BadSignature) => Err(Error::from("Bad signature for commit")),
         Err(VerificationError::MissingSignatures) => {
-            Err(Error::Generic("Missing signature for commit"))
+            Err(Error::from("Missing signature for commit"))
         }
-        Err(VerificationError::TooManySignatures) => Err(Error::Generic(
+        Err(VerificationError::TooManySignatures) => Err(Error::from(
             "If a git commit contains more than one signature, something is fishy",
         )),
     }
@@ -494,7 +492,7 @@ fn name_from_commit(commit: &git2::Commit) -> Result<String> {
     commit
         .committer()
         .name()
-        .map_or(Err(Error::Generic("missing committer name")), |s| {
+        .map_or(Err(Error::from("missing committer name")), |s| {
             Ok(s.to_owned())
         })
 }

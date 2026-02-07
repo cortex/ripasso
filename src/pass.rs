@@ -29,9 +29,8 @@ use config::Config;
 use totp_rs::TOTP;
 use zeroize::Zeroize;
 
-use crate::crypto::Fingerprint;
 use crate::{
-    crypto::{Crypto, CryptoImpl, GpgMe, Sequoia, VerificationError},
+    crypto::{Crypto, CryptoImpl, Fingerprint, GpgMe, Sequoia, VerificationError},
     git::{
         add_and_commit_internal, commit, find_last_commit, init_git_repo, match_with_parent,
         move_and_commit, push_password_if_match, read_git_meta_data, remove_and_commit,
@@ -94,20 +93,20 @@ impl PasswordStore {
     ) -> Result<Self> {
         let pass_home = password_dir_raw(password_store_dir, home);
         if !pass_home.exists() {
-            return Err(Error::Generic("failed to locate password directory"));
+            return Err(Error::from("failed to locate password directory"));
         }
 
         let crypto: Box<dyn Crypto + Send> = match crypto_impl {
             CryptoImpl::GpgMe => Box::new(GpgMe {}),
             CryptoImpl::Sequoia => {
                 let home: PathBuf = home
-                    .ok_or(Error::Generic(
+                    .ok_or(Error::from(
                         "no home, required for using Sequoia as pgp implementation",
                     ))?
                     .to_owned();
                 Box::new(Sequoia::new(
                     &home.join(".local"),
-                    own_fingerprint.ok_or_else(|| Error::Generic("own_fingerprint is not configured, required for using Sequoia as pgp implementation"))?.to_owned(),
+                    own_fingerprint.ok_or_else(|| Error::from("own_fingerprint is not configured, required for using Sequoia as pgp implementation"))?.to_owned(),
                     &home,
                 )?)
             }
@@ -146,19 +145,17 @@ impl PasswordStore {
     ) -> Result<Self> {
         let pass_home = password_dir_raw(password_store_dir, home);
         if pass_home.exists() {
-            return Err(Error::Generic(
+            return Err(Error::from(
                 "trying to create a pass store in an existing directory",
             ));
         }
 
         if recipients.is_empty() {
-            return Err(Error::Generic(
-                "password store must have at least one member",
-            ));
+            return Err(Error::from("password store must have at least one member"));
         }
         for recipient in recipients {
             if recipient.key_id.len() != 40 && recipient.key_id.len() != 42 {
-                return Err(Error::Generic(
+                return Err(Error::from(
                     "member specification wasn't a full pgp fingerprint",
                 ));
             }
@@ -171,7 +168,7 @@ impl PasswordStore {
                 let mut fingerprints = vec![];
                 for r in recipients {
                     fingerprints.push(r.fingerprint.ok_or_else(|| {
-                        Error::GenericDyn(format!(
+                        Error::from(format!(
                             "recipient {} ({}) doesn't have a fingerprint",
                             r.name, r.key_id
                         ))
@@ -273,7 +270,7 @@ impl PasswordStore {
 
             let gpg_id = fs::read(gpg_id_file)?;
             let Ok(gpg_id_sig) = fs::read(gpg_id_sig_file) else {
-                return Err(Error::Generic(
+                return Err(Error::from(
                     "problem reading .gpg-id.sig, and strict signature checking was asked for",
                 ));
             };
@@ -288,23 +285,23 @@ impl PasswordStore {
                     SignatureStatus::Bad => return Ok(SignatureStatus::Bad),
                 },
                 Err(VerificationError::InfrastructureError(message)) => {
-                    return Err(Error::GenericDyn(message));
+                    return Err(Error::from(message));
                 }
                 Err(VerificationError::SignatureFromWrongRecipient) => {
-                    return Err(Error::Generic(
+                    return Err(Error::from(
                         "the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY",
                     ));
                 }
                 Err(VerificationError::BadSignature) => {
-                    return Err(Error::Generic("Bad signature for .gpg-id file"));
+                    return Err(Error::from("Bad signature for .gpg-id file"));
                 }
                 Err(VerificationError::MissingSignatures) => {
-                    return Err(Error::Generic(
+                    return Err(Error::from(
                         "Missing signature for .gpg-id file, and PASSWORD_STORE_SIGNING_KEY specified",
                     ));
                 }
                 Err(VerificationError::TooManySignatures) => {
-                    return Err(Error::Generic(
+                    return Err(Error::from(
                         "Signature for .gpg-id file contained more than one signature, something is fishy",
                     ));
                 }
@@ -323,7 +320,7 @@ impl PasswordStore {
 
         let gpg_id = fs::read(gpg_id_file)?;
         let Ok(gpg_id_sig) = fs::read(gpg_id_sig_file) else {
-            return Err(Error::Generic(
+            return Err(Error::from(
                 "problem reading .gpg-id.sig, and strict signature checking was asked for",
             ));
         };
@@ -333,17 +330,17 @@ impl PasswordStore {
             .verify_sign(&gpg_id, &gpg_id_sig, &self.valid_gpg_signing_keys)
         {
             Ok(r) => Ok(r),
-            Err(VerificationError::InfrastructureError(message)) => Err(Error::GenericDyn(message)),
-            Err(VerificationError::SignatureFromWrongRecipient) => Err(Error::Generic(
+            Err(VerificationError::InfrastructureError(message)) => Err(Error::from(message)),
+            Err(VerificationError::SignatureFromWrongRecipient) => Err(Error::from(
                 "the .gpg-id file wasn't signed by one of the keys specified in the environmental variable PASSWORD_STORE_SIGNING_KEY",
             )),
             Err(VerificationError::BadSignature) => {
-                Err(Error::Generic("Bad signature for .gpg-id file"))
+                Err(Error::from("Bad signature for .gpg-id file"))
             }
-            Err(VerificationError::MissingSignatures) => Err(Error::Generic(
+            Err(VerificationError::MissingSignatures) => Err(Error::from(
                 "Missing signature for .gpg-id file, and PASSWORD_STORE_SIGNING_KEY specified",
             )),
-            Err(VerificationError::TooManySignatures) => Err(Error::Generic(
+            Err(VerificationError::TooManySignatures) => Err(Error::from(
                 "Signature for .gpg-id file contained more than one signature, something is fishy",
             )),
         }
@@ -366,7 +363,7 @@ impl PasswordStore {
                 if let Ok(c_file) = c_file_res
                     && !c_file.starts_with(c_path.as_path())
                 {
-                    return Err(Error::Generic(
+                    return Err(Error::from(
                         "trying to write outside of password store directory",
                     ));
                 }
@@ -379,7 +376,7 @@ impl PasswordStore {
         }
 
         if path.exists() {
-            return Err(Error::Generic("file already exist"));
+            return Err(Error::from("file already exist"));
         }
 
         match self.new_password_file_internal(&path, path_end, content) {
@@ -587,9 +584,9 @@ impl PasswordStore {
             passwords.push(PasswordEntry::new(
                 &self.root,
                 &not_found,
-                Err(Error::Generic("")),
-                Err(Error::Generic("")),
-                Err(Error::Generic("")),
+                Err(Error::from("")),
+                Err(Error::from("")),
+                Err(Error::from("")),
                 RepositoryStatus::NotInRepo,
             ));
         }
@@ -634,7 +631,7 @@ impl PasswordStore {
         let root = fs::canonicalize(&self.root)?;
 
         if !new_dir.starts_with(&root) {
-            return Err(Error::Generic("path traversal is not allowed"));
+            return Err(Error::from("path traversal is not allowed"));
         }
 
         while new_dir.starts_with(&root) {
@@ -646,7 +643,7 @@ impl PasswordStore {
             new_dir.pop();
         }
 
-        Err(Error::Generic("No .gpg-id file found"))
+        Err(Error::from("No .gpg-id file found"))
     }
 
     fn visit_dirs(dir: &Path, result: &mut Vec<PathBuf>) -> Result<()> {
@@ -706,20 +703,20 @@ impl PasswordStore {
             self.crypto.pull_keys(&[r], config_path)?;
         }
         if !self.crypto.is_key_in_keyring(r)? {
-            return Err(Error::Generic(
+            return Err(Error::from(
                 "Key isn't in keyring and couldn't be downloaded from keyservers",
             ));
         }
 
         let dir = self.root.join(path);
         if !dir.exists() {
-            return Err(Error::Generic("path doesn't exist"));
+            return Err(Error::from("path doesn't exist"));
         }
         let dir = fs::canonicalize(self.root.join(path))?;
         let root = fs::canonicalize(&self.root)?;
 
         if !dir.starts_with(root) {
-            return Err(Error::Generic("path traversal not allowed"));
+            return Err(Error::from("path traversal not allowed"));
         }
         if !dir.join(".gpg-id").exists() {
             File::create(dir.join(".gpg-id"))?;
@@ -775,7 +772,7 @@ impl PasswordStore {
     pub fn add_and_commit(&self, paths: &[PathBuf], message: &str) -> Result<git2::Oid> {
         let repo = self.repo();
         if repo.is_err() {
-            return Err(Error::Generic("must have a repository"));
+            return Err(Error::from("must have a repository"));
         }
         let repo = repo?;
 
@@ -814,7 +811,7 @@ impl PasswordStore {
     /// Returns an `Err` if the file is missing, or the target already exists.
     pub fn rename_file(&mut self, old_name: &str, new_name: &str) -> Result<usize> {
         if new_name.starts_with('/') || new_name.contains("..") {
-            return Err(Error::Generic("directory traversal not allowed"));
+            return Err(Error::from("directory traversal not allowed"));
         }
 
         let mut old_path = self.root.clone();
@@ -825,11 +822,11 @@ impl PasswordStore {
         let new_path = append_extension(new_path, ".gpg");
 
         if !old_path.exists() {
-            return Err(Error::Generic("source file is missing"));
+            return Err(Error::from("source file is missing"));
         }
 
         if new_path.exists() {
-            return Err(Error::Generic("can't target file already exists"));
+            return Err(Error::from("can't target file already exists"));
         }
 
         let mut new_path_dir = new_path.clone();
@@ -892,11 +889,11 @@ pub fn all_recipients_from_stores(
         let mut ar: HashMap<String, Recipient> = HashMap::new();
         let stores = stores
             .lock()
-            .map_err(|_e| Error::Generic("problem locking the mutex"))?;
+            .map_err(|_e| Error::from("problem locking the mutex"))?;
         for store in stores.iter() {
             let store = store
                 .lock()
-                .map_err(|_e| Error::Generic("problem locking the mutex"))?;
+                .map_err(|_e| Error::from("problem locking the mutex"))?;
             for recipient in store.all_recipients()? {
                 let key = match recipient.fingerprint.as_ref() {
                     None => recipient.key_id.clone(),
@@ -1062,7 +1059,7 @@ impl PasswordEntry {
     pub fn secret(&self, store: &PasswordStore) -> Result<String> {
         let s = fs::metadata(&self.path)?;
         if s.len() == 0 {
-            return Err(Error::Generic("empty password file"));
+            return Err(Error::from("empty password file"));
         }
 
         let content = fs::read(&self.path)?;
@@ -1103,7 +1100,7 @@ impl PasswordEntry {
             Ok(totp.generate_current()?)
         } else {
             secret.zeroize();
-            Err(Error::Generic("No otpauth:// url in secret"))
+            Err(Error::from("No otpauth:// url in secret"))
         }
     }
 
@@ -1275,7 +1272,7 @@ pub fn search(store: &PasswordStore, query: &str) -> Vec<PasswordEntry> {
 pub fn password_dir(password_store_dir: Option<&Path>, home: Option<&Path>) -> Result<PathBuf> {
     let pass_home = password_dir_raw(password_store_dir, home);
     if !pass_home.exists() {
-        return Err(Error::Generic("failed to locate password directory"));
+        return Err(Error::from("failed to locate password directory"));
     }
     Ok(pass_home)
 }
@@ -1407,7 +1404,7 @@ fn xdg_config_file_location(
             if let Some(h) = home {
                 Ok(h.join(".config/ripasso/settings.toml"))
             } else {
-                Err(Error::Generic("no home directory"))
+                Err(Error::from("no home directory"))
             }
         }
     }
@@ -1467,11 +1464,11 @@ pub fn save_config(
     let mut all_stores_map = HashMap::new();
     let stores_borrowed = stores
         .lock()
-        .map_err(|_e| Error::Generic("problem locking the mutex"))?;
+        .map_err(|_e| Error::from("problem locking the mutex"))?;
     for store in stores_borrowed.iter() {
         let store = store
             .lock()
-            .map_err(|_e| Error::Generic("problem locking the mutex"))?;
+            .map_err(|_e| Error::from("problem locking the mutex"))?;
         let mut store_map = HashMap::new();
         store_map.insert(
             "path",
