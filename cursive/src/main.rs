@@ -14,6 +14,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+    process,
+    sync::{Arc, LazyLock, Mutex, MutexGuard},
+    thread, time,
+};
+
 use config::Config;
 use cursive::{
     Cursive, CursiveExt,
@@ -28,31 +36,21 @@ use cursive::{
 };
 use pass::Result;
 use ripasso::{
-    crypto::CryptoImpl,
+    crypto::{CryptoImpl, Fingerprint},
     git::{pull, push},
     pass,
     pass::{
         OwnerTrustLevel, PasswordStore, Recipient, SignatureStatus, all_recipients_from_stores,
     },
     passphrase_generator::passphrase_generator,
-    password_generator::password_generator,
-};
-use std::sync::{LazyLock, MutexGuard};
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-    process,
-    sync::{Arc, Mutex},
-    thread, time,
+    password_generator::{PasswordGenerationCategory, password_generator},
 };
 use unic_langid::LanguageIdentifier;
+use zeroize::Zeroize;
 
 use crate::helpers::{
     get_value_from_input, is_checkbox_checked, is_radio_button_selected, recipients_widths,
 };
-use ripasso::crypto::Fingerprint;
-use ripasso::password_generator::PasswordGenerationCategory;
-use zeroize::Zeroize;
 
 mod helpers;
 mod wizard;
@@ -864,7 +862,7 @@ fn delete_recipient(ui: &mut Cursive, store: &PasswordStoreType) -> Result<()> {
     let sel = l.selection();
 
     if sel.is_none() || sel.as_ref().unwrap().is_none() {
-        return Err(pass::Error::Generic("Selection is empty"));
+        return Err(pass::Error::from("Selection is empty"));
     }
 
     let binding = sel.unwrap();
@@ -914,7 +912,7 @@ fn add_recipient(ui: &mut Cursive, store: &PasswordStoreType, config_path: &Path
         Err(err) => helpers::errorbox(ui, &err),
         Ok(recipient) => {
             if recipient.trust_level != OwnerTrustLevel::Ultimate {
-                helpers::errorbox(ui, &pass::Error::Generic(CATALOG.gettext("Can't import team member due to that the GPG trust relationship level isn't Ultimate")));
+                helpers::errorbox(ui, &pass::Error::from(CATALOG.gettext("Can't import team member due to that the GPG trust relationship level isn't Ultimate")));
                 return Ok(());
             }
 
@@ -1082,7 +1080,7 @@ fn view_recipients(ui: &mut Cursive, store: &PasswordStoreType, config_path: &Pa
             do_view_recipients_for_dir(ui, store, &sub_dirs[0], config_path);
         }
         std::cmp::Ordering::Less => {
-            helpers::errorbox(ui, &pass::Error::Generic("no subdirectories found"));
+            helpers::errorbox(ui, &pass::Error::from("no subdirectories found"));
         }
     }
 

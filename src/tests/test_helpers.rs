@@ -21,9 +21,10 @@ use sequoia_openpgp::{
 };
 use tar::Archive;
 
-use crate::crypto::Fingerprint;
 use crate::{
-    crypto::{Crypto, CryptoImpl, FindSigningFingerprintStrategy, Key, VerificationError},
+    crypto::{
+        Crypto, CryptoImpl, FindSigningFingerprintStrategy, Fingerprint, Key, VerificationError,
+    },
     error::{Error, Result},
     pass::{KeyRingStatus, OwnerTrustLevel, SignatureStatus},
     signature::{Comment, Recipient},
@@ -221,9 +222,7 @@ impl Crypto for MockCrypto {
     fn encrypt_string(&self, _: &str, _: &[Recipient]) -> Result<Vec<u8>> {
         self.encrypt_called.replace(true);
         if self.encrypt_string_error.is_some() {
-            Err(Error::GenericDyn(
-                self.encrypt_string_error.clone().unwrap(),
-            ))
+            Err(Error::from(self.encrypt_string_error.clone().unwrap()))
         } else {
             Ok(self.encrypt_string_return.clone())
         }
@@ -266,13 +265,11 @@ impl Crypto for MockCrypto {
 
     fn get_key(&self, key_id: &str) -> Result<Box<dyn Key>> {
         if self.get_key_string_error.is_some() {
-            Err(Error::GenericDyn(
-                self.get_key_string_error.clone().unwrap(),
-            ))
+            Err(Error::from(self.get_key_string_error.clone().unwrap()))
         } else if self.get_key_answers.contains_key(key_id) {
             Ok(Box::new(self.get_key_answers.get(key_id).unwrap().clone()))
         } else {
-            Err(Error::Generic("no key configured"))
+            Err(Error::from("no key configured"))
         }
     }
 

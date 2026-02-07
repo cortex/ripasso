@@ -24,6 +24,7 @@ sequoia-openpgp = "2"
 anyhow = "1"
 sequoia-gpg-agent = "0.6"
 zeroize = { version = "1", features = ["zeroize_derive", "alloc"] }
+thiserror = "2"
 
 [dependencies.config]
 version = "0.15"

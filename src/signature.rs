@@ -6,8 +6,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::crypto::{FindSigningFingerprintStrategy, Fingerprint};
-use crate::error::{Error, Result};
+use crate::{
+    crypto::{FindSigningFingerprintStrategy, Fingerprint},
+    error::{Error, Result},
+};
 
 /// A git commit for a password might be signed by a gpg key, and this signature's verification
 /// state is one of these values.
@@ -52,14 +54,14 @@ pub fn parse_signing_keys(
             let have_0x = trimmed.starts_with("0x");
 
             if !(len == 40 || len == 64 || len == 42 && have_0x || len == 66 && have_0x) {
-                return Err(Error::Generic(
+                return Err(Error::from(
                     "signing key isn't in full 40/64 hex character fingerprint format",
                 ));
             }
 
             let key_res = crypto.get_key(&trimmed);
             if let Some(err) = key_res.err() {
-                return Err(Error::GenericDyn(format!(
+                return Err(Error::from(format!(
                     "signing key not found in keyring, error: {err}",
                 )));
             }
@@ -424,7 +426,7 @@ impl Recipient {
 
         if recipients.is_empty() {
             if recipients_file == store_root_path.join(".gpg_id") {
-                Err(Error::Generic("Can't delete the last encryption key"))
+                Err(Error::from("Can't delete the last encryption key"))
             } else {
                 Ok(fs::remove_file(recipients_file)?)
             }
@@ -451,9 +453,7 @@ impl Recipient {
 
         for r in &recipients {
             if r == recipient {
-                return Err(Error::Generic(
-                    "Team member is already in the list of key ids",
-                ));
+                return Err(Error::from("Team member is already in the list of key ids"));
             }
         }
         recipients.push((*recipient).clone());

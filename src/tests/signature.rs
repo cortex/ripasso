@@ -1,7 +1,7 @@
 use hex::FromHex;
 
-use crate::crypto::Fingerprint;
 use crate::{
+    crypto::Fingerprint,
     pass::{KeyRingStatus, OwnerTrustLevel, Recipient},
     signature::{Comment, parse_signing_keys},
     test_helpers::{MockCrypto, MockKey, append_file_name, recipient_alex, recipient_alex_old},

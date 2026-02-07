@@ -4,9 +4,8 @@ use hex::FromHex;
 use sequoia_openpgp::{Cert, cert::CertBuilder, parse::Parse, serialize::Serialize};
 use tempfile::tempdir;
 
-use crate::crypto::Fingerprint;
 use crate::{
-    crypto::{Crypto, CryptoImpl, Sequoia},
+    crypto::{Crypto, CryptoImpl, Fingerprint, Sequoia},
     signature::Recipient,
 };
 
