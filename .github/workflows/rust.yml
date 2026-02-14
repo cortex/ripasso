@@ -19,7 +19,7 @@ jobs:
           toolchain: stable
           override: true
       - name: Dependencies
-        run: sudo apt update -y && sudo apt install libgpgme11-dev libgpg-error-dev nettle-dev -y
+        run: sudo apt update -y && sudo apt install libgpgme11-dev libgpg-error-dev nettle-dev capnproto -y
       - uses: actions-rs/cargo@v1
         with:
           command: check
@@ -35,7 +35,7 @@ jobs:
           toolchain: stable
           override: true
       - name: Dependencies
-        run: sudo apt update -y && sudo apt install libssl-dev libclang-dev libadwaita-1-dev libgpgme11-dev libgpg-error-dev libgtk-4-dev libxcb-shape0-dev libxcb-xfixes0-dev nettle-dev -y
+        run: sudo apt update -y && sudo apt install libssl-dev libclang-dev libadwaita-1-dev libgpgme11-dev libgpg-error-dev libgtk-4-dev libxcb-shape0-dev libxcb-xfixes0-dev nettle-dev capnproto -y
       - uses: actions-rs/cargo@v1
         with:
           command: test
@@ -54,7 +54,7 @@ jobs:
       - name: Install dependencies
         run: |
           brew update || true
-          brew install gpgme nettle || true
+          brew install gpgme nettle capnp || true
       - uses: actions-rs/cargo@v1
         with:
           command: test
@@ -72,7 +72,7 @@ jobs:
           override: true
       - run: rustup component add rustfmt
       - name: Dependencies
-        run: sudo apt update -y && sudo apt install libgpgme11-dev libgpg-error-dev nettle-dev -y
+        run: sudo apt update -y && sudo apt install libgpgme11-dev libgpg-error-dev nettle-dev capnproto -y
       - uses: actions-rs/cargo@v1
         with:
           command: fmt
@@ -90,7 +90,7 @@ jobs:
           override: true
       - run: rustup component add clippy
       - name: Dependencies
-        run: sudo apt update -y && sudo apt install libgpgme11-dev libgpg-error-dev nettle-dev -y
+        run: sudo apt update -y && sudo apt install libgpgme11-dev libgpg-error-dev nettle-dev capnproto -y
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
