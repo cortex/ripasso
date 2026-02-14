@@ -26,10 +26,7 @@ pub fn passphrase_generator(word_count: usize) -> Result<Vec<String>> {
     let selected = if words.len() <= word_count {
         words.clone()
     } else {
-        words
-            .sample(&mut rng, word_count)
-            .cloned()
-            .collect()
+        words.sample(&mut rng, word_count).cloned().collect()
     };
 
     Ok(selected)
