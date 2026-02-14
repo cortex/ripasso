@@ -350,7 +350,7 @@ impl Recipient {
 
         let mut file_content = String::new();
         let mut sorted_recipients = recipients.to_owned();
-        sorted_recipients.sort_by(|a, b| a.fingerprint.cmp(&b.fingerprint));
+        sorted_recipients.sort_by_key(|a| a.fingerprint);
         for recipient in sorted_recipients {
             let to_add = match recipient.fingerprint {
                 Some(f) => hex::encode_upper(f),

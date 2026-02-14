@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::RngExt;
 
 #[non_exhaustive]
 #[derive(Debug, Copy, Clone)]

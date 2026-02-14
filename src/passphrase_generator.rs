@@ -27,7 +27,7 @@ pub fn passphrase_generator(word_count: usize) -> Result<Vec<String>> {
         words.clone()
     } else {
         words
-            .choose_multiple(&mut rng, word_count)
+            .sample(&mut rng, word_count)
             .cloned()
             .collect()
     };
