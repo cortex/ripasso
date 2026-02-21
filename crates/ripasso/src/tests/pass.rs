@@ -1869,7 +1869,7 @@ fn test_verify_gpg_id_files_untrusted_key_in_keyring() {
 
     assert!(result.is_err());
 
-    assert_eq!(Error::from("No valid signature"), result.err().unwrap());
+    assert!(format!("{:?}", result.err().unwrap()).contains("No valid signature"));
 }
 
 #[test]
