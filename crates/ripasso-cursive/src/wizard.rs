@@ -20,7 +20,7 @@ use cursive::{
     Cursive, CursiveExt,
     direction::Orientation,
     event::Key,
-    traits::*,
+    traits::{Nameable, Resizable},
     views::{Dialog, EditView, LinearLayout, OnEventView, SelectView, TextView},
 };
 use ripasso::{crypto::CryptoImpl, git::init_git_repo, pass};

@@ -72,11 +72,7 @@ impl UnpackedDir {
 }
 
 fn get_testres_path() -> PathBuf {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
+    let mut base_path: PathBuf = env!("CARGO_MANIFEST_DIR").into();
     base_path.push("testres");
 
     base_path

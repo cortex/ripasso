@@ -4,12 +4,12 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use adw::{prelude::*, subclass::prelude::*};
 use glib::{ParamSpec, ParamSpecString, Value};
-use gtk::{
+use gtk4::{
     gio, glib,
     glib::{ParamSpecBoxed, ParamSpecObject},
 };
+use libadwaita::{prelude::*, subclass::prelude::*};
 use once_cell::sync::{Lazy, OnceCell};
 use ripasso::pass::PasswordStore;
 

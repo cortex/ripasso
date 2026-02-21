@@ -1,0 +1,39 @@
+[package]
+name = "ripasso"
+description = "A password manager that uses the file format of the standard unix password manager 'pass'"
+keywords = ["password-manager", "pass"]
+repository.workspace = true
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+arboard.workspace = true
+glob.workspace = true
+gpgme.workspace = true
+chrono = { workspace = true, default-features = false, features = ["clock"] }
+git2.workspace = true
+rand.workspace = true
+whoami.workspace = true
+toml.workspace = true
+reqwest = { workspace = true, features = ["blocking"] }
+hex.workspace = true
+totp-rs = { workspace = true, features = ["otpauth"] }
+sequoia-openpgp.workspace = true
+anyhow.workspace = true
+sequoia-gpg-agent.workspace = true
+zeroize = { workspace = true, features = ["zeroize_derive", "alloc"] }
+thiserror.workspace = true
+config = { workspace = true, default-features = false, features = ["toml"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+flate2.workspace = true
+tar.workspace = true
+criterion.workspace = true
+
+[[bench]]
+name = "library_benchmark"
+harness = false

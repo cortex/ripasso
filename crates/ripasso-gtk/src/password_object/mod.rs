@@ -5,10 +5,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use adw::subclass::prelude::*;
 use chrono::{DateTime, Local};
 use glib::Object;
-use gtk::glib;
+use gtk4::glib;
+use libadwaita::subclass::prelude::*;
 use ripasso::pass::{Error, PasswordEntry, PasswordStore};
 
 use crate::utils::{PasswordStoreBoxed, error_dialog_standalone};

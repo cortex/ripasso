@@ -28,7 +28,7 @@ use cursive::{
     direction::Orientation,
     event::{Event, Key},
     menu::Tree,
-    traits::*,
+    traits::{Nameable, Resizable, Scrollable},
     views::{
         Checkbox, CircularFocus, Dialog, EditView, LinearLayout, NamedView, OnEventView,
         RadioGroup, ResizedView, ScrollView, SelectView, TextArea, TextView,

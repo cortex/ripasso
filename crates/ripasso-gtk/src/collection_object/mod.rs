@@ -5,12 +5,12 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use adw::{
+use glib::Object;
+use gtk4::{gio, glib};
+use libadwaita::{
     prelude::{ListModelExtManual, *},
     subclass::prelude::*,
 };
-use glib::Object;
-use gtk::{gio, glib};
 use ripasso::pass::{PasswordEntry, PasswordStore};
 
 use crate::{
@@ -50,7 +50,7 @@ impl CollectionObject {
             .clone()
     }
 
-    pub fn git_pull(&self, parent_window: &impl IsA<gtk::Window>) {
+    pub fn git_pull(&self, parent_window: &impl IsA<gtk4::Window>) {
         let res = ripasso::git::pull(&self.imp().store.borrow().as_ref().lock().unwrap());
 
         if let Err(e) = res {
@@ -58,7 +58,7 @@ impl CollectionObject {
         }
     }
 
-    pub fn git_push(&self, parent_window: &impl IsA<gtk::Window>) {
+    pub fn git_push(&self, parent_window: &impl IsA<gtk4::Window>) {
         let res = ripasso::git::push(&self.imp().store.borrow().as_ref().lock().unwrap());
 
         if let Err(e) = res {
@@ -66,7 +66,7 @@ impl CollectionObject {
         }
     }
 
-    pub fn pgp_download(&self, parent_window: &impl IsA<gtk::Window>) {
+    pub fn pgp_download(&self, parent_window: &impl IsA<gtk4::Window>) {
         let res = ripasso::pass::pgp_pull(
             &mut self.imp().store.borrow_mut().lock().unwrap(),
             &self.imp().user_config_dir.borrow(),
