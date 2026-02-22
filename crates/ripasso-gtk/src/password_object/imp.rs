@@ -4,10 +4,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use adw::{prelude::*, subclass::prelude::*};
 use chrono::{DateTime, Local};
 use glib::{ParamSpec, ParamSpecBoxed, ParamSpecString, Value};
-use gtk::glib;
+use gtk4::glib;
+use libadwaita::{prelude::*, subclass::prelude::*};
 use once_cell::sync::Lazy;
 use ripasso::pass::{PasswordEntry, PasswordStore};
 

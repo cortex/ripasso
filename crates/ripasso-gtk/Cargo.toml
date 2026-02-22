@@ -1,0 +1,18 @@
+[package]
+name = "ripasso-gtk"
+authors = ["Joakim Lundborg <joakim.lundborg@gmail.com>", "Alexander Kjäll <alexander.kjall@gmail.com>"]
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+ripasso = { workspace = true, version = "0.8.0" }
+gtk4 = { workspace = true, features = ["v4_6"] }
+libadwaita.workspace = true
+glib.workspace = true
+once_cell.workspace = true
+hex.workspace = true
+config.workspace = true
+chrono = { workspace = true, default-features = false, features = ["clock"] }
+
+[build-dependencies]
+glib-build-tools.workspace = true

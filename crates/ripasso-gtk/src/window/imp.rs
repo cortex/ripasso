@@ -1,11 +1,11 @@
 use std::{cell::RefCell, path::PathBuf};
 
-use adw::{Leaflet, subclass::prelude::*};
 use glib::{Propagation, subclass::InitializingObject};
-use gtk::{
+use gtk4::{
     Button, CompositeTemplate, Entry, FilterListModel, ListBox, Stack, gio, glib,
     glib::SignalHandlerId,
 };
+use libadwaita::{Leaflet, subclass::prelude::*};
 use once_cell::sync::OnceCell;
 
 use crate::collection_object::CollectionObject;
@@ -40,7 +40,7 @@ impl ObjectSubclass for Window {
     // `NAME` needs to match `class` attribute of template
     const NAME: &'static str = "RipassoWindow";
     type Type = super::Window;
-    type ParentType = adw::ApplicationWindow;
+    type ParentType = libadwaita::ApplicationWindow;
 
     fn class_init(klass: &mut Self::Class) {
         klass.bind_template();

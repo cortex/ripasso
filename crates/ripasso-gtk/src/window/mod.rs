@@ -6,25 +6,25 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use adw::{ActionRow, NavigationDirection, prelude::*, subclass::prelude::*};
 use glib::{Object, clone};
-use gtk::{
+use gtk4::{
     AboutDialog, CustomFilter, Dialog, DialogFlags, Entry, FilterListModel, Label, ListBox,
     ListBoxRow, NoSelection, ResponseType, SelectionMode, gio, glib, glib::BindingFlags, pango,
 };
+use libadwaita::{ActionRow, NavigationDirection, prelude::*, subclass::prelude::*};
 use ripasso::{crypto::CryptoImpl, pass::PasswordStore};
 
 use crate::{collection_object::CollectionObject, password_object::PasswordObject};
 
 glib::wrapper! {
     pub struct Window(ObjectSubclass<imp::Window>)
-        @extends adw::ApplicationWindow, gtk::ApplicationWindow, gtk::Window, gtk::Widget,
-        @implements gio::ActionGroup, gio::ActionMap, gtk::Accessible, gtk::Buildable,
-                    gtk::ConstraintTarget, gtk::Native, gtk::Root, gtk::ShortcutManager;
+        @extends libadwaita::ApplicationWindow, gtk4::ApplicationWindow, gtk4::Window, gtk4::Widget,
+        @implements gio::ActionGroup, gio::ActionMap, gtk4::Accessible, gtk4::Buildable,
+                    gtk4::ConstraintTarget, gtk4::Native, gtk4::Root, gtk4::ShortcutManager;
 }
 
 impl Window {
-    pub fn new(app: &adw::Application) -> Self {
+    pub fn new(app: &libadwaita::Application) -> Self {
         // Create new window
         Object::builder().property("application", app).build()
     }
@@ -304,7 +304,7 @@ impl Window {
                     .downcast::<PasswordObject>()
                     .expect("The object needs to be a `PasswordObject`.");
 
-                let display = gtk::gdk::Display::default().unwrap();
+                let display = gtk4::gdk::Display::default().unwrap();
                 let clipboard = display.clipboard();
                 clipboard.set_text(&password.property::<String>("secret"));
             }
@@ -417,7 +417,7 @@ impl Window {
             .license("GPL-3")
             .comments("A password manager that implements the pass store disk format")
             .logo(
-                &gtk::Image::from_file("/usr/share/ripasso-gtk/logo.svg")
+                &gtk4::Image::from_file("/usr/share/ripasso-gtk/logo.svg")
                     .paintable()
                     .expect("logo must be paintable"),
             )

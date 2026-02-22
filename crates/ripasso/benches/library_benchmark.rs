@@ -44,11 +44,7 @@ fn pop_list(password_dir: PathBuf) -> pass::Result<()> {
 }
 
 fn criterion_benchmark_load_4_passwords(c: &mut Criterion) {
-    let mut base_path: PathBuf = std::env::current_exe().unwrap();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
-    base_path.pop();
+    let mut base_path: PathBuf = env!("CARGO_MANIFEST_DIR").into();
     base_path.push("testres");
 
     let mut password_dir: PathBuf = base_path.clone();

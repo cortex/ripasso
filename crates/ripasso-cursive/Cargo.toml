@@ -1,0 +1,34 @@
+[package]
+name = "ripasso-cursive"
+description = "A password manager that uses the file format of the standard unix password manager 'pass', this is the ncurses frontend application"
+keywords = ["password-manager", "pass"]
+categories = ["command-line-utilities"]
+repository.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+build = "build.rs"
+
+[dependencies]
+cursive = { workspace = true, default-features = false, features = ["toml", "crossterm-backend"]}
+arboard = { workspace = true, features = ["wayland-data-control"]}
+ripasso = { workspace = true, version = "0.8.0" }
+locale_config.workspace = true
+unic-langid.workspace = true
+gettext.workspace = true
+terminal_size.workspace = true
+hex.workspace = true
+zeroize = { workspace = true, features = ["zeroize_derive", "alloc"] }
+config = { workspace = true, default-features = false, features = ["toml"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+chrono = { workspace = true, default-features = false, features = ["clock"] }
+
+[build-dependencies]
+glob.workspace = true
+man.workspace = true
+
+[lints]
+workspace = true
