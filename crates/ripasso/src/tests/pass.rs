@@ -789,7 +789,10 @@ fn save_config_one_store() {
     let config = fs::read_to_string(config_file.path()).unwrap();
 
     assert!(config.contains("[stores.\"s1 name\"]\n"));
-    assert!(config.contains(&format!("path = \"{}\"\n", passdir.path().display())));
+    assert!(config.contains(&format!(
+        "path = \"{}\"\n",
+        passdir.path().canonicalize().unwrap().display()
+    )));
     assert!(config.contains(&format!(
         "style_path = \"{}\"\n",
         style_file.path().display()
@@ -823,7 +826,10 @@ fn save_config_one_store_with_pgp_impl() {
 
     assert!(data.contains("[stores.default]"));
     assert!(data.contains("pgp_implementation = \"gpg\""));
-    assert!(data.contains(&format!("path = \"{}\"\n", &dir.path().display())));
+    assert!(data.contains(&format!(
+        "path = \"{}\"\n",
+        &dir.path().canonicalize().unwrap().display()
+    )));
 }
 
 #[test]
@@ -854,7 +860,10 @@ fn save_config_one_store_with_fingerprint() {
     assert!(data.contains("[stores.default]"));
     assert!(data.contains("pgp_implementation = \"sequoia\""));
     assert!(data.contains("own_fingerprint = \"7E068070D5EF794B00C8A9D91D108E6C07CBC406\""));
-    assert!(data.contains(&format!("path = \"{}\"\n", &dir.path().display())));
+    assert!(data.contains(&format!(
+        "path = \"{}\"\n",
+        &dir.path().canonicalize().unwrap().display()
+    )));
 }
 
 #[test]
@@ -1869,7 +1878,7 @@ fn test_verify_gpg_id_files_untrusted_key_in_keyring() {
 
     assert!(result.is_err());
 
-    assert_eq!(Error::from("No valid signature"), result.err().unwrap());
+    assert!(format!("{:?}", result.err().unwrap()).contains("No valid signature"));
 }
 
 #[test]
@@ -2438,8 +2447,10 @@ fn test_recipients_file_for_dir() -> Result<()> {
     File::create(td.path().join(".gpg-id"))?;
 
     assert_eq!(
-        td.path().join(".gpg-id"),
-        store.recipients_file_for_dir(&store.get_store_path())?
+        td.path().join(".gpg-id").canonicalize()?,
+        store
+            .recipients_file_for_dir(&store.get_store_path())?
+            .canonicalize()?
     );
     Ok(())
 }

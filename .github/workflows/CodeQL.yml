@@ -1,0 +1,42 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    # Run CodeQL analysis on a schedule (e.g., every Monday at 3:00 AM)
+    - cron: '0 3 * * 1'
+
+jobs:
+  analyze:
+    name: Analyze
+    # Use a Rust-supported runner, e.g., 'ubuntu-latest'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # Initializes the CodeQL Action and creates a database for Rust
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: rust
+
+      # CodeQL for Rust does not require an explicit build command
+      # - name: Build (optional, only if needed for specific dependencies)
+      #   run: cargo build --release
+
+      # Performs the CodeQL analysis and uploads the results
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:rust"
