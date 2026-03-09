@@ -5,7 +5,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-ripasso = { workspace = true, version = "0.8.0" }
+ripasso = { workspace = true }
 gtk4 = { workspace = true, features = ["v4_6"] }
 libadwaita.workspace = true
 glib.workspace = true
