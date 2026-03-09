@@ -2266,17 +2266,9 @@ fn check_args() {
 
     match args.len() {
         1 => (),
-        2 => {
-            if args[1] == "-h" || args[1] == "--help" {
-                help();
-                process::exit(0);
-            } else {
-                eprintln!(
-                    "{}",
-                    CATALOG.gettext("Unknown argument, usage: ripasso-cursive [-h|--help]")
-                );
-                process::exit(1);
-            }
+        2 if (args[1] == "-h" || args[1] == "--help") => {
+            help();
+            process::exit(0);
         }
         _ => {
             eprintln!(
