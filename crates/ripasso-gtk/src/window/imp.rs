@@ -2,10 +2,9 @@ use std::{cell::RefCell, path::PathBuf};
 
 use glib::{Propagation, subclass::InitializingObject};
 use gtk4::{
-    Button, CompositeTemplate, Entry, FilterListModel, ListBox, Stack, gio, glib,
-    glib::SignalHandlerId,
+    CompositeTemplate, Entry, FilterListModel, ListBox, Stack, gio, glib, glib::SignalHandlerId,
 };
-use libadwaita::{Leaflet, subclass::prelude::*};
+use libadwaita::{NavigationSplitView, subclass::prelude::*};
 use once_cell::sync::OnceCell;
 
 use crate::collection_object::CollectionObject;
@@ -22,11 +21,9 @@ pub struct Window {
     #[template_child]
     pub collections_list: TemplateChild<ListBox>,
     #[template_child]
-    pub leaflet: TemplateChild<Leaflet>,
+    pub split_view: TemplateChild<NavigationSplitView>,
     #[template_child]
     pub stack: TemplateChild<Stack>,
-    #[template_child]
-    pub back_button: TemplateChild<Button>,
     pub collections: OnceCell<gio::ListStore>,
     pub current_collection: RefCell<Option<CollectionObject>>,
     pub current_filter_model: RefCell<Option<FilterListModel>>,

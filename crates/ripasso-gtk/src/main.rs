@@ -36,5 +36,5 @@ fn setup_shortcuts(app: &libadwaita::Application) {
 fn build_ui(app: &libadwaita::Application) {
     // Create a new custom window and show it
     let window = Window::new(app);
-    window.show();
+    window.present();
 }

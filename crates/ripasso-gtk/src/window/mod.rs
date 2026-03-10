@@ -8,10 +8,10 @@ use std::{
 
 use glib::{Object, clone};
 use gtk4::{
-    AboutDialog, CustomFilter, Dialog, DialogFlags, Entry, FilterListModel, Label, ListBox,
-    ListBoxRow, NoSelection, ResponseType, SelectionMode, gio, glib, glib::BindingFlags, pango,
+    AboutDialog, CustomFilter, Entry, FilterListModel, Label, ListBox, ListBoxRow, NoSelection,
+    SelectionMode, gio, glib, glib::BindingFlags, pango,
 };
-use libadwaita::{ActionRow, NavigationDirection, prelude::*, subclass::prelude::*};
+use libadwaita::{ActionRow, AlertDialog, ResponseAppearance, prelude::*, subclass::prelude::*};
 use ripasso::{crypto::CryptoImpl, pass::PasswordStore};
 
 use crate::{collection_object::CollectionObject, password_object::PasswordObject};
@@ -284,7 +284,7 @@ impl Window {
                     .downcast::<CollectionObject>()
                     .expect("The object needs to be a `CollectionObject`.");
                 window.set_current_collection(selected_collection);
-                window.imp().leaflet.navigate(NavigationDirection::Forward);
+                window.imp().split_view.set_show_content(true);
             }
         ));
 
@@ -310,13 +310,13 @@ impl Window {
             }
         ));
 
-        // Setup callback for folding the leaflet
-        self.imp().leaflet.connect_folded_notify(clone!(
+        // Setup callback for collapsing the split view
+        self.imp().split_view.connect_collapsed_notify(clone!(
             #[weak(rename_to = window)]
             self,
             #[upgrade_or_panic]
-            move |leaflet| {
-                if leaflet.is_folded() {
+            move |split_view| {
+                if split_view.is_collapsed() {
                     window
                         .imp()
                         .collections_list
@@ -328,15 +328,6 @@ impl Window {
                         .set_selection_mode(SelectionMode::Single);
                     window.select_collection_row();
                 }
-            }
-        ));
-
-        self.imp().back_button.connect_clicked(clone!(
-            #[weak(rename_to = window)]
-            self,
-            #[upgrade_or_panic]
-            move |_| {
-                window.imp().leaflet.navigate(NavigationDirection::Back);
             }
         ));
     }
@@ -427,23 +418,16 @@ impl Window {
     }
 
     fn new_collection(&self) {
-        // Create new Dialog
-        let dialog = Dialog::with_buttons(
-            Some("New Collection"),
-            Some(self),
-            DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT | DialogFlags::USE_HEADER_BAR,
-            &[
-                ("Cancel", ResponseType::Cancel),
-                ("Create", ResponseType::Accept),
-            ],
-        );
-        dialog.set_default_response(ResponseType::Accept);
+        // Create new dialog
+        let dialog = AlertDialog::builder().heading("New Collection").build();
+        dialog.add_response("cancel", "Cancel");
+        dialog.add_response("create", "Create");
+        dialog.set_response_appearance("create", ResponseAppearance::Suggested);
+        dialog.set_default_response(Some("create"));
+        dialog.set_close_response("cancel");
 
-        // Make the dialog button insensitive initially
-        let dialog_button = dialog
-            .widget_for_response(ResponseType::Accept)
-            .expect("The dialog needs to have a widget for response type `Accept`.");
-        dialog_button.set_sensitive(false);
+        // Make the "create" response insensitive initially
+        dialog.set_response_enabled("create", false);
 
         // Create entry and add it to the dialog
         let entry = Entry::builder()
@@ -454,23 +438,17 @@ impl Window {
             .placeholder_text("Name")
             .activates_default(true)
             .build();
-        dialog.content_area().append(&entry);
+        dialog.set_extra_child(Some(&entry));
 
         // Set entry's css class to "error", when there is no text in it
         entry.connect_changed(clone!(
-            #[weak(rename_to = _window)]
-            self,
             #[weak]
             dialog,
             #[upgrade_or_panic]
             move |entry| {
-                let text = entry.text();
-                let dialog_button = dialog
-                    .widget_for_response(ResponseType::Accept)
-                    .expect("The dialog needs to have a widget for response type `Accept`.");
-                let empty = text.is_empty();
+                let empty = entry.text().is_empty();
 
-                dialog_button.set_sensitive(!empty);
+                dialog.set_response_enabled("create", !empty);
 
                 if empty {
                     entry.add_css_class("error");
@@ -481,55 +459,53 @@ impl Window {
         ));
 
         // Connect response to dialog
-        dialog.connect_response(clone!(
-            #[weak(rename_to = window)]
-            self,
-            #[weak]
-            entry,
-            #[weak]
-            dialog,
-            #[upgrade_or_panic]
-            move |_, response| {
-                // Destroy dialog
-                dialog.destroy();
+        dialog.connect_response(
+            None,
+            clone!(
+                #[weak(rename_to = window)]
+                self,
+                #[weak]
+                entry,
+                #[upgrade_or_panic]
+                move |_, response| {
+                    // Return if the user chose a response different from `create`
+                    if response != "create" {
+                        return;
+                    }
 
-                // Return if the user chose a response different from `Accept`
-                if response != ResponseType::Accept {
-                    return;
+                    // Create a new list store
+                    let passwords = gio::ListStore::new::<PasswordObject>();
+
+                    // Create a new collection object from the title the user provided
+                    let title = entry.text().to_string();
+                    let collection = CollectionObject::new(
+                        &title,
+                        passwords,
+                        Arc::new(Mutex::new(
+                            PasswordStore::new(
+                                "default",
+                                None,
+                                None,
+                                None,
+                                None,
+                                CryptoImpl::GpgMe,
+                                None,
+                            )
+                            .expect("Created store"),
+                        )),
+                        &window.imp().user_config_dir.borrow(),
+                    );
+
+                    // Add new collection object and set current passwords
+                    window.collections().append(&collection);
+                    window.set_current_collection(collection);
+
+                    // Show the passwords of the newly created collection
+                    window.imp().split_view.set_show_content(true);
                 }
-
-                // Create a new list store
-                let passwords = gio::ListStore::new::<PasswordObject>();
-
-                // Create a new collection object from the title the user provided
-                let title = entry.text().to_string();
-                let collection = CollectionObject::new(
-                    &title,
-                    passwords,
-                    Arc::new(Mutex::new(
-                        PasswordStore::new(
-                            "default",
-                            None,
-                            None,
-                            None,
-                            None,
-                            CryptoImpl::GpgMe,
-                            None,
-                        )
-                        .expect("Created store"),
-                    )),
-                    &window.imp().user_config_dir.borrow(),
-                );
-
-                // Add new collection object and set current passwords
-                window.collections().append(&collection);
-                window.set_current_collection(collection);
-
-                // Let the leaflet navigate to the next child
-                window.imp().leaflet.navigate(NavigationDirection::Forward);
-            }
-        ));
-        dialog.present();
+            ),
+        );
+        dialog.present(Some(self));
     }
 }
 
