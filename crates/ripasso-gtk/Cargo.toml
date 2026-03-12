@@ -6,7 +6,7 @@ edition.workspace = true
 
 [dependencies]
 ripasso = { workspace = true }
-gtk4 = { workspace = true, features = ["v4_6"] }
+gtk4 = { workspace = true, features = ["v4_14"] }
 libadwaita.workspace = true
 glib.workspace = true
 once_cell.workspace = true
