@@ -828,7 +828,7 @@ fn save_config_one_store_with_pgp_impl() {
     assert!(data.contains("pgp_implementation = \"gpg\""));
     assert!(data.contains(&format!(
         "path = \"{}\"\n",
-        &dir.path().canonicalize().unwrap().display()
+        dir.path().canonicalize().unwrap().display()
     )));
 }
 
@@ -862,7 +862,7 @@ fn save_config_one_store_with_fingerprint() {
     assert!(data.contains("own_fingerprint = \"7E068070D5EF794B00C8A9D91D108E6C07CBC406\""));
     assert!(data.contains(&format!(
         "path = \"{}\"\n",
-        &dir.path().canonicalize().unwrap().display()
+        dir.path().canonicalize().unwrap().display()
     )));
 }
 

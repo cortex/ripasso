@@ -1016,7 +1016,7 @@ impl Crypto for Sequoia {
         for recipient in recipients {
             let res = self.pull_and_write(&recipient.key_id, &p);
 
-            write!(ret, "{}: ", &recipient.key_id)?;
+            write!(ret, "{}: ", recipient.key_id)?;
             match res {
                 Ok(s) => ret.push_str(&s),
                 Err(err) => write!(ret, "{err:?}")?,

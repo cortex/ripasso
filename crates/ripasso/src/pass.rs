@@ -562,7 +562,7 @@ impl PasswordStore {
         // When we have checked all the diffs, we also need to consider what
         // files was checked in to the first commit
         last_tree.walk(git2::TreeWalkMode::PreOrder, |path, entry| {
-            if let Some(entry_name) = entry.name() {
+            if let Ok(entry_name) = entry.name() {
                 let found = Path::new(path).join(entry_name);
                 files_to_find.retain(|target| {
                     push_password_if_match(
@@ -1130,7 +1130,7 @@ impl PasswordEntry {
             return Ok(());
         }
 
-        let message = format!("Edit password for {} using ripasso", &self.name);
+        let message = format!("Edit password for {} using ripasso", self.name);
 
         store.add_and_commit(
             &[append_extension(PathBuf::from(&self.name), ".gpg")],
@@ -1149,7 +1149,7 @@ impl PasswordEntry {
         if store.repo().is_err() {
             return Ok(());
         }
-        let message = format!("Removed password file for {} using ripasso", &self.name);
+        let message = format!("Removed password file for {} using ripasso", self.name);
 
         remove_and_commit(
             store,

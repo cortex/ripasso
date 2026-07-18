@@ -17,7 +17,7 @@ use crate::{
 fn git_branch_name(repo: &Repository) -> Result<String> {
     let head = repo.find_reference("HEAD")?;
     let symbolic = head
-        .symbolic_target()
+        .symbolic_target()?
         .ok_or(Error::from("no symbolic target"))?;
 
     let mut parts = symbolic.split('/');
@@ -230,11 +230,9 @@ fn find_origin(repo: &Repository) -> Result<(git2::Remote<'_>, String)> {
         if b.is_head() {
             let upstream_name_buf = repo.branch_upstream_remote(&format!(
                 "refs/heads/{}",
-                &b.name()?.ok_or("no branch name")?
+                b.name()?.ok_or("no branch name")?
             ))?;
-            let upstream_name = upstream_name_buf
-                .as_str()
-                .ok_or("Can't convert to string")?;
+            let upstream_name = upstream_name_buf.as_str()?;
             let origin = repo.find_remote(upstream_name)?;
             return Ok((origin, b.name()?.ok_or("no branch name")?.to_owned()));
         }

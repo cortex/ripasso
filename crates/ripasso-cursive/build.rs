@@ -131,15 +131,15 @@ fn generate_translation_files() {
             "generating .mo file for {} to {}/{} ",
             file.display(),
             dest_path.display(),
-            &filename
+            filename
         );
         let res = Command::new("msgfmt")
             .arg(format!(
                 "--output-file={}/{}",
                 dest_path.display(),
-                &filename
+                filename
             ))
-            .arg(format!("{}", &file.display()))
+            .arg(format!("{}", file.display()))
             .output();
 
         if res.is_ok() {

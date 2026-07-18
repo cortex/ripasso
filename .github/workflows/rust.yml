@@ -22,7 +22,7 @@ jobs:
           toolchain: stable
           cache: false
       - name: Dependencies
-        run: sudo apt update -y && sudo apt install libssl-dev libclang-dev libadwaita-1-dev libgpgme11-dev libgpg-error-dev libgtk-4-dev libxcb-shape0-dev libxcb-xfixes0-dev nettle-dev capnproto -y
+        run: sudo apt update -y && sudo apt install libssl-dev libclang-dev libadwaita-1-dev libgpgme11-dev libgpg-error-dev libgtk-4-dev libxcb-shape0-dev libxcb-xfixes0-dev capnproto -y
       - run: cargo test --all
 
   macos-test:
@@ -41,7 +41,7 @@ jobs:
       - name: Install dependencies
         run: |
           brew update || true
-          brew install gpgme nettle capnp libadwaita || true
+          brew install gpgme capnp libadwaita || true
       - run: cargo test --all
 
   fmt:
@@ -58,7 +58,7 @@ jobs:
           toolchain: stable
           cache: false
       - name: Dependencies
-        run: sudo apt update -y && sudo apt install libssl-dev libclang-dev libadwaita-1-dev libgpgme11-dev libgpg-error-dev libgtk-4-dev libxcb-shape0-dev libxcb-xfixes0-dev nettle-dev capnproto -y
+        run: sudo apt update -y && sudo apt install libssl-dev libclang-dev libadwaita-1-dev libgpgme11-dev libgpg-error-dev libgtk-4-dev libxcb-shape0-dev libxcb-xfixes0-dev capnproto -y
       - run: cargo fmt --check
 
   clippy:
@@ -76,7 +76,7 @@ jobs:
           cache: false
       - run: rustup component add clippy
       - name: Dependencies
-        run: sudo apt update -y && sudo apt install libssl-dev libclang-dev libadwaita-1-dev libgpgme11-dev libgpg-error-dev libgtk-4-dev libxcb-shape0-dev libxcb-xfixes0-dev nettle-dev capnproto -y
+        run: sudo apt update -y && sudo apt install libssl-dev libclang-dev libadwaita-1-dev libgpgme11-dev libgpg-error-dev libgtk-4-dev libxcb-shape0-dev libxcb-xfixes0-dev capnproto -y
       - run: cargo clippy --tests
 
   audit:
