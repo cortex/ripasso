@@ -1020,8 +1020,8 @@ fn render_recipient_label(
     format!(
         "{} {:width_key$} {:width_name$} {}  {}  ",
         symbol,
-        &recipient.key_id,
-        &recipient.name,
+        recipient.key_id,
+        recipient.name,
         trust,
         if recipient.not_usable {
             CATALOG.gettext("Not Usable")
@@ -2375,7 +2375,11 @@ fn add_layers(ui: &mut Cursive, store: &PasswordStoreType) {
     // Override shortcuts on search box
     let search_box = OnEventView::new(search_box)
         .on_event(Key::Up, up)
-        .on_event(Key::Down, down);
+        .on_event(Key::Down, down)
+        // EditView consumes Ctrl+U internally (delete to start of line), so the
+        // global callback never fires. Intercept it before the EditView with a
+        // pre-event handler so copying the name keeps working from the search box.
+        .on_pre_event(Event::CtrlChar('u'), copy_name);
 
     let results = SelectView::<pass::PasswordEntry>::new()
         .with_name("results")

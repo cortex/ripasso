@@ -4,12 +4,11 @@
 
 Ripasso depends on a number of local libraries through it's dependencies:
 
- * openssl - for git operations
+ * openssl - for git operations and sequoia crypto backend
  * libgit2 - for git operations
  * libgpgerror - for the gpgme encryption backend
  * gpgme - for the gpgme encryption backend
  * xorg - for the clippboard
- * nettle-dev - for the sequoia encryption backend
 
 They are named different things on different platforms
 
@@ -25,14 +24,14 @@ $ cargo run
 
 ### Ubuntu
 ```
-$ apt install cargo libssl-dev libclang-dev libadwaita-1-dev libgpgme11-dev libgpg-error-dev libgtk-4-dev libxcb-shape0-dev libxcb-xfixes0-dev nettle-dev
+$ apt install cargo libssl-dev libclang-dev libadwaita-1-dev libgpgme11-dev libgpg-error-dev libgtk-4-dev libxcb-shape0-dev libxcb-xfixes0-dev
 $ cargo build --all
 ```
 
 ### Fedora
 #### All
 ```
-$ dnf install cargo gpgme-devel openssl-devel libxcb libxcb-devel nettle-devel
+$ dnf install cargo gpgme-devel openssl-devel libxcb libxcb-devel
 ```
 #### GTK
 ```
