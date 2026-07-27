@@ -5,6 +5,7 @@
 .idea/
 *.iml
 *.kdev4
+.devenv/
 
 #Generated binary translation files
 *.mo
