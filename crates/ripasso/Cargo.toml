@@ -20,6 +20,7 @@ whoami.workspace = true
 toml.workspace = true
 reqwest = { workspace = true, features = ["blocking"] }
 hex.workspace = true
+icu_normalizer.workspace = true
 totp-rs = { workspace = true, features = ["otpauth"] }
 sequoia-openpgp.workspace = true
 anyhow.workspace = true

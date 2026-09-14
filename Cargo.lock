@@ -3283,6 +3283,7 @@ dependencies = [
  "glob",
  "gpgme",
  "hex",
+ "icu_normalizer",
  "rand",
  "reqwest",
  "sequoia-gpg-agent",

@@ -1,4 +1,6 @@
 use std::{
+    borrow::Cow,
+    ffi::OsString,
     fmt::Display,
     path::{Path, PathBuf},
     str,
@@ -6,6 +8,7 @@ use std::{
 
 use chrono::{DateTime, Local, TimeZone};
 use git2::{Oid, Repository};
+use icu_normalizer::ComposingNormalizerBorrowed;
 
 use crate::{
     crypto::{Crypto, FindSigningFingerprintStrategy, VerificationError},
@@ -455,16 +458,60 @@ pub fn init_git_repo(base: &Path) -> Result<Repository> {
     Ok(Repository::init(base)?)
 }
 
+const NFC: ComposingNormalizerBorrowed<'static> = ComposingNormalizerBorrowed::new_nfc();
+
+/// Filesystem paths and git tree paths can disagree on how they normalize
+/// Unicode: HFS+ gives NFD from readdir, while git stores what was committed,
+/// which can be NFC. The setting `core.precomposeunicode` in git affects this.
+pub(crate) fn to_nfc(path: &Path) -> Cow<'_, Path> {
+    match path.to_str() {
+        // separators are unaffected by NFC, so checking the whole path at once
+        // is the same as checking every component, and lets the common case
+        // avoid rebuilding the path
+        Some(s) if NFC.is_normalized(s) => Cow::Borrowed(path),
+        None => Cow::Borrowed(path),
+        Some(_) => Cow::Owned(
+            path.components()
+                .map(|c| {
+                    c.as_os_str().to_str().map_or_else(
+                        || c.as_os_str().to_os_string(),
+                        |s| OsString::from(NFC.normalize(s).into_owned()),
+                    )
+                })
+                .collect(),
+        ),
+    }
+}
+
+/// A password file that we are looking for in the git history.
+pub struct PathWithNormalization {
+    /// the path, relative to the store root, as it exists on disk
+    pub relpath: PathBuf,
+    /// `relpath` normalized in NFC
+    normalized: PathBuf,
+}
+
+impl PathWithNormalization {
+    #[must_use]
+    pub fn new(relpath: PathBuf) -> Self {
+        let normalized = to_nfc(&relpath).into_owned();
+        Self {
+            relpath,
+            normalized,
+        }
+    }
+}
+
 pub fn push_password_if_match(
-    target: &Path,
-    found: &Path,
+    target: &PathWithNormalization,
+    found: &PathWithNormalization,
     commit: &git2::Commit,
     repo: &Repository,
     passwords: &mut Vec<PasswordEntry>,
     oid: &Oid,
     store: &PasswordStore,
 ) -> bool {
-    if *target == *found {
+    if target.normalized == found.normalized {
         let time = commit.time();
         let time_return = to_result(Local.timestamp_opt(time.seconds(), 0));
 
@@ -474,7 +521,7 @@ pub fn push_password_if_match(
 
         passwords.push(PasswordEntry::new(
             &store.get_store_path(),
-            target,
+            &target.relpath,
             time_return,
             name_return,
             signature_return,
