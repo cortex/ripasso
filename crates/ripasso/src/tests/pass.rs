@@ -126,6 +126,78 @@ fn populate_password_list_small_repo() -> Result<()> {
     Ok(())
 }
 
+/// A password file committed in NFC, but that the filesystem hands back in NFD,
+/// which is what happens on HFS+ for a store that was created on linux.
+#[test]
+fn test_decomposed_filename_matches_composed_git_path() -> Result<()> {
+    let dir = tempdir()?;
+    let store_dir = dir.path().join(".password-store");
+    create_dir_all(&store_dir)?;
+
+    let on_disk = "test_a\u{30a}A\u{30a}æÆa\u{308}A\u{308}øØo\u{308}O\u{308}.gpg";
+    let in_git = "test_åÅæÆäÄøØöÖ.gpg";
+
+    File::create(store_dir.join(".gpg-id"))?.write_all(b"0xDF0C3D316B7312D5\n")?;
+    File::create(store_dir.join(on_disk))?.write_all(b"")?;
+
+    // add the paths through the index rather than from the working directory,
+    // so that git records the composed spelling regardless of what the
+    // filesystem that the test runs on would have given us
+    let repo = Repository::init(&store_dir)?;
+    let mut index = repo.index()?;
+    for path in [".gpg-id", in_git] {
+        index.add_frombuffer(
+            &git2::IndexEntry {
+                ctime: git2::IndexTime::new(0, 0),
+                mtime: git2::IndexTime::new(0, 0),
+                dev: 0,
+                ino: 0,
+                mode: 0o100_644,
+                uid: 0,
+                gid: 0,
+                file_size: 0,
+                id: git2::Oid::ZERO_SHA1,
+                flags: 0,
+                flags_extended: 0,
+                path: path.as_bytes().to_vec(),
+            },
+            b"",
+        )?;
+    }
+    let tree = repo.find_tree(index.write_tree()?)?;
+    let signature = git2::Signature::new("default", "default@example.com", &git2::Time::new(0, 0))?;
+    repo.commit(
+        Some("HEAD"),
+        &signature,
+        &signature,
+        "unit test",
+        &tree,
+        &[],
+    )?;
+
+    let store = PasswordStore {
+        name: "default".to_owned(),
+        root: store_dir.canonicalize()?,
+        valid_gpg_signing_keys: vec![],
+        passwords: vec![],
+        style_file: None,
+        crypto: Box::new(MockCrypto::new()),
+        user_home: None,
+    };
+    let results = store.all_passwords()?;
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(
+        results[0].name,
+        "test_a\u{30a}A\u{30a}æÆa\u{308}A\u{308}øØo\u{308}O\u{308}"
+    );
+    assert_eq!(results[0].path, store.root.join(on_disk));
+    assert_eq!(results[0].is_in_git, RepositoryStatus::InRepo);
+    assert_eq!(results[0].committed_by, Some("default".to_owned()));
+
+    Ok(())
+}
+
 #[test]
 fn populate_password_list_repo_with_deleted_files() -> Result<()> {
     let dir = UnpackedDir::new("populate_password_list_repo_with_deleted_files")?;

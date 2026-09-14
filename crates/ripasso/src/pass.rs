@@ -32,9 +32,9 @@ use zeroize::Zeroize;
 use crate::{
     crypto::{Crypto, CryptoImpl, Fingerprint, GpgMe, Sequoia, VerificationError},
     git::{
-        add_and_commit_internal, commit, find_last_commit, init_git_repo, match_with_parent,
-        move_and_commit, push_password_if_match, read_git_meta_data, remove_and_commit,
-        verify_git_signature,
+        PathWithNormalization, add_and_commit_internal, commit, find_last_commit, init_git_repo,
+        match_with_parent, move_and_commit, push_password_if_match, read_git_meta_data,
+        remove_and_commit, verify_git_signature,
     },
 };
 pub use crate::{
@@ -505,9 +505,11 @@ impl PasswordStore {
         // First, collect all files we need to find the first commit for
         let password_path_glob = self.root.join("**/*.gpg");
         let existing_iter = glob::glob(&password_path_glob.to_string_lossy())?;
-        let mut files_to_find: Vec<PathBuf> = vec![];
+        let mut files_to_find: Vec<PathWithNormalization> = vec![];
         for existing_file in existing_iter {
-            files_to_find.push(existing_file?.strip_prefix(&self.root)?.to_path_buf());
+            files_to_find.push(PathWithNormalization::new(
+                existing_file?.strip_prefix(&self.root)?.to_path_buf(),
+            ));
         }
 
         if files_to_find.is_empty() {
@@ -536,10 +538,11 @@ impl PasswordStore {
             diff.foreach(
                 &mut |delta: git2::DiffDelta, _f: f32| {
                     if let Some(found) = delta.new_file().path() {
+                        let found = PathWithNormalization::new(found.to_path_buf());
                         files_to_find.retain(|target| {
                             push_password_if_match(
                                 target,
-                                found,
+                                &found,
                                 &commit,
                                 &repo,
                                 &mut passwords,
@@ -563,7 +566,7 @@ impl PasswordStore {
         // files was checked in to the first commit
         last_tree.walk(git2::TreeWalkMode::PreOrder, |path, entry| {
             if let Ok(entry_name) = entry.name() {
-                let found = Path::new(path).join(entry_name);
+                let found = PathWithNormalization::new(Path::new(path).join(entry_name));
                 files_to_find.retain(|target| {
                     push_password_if_match(
                         target,
@@ -583,7 +586,7 @@ impl PasswordStore {
         for not_found in files_to_find {
             passwords.push(PasswordEntry::new(
                 &self.root,
-                &not_found,
+                &not_found.relpath,
                 Err(Error::from("")),
                 Err(Error::from("")),
                 Err(Error::from("")),
